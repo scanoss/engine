@@ -1,0 +1,69 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.2",
+  "version": 1,
+  "serialNumber": "scanner:1594067462",
+  "components": [
+    {
+      "type": "application",
+      "publisher": "scanoss",
+      "group": "scanoss",
+      "name": "engine",
+      "url": "https://github.com/scanoss/engine",
+      "licenses": [
+        {
+            "id": "GPL-2.0-or-later"
+          }
+      ]
+    },
+    {
+      "type": "library",
+      "publisher": "scanoss",
+      "group": "ldb",
+      "name": "ldb",
+      "url": "https://github.com/scanoss/ldb",
+      "licenses": [
+        {
+            "id": "GPL-2.0-or-later"
+          }
+      ]
+    },
+    {
+      "type": "library",
+      "publisher": "scanoss",
+      "group": "wfp",
+      "name": "wfp",
+      "url": "https://github.com/scanoss/wfp",
+      "licenses": [
+        {
+            "id": "GPL-2.0-or-later"
+          }
+      ]
+    },
+    {
+      "type": "library",
+      "publisher": "madler",
+      "group": "madler",
+      "name": "crc32c",
+      "url": "https://stackoverflow.com/questions/17645167/implementing-sse-4-2s-crc32c-in-software#17646775",
+      "licenses": [
+        {
+          "id": "BSD-3-Clause"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "publisher": "udp",
+      "group": "udp",
+      "name": "json-parser",
+      "url": "https://github.com/udp/json-parser",
+      "licenses": [
+        {
+          "id": "BSD-3-Clause"
+        }
+      ]
+    }
+  ]
+}
+
