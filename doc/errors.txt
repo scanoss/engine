@@ -1,0 +1,22 @@
+Errors in scanoss.c
+E001 Provided md5 hash is invalid
+E002 Provided project id invalid
+E003 Parameter is not valid
+E004 Parameter is too long
+E005 Missing parameters. Please use -h for help
+E006 --query requires --md5 and --project
+E007 Invalid parameters provided with --query-identification
+E008 --delete requires --md5 and --project
+E009 Invalid parameters provided with --delete-identification
+E010 Missing parameters for --insert-identification
+E011 Scanning a directory requires --output
+E012 Scanning .wfp fingerprint files requires --output
+E013 Parameter --output can only be used when scanning directoriess
+E014 Cannot access
+E015 Output SQLite DB already exists
+E016 Error opening SQLite DB
+E017 Cannot open target
+E018 Error creating SQLite DB
+E019 Table name is too long
+E020 Identifications table is not provided
+E021 Cannot open file
