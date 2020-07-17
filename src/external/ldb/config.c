@@ -4,7 +4,7 @@
  *
  * Configuration file handling routines
  *
- * Copyright (C) 2018-2020 SCANOSS LTD
+ * Copyright (C) 2018-2020 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ bool ldb_load_cfg(char *db, char *table, struct ldb_recordset *rs)
 
 	// Read configuration file
 	char *buffer = malloc(LDB_MAX_NAME);
-	fread(buffer, 1, LDB_MAX_NAME, cfg);
+	if (!fread(buffer, 1, LDB_MAX_NAME, cfg)) printf("Warning: cannot open file %s\n", path);
 	fclose(cfg);
 	char *reclen = buffer + ldb_split_string(buffer, ',');
 
@@ -74,7 +74,7 @@ struct ldb_table ldb_read_cfg(char *db_table)
 
 		// Read configuration file
 		char *buffer = calloc(LDB_MAX_NAME, 1);
-		fread(buffer, 1, LDB_MAX_NAME, cfg);
+		if (!fread(buffer, 1, LDB_MAX_NAME, cfg)) printf("Warning: cannot read file %s\n", path);
 		char *reclen = buffer + ldb_split_string(buffer, ',');
 
 		// Assign values to cfg structure

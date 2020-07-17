@@ -4,7 +4,7 @@
  *
  * File handling functions
  *
- * Copyright (C) 2018-2020 SCANOSS LTD
+ * Copyright (C) 2018-2020 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,7 +60,7 @@ uint8_t *file_md5(char *filepath)
 	long filesize = ftell(in);
 	fseek(in, 0L, SEEK_SET);
 	uint8_t *buffer = malloc(filesize);
-	fread(buffer, filesize, 1, in);
+	if (!fread(buffer, filesize, 1, in)) printf("Warning: cannot open file %s\n", filepath);
 	fclose(in);
 
 	/* Calculate MD5sum */

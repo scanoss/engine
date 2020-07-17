@@ -4,7 +4,7 @@
  *
  * Hexadecimal and numeric conversions
  *
- * Copyright (C) 2018-2020 SCANOSS LTD
+ * Copyright (C) 2018-2020 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -92,8 +92,8 @@ void ldb_uint32_write(FILE *ldb_sector, uint32_t value)
 /* Read an unsigned long integer (32-bit) from the provided ldb_sector at the current location */
 uint32_t ldb_uint32_read(FILE *ldb_sector)
 {
-	uint32_t out;
-	fread((uint8_t*)&out, 1, 4, ldb_sector);
+	uint32_t out = 0;
+	if (!fread((uint8_t*)&out, 1, 4, ldb_sector)) printf("Warning: cannot read LDB sector\n");
 	return out;
 }
 
@@ -101,15 +101,15 @@ uint32_t ldb_uint32_read(FILE *ldb_sector)
 uint64_t ldb_uint40_read(FILE *ldb_sector)
 {
 	uint64_t out = 0;
-	fread((uint8_t*)&out, 1, 5, ldb_sector);
+	if (!fread((uint8_t*)&out, 1, 5, ldb_sector)) printf("Warning: cannot read LDB sector\n");
 	return out;
 }
 
 /* Read an unsigned integer (16-bit) from the provided ldb_sector at the current location */
 uint16_t ldb_uint16_read(FILE *ldb_sector)
 {
-	uint16_t out;
-	fread((uint8_t*)&out, 1, 2, ldb_sector);
+	uint16_t out = 0;
+	if (!fread((uint8_t*)&out, 1, 2, ldb_sector)) printf("Warning: cannot read LDB sector\n");
 	return out;
 }
 

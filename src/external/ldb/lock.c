@@ -4,7 +4,7 @@
  *
  * DB Locking mechanisms
  *
- * Copyright (C) 2018-2020 SCANOSS LTD
+ * Copyright (C) 2018-2020 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,12 +33,12 @@ void ldb_lock()
 
 	/* Write lock file */
 	FILE *lock = fopen (ldb_lock_path, "wb");
-	fwrite (&pid, 4, 1, lock);
+	if (!fwrite (&pid, 4, 1, lock)) printf("Warning: cannot write lock file\n");
 	fclose (lock);
 
 	/* Validate lock file */
 	lock = fopen (ldb_lock_path, "rb");
-	fread (&pid, 4, 1, lock);
+	if (!fread (&pid, 4, 1, lock)) printf("Warning: cannot read lock file\n");
 	fclose (lock);
 
 	if (pid != getpid()) ldb_error ("E052 Concurrent ldb writing is not supported. (check /dev/shm/ldb.lock)");

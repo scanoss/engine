@@ -4,7 +4,7 @@
  *
  * LDB node handling routines
  *
- * Copyright (C) 2018-2020 SCANOSS LTD
+ * Copyright (C) 2018-2020 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ void ldb_load_node(struct ldb_recordset *rs)
 
 	/* Read node */
 	rs->node = malloc(rs->node_ln + 1);
-	fread(rs->node, 1, rs->node_ln, rs->sector);
+	if (!fread(rs->node, 1, rs->node_ln, rs->sector)) printf("Warning: cannot load node\n");
 
 	/* Terminate with a chr(0) */
 	rs->node[rs->node_ln] = 0;
@@ -150,7 +150,7 @@ uint64_t ldb_node_read (struct ldb_table table, FILE *ldb_sector, uint64_t ptr, 
 
 	/* Read node information into buffer: NN(5) and TS(2/4) */
 	uint8_t *buffer = calloc(ldb_ptr_ln + table.ts_ln + ldb_key_ln, 1);
-	fread(buffer, 1, ldb_ptr_ln + table.ts_ln, ldb_sector);
+	if (!fread(buffer, 1, ldb_ptr_ln + table.ts_ln, ldb_sector)) printf("Warning: cannot read LDB node\n");
 
 	/* NN: Obtain the next node */
 	uint64_t next_node = uint40_read(buffer);
@@ -175,7 +175,7 @@ uint64_t ldb_node_read (struct ldb_table table, FILE *ldb_sector, uint64_t ptr, 
 		if (table.rec_ln) if (actual_size > 64800) actual_size = 64800; //TODO: EXPAND?
 
 		/* Return the entire node */
-		fread(out, 1, actual_size, ldb_sector);
+		if (!fread(out, 1, actual_size, ldb_sector)) printf("Warning: cannot read entire LDB node\n");
 		*bytes_read = actual_size;
 
 		/* Gracefully terminate non-fixed records (strings) with a chr(0) */
@@ -231,7 +231,11 @@ void ldb_node_unlink (struct ldb_table table, uint8_t *key)
 
 					/* Read node information into buffer: NN(5) and TS(2/4) */
 					uint8_t *buffer = malloc(ldb_ptr_ln + table.ts_ln + table.key_ln);
-					fread(buffer, 1, ldb_ptr_ln + table.ts_ln, ldb_sector);
+					if (!fread(buffer, 1, ldb_ptr_ln + table.ts_ln, ldb_sector))
+					{
+						printf("Warning: cannot read LDB node info\n");
+						break;
+					}
 
 					/* NN: Obtain the next node */
 					next = uint40_read(buffer);
@@ -258,7 +262,11 @@ void ldb_node_unlink (struct ldb_table table, uint8_t *key)
 							uint32_t get_bytes = subkeyln + (table.rec_ln ? 0 : 2);
 
 							/* Read K and GS (2) if needed */
-							fread(buffer, 1, get_bytes, ldb_sector);
+							if (!fread(buffer, 1, get_bytes, ldb_sector))
+							{
+								printf("Warning: cannot read LDB node info (K/GS)\n");
+								break;
+							}
 
 							if (memcmp(buffer, key + ldb_key_ln, subkeyln) != 0) key_ok = false;
 

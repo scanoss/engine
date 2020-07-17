@@ -8,6 +8,22 @@ With its open architecture that is easy to integrate into existing processes and
 
 By freeing developers to focus on writing great, compliant code that they and their team can completely trust, applications are finished earlier, quality is consistently higher, and development costs are dramatically lower.
 
+# Installation
+
+The SCANOSS Inventory Engine a command-line tool used for comparing a file or directory against the SCANOSS Knowledgebase. The source code can be downloaded and compiled as follows:
+
+```
+wget -O engine.zip https://github.com/scanoss/engine/archive/master.zip
+unzip engine.zip
+cd engine-master
+make
+sudo make install
+cd ..
+scanoss -v
+```
+
+The last command should show the installed version of the SCANOSS Inventory Engine.
+
 # Usage
 
 This program performs an OSS inventory for the given TARGET comparing against the ScanOSS LDB Knowledgebase. Results are printed in STDOUT in JSON format.
@@ -30,5 +46,5 @@ Options:
 
 The Scanoss Open Source Inventory Engine is released under the GPL 2.0 license. Please check the LICENSE file for more information.
 
-Copyright (C) 2018-2020 ScanOSS LTD
+Copyright (C) 2018-2020 SCANOSS.COM
 
