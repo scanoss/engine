@@ -4,7 +4,7 @@
  *
  * LDB Database simple shell
  *
- * Copyright (C) 2018-2020 SCANOSS LTD
+ * Copyright (C) 2018-2020 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -148,7 +148,7 @@ bool stdin_handle()
 	char *command = NULL;
 	size_t size = 0;
 
-	getline(&command, &size, stdin);
+	if (!getline(&command, &size, stdin)) printf("Warning: cannot read STDIN\n");
 	ldb_trim(command);
 
 	bool stay = execute(command);

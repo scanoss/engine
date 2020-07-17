@@ -4,7 +4,7 @@
  *
  * LDB sector handling routines
  *
- * Copyright (C) 2018-2020 SCANOSS LTD
+ * Copyright (C) 2018-2020 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -107,7 +107,7 @@ uint8_t *ldb_load_sector (struct ldb_table table, uint8_t *key) {
 
 	uint8_t *out = malloc(size);
 	fseeko64(ldb_sector, 0, SEEK_SET);
-	fread(out, 1, size, ldb_sector);
+	if (!fread(out, 1, size, ldb_sector)) printf("Warning: ldb_load_sector failed\n");
 	fclose(ldb_sector);
 
 	return out;

@@ -4,7 +4,7 @@
  *
  * Data parsing subroutines
  *
- * Copyright (C) 2018-2020 SCANOSS LTD
+ * Copyright (C) 2018-2020 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -80,7 +80,7 @@ char *parse_sbom(char *filepath)
 	long file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
 	char *buffer = malloc(file_size + 1);
-	fread(buffer, 1, file_size, file);
+	if (!fread(buffer, 1, file_size, file)) printf("Warning: cannot parse SBOM %s\n", filepath);
 	fclose(file);
 	buffer[file_size] = 0;
 

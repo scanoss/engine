@@ -4,7 +4,7 @@
  *
  * Debugging-related subroutines
  *
- * Copyright (C) 2018-2020 SCANOSS LTD
+ * Copyright (C) 2018-2020 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@ void slow_query_log(char *md5_hex, char *filename, long elapsed)
 		char data[1024] = "\0";
 		sprintf(data, "%lu, %.6fs, %s\n", (unsigned long)time(NULL), (double) elapsed / 1000000, filename);
 		FILE *log = fopen(SLOW_QUERY_LOG, "a");
-		fprintf(log, data);
+		if (!fprintf(log, data)) printf("Warning: Cannot log slow query\n");
 		fclose(log);
 	}
 }

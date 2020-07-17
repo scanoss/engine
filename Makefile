@@ -5,11 +5,11 @@ BINFLAGS=-O -Wall -g -lm -lpthread -lcrypto
 all: ldb scanoss
 
 ldb: src/external/ldb/ldb.c src/external/ldb/ldb.h src/external/ldb/command.c
-	@$(CC) $(LIBFLAGS) -c src/external/ldb/ldb.c src/external/ldb/command.c 
+	@$(CC) -c src/external/ldb/ldb.c src/external/ldb/command.c $(LIBFLAGS)
 	@echo Library is built
 
 scanoss: src/main.c src/scanoss.h src/limits.h 
-	@$(CC) $(BINFLAGS) -o scanoss ldb.o src/main.c $(LIB_BASE)
+	@$(CC) -o scanoss ldb.o src/main.c $(BINFLAGS)
 	@echo Scanoss built
 
 clean:
