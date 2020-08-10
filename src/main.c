@@ -28,6 +28,7 @@
 #include "file.c"
 #include "debug.c"
 #include "query.c"
+#include "report.c"
 #include "match.c"
 #include "psi.c"
 #include "scan.c"
@@ -64,8 +65,10 @@ void recurse_directory(char *root_path, char *name)
 bool validate_alpha(char *txt)
 {
 	/* Check digits (and convert to lowercase) */
-	for (int i = 0; i < 32; i++)
-		if (i > '~' || i < '*') return false;
+	for (int i = 0; i < strlen(txt); i++)
+	{
+		if (!isalnum(txt[i])) return false;
+	}
 
 	return true;
 }
@@ -85,6 +88,16 @@ bool validate_md5(char *txt)
 	}
 
 	return true;
+}
+
+report_format set_json_format(char *arg)
+{
+	if (!strcmp(arg, "plain")) return plain;
+	if (!strcmp(arg, "spdx")) return spdx;
+	if (!strcmp(arg, "cyclonedx")) return cyclonedx;
+	printf("Unsupported report format\n");
+	exit(EXIT_FAILURE);
+	return plain;
 }
 
 int main(int argc, char **argv)
@@ -124,7 +137,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":w:s:b:tvhd")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:wtvhd")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -138,8 +151,8 @@ int main(int argc, char **argv)
 
 		switch (option)
 		{
-			case 'w':
-				force_wfp = true;
+			case 'f':
+				json_format = set_json_format(optarg);
 				break;
 
 			case 's':
@@ -148,6 +161,10 @@ int main(int argc, char **argv)
 
 			case 'b':
 				blacklisted_assets = parse_sbom(optarg);
+				break;
+
+			case 'w':
+				force_wfp = true;
 				break;
 
 			case 't':
@@ -220,20 +237,26 @@ int main(int argc, char **argv)
 		for (int i=strlen(target)-1; i>=0; i--) if (target[i]=='/') target[i]=0; else break;
 
 		/* Open main JSON structure */
-		printf("{\n");
+		json_open();
 
 		/* Scan directory */
 		if (isdir) recurse_directory(target, target);
 
 		/* Scan file */
 		else
-			if (strcmp(extension(target),"wfp")==0 || force_wfp)
+		{
+			bool wfp_extension = false;
+			if (extension(target)) if (!strcmp(extension(target), "wfp")) wfp_extension = true;
+			if (force_wfp) wfp_extension = true;
+
+			if (wfp_extension)
 				wfp_scan(target);
 			else 
 				ldb_scan(target, target);
+		}
 			
 		/* Close main JSON structure */
-		printf("}\n");
+		json_close();
 
 		if (target) free (target);
 	}

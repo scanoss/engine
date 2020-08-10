@@ -32,9 +32,10 @@
 #define SCAN_LOG "/tmp/scan.log"
 #define MAP_DUMP "/tmp/map.dump"
 
-char SCANOSS_VERSION[7] = "3.22";
+char SCANOSS_VERSION[7] = "3.23";
 
 typedef enum { none, component, file, snippet } matchtype;
+typedef enum {plain, cyclonedx, spdx} report_format;
 char *matchtypes[] = {"none", "component", "file", "snippet"};
 
 typedef struct keywords {
@@ -62,6 +63,7 @@ unsigned char *linemap;
 unsigned char *map;
 int map_rec_len;
 bool debug_on = false;
+int json_format = plain;
 
 /*  Parameters */
 int scan_limit=10;

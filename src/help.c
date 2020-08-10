@@ -30,9 +30,10 @@ Results are printed in STDOUT in JSON format\n\
 Syntax: scanoss [parameters] [TARGET]\n\
 \n\
 Configuration:\n\
--w       Treats TARGET as a .wfp file regardless of the actual file extension\n\
--s FILE  Use assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification\n\
--b FILE  Blacklist matches to assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format)\n\
+-w         Treats TARGET as a .wfp file regardless of the actual file extension\n\
+-s FILE    Use assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification\n\
+-b FILE    Blacklist matches to assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format)\n\
+-f FORMAT  Set output format as: plain(default)|spdx|cyclonedx\n\
 \n\
 Options:\n\
 -t  Tests engine performance\n\
