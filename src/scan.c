@@ -82,8 +82,12 @@ bool get_all_file_ids(uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 
     if (datalen)
     {
-		/* Save data and update dataln */
 		uint32_t size = uint32_read(record);
+
+		/* Leave if true (to end recordset fetch) if max_query_response is reached */
+		if (size + datalen + 4 >= max_query_response) return true;
+
+		/* Save data and update dataln */
 		memcpy(record + size + 4, data, datalen);
         uint32_write(record, size + datalen);
  	}
