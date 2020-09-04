@@ -35,7 +35,7 @@
 #include "help.c"
 #include "parse.c"
 
-void recurse_directory(char *root_path, char *name)
+void recurse_directory(char *name)
 {
 	DIR *dir;
 	struct dirent *entry;
@@ -52,9 +52,18 @@ void recurse_directory(char *root_path, char *name)
 		if (!strcmp(entry->d_name,".") || !strcmp(entry->d_name,"..")) continue;
 
 		if (entry->d_type == DT_DIR)
-				recurse_directory (root_path, path);
+				recurse_directory(path);
 
-		else if (is_file(path)) ldb_scan(root_path, path);
+		else if (is_file(path))
+		{
+			/* Scan file directly */
+			scan_data scan = scan_data_init();
+			strcpy(scan.file_path, path);
+
+			ldb_scan(&scan);
+
+			scan_data_free(scan);
+		}
 
 		free (path);
 	}
@@ -240,7 +249,7 @@ int main(int argc, char **argv)
 		json_open();
 
 		/* Scan directory */
-		if (isdir) recurse_directory(target, target);
+		if (isdir) recurse_directory(target);
 
 		/* Scan file */
 		else
@@ -250,9 +259,18 @@ int main(int argc, char **argv)
 			if (force_wfp) wfp_extension = true;
 
 			if (wfp_extension)
+				/* Scan wfp file */
 				wfp_scan(target);
-			else 
-				ldb_scan(target, target);
+			else
+			{
+				/* Scan file directly */
+				scan_data scan = scan_data_init();
+				strcpy(scan.file_path, target);
+
+				ldb_scan(&scan);
+
+				scan_data_free(scan);
+			}
 		}
 			
 		/* Close main JSON structure */

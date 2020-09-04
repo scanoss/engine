@@ -28,7 +28,7 @@ char *get_filename(char *md5)
 	hex_to_bin(md5, MD5_LEN * 2, md5bin);
 
 	/* Init record */
-	uint8_t *record = calloc(ldb_max_recln + 1, 1);
+	uint8_t *record = calloc(LDB_MAX_REC_LN + 1, 1);
 
 	/* Fetch first record */
 	ldb_get_first_record(oss_file, md5bin, (void *) record);
@@ -44,7 +44,7 @@ char *get_filename(char *md5)
 }
 
 /* Handler function for ldb_get_first_non_blacklisted */
-bool ldb_get_first_non_blacklisted(uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool ldb_get_first_non_blacklisted(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
     uint8_t *record = (uint8_t *) ptr;
 
@@ -68,7 +68,7 @@ void get_component_record(uint8_t *md5, uint8_t *record)
 	uint32_write(record, 0);
 
 	/* Fetch record */
-    ldb_fetch_recordset(oss_component, md5, ldb_get_first_non_blacklisted, (void *) record);
+    ldb_fetch_recordset(NULL, oss_component, md5, false, ldb_get_first_non_blacklisted, (void *) record);
 
 	/* Erase record length prefix from record */
 	uint32_t recln = uint32_read(record);

@@ -23,7 +23,7 @@
 /* Loads table configuration from .cfg file */
 bool ldb_load_cfg(char *db, char *table, struct ldb_recordset *rs)
 {
-	char *path = malloc(ldb_max_path);
+	char *path = malloc(LDB_MAX_PATH);
 
 	// Open configuration file
 	sprintf(path, "%s/%s/%s.cfg", ldb_root, db, table);
@@ -59,7 +59,7 @@ bool ldb_load_cfg(char *db, char *table, struct ldb_recordset *rs)
 struct ldb_table ldb_read_cfg(char *db_table)
 {
 	struct ldb_table tablecfg;
-	char *path = malloc(ldb_max_path);
+	char *path = malloc(LDB_MAX_PATH);
 	
 	// Open configuration file
 	sprintf(path, "%s/%s.cfg", ldb_root, db_table);
@@ -78,7 +78,7 @@ struct ldb_table ldb_read_cfg(char *db_table)
 		char *reclen = buffer + ldb_split_string(buffer, ',');
 
 		// Assign values to cfg structure
-		char tmp[1024] = "\0";
+		char tmp[LDB_MAX_PATH] = "\0";
 		strcpy(tmp, db_table);
 		char *tablename = tmp + ldb_split_string(tmp, '/');
 		strcpy(tablecfg.db, tmp);
@@ -95,7 +95,7 @@ struct ldb_table ldb_read_cfg(char *db_table)
 
 void ldb_write_cfg(char *db, char *table, int keylen, int reclen)
 {
-	char *path = malloc(ldb_max_path);
+	char *path = malloc(LDB_MAX_PATH);
 	sprintf(path, "%s/%s/%s.cfg", ldb_root, db, table);
 
 	FILE *cfg = fopen(path, "w");

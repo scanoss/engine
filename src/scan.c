@@ -20,6 +20,44 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+scan_data scan_data_init()
+{
+	scan_data scan;
+	scan.md5 = calloc (MD5_LEN,1);
+	scan.file_path = calloc(LDB_MAX_REC_LN, 1);
+	scan.file_size = calloc(LDB_MAX_REC_LN, 1);
+	scan.hashes = malloc(max_file_size);
+	scan.lines  = malloc(max_file_size);
+	scan.hash_count = 0;
+	scan.timer = 0;
+	scan.preload = false;
+	scan.total_lines = 0;
+	scan.matchmap = calloc(max_files * map_rec_len, 1);
+	scan.matchmap_ptr = 0;
+	scan.match_type = none;
+	scan.preload = false;
+	return scan;
+}
+
+void scan_data_reset(scan_data *scan)
+{
+	*scan->file_path = 0;
+	*scan->file_size = 0;
+	scan->hash_count = 0;
+	scan->total_lines = 0;
+	scan->matchmap_ptr = 0;
+}
+
+void scan_data_free(scan_data scan)
+{
+	free(scan.md5);
+	free(scan.file_path);
+	free(scan.file_size);
+	free(scan.hashes);
+	free(scan.lines);
+	free(scan.matchmap);
+}
+
 char *parse_sbom(char *filepath);
 
 /* Returns true if md5 is the md5sum for NULL */
@@ -34,25 +72,18 @@ bool zero_bytes (uint8_t *md5)
 }
 
 /* Performs component and file comparison */
-matchtype ldb_scan_file(uint8_t *fid, long *elapsed) {
+matchtype ldb_scan_file(uint8_t *fid) {
 			
 	scanlog("Checking entire file\n");
 	
 	if (zero_bytes(fid)) return none;
 	
-	/* Stopwatch starts */
-	struct timeval start; gettimeofday(&start, NULL);
-
 	matchtype match_type = none;
 
 	if (ldb_key_exists(oss_component, fid)) match_type = component;
 	else if (ldb_key_exists(oss_file, fid)) match_type = file;
 
-	/* Stopwatch stops */
-	*elapsed = elapsed_time(start);
-
 	return match_type;
-
 }
 
 void adjust_tolerance(uint32_t wfpcount)
@@ -76,7 +107,7 @@ void adjust_tolerance(uint32_t wfpcount)
 }
 
 /* Handler function to collect all file ids */
-bool get_all_file_ids(uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
     uint8_t *record = (uint8_t *) ptr;
 
@@ -98,20 +129,15 @@ bool get_all_file_ids(uint8_t *data, uint32_t datalen, int iteration, void *ptr)
    matchmap is a series of fixed-length records with the following structure:
    [MD5(16)][hits(2)][range1(4)]....[rangeN(4)][lastwfp(4)] */
 
-matchtype ldb_scan_snippets(uint8_t *matchmap, uint64_t *matchmap_ptr, uint32_t *wfps, uint32_t wfpcount, uint32_t* lines, long *elapsed) {
+matchtype ldb_scan_snippets(scan_data *scan) {
 
-	if (!wfpcount) return none;
-
+	if (!scan->hash_count) return none;
 	scanlog("Checking snippets\n");
 
-	adjust_tolerance(wfpcount);
-
-	/* Stopwatch starts */
-	struct timeval start; gettimeofday(&start, NULL);
+	adjust_tolerance(scan->hash_count);
 
 	uint32_t line = 0;
 	uint32_t prev_line = 1;
-	uint8_t *md5 = calloc (19, 1);
 	uint8_t *wfp_ptr;
 	uint8_t wfp[4];
 	uint32_t from = 0;
@@ -123,14 +149,14 @@ matchtype ldb_scan_snippets(uint8_t *matchmap, uint64_t *matchmap_ptr, uint32_t 
 	int consecutive = 0;
 
 	/* Limit snippets to be scanned  */
-	if (wfpcount > max_snippets_scanned) wfpcount = max_snippets_scanned;
+	if (scan->hash_count > max_snippets_scanned) scan->hash_count = max_snippets_scanned;
 
 	/* Compare each wfp */
-	for (long i = 0; i < wfpcount; i++)
+	for (long i = 0; i < scan->hash_count; i++)
 	{
 		/* Read line number and wfp */
-		line = lines[i];
-		wfp_ptr = (uint8_t*)&wfps[i];
+		line = scan->lines[i];
+		wfp_ptr = (uint8_t*)&scan->hashes[i];
 		wfp[0]=wfp_ptr[3];
 		wfp[1]=wfp_ptr[2];
 		wfp[2]=wfp_ptr[1];
@@ -138,16 +164,16 @@ matchtype ldb_scan_snippets(uint8_t *matchmap, uint64_t *matchmap_ptr, uint32_t 
 
 		/* Get all file IDs for given wfp */
 		uint32_write(all_md5, 0);
-		ldb_fetch_recordset(oss_wfp, wfp, get_all_file_ids, (void *) all_md5);
+		ldb_fetch_recordset(NULL, oss_wfp, wfp, false, get_all_file_ids, (void *) all_md5);
 		all_md5_ln = uint32_read(all_md5);
 		uint8_t *md5_records = all_md5 + 4;
 
-		if (all_md5_ln > (wfp_popularity_threshold*18)) all_md5_ln = 0;
+		if (all_md5_ln > (wfp_popularity_threshold * WFP_REC_LN)) all_md5_ln = 0;
 
 		/* If a snippet brings more than "score" result by "hits" times in a row, we skip "jump" snippets */
-		if (all_md5_ln > consecutive_score) 
+		if (all_md5_ln > consecutive_score)
 		{
-			if (++consecutive >= consecutive_hits) 
+			if (++consecutive >= consecutive_hits)
 			{
 				i += consecutive_jump;
 				consecutive = 0;
@@ -155,54 +181,54 @@ matchtype ldb_scan_snippets(uint8_t *matchmap, uint64_t *matchmap_ptr, uint32_t 
 		}
 
 		/* Recurse each record from the wfp table */
-		for (int n = 0; n < all_md5_ln; n += 18)
+		for (int n = 0; n < all_md5_ln; n += WFP_REC_LN)
 		{
 			/* Retrieve an MD5 from the recordset */
-			memcpy (md5, md5_records + n, 16);
+			memcpy(scan->md5, md5_records + n, MD5_LEN);
 
 			/* The md5 is followed by the line number where the wfp hash was seen */
-			uint8_t *oss_line = md5_records + n + 16;
+			uint8_t *oss_line = md5_records + n + MD5_LEN;
 
 			/* Check if md5 already exists in map */
 			long found = -1;
-			for (long t=0; t < *matchmap_ptr; t++)
+			for (long t=0; t < scan->matchmap_ptr; t++)
 			{
-				if (md5cmp(matchmap + t * map_rec_len, md5))
+				if (md5cmp(scan->matchmap + t * map_rec_len, scan->md5))
 				{
 					found = t;
 					break;
 				}
 			}
 
-			/* Map record: [MD5(16)][hits(2)][range1(6)]....[rangeN(6)][lastwfp(4)] 
+			/* Map record: [MD5(16)][hits(2)][range1(6)]....[rangeN(6)][lastwfp(4)]
 			   where range contains start(2) to(2) start_on_external_file(2) */
 			if (found < 0)
 			{
 				/* Not found. Add MD5 to map */
-				if (*(matchmap_ptr) >= max_files) break;
-				memcpy (matchmap + (*matchmap_ptr * map_rec_len), md5, 16);
-				found = *matchmap_ptr;
+				if (scan->matchmap_ptr >= max_files) break;
+				memcpy (scan->matchmap + (scan->matchmap_ptr * map_rec_len), scan->md5, MD5_LEN);
+				found = scan->matchmap_ptr;
 			}
 
 			/* Search for the right range */
 			uint32_t record_offset = found * map_rec_len;
-			uint32_t ranges_offset = record_offset + 18; // We skip MD5(16) + hits (2)
-			hits = uint16_read (matchmap + record_offset + 16);
+			uint32_t ranges_offset = record_offset + WFP_REC_LN; // We skip MD5(16) + hits (2)
+			hits = uint16_read(scan->matchmap + record_offset + MD5_LEN);
 			to = line;
-			uint8_t *lastwfp = matchmap + ranges_offset + 6 * MAX_MAP_RANGES;
+			uint8_t *lastwfp = scan->matchmap + ranges_offset + 6 * MAX_MAP_RANGES;
 
 			for (uint32_t t = 0; t < MAX_MAP_RANGES; t++)
 			{
-				from = uint16_read (matchmap + ranges_offset + 6 * t);
-				to   = uint16_read (matchmap + ranges_offset + 6 * t + 2);
+				from = uint16_read (scan->matchmap + ranges_offset + 6 * t);
+				to   = uint16_read (scan->matchmap + ranges_offset + 6 * t + 2);
 
 				/* New range */
 				if (from == 0 && to == 0)
 				{
 					/* Update from and to */
-					uint16_write (matchmap + ranges_offset + 6 * t, prev_line);
-					uint16_write (matchmap + ranges_offset + 6 * t + 2, line);
-					memcpy(matchmap + ranges_offset + 6 * t + 4, oss_line, 2);
+					uint16_write (scan->matchmap + ranges_offset + 6 * t, prev_line);
+					uint16_write (scan->matchmap + ranges_offset + 6 * t + 2, line);
+					memcpy(scan->matchmap + ranges_offset + 6 * t + 4, oss_line, 2);
 					break;
 				}
 
@@ -213,7 +239,7 @@ matchtype ldb_scan_snippets(uint8_t *matchmap, uint64_t *matchmap_ptr, uint32_t 
 				else if ((prev_line - to) < range_tolerance)
 				{
 					/* Update to */
-					uint16_write (matchmap + (ranges_offset + 6 * t + 2), line);
+					uint16_write (scan->matchmap + (ranges_offset + 6 * t + 2), line);
 					break;
 				}
 			}
@@ -221,24 +247,21 @@ matchtype ldb_scan_snippets(uint8_t *matchmap, uint64_t *matchmap_ptr, uint32_t 
 			/* Update hits count (if we are not hitting the same wfp again) */
 			if (to != line)
 			{	
-				if (memcmp(wfp,lastwfp,4)) 
+				if (memcmp(wfp,lastwfp,4))
 				{
-					uint16_write (matchmap + record_offset + 16, (uint16_t) (1 + hits));
+					uint16_write (scan->matchmap + record_offset + MD5_LEN, (uint16_t) (1 + hits));
 					memcpy(lastwfp,wfp,4);
 				}
 			}
-
-			if (found == *matchmap_ptr) (*matchmap_ptr)++;
+			if (found == scan->matchmap_ptr) scan->matchmap_ptr++;
 		}
 		prev_line = line;
 	}
 
 	free(all_md5);
-	free(md5);
 
-	/* Stopwatch stops */
-	*elapsed = elapsed_time(start);
-	if ((*matchmap_ptr) > 0) return snippet;
+	if (scan->matchmap_ptr) return snippet;
+	scanlog("Snippet scan has no matches\n");
 	return none;
 }
 
@@ -254,7 +277,7 @@ int ldb_matched_percent(matchtype match_type, int hits, unsigned int total) {
 /* Compiles list of line ranges, returning total number of hits (lines matched) */
 uint32_t compile_ranges(uint8_t *matchmap_matching, char *ranges, char *oss_ranges) {
 
-	if (uint16_read(matchmap_matching + 16) < 2) return 0;
+	if (uint16_read(matchmap_matching + MD5_LEN) < 2) return 0;
 
 	int hits = 0;
 	ranges [0] = 0;
@@ -292,7 +315,7 @@ bool assets_match(match_data match)
 
 	bool found = false;	
 
-	char *asset = calloc(ldb_max_recln, 1);
+	char *asset = calloc(LDB_MAX_REC_LN, 1);
 	sprintf(asset, "%s,", match.component);
 
 	if (strstr(sbom, asset)) found = true;
@@ -307,8 +330,8 @@ bool blacklist_match(uint8_t *component_record)
 
 	bool found = false;	
 
-	char *asset = calloc(ldb_max_recln, 1);
-	extract_csv(asset, (char *) component_record, 2, ldb_max_recln);
+	char *asset = calloc(LDB_MAX_REC_LN, 1);
+	extract_csv(asset, (char *) component_record, 2, LDB_MAX_REC_LN);
 	strcat(asset, ",");
 
 	if (strcasestr(blacklisted_assets, asset)) found = true;
@@ -323,15 +346,15 @@ match_data match_init()
 {
 	match_data match;
 	*match.lines=0;
-	*match.vendor=0;        
+	*match.vendor=0;
 	*match.component=0;
-	*match.version=0;       
-	*match.latest_version=0;        
+	*match.version=0;
+	*match.latest_version=0;
 	*match.lines=0;
 	*match.oss_lines=0;
-	*match.url=0;   
-	*match.file=0;  
-	*match.matched=0;       
+	*match.url=0;
+	*match.file=0;
+	*match.matched=0;
 	*match.size=0;
 	match.selected = false;
 	return match;
@@ -380,7 +403,7 @@ bool add_match(match_data match, match_data *matches, bool component_match)
 	/* Verify if metadata is complete */
 	if (!*match.vendor || !*match.component || !*match.url || !*match.version || !*match.file || !*match.size)
 	{
-		scanlog("Metadata is incomplete: %s,%s,%s,%s,%s,%s\n",match.vendor,match.component,match.version,match.size,match.url,match.file);  
+		scanlog("Metadata is incomplete: %s,%s,%s,%s,%s,%s\n",match.vendor,match.component,match.version,match.size,match.url,match.file);
 		return false;
 	}
 
@@ -394,7 +417,7 @@ bool add_match(match_data match, match_data *matches, bool component_match)
 	int n = 0;
 
 	/* Count total number of current matches */
-	for (n = 0; n < scan_limit; n++) 
+	for (n = 0; n < scan_limit; n++)
 	{
 		if (!*matches[n].component) break;
 	}
@@ -437,8 +460,8 @@ bool add_match(match_data match, match_data *matches, bool component_match)
 		}
 
 		else
-		{ 
-			scanlog("Match cannot be added\n");  
+		{
+			scanlog("Match cannot be added\n");
 			return false;
 		}
 	}
@@ -446,7 +469,7 @@ bool add_match(match_data match, match_data *matches, bool component_match)
 	return true;
 }
 
-bool handle_match_record(uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool handle_match_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen) return false;
 	data[datalen] = 0;
@@ -469,17 +492,17 @@ bool handle_match_record(uint8_t *data, uint32_t datalen, int iteration, void *p
 	else
 	{
 		/* If component does not exist (orphan file) skip it */
-		if (!ldb_key_exists(oss_component, data)) 
+		if (!ldb_key_exists(oss_component, data))
 		{
 			scanlog("Orphan file\n");
 			return false;
 		}
 
-		component = calloc(ldb_max_recln, 1);
+		component = calloc(LDB_MAX_REC_LN, 1);
 		get_component_record(data, component);
 		if (*component)
 		{
-			match = fill_match(data + 16, component);
+			match = fill_match(data + MD5_LEN, component);
 		}
 		else scanlog("No component data found\n");
 	}
@@ -512,9 +535,9 @@ struct match_data *prefill_match(matchtype match_type, char *lines, char *oss_li
 	return matches;
 }
 
-match_data *load_matches(uint8_t *matchmap, uint64_t matchmap_ptr, uint8_t *matching_md5, matchtype match_type, uint32_t total_lines)
+match_data *load_matches(scan_data *scan, uint8_t *matching_md5)
 {
-	if (!matching_md5) 
+	if (!matching_md5)
 	{
 		scanlog("No matching file id\n");
 		return NULL;
@@ -532,10 +555,10 @@ match_data *load_matches(uint8_t *matchmap, uint64_t matchmap_ptr, uint8_t *matc
 	int hits = 100;
 	int matched_percent = 100;
 
-	if (match_type == snippet) 
+	if (scan->match_type == snippet)
 	{
 		hits = compile_ranges(matching_md5, line_ranges, oss_ranges);
-		float percent = (hits * 100) / total_lines;
+		float percent = (hits * 100) / scan->total_lines;
 		if (hits) matched_percent = floor(percent);
 		scanlog("%d hits left after compiling ranges\n", hits);
 	}
@@ -547,14 +570,14 @@ match_data *load_matches(uint8_t *matchmap, uint64_t matchmap_ptr, uint8_t *matc
 		return NULL;
 	}
 
-	struct match_data *matches = prefill_match(match_type, line_ranges, oss_ranges, matched_percent);
+	struct match_data *matches = prefill_match(scan->match_type, line_ranges, oss_ranges, matched_percent);
 	free(oss_ranges);
 	free(line_ranges);
 
 	uint8_t *rs = calloc (max_query_response, 1);
 
 	/* Get first record to determine if a file/component was found for the matching_md5 */
-	ldb_get_first_record((match_type == component) ? oss_component : oss_file, matching_md5, (void *) rs);
+	ldb_get_first_record((scan->match_type == component) ? oss_component : oss_file, matching_md5, (void *) rs);
 
 	uint32_t bytes_read = uint32_read(rs);
 	uint32_write(rs, 0);
@@ -563,14 +586,14 @@ match_data *load_matches(uint8_t *matchmap, uint64_t matchmap_ptr, uint8_t *matc
 	uint32_t records;
 
 	/* Snippet matches and no files found? Search straight for a full component */
-	if (!bytes_read && match_type == snippet)
+	if (!bytes_read && scan->match_type == snippet)
 	{
-		records = ldb_fetch_recordset(oss_component, matching_md5, handle_match_record, (void *) matches);
+		records = ldb_fetch_recordset(NULL, oss_component, matching_md5, false, handle_match_record, (void *) matches);
 		scanlog("Searching for direct component match results in %u records\n", records);
 	}
 	else
 	{
-		records = ldb_fetch_recordset((match_type == component) ? oss_component : oss_file, matching_md5, handle_match_record, (void *) matches);
+		records = ldb_fetch_recordset(NULL, (scan->match_type == component) ? oss_component : oss_file, matching_md5, false, handle_match_record, (void *) matches);
 	}
 
 	free(rs);
@@ -590,7 +613,7 @@ uint8_t *biggest_snippet(uint8_t *matchmap, uint64_t matchmap_ptr)
 	int most_hits = 0;
 	int hits = 0;
 	for (int i = 0; i < matchmap_ptr; i++) {
-		hits = uint16_read (matchmap + i * map_rec_len + 16);
+		hits = uint16_read (matchmap + i * map_rec_len + MD5_LEN);
 		if (hits >= most_hits) {
 			most_hits = hits;
 			out = matchmap + i * map_rec_len;
@@ -599,171 +622,94 @@ uint8_t *biggest_snippet(uint8_t *matchmap, uint64_t matchmap_ptr)
 	return out;
 }
 
-void compile_matches(uint8_t *md5, char *path, uint8_t *matchmap, uint64_t matchmap_ptr, matchtype match_type, uint32_t total_lines, long elapsed) {
-
-	uint8_t *matching_md5 = md5;
+void compile_matches(scan_data *scan)
+{
+	uint8_t *matching_md5 = scan->md5;
 
 	/* Search for biggest snippet */
-	if (match_type == snippet)
+	if (scan->match_type == snippet)
 	{
-		matching_md5 = biggest_snippet(matchmap, matchmap_ptr);
-		scanlog("%ld matches in snippet map\n", matchmap_ptr);
+		matching_md5 = biggest_snippet(scan->matchmap, scan->matchmap_ptr);
+		scanlog("%ld matches in snippet map\n", scan->matchmap_ptr);
 	}
 
 	/* Dump match map */
-	if (debug_on) map_dump(matchmap, matchmap_ptr);
+	if (debug_on) map_dump(scan->matchmap, scan->matchmap_ptr);
 
 	/* Gather and load match metadata */
-	match_data *matches = load_matches(matchmap, matchmap_ptr, matching_md5, match_type, total_lines);
+	match_data *matches = load_matches(scan, matching_md5);
 
-	scanlog("Match type: %s\n", matchtypes[match_type]);
+	scanlog("Match type: %s\n", matchtypes[scan->match_type]);
 
 	/* The latter could result in no matches */
-	if (!matches) match_type = none;
+	if (!matches) scan->match_type = none;
 
 	/* Perform post scan intelligence */
-	if (match_type != none) post_scan(matches);
+	if (scan->match_type != none) post_scan(matches);
 
-	output_matches_json(matches, match_type, md5, path, elapsed);
+	output_matches_json(matches, scan);
 
 	if (matches) free(matches);
-
 }
-
 
 /* Scans a wfp file with winnowing fingerprints */
 int wfp_scan(char *path)
 {
-	// Count files
 	char * line = NULL;
 	size_t len = 0;
 	ssize_t lineln;
-	FILE * fp;
-	fp = fopen (path, "r");
+	uint8_t *rec = calloc (LDB_MAX_REC_LN, 1);
+
+	scan_data scan = scan_data_init();
+	scan.preload = true;
+
+	/* Open WFP file */
+	FILE *fp = fopen (path, "r");
 	if (fp == NULL)
 	{
 		fprintf (stdout, "E017 Cannot open target");
 		return EXIT_FAILURE;
 	}
-	int total_files = 0;
-	while ((lineln = getline (&line, &len, fp)) != -1)
-		if (!strncmp(line,"file=",5)) total_files++;
+	bool read_data = false;
 
-	fclose(fp);
-
-	// Scan files
-	fp = fopen (path, "r");
-	if (fp == NULL)
-	{
-		fprintf (stdout, "E017 Cannot open target");
-		return EXIT_FAILURE;
-	}
-
-	uint8_t *md5 = calloc (16,1);
-	uint8_t *rec = calloc (ldb_max_recln, 1);
-	char *file_path = calloc(ldb_max_recln, 1);
-	char *file_size = calloc(ldb_max_recln, 1);
-
-	uint32_t *hashes = malloc(max_file_size);
-	uint32_t hashcount = 0;
-	uint32_t *lines  = malloc(max_file_size);
-
-	bool skip_snippets = true;
-	uint32_t file_counter = 0;
-	bool no_match = false;
-	bool matches_returned = false;
-	long filesize = 0;
-
-	/* Stopwatch starts */
-	struct timeval start; gettimeofday(&start, NULL);
-
+	/* Read line by line */
 	while ((lineln = getline (&line, &len, fp)) != -1)
 	{
 		trim(line);
 
 		bool is_component = (memcmp(line, "component=", 4) == 0);
 		bool is_file = (memcmp(line, "file=", 5) == 0);
-		long elapsed = 0;
+		bool is_wfp = (!is_file && !is_component);
 
-		/*  We arrive to a file or component and have hashes to scan from the previous file */
-		if (is_component || is_file)
-		{
-			if (hashcount && (filesize < max_file_size))
-			{
+		/* Scan previous file */
+		if ((is_component || is_file) && read_data) ldb_scan(&scan);
 
-				/* Scan collected snippets */
-				uint8_t *matchmap    = calloc (max_files * map_rec_len, 1);
-				uint64_t matchmap_ptr = 0;
-				uint32_t total_lines = lines[hashcount - 1];
-				matchtype match_type = ldb_scan_snippets(matchmap, &matchmap_ptr, hashes, hashcount, lines, &elapsed);
-				hashcount = 0;
-
-				/* Stopwatch stops */
-				elapsed = elapsed_time(start);
-
-				/* Compile matches */
-				compile_matches(md5, file_path, matchmap, matchmap_ptr, match_type, total_lines, elapsed);
-				matches_returned = true;
-				free(matchmap);
-
-				/* Stopwatch restarts */
-				gettimeofday(&start, NULL);
-			}
-			else if (file_counter > 0 && !skip_snippets)
-			{
-				output_matches_json(NULL, 0, md5, file_path, elapsed);
-				matches_returned = true;
-			}
-
-			if (is_file && matches_returned) matches_returned = true;
-
-			no_match = false;
-		} 
-
+		/* Parse file information with format: file=MD5(32),file_size,file_path */
 		if (is_file)
 		{
-			skip_snippets = false;
 
-			/* Parse file information */
-			char *hexmd5 = calloc(33,1);
-			memcpy(hexmd5, line+5, 32);
-			hex_to_bin(hexmd5, 32, md5);
-			strcpy((char *) rec, line + 5 + 32 + 1);
+			scan_data_reset(&scan);
 
-			/* Extract fields from file record */
-			extract_csv(file_size, (char *)rec, 1, ldb_max_recln);
-			extract_csv(file_path, (char *)rec, 2, ldb_max_recln);
-			filesize = atoi(file_size);
+			const int tagln = 5; // len of 'file='
+
+			/* Get file MD5 */
+			char *hexmd5 = calloc(MD5_LEN * 2 + 1, 1);
+			memcpy(hexmd5, line + tagln, MD5_LEN * 2);
+			hex_to_bin(hexmd5, MD5_LEN * 2, scan.md5);
 			free(hexmd5);
 
-			matchtype match_type = none;
+			/* Extract fields from file record */
+			strcpy((char *)rec, line + tagln + (MD5_LEN * 2) + 1);
+			extract_csv(scan.file_size, (char *)rec, 1, LDB_MAX_REC_LN);
+			extract_csv(scan.file_path, (char *)rec, 2, LDB_MAX_REC_LN);
 
-			long elapsed = 0;
-			/* Scan full file */
-			if (match_type == none) match_type = ldb_scan_file(md5, &elapsed);
-
-			if (match_type != none)
-			{
-				/* Stopwatch stops */
-				elapsed = elapsed_time(start);
-
-				/* Compile matches */
-				compile_matches(md5, file_path, NULL, 0, match_type, 0, elapsed);
-				skip_snippets = true;
-
-				/* Stopwatch restarts */
-				gettimeofday(&start, NULL);
-			}
-
-			else no_match = true;
-
-			if (!no_match) matches_returned = true;
-
-			hashcount = 0;
+			read_data = true;
 		}
 
-		/* Save hash to memory */
-		else if (!skip_snippets)
+		/* Save hash/es to memory. Parse file information with format:
+			linenr=wfp(6)[,wfp(6)]+ */
+
+		if (is_wfp && (scan.hash_count < MAX_HASHES_READ))
 		{
 			/* Split string by the equal and commas */
 			int line_ln = strlen(line);
@@ -779,51 +725,28 @@ int wfp_scan(char *path)
 			while (*hexhash) {
 
 				/* Convert hash to binary */
-				hex_to_bin(hexhash, 8, (uint8_t *)&hashes[hashcount]);
-				uint32_reverse((uint8_t *)&hashes[hashcount]);
+				hex_to_bin(hexhash, 8, (uint8_t *)&scan.hashes[scan.hash_count]);
+				uint32_reverse((uint8_t *)&scan.hashes[scan.hash_count]);
 
 				/* Save line number */
-				lines[hashcount++] = line_nr;
-				if (hashcount >= 65535)
-				{
-					skip_snippets = true;
-					break;
-				}
+				scan.lines[scan.hash_count] = line_nr;
 
 				/* Move pointer to the next hash */
 				hexhash += strlen(hexhash) + 1;
+
+				scan.hash_count++;
 			}
 		}
 	}
 
-	/* Snippet scan for the last file, if needed */
-	long elapsed = 0;
-	if (hashcount && *md5) 
-	{
-		uint8_t *matchmap = calloc(max_files * map_rec_len, 1);
-		uint64_t matchmap_ptr = 0;
-		uint32_t total_lines = lines[hashcount - 1];
-		matchtype match_type = ldb_scan_snippets(matchmap, &matchmap_ptr, hashes, hashcount, lines, &elapsed);
-
-		/* Stopwatch stops */
-		elapsed = elapsed_time(start);
-
-		/* Compile matches */
-		compile_matches(md5, file_path, matchmap, matchmap_ptr, match_type, total_lines, elapsed);
-
-		free(matchmap);
-	}
-	else if (file_counter > 0 && !skip_snippets) output_matches_json(NULL, 0, md5, file_path, elapsed);
+	/* Scan the last file */
+	if (read_data) ldb_scan(&scan);
 
 	fclose(fp);
 	if (line) free(line);
-	free(md5);
 	free(rec);
-	free(file_path);
-	free(file_size);
-	free(hashes);
-	free(lines);
 
+	scan_data_free(scan);
 	return EXIT_SUCCESS;
 }
 
@@ -851,78 +774,59 @@ bool skip_snippets(char *src, uint64_t srcln)
 	return true;
 }
 
-/* Scans a file and returns JSON matches via STDOUT */
-bool ldb_scan(char *root_path, char *path)
+/* Scans a file and returns JSON matches via STDOUT
+	scan structure can be already preloaded (.wfp scan)
+	otherwise, it will be loaded here (scanning a physical file) */
+bool ldb_scan(scan_data *scan)
 {
+	scan->matchmap_ptr = 0;
+	scan->match_type = none;
+	scan->timer = microseconds_now();
 
-	uint64_t matchmap_ptr = 0;
-	matchtype match_type = none;
-	char *fullpath = malloc (max_path);
-	long elapsed = 0;
-
-	/* Stopwatch starts */
-	struct timeval start; gettimeofday(&start, NULL);
-
-	strcpy (fullpath, path);
-
-	/* Check if file is readable and if it is under CFG_MAXFILELEN */
-	uint64_t file_len = file_size (fullpath);
+	/* Get file length */
+	uint64_t file_size;
+	if (scan->preload) file_size = atoi(scan->file_size);
+	else file_size = get_file_size(scan->file_path);
 
 	/* Error reading file */
-	if (file_len < 0) ldb_error ("Cannot access file");
+	if (file_size < 0) ldb_error("Cannot access file");
 
-	/* Initialize matchmap */
-	uint8_t *matchmap    = calloc (max_files * map_rec_len, 1);
-
-	/* Calculate MD5 hash */
-	uint8_t *md5 = file_md5(fullpath);
-	uint32_t total_lines = 0;
+	/* Calculate MD5 hash (if not already preloaded) */
+	if (!scan->preload) file_md5(scan->file_path, scan->md5);
 
 	/* Ignore <=1 byte */
-	if (file_len > 1)
+	if (file_size > 1)
 	{
-
 		/* Scan full file */
-		match_type = ldb_scan_file(md5, &elapsed);
+		scan->match_type = ldb_scan_file(scan->md5);
 
 		/* If no match, scan snippets */
-		if (match_type == none)
+		if (scan->match_type == none)
 		{
-			char *src = calloc (max_file_size, 1);
-
-			/* Read file into memory */
-			if (file_len < max_file_size) read_file (src, fullpath, 0);
-
-			if (!skip_snippets(src, file_len))
+			/* Load snippets into scan data */
+			if (!scan->preload)
 			{
-				/* Calculate snippet wfps and scan them */
-				uint32_t *wfps = malloc(max_file_size);
-				uint32_t *lines  = malloc(max_file_size);
-				uint32_t wfpcount = winnowing (src, wfps, lines, max_file_size);
+				/* Read file into memory */
+				char *src = calloc(max_file_size, 1);
+				if (file_size < max_file_size) read_file(src, scan->file_path, 0);
 
-				if (wfpcount)
+				/* Determine if file is to skip snippet search */
+				if (!skip_snippets(src, file_size))
 				{
-					match_type = ldb_scan_snippets(matchmap, &matchmap_ptr, wfps, wfpcount, lines, &elapsed);
-					total_lines = lines[wfpcount - 1];
+					/* Load wfps into scan structure */
+					scan->hash_count = winnowing(src, scan->hashes, scan->lines, max_file_size);
+					if (scan->hash_count) scan->total_lines = scan->lines[scan->hash_count - 1];
 				}
-
-				free(wfps);
-				free(lines);
+				free(src);
 			}
-			else scanlog("File skipped\n");
 
-			free(src);
+			/* Perform snippet scan */
+			if (scan->total_lines) scan->match_type = ldb_scan_snippets(scan);
+
+			else scanlog("File skipped\n");
 		}
 	}
-
-	/* Stopwatch stops */
-	elapsed = elapsed_time(start);
-
-	compile_matches(md5, fullpath, matchmap, matchmap_ptr, match_type, total_lines, elapsed);
-
-	free (md5);
-	free (matchmap);
-	free (fullpath);
+	compile_matches(scan);
 
 	return true;
 }

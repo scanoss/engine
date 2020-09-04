@@ -21,16 +21,15 @@
  */
 
 #define MD5_LEN 16
+#define WFP_REC_LN 18
 #define MAX_ARGLN 512       // Max command line argument length
 #define MAX_MAP_RANGES 10
-
-/* Slow queries */
-const int SLOW_QUERY_LIMIT_IN_USEC = 2000000;
-const char SLOW_QUERY_LOG[] = "/tmp/scanoss_slow_query.log";
+#define MAX_HASHES_READ 65535
+#define SLOW_QUERY_LIMIT_IN_USEC 2000000
 
 /* Skip snippets */
-const int   SKIP_SNIPPETS_IF_FILE_BIGGER = 1024 * 1024 * 4;
-const int   SKIP_SNIPPETS_IF_1ST_LINE_LONGER = 1000;
+#define SKIP_SNIPPETS_IF_FILE_BIGGER (1024 * 1024 * 4)
+#define SKIP_SNIPPETS_IF_1ST_LINE_LONGER 1000
 const char *SKIP_SNIPPETS_IF_STARTS_WITH[] = {"{", "<?xml", "<html"};
 
 const uint32_t  wsi_per_line = 8;

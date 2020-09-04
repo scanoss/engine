@@ -38,9 +38,13 @@ void ldb_hexprint(uint8_t *data, uint32_t len, uint8_t width)
 		}
 }
 
-bool ldb_hexprint16(uint8_t *data, uint32_t len, int iteration, void *ptr)
+bool ldb_hexprint16(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t len, int iteration, void *ptr)
 {
+    for (int i = 0; i < LDB_KEY_LN; i++) printf("%02x", key[i]);
+    for (int i = 0; i < subkey_ln; i++)  printf("%02x", subkey[i]);
+    printf("\n");
 	ldb_hexprint(data, len, 16);
+    printf("\n");
 	return false;
 }
 

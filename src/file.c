@@ -38,7 +38,7 @@ bool is_dir(char *path)
 	return false;
 }
 
-uint64_t file_size(char *path)
+uint64_t get_file_size(char *path)
 {
 	uint64_t length = 0;
 	FILE *file = fopen(path, "rb");
@@ -51,7 +51,7 @@ uint64_t file_size(char *path)
 	return length;
 }
 
-uint8_t *file_md5(char *filepath)
+void file_md5(char *filepath, uint8_t *md5_result)
 {
 
 	/* Read file contents into buffer */
@@ -60,15 +60,12 @@ uint8_t *file_md5(char *filepath)
 	long filesize = ftell(in);
 	fseek(in, 0L, SEEK_SET);
 	uint8_t *buffer = malloc(filesize);
-	if (!fread(buffer, filesize, 1, in)) printf("Warning: cannot open file %s\n", filepath);
+    if (!fread(buffer, filesize, 1, in)) fprintf(stderr, "Warning: cannot open file %s\n", filepath);
 	fclose(in);
 
 	/* Calculate MD5sum */
-	uint8_t * md5_result = malloc(MD5_DIGEST_LENGTH);
 	MD5(buffer, filesize, md5_result);
-
 	free (buffer);
-	return md5_result;
 }
 
 void read_file(char *out, char *path, uint64_t maxlen)
