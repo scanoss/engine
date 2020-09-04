@@ -20,24 +20,40 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
+#include <ctype.h>
+#include <dirent.h>
+#include <locale.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
+
+#define LDB_VERSION "2.04"
+#define LDB_MAX_PATH 1024
 #define LDB_MAX_NAME 64
+#define LDB_MAX_RECORDS 500000 // Max number of records per list
+#define LDB_MAX_REC_LN 65535
+#define LDB_KEY_LN 4 // Main LDB key:  32-bit
+#define LDB_PTR_LN 5 // Node pointers: 40-bit
+#define LDB_MAP_SIZE (256 * 256 * 256 * 5) // Size of sector map
+#define LDB_MAX_NODE_DATA_LN (4 * 1048576) // Maximum length for a data record in a node (4Mb)
+#define LDB_MAX_NODE_LN ((256 * 256 * 18) - 1)
+#define LDB_MAX_COMMAND_SIZE (64 * 1024)   // Maximum length for an LDB command statement
+#define COLLATE_REPORT_SEC 5 // Report interval for collate status
 #ifndef _LDB_GLOBAL_
 #define _LDB_GLOBAL_
 
-extern const char LDB_VERSION[];
 extern char ldb_root[];
 extern char ldb_lock_path[];
-extern const uint8_t  ldb_key_ln;
-extern const uint8_t  ldb_ptr_ln;
-extern const uint64_t ldb_sector_map_size;
-extern const uint32_t ldb_max_recln;
-extern const uint32_t ldb_max_dataln;
-extern const uint32_t ldb_max_nodeln;
-extern const uint32_t ldb_max_path;
-extern const uint32_t ldb_max_command_size;
 extern char *ldb_commands[];
 extern int ldb_commands_count;
-extern int ldb_max_list_record_length;
+extern int ldb_cmp_width;
 
 typedef enum { 
 HELP, 
@@ -50,8 +66,8 @@ INSERT_HEX,
 SELECT_ASCII,
 SELECT, 
 DELETE,
-DROP_DATABASE,
-DROP_TABLE,
+COLLATE,
+MERGE,
 VERSION,
 UNLINK_LIST
 } commandtype;
@@ -89,6 +105,22 @@ struct ldb_recordset
     uint8_t ts_ln;      // 2 or 4 (16-bit or 32-bit reserved for total sector size)
 };
 
+struct ldb_collate_data
+{
+    void *data;
+    long data_ptr;
+	int table_key_ln;
+	int table_rec_ln;
+	int max_rec_ln;
+	int  rec_width;
+	long rec_count;
+	FILE *out_sector;
+	struct ldb_table out_table;
+	uint8_t last_key[LDB_KEY_LN];
+	time_t last_report;
+	bool merge;
+};
+
 #endif
 
 bool ldb_file_exists(char *path);
@@ -115,7 +147,7 @@ uint64_t ldb_list_pointer(FILE *ldb_sector, uint8_t *key);
 uint64_t ldb_last_node_pointer(FILE *ldb_sector, uint64_t list_pointer);
 void ldb_update_list_pointers(FILE *ldb_sector, uint8_t *key, uint64_t list, uint64_t new_node);
 void ldb_node_write (struct ldb_table table, FILE *ldb_sector, uint8_t *key, uint8_t *data, uint32_t dataln, uint16_t records);
-uint64_t ldb_node_read (struct ldb_table table, FILE *ldb_sector, uint64_t ptr, uint8_t *key, uint32_t *bytes_read, uint8_t *out, int max_node_size);
+uint64_t ldb_node_read (uint8_t *sector, struct ldb_table table, FILE *ldb_sector, uint64_t ptr, uint8_t *key, uint32_t *bytes_read, uint8_t **out, int max_node_size);
 char *ldb_sector_path (struct ldb_table table, uint8_t *key, char *mode, bool tmp);
 FILE *ldb_open (struct ldb_table table, uint8_t *key, char *mode);
 void ldb_node_unlink (struct ldb_table table, uint8_t *key);
@@ -153,10 +185,12 @@ void ldb_list_unlink(FILE *ldb_sector, uint8_t *key);
 void ldb_command_unlink_list(char *command);
 uint8_t *ldb_load_sector (struct ldb_table table, uint8_t *key);
 bool ldb_validate_node(uint8_t *node, uint32_t node_size, int subkey_ln);
-uint64_t ldb_node_extract (struct ldb_table table, uint8_t *ldb_sector, uint64_t ptr, uint32_t key, uint32_t *node_size, uint8_t **node, int max_node_size);
 bool uint32_is_zero(uint8_t *n);
 bool ldb_key_exists(struct ldb_table table, uint8_t *key);
 bool ldb_key_in_recordset(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);
-uint32_t ldb_fetch_recordset(struct ldb_table table, uint8_t* key, bool (*ldb_record_handler) (uint8_t *, uint32_t, int, void *), void *void_ptr);
-bool ldb_asciiprint(uint8_t *data, uint32_t size, int iteration, void *ptr);
-bool ldb_hexprint16(uint8_t *data, uint32_t size, int iteration, void *ptr);
+uint32_t ldb_fetch_recordset(uint8_t *sector, struct ldb_table table, uint8_t* key, bool skip_subkey, bool (*ldb_record_handler) (uint8_t *, uint8_t *, int, uint8_t *, uint32_t, int, void *), void *void_ptr);
+bool ldb_asciiprint(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t size, int iteration, void *ptr);
+bool ldb_hexprint16(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t size, int iteration, void *ptr);
+void ldb_collate(struct ldb_table table, struct ldb_table tmp_table, int max_rec_ln, bool merge);
+void ldb_sector_update(struct ldb_table table, uint8_t *key);
+void ldb_sector_erase(struct ldb_table table, uint8_t *key);

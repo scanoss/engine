@@ -35,7 +35,7 @@
 
 void ldb_command_normalize(char *text)
 {
-	char *tmp = calloc(ldb_max_command_size, 1);
+	char *tmp = calloc(LDB_MAX_COMMAND_SIZE, 1);
 
 	for (int i = 0; i < strlen(text); i++)
 	{
@@ -102,12 +102,88 @@ commandtype ldb_syntax_check(char *command, int *command_nr, int *word_nr)
 	return false;
 }
 
+void ldb_command_collate(char *command)
+{
+	/* Lock DB */
+	ldb_lock();
+
+	/* Extract values from command */
+	char *dbtable = ldb_extract_word(2, command);
+	char *max_ln  = ldb_extract_word(4, command);
+	int max = atoi(max_ln);
+	free(max_ln);
+
+	if (ldb_valid_table(dbtable))
+	{
+		/* Assembly ldb table structure */
+		struct ldb_table ldbtable = ldb_read_cfg(dbtable);
+		struct ldb_table tmptable = ldb_read_cfg(dbtable);
+		tmptable.tmp = true;
+		tmptable.key_ln = LDB_KEY_LN;
+
+		if (ldbtable.rec_ln && ldbtable.rec_ln != max)
+			printf("E076 Max record length should equal fixed record length (%d)\n", ldbtable.rec_ln);
+		else if (max < ldbtable.key_ln)
+			printf("E076 Max record length cannot be smaller than table key\n");
+		else
+			ldb_collate(ldbtable, tmptable, max, false);
+	}
+
+	/* Unlock DB */
+	ldb_unlock ();
+
+	/* Free memory */
+	free(dbtable);
+}
+
+void ldb_command_merge(char *command)
+{
+	/* Lock DB */
+	ldb_lock();
+
+	/* Extract values from command */
+	char *dbtable = ldb_extract_word(2, command);
+	char *totable = ldb_extract_word(4, command);
+	char *max_ln  = ldb_extract_word(6, command);
+	int max = atoi(max_ln);
+	free(max_ln);
+
+	if (ldb_valid_table(dbtable))
+	{
+		/* Assembly ldb table structure */
+		struct ldb_table ldbtable = ldb_read_cfg(dbtable);
+		struct ldb_table outtable = ldb_read_cfg(totable);
+
+		if (ldbtable.rec_ln && ldbtable.rec_ln != max)
+			printf("E076 Max record length should equal fixed record length (%d)\n", ldbtable.rec_ln);
+		else if (max < ldbtable.key_ln)
+			printf("E076 Max record length cannot be smaller than table key\n");
+		else if (ldbtable.key_ln != outtable.key_ln)
+			printf("E076 Merge requires tables with equal key length\n");
+		else if (ldbtable.rec_ln != outtable.rec_ln)
+			printf("E076 Merge requires tables with equal record types\n");
+		else
+		{
+			outtable.tmp = false;
+			outtable.key_ln = LDB_KEY_LN;
+			ldb_collate(ldbtable, outtable, max, true);
+		}
+	}
+
+	/* Unlock DB */
+	ldb_unlock ();
+
+	/* Free memory */
+	free(dbtable);
+	free(totable);
+}
+
 void ldb_command_unlink_list(char *command)
 {
 	/* Extract values from command */
 	char *dbtable = ldb_extract_word(4, command);
 	char *key   = ldb_extract_word(6, command);
-	uint8_t *keybin = malloc(ldb_max_nodeln);
+	uint8_t *keybin = malloc(LDB_MAX_NODE_LN);
 
 	if (ldb_valid_table(dbtable))
 	{
@@ -144,8 +220,8 @@ void ldb_command_insert(char *command, commandtype type)
 	char *dbtable = ldb_extract_word(3, command);	
 	char *key   = ldb_extract_word(5, command);	
 	char *data  = ldb_extract_word(7, command);	
-	uint8_t *keybin = malloc(ldb_max_nodeln);
-	uint8_t *databin = malloc(ldb_max_nodeln);
+	uint8_t *keybin = malloc(LDB_MAX_NODE_LN);
+	uint8_t *databin = malloc(LDB_MAX_NODE_LN);
 	uint32_t dataln;
 
 	if (ldb_valid_table(dbtable))
@@ -217,8 +293,8 @@ void ldb_command_select(char *command, bool ascii)
 	/* Extract values from command */
 	char *dbtable = ldb_extract_word(3, command);	
 	char *key   = ldb_extract_word(5, command);
-	uint8_t *keybin = malloc(ldb_max_nodeln);
-	char *rs = malloc(ldb_max_dataln);
+	uint8_t *keybin = malloc(LDB_MAX_NODE_LN);
+	char *rs = malloc(LDB_MAX_NODE_DATA_LN);
 
 	if (ldb_valid_table(dbtable))
 	{
@@ -234,14 +310,14 @@ void ldb_command_select(char *command, bool ascii)
 			/* Assembly ldb table structure */
 			struct ldb_table ldbtable = ldb_read_cfg(dbtable);
 
-			/* Verify that provided key is not longer than the table key_ln */
-			if (key_ln > ldbtable.key_ln)
-				printf("E073 Provided key is longer than table key (%d)\n", ldbtable.key_ln);
+			/* Verify that provided key matches table key_ln (or main LDB_KEY_LEN) */
+			if ((key_ln != ldbtable.key_ln) && (key_ln != LDB_KEY_LN))
+				printf("E073 Provided key length is invalid\n");
 
 			else if (ascii)
-				ldb_fetch_recordset(ldbtable, keybin, ldb_asciiprint, NULL);
+				ldb_fetch_recordset(NULL, ldbtable, keybin, (key_ln == 4), ldb_asciiprint, NULL);
 			else
-				ldb_fetch_recordset(ldbtable, keybin, ldb_hexprint16, NULL);
+				ldb_fetch_recordset(NULL, ldbtable, keybin, (key_ln == 4), ldb_hexprint16, NULL);
 		}
 	}
 	/* Free memory */
@@ -254,7 +330,7 @@ void ldb_command_select(char *command, bool ascii)
 void ldb_command_create_database(char *command)
 {
 	char *database = ldb_extract_word(3, command);	
-	char *path = malloc(ldb_max_path);
+	char *path = malloc(LDB_MAX_PATH);
 	sprintf(path, "%s/%s", ldb_root, database);
 
 	if (!ldb_valid_name(database))
@@ -277,7 +353,7 @@ void ldb_command_show_databases()
 		while ((ent = readdir (dir)) != NULL) {
 			if (ent->d_name[0] != '.')
 			{
-				char *path = malloc(ldb_max_path);
+				char *path = malloc(LDB_MAX_PATH);
 				sprintf(path, "%s/%s", ldb_root, ent->d_name);
 				if (ldb_dir_exists(path)) printf ("%s\n", ent->d_name);
 			}
@@ -294,7 +370,7 @@ void ldb_command_show_tables(char *command)
 	char *dbname = ldb_extract_word(4, command);
 
 	// Verify that db/table path is not too long
-	if (strlen(dbname) + strlen(ldb_root) + 1 >= ldb_max_path)
+	if (strlen(dbname) + strlen(ldb_root) + 1 >= LDB_MAX_PATH)
 		printf("E061 db/table name is too long\n");
 
 	else if (!ldb_valid_name(dbname))
@@ -304,14 +380,14 @@ void ldb_command_show_tables(char *command)
 	{	
 		DIR *dir;
 		struct dirent *ent;
-		char *path = malloc(ldb_max_path);
+		char *path = malloc(LDB_MAX_PATH);
 		sprintf(path, "%s/%s", ldb_root, dbname);
 
 		if ((dir = opendir(path)) != NULL) {
 			while ((ent = readdir(dir)) != NULL) {
 				if (ent->d_name[0] != '.')
 				{
-					char *tpath = malloc(ldb_max_path);
+					char *tpath = malloc(LDB_MAX_PATH);
 					sprintf(tpath, "%s/%s", path, ent->d_name);
 					if (ldb_dir_exists(tpath)) printf("%s\n", ent->d_name); 
 					free(tpath);
@@ -327,16 +403,6 @@ void ldb_command_show_tables(char *command)
 		free(path);
 	}
 	free(dbname);
-}
-
-int sort_cmp(const void * a, const void * b) 
-{
-	for (int i=0; i<ldb_max_list_record_length; i++)
-	{
-		if (*(uint8_t*)(a+i) > *(uint8_t*)(b+i)) return 1;
-		if (*(uint8_t*)(a+i) < *(uint8_t*)(b+i)) return -1;
-	}
-	return 0;
 }
 
 /* Case insensitive string comparison */

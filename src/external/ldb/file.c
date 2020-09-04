@@ -71,7 +71,7 @@ bool ldb_check_root()
 /* Checks if a db/table already exists */
 bool ldb_table_exists(char *db, char*table)
 {
-	char *path = malloc(ldb_max_path);
+	char *path = malloc(LDB_MAX_PATH);
 	sprintf(path, "%s/%s/%s", ldb_root, db, table);
 	bool out = ldb_dir_exists(path);
 	free(path);
@@ -82,7 +82,7 @@ bool ldb_table_exists(char *db, char*table)
 
 bool ldb_database_exists(char *db)
 {
-	char *path = malloc(ldb_max_path);
+	char *path = malloc(LDB_MAX_PATH);
 	sprintf(path, "%s/%s", ldb_root, db);
 	bool out = ldb_dir_exists(path);
 	free(path);

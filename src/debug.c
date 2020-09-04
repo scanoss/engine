@@ -80,6 +80,12 @@ long elapsed_time(struct timeval start)
 	return (end.tv_sec*(int)1e6+end.tv_usec) - (start.tv_sec*(int)1e6+start.tv_usec);
 }
 
+long microseconds_now()
+{
+	struct timeval now; gettimeofday(&now, NULL);
+	return (now.tv_sec*(int)1e6+now.tv_usec);
+}
+
 void hexdump(FILE *map, uint8_t *in, uint64_t len, char *text, bool lf, uint32_t cut) 
 {
 	uint8_t *out = malloc (len*3+1);
@@ -136,13 +142,9 @@ void map_dump(uint8_t *mmap, uint64_t mmap_ptr)
 
 void scan_benchmark()
 {
-
-	/* Get timestamp */
-	struct timeval stop, start;
-	gettimeofday(&start, NULL);
-
 	uint32_t total_hashes = 100; // Number of hashes per pseudo file
 	uint32_t total_files = 100; // Number of pseudo hashes to scan
+	double elapsed = microseconds_now();
 
 	/* Init random number generator */
 	time_t t;
@@ -150,36 +152,25 @@ void scan_benchmark()
 
 	for (int f = 0; f < total_files ; f++)
 	{
-
-		/* Initialize matchmap */
-		uint8_t *matchmap    = calloc (max_files * map_rec_len, 1);
-		uint64_t matchmap_ptr = 0;
+		scan_data scan = scan_data_init();
+		scan.preload = true;
 
 		progress ("Scanning: ", f + 1, total_files, false);
 
-		/* Fill up pseudo snippet hashes and scan them */
-		uint32_t *hashes = malloc(total_hashes*4);
-		uint32_t *lines  = malloc(total_hashes*4);
-
+		/* Fill up pseudo snippet hashes */
 		for (uint32_t i = 0; i < total_hashes; i++)
 		{
-			lines[i] = i;
-			hashes[i] = rand() % 256 + (rand() % 256) * 256 + (rand() % 256) * 256 * 256 + (rand() % 256) * 256 * 256 * 256;
+			scan.lines[i] = i;
+			scan.hashes[i] = rand() % 256 + (rand() % 256) * 256 + (rand() % 256) * 256 * 256 + (rand() % 256) * 256 * 256 * 256;
 		}
 
-		long elapsed = 0;
-		ldb_scan_snippets(matchmap, &matchmap_ptr, hashes, total_hashes, lines, &elapsed);
-
-		free(hashes);
-		free(lines);
-
-		free(matchmap);
+		ldb_scan_snippets(&scan);
+		scan_data_free(scan);
 	}
 	printf("Analysis complete\n");
 
 	/* Calculate elapsed time */
-	gettimeofday(&stop, NULL);
-	double elapsed = (double) (stop.tv_sec - start.tv_sec) * 1000 + (double) (stop.tv_usec - start.tv_usec) / 1000;
+	elapsed = microseconds_now() - elapsed;
 
 	printf ("Test executed in %.0fms\n", elapsed);
 	printf ("Average file scanning time is %.0fms\n", elapsed / total_files);

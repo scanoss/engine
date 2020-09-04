@@ -33,6 +33,7 @@
 #include <unistd.h>
 
 #include "ldb.h"
+#include "collate.c"
 #include "config.c"
 #include "pointer.c"
 #include "file.c"
@@ -43,20 +44,11 @@
 #include "sector.c"
 #include "string.c"
 
-const char LDB_VERSION[] = "2.02";
 
 /* Global */
 char ldb_root[] = "/var/lib/ldb";
 char ldb_lock_path[] = "/dev/shm/ldb.lock";
-const uint8_t  ldb_key_ln = 4; // Main LDB key:  32-bit
-const uint8_t  ldb_ptr_ln = 5; // Node pointers: 40-bit
-const uint64_t ldb_sector_map_size = 256 * 256 * 256 * 5;
-const uint32_t ldb_max_recln  = 65535;
-const uint32_t ldb_max_dataln  = 4 * 1048576; // Maximum length for a data record in a node (4Mb)
-const uint32_t ldb_max_nodeln  = (256 * 256 * 18) - 1;
-const uint32_t ldb_max_path = 1024; // Maximum length for a path
-const uint32_t ldb_max_command_size = 64 * 1024; // Maximum length for an LDB command statement
-int ldb_max_list_record_length = 1024; // Maximum record length in the sort list
+int ldb_cmp_width = 0;
 
 char *ldb_commands[] = 
 {
@@ -70,12 +62,10 @@ char *ldb_commands[] =
 	"select from {ascii} key {hex} ascii",
 	"select from {ascii} key {hex}",
 	"delete from {ascii} key {hex}",
-	"drop database {ascii}",
-	"drop table {ascii}",
+	"collate {ascii} max {ascii}",
+	"merge {ascii} into {ascii} max {ascii}",
 	"version",
-	"unlink list from {ascii} key {hex}",
-	"sort table {ascii}",
-	"dump table {ascii} hex {ascii}"
+	"unlink list from {ascii} key {hex}"
 };
 int ldb_commands_count = sizeof(ldb_commands) / sizeof(ldb_commands[0]);
 

@@ -29,21 +29,41 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define SCAN_LOG "/tmp/scan.log"
-#define MAP_DUMP "/tmp/map.dump"
+#define SCAN_LOG "/tmp/scanoss_scan.log"
+#define MAP_DUMP "/tmp/scanoss_map.dump"
+#define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-char SCANOSS_VERSION[7] = "3.23";
+char SCANOSS_VERSION[7] = "3.24";
+int file_counter = 0;
 
 typedef enum { none, component, file, snippet } matchtype;
 typedef enum {plain, cyclonedx, spdx} report_format;
 char *matchtypes[] = {"none", "component", "file", "snippet"};
 
-typedef struct keywords {
+typedef struct keywords
+{
 	int  count;
 	char word[128];
 } keywords;
 
-typedef struct match_data {
+typedef struct scan_data
+{
+	uint8_t *md5;
+	char *file_path;
+	char *file_size;
+	uint32_t *hashes;
+	uint32_t *lines;
+	uint32_t hash_count;
+	long timer;
+	bool preload;
+	int total_lines;
+	matchtype match_type;
+	uint8_t *matchmap;
+	uint64_t matchmap_ptr;
+} scan_data;
+
+typedef struct match_data
+{
 	matchtype type;
 	char lines[128];
 	char oss_lines[128];
@@ -82,14 +102,15 @@ char *sbom = NULL;
 char *blacklisted_assets = NULL;
 
 /* Prototype declarations */
-matchtype ldb_scan_snippets(uint8_t *matchmap, uint64_t *matchmap_ptr, uint32_t *hashes, uint32_t hashcount, uint32_t* lines, long *elapsed);
-bool key_find(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);
 int wfp_scan(char *path);
-bool ldb_scan(char *root_path, char *path);
-void recurse_directory (char *root_path, char *name);
+bool ldb_scan(scan_data *scan);
+matchtype ldb_scan_snippets(scan_data *scan_ptr);
+bool key_find(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);
+void recurse_directory (char *path);
 match_data match_init();
 void extract_csv(char *out, char *in, int n, long limit);
 bool blacklist_match(uint8_t *component_record);
 void extract_csv(char *out, char *in, int n, long limit);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
-
+scan_data scan_data_init();
+void scan_data_free(scan_data scan);

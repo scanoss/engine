@@ -35,7 +35,7 @@ uint64_t ldb_map_pointer_pos(uint8_t *key)
 	k[1]=key[2];
 	k[2]=key[1];
 
-	return out * ldb_ptr_ln;
+	return out * LDB_PTR_LN;
 }
 
 /* Return pointer to the beginning of the given list */
@@ -61,7 +61,7 @@ void ldb_update_list_pointers(FILE *ldb_sector, uint8_t *key, uint64_t list, uin
 	{
 		fseeko64(ldb_sector, ldb_map_pointer_pos(key), SEEK_SET);
 		ldb_uint40_write(ldb_sector, new_node);
-		if (new_node < ldb_sector_map_size) ldb_error("E054 Data corruption");
+		if (new_node < LDB_MAP_SIZE) ldb_error("E054 Data corruption");
 	}
 
 	/* Otherwise we update the list */
@@ -72,9 +72,9 @@ void ldb_update_list_pointers(FILE *ldb_sector, uint8_t *key, uint64_t list, uin
 		fseeko64(ldb_sector, list, SEEK_SET);
 		uint64_t last_node = ldb_uint40_read(ldb_sector);
 
-		if (last_node < ldb_sector_map_size) {
-			printf("\nMap size is %lu\n", ldb_sector_map_size);
-			printf ("\nData corruption on list %lu for key %02x%02x%02x%02x with last node %lu < %lu\n", list, key[0], key[1], key[2], key[3], last_node, ldb_sector_map_size);
+		if (last_node < LDB_MAP_SIZE) {
+			printf("\nMap size is %u\n", LDB_MAP_SIZE);
+			printf ("\nData corruption on list %lu for key %02x%02x%02x%02x with last node %lu < %u\n", list, key[0], key[1], key[2], key[3], last_node, LDB_MAP_SIZE);
 			ldb_error("E055 Data corruption");
 		}
 

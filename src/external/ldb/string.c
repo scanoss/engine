@@ -59,8 +59,13 @@ bool ldb_valid_name(char *str)
 	return true;
 }
 
-bool ldb_asciiprint(uint8_t *data, uint32_t size, int iteration, void *ptr)
+bool ldb_asciiprint(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t size, int iteration, void *ptr)
 {
+	for (int i = 0; i < LDB_KEY_LN; i++) printf("%02x", key[i]);
+	for (int i = 0; i < subkey_ln; i++)  printf("%02x", subkey[i]);
+
+	printf(": ");
+
 	for (int i = 0; i < size; i++)
 		if (data[i] >= 32 && data[i] <= 126)
 			fwrite(data + i, 1, 1, stdout);
@@ -98,7 +103,7 @@ bool ldb_valid_table(char *table)
 	}
 
 	// Verify that db/table path is not too long
-	if (strlen(table) + strlen(ldb_root) + 1 >= ldb_max_path)
+	if (strlen(table) + strlen(ldb_root) + 1 >= LDB_MAX_PATH)
 	{
 		printf("E061 db/table name is too long\n");
 		return false;
@@ -106,11 +111,11 @@ bool ldb_valid_table(char *table)
 
 	bool out = true;
 
-	char *db_path    = malloc(ldb_max_path);
+	char *db_path    = malloc(LDB_MAX_PATH);
 	sprintf(db_path, "%s/%s", ldb_root, table);
 	db_path[strlen(ldb_root) + 1 + s] = 0;
 
-	char *table_path    = malloc(ldb_max_path);
+	char *table_path    = malloc(LDB_MAX_PATH);
 	sprintf(table_path, "%s/%s", ldb_root, table);
 
 	// Verify that db exists
@@ -147,7 +152,7 @@ int ldb_word_count(char *text)
 char *ldb_extract_word(int n, char *wordlist)
 {
 	int word_start = 0;
-	char *out = calloc(ldb_max_command_size, 1);
+	char *out = calloc(LDB_MAX_COMMAND_SIZE + 1, 1);
 
 	// Look for word start
 	if (n>1)
