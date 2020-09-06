@@ -299,7 +299,6 @@ void print_json_match_plain(char *md5_hex, match_data match, matchtype match_typ
 	printf("      \"url\": \"%s\",\n", match.url);
 	printf("      \"file\": \"%s\",\n", match.file);
 	printf("      \"size\": \"%s\",\n", match.size);
-	printf("      \"count\": \"%d\",\n", file_counter);
 	printf("      \"dependencies\": ");
 	print_dependencies(pair_md5);
 	printf("      \"licenses\": ");
