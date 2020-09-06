@@ -25,6 +25,7 @@
 #define MAX_ARGLN 512       // Max command line argument length
 #define MAX_MAP_RANGES 10
 #define MAX_HASHES_READ 65535
+#define MAX_FILES 10000     // Max number of files evaluated in snippet matching
 #define SLOW_QUERY_LIMIT_IN_USEC 2000000
 
 /* Skip snippets */
@@ -37,7 +38,6 @@ const uint64_t  max_record_len     = 256 * 256;
 const uint32_t  max_records        = 10000;
 const uint32_t  max_lines          = 65536;
 const uint32_t  max_files_per_line = 500;
-const uint32_t  max_files          = 50000;
 const uint32_t  max_query_response = 8 * 1048576;
 const uint32_t  max_username       = 50;
 const uint 	    max_variable_len   = 4096;
@@ -45,12 +45,15 @@ const int       max_field_name     = 50;
 const int       max_snippets_scanned = 2500;
 const int		max_path = 1024;
 const int		max_file_size = 4 * 1048576;
-const uint32_t wfp_popularity_threshold = 25000 ; // wfp hash with more hits than this will be ignored. This should never be higher than max_files;
+const uint32_t wfp_popularity_threshold = 25000 ; // wfp hash with more hits than this will be ignored. This should never be higher than MAX_FILES;
 
 const uint32_t detect_maxread = 10000; 	// Max # bytes to read from file or licenses
 const uint32_t detect_threshold = 80;   // Match score threshold under which match is ignored
 const uint32_t detect_minwords	 = 2;	// Min # words to group for comparison
 const uint32_t detect_minbytes	 = 20;	// Min # bytes to group for comparison
+
+/* Map record:[MD5(16)][hits(2)][range1(4)]....[rangeN(4)][lastwfp(4)] */
+int map_rec_len = 16 + 2 + (MAX_MAP_RANGES * 6) + 4;
 
 /* During snippet scanning, when a wfp produces a score higher than consecutive_score by consecutive_hits in
    a row, the scan will skip consecutive_jump snippets */

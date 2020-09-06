@@ -154,6 +154,9 @@ void scan_benchmark()
 	{
 		scan_data scan = scan_data_init();
 		scan.preload = true;
+		memcpy(scan.md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
+		strcpy(scan.file_path, "pseudo_file");
+		strcpy(scan.file_size, "1024");
 
 		progress ("Scanning: ", f + 1, total_files, false);
 
@@ -163,6 +166,7 @@ void scan_benchmark()
 			scan.lines[i] = i;
 			scan.hashes[i] = rand() % 256 + (rand() % 256) * 256 + (rand() % 256) * 256 * 256 + (rand() % 256) * 256 * 256 * 256;
 		}
+		scan.hash_count = total_hashes;
 
 		ldb_scan_snippets(&scan);
 		scan_data_free(scan);
@@ -170,11 +174,11 @@ void scan_benchmark()
 	printf("Analysis complete\n");
 
 	/* Calculate elapsed time */
-	elapsed = microseconds_now() - elapsed;
+	int elapsed_ms = (microseconds_now() - elapsed) / 1000;
 
-	printf ("Test executed in %.0fms\n", elapsed);
-	printf ("Average file scanning time is %.0fms\n", elapsed / total_files);
-	printf ("Performance is %.0f fingerprints per second\n", ((total_files * total_hashes) / elapsed) * 1000);
+	printf ("Test executed in %dms\n", elapsed_ms);
+	printf ("Average file scanning time is %dms\n", elapsed_ms / total_files);
+	printf ("Performance is %d fingerprints per second\n", (total_files * total_hashes * 1000) / elapsed_ms);
 
 }
 

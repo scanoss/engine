@@ -237,10 +237,6 @@ int main(int argc, char **argv)
 
 		char *target = calloc (max_record_len, 1);
 
-		/* Map record:[MD5(16)][hits(2)][range1(4)]....[rangeN(4)][lastwfp(4)] */
-		map_rec_len = 16 + 2 + (MAX_MAP_RANGES * 6) + 4;
-		map = malloc (max_files * map_rec_len);
-
 		/* Remove trailing backslashes from target (if any) */
 		strcpy (target, argv[argc-1]);
 		for (int i=strlen(target)-1; i>=0; i--) if (target[i]=='/') target[i]=0; else break;
@@ -281,7 +277,6 @@ int main(int argc, char **argv)
 
 	if (sbom) free (sbom);
 	if (blacklisted_assets)  free (blacklisted_assets);
-	if (map) free (map);
 
 	return EXIT_SUCCESS;
 }

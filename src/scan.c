@@ -32,7 +32,7 @@ scan_data scan_data_init()
 	scan.timer = 0;
 	scan.preload = false;
 	scan.total_lines = 0;
-	scan.matchmap = calloc(max_files * map_rec_len, 1);
+	scan.matchmap = calloc(MAX_FILES * map_rec_len, 1);
 	scan.matchmap_ptr = 0;
 	scan.match_type = none;
 	scan.preload = false;
@@ -110,13 +110,15 @@ void adjust_tolerance(uint32_t wfpcount)
 bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
     uint8_t *record = (uint8_t *) ptr;
-
     if (datalen)
     {
 		uint32_t size = uint32_read(record);
 
-		/* Leave if true (to end recordset fetch) if max_query_response is reached */
+		/* End recordset fetch if max_query_response is reached */
 		if (size + datalen + 4 >= max_query_response) return true;
+
+		/* End recordeet fetch if MAX_FILES are reached for the snippet */
+		if ((WFP_REC_LN * MAX_FILES) <= (size + datalen)) return true;
 
 		/* Save data and update dataln */
 		memcpy(record + size + 4, data, datalen);
@@ -205,8 +207,8 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 			if (found < 0)
 			{
 				/* Not found. Add MD5 to map */
-				if (scan->matchmap_ptr >= max_files) break;
-				memcpy (scan->matchmap + (scan->matchmap_ptr * map_rec_len), scan->md5, MD5_LEN);
+				if (scan->matchmap_ptr >= MAX_FILES) break;
+				memcpy(scan->matchmap + (scan->matchmap_ptr * map_rec_len), scan->md5, MD5_LEN);
 				found = scan->matchmap_ptr;
 			}
 
