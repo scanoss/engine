@@ -33,7 +33,7 @@
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-char SCANOSS_VERSION[7] = "3.25";
+char SCANOSS_VERSION[7] = "3.26";
 
 typedef enum { none, component, file, snippet } matchtype;
 typedef enum {plain, cyclonedx, spdx} report_format;
@@ -113,3 +113,4 @@ void extract_csv(char *out, char *in, int n, long limit);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
 scan_data scan_data_init();
 void scan_data_free(scan_data scan);
+int count_matches(match_data *matches);

@@ -398,6 +398,13 @@ match_data fill_match(uint8_t *file_record, uint8_t *component_record)
 	return match;
 }
 
+int count_matches(match_data *matches)
+{
+	int c = 0;
+	for (int i = 0; i < scan_limit && *matches[i].component; i++) c++;
+	return c;
+}
+
 /* Adds match to matches. Returns false if matches are full */		
 bool add_match(match_data match, match_data *matches, bool component_match)
 {
@@ -416,13 +423,7 @@ bool add_match(match_data match, match_data *matches, bool component_match)
 		return false;
 	}
 
-	int n = 0;
-
-	/* Count total number of current matches */
-	for (n = 0; n < scan_limit; n++)
-	{
-		if (!*matches[n].component) break;
-	}
+	int n = count_matches(matches);
 
 	/* Attempt to place match among existing ones */
 	bool placed = false;
@@ -480,6 +481,9 @@ bool handle_match_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	if (skip_file_path(data, datalen)) return false;
 
 	struct match_data *matches = (struct match_data*) ptr;
+
+	/* Exit if we have enough matches */
+	if (count_matches(matches) >= scan_limit) return true;
 
 	struct match_data match = match_init();
 
@@ -639,7 +643,9 @@ void compile_matches(scan_data *scan)
 	if (debug_on) map_dump(scan->matchmap, scan->matchmap_ptr);
 
 	/* Gather and load match metadata */
-	match_data *matches = load_matches(scan, matching_md5);
+	match_data *matches = NULL;
+
+	if (scan->match_type != none) matches = load_matches(scan, matching_md5);
 
 	scanlog("Match type: %s\n", matchtypes[scan->match_type]);
 
