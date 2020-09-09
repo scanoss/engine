@@ -22,6 +22,12 @@
 
 double progress_timer = 0;
 
+long microseconds_now()
+{
+	struct timeval now; gettimeofday(&now, NULL);
+	return (now.tv_sec*(int)1e6+now.tv_usec);
+}
+
 void scanlog(const char *fmt, ...)
 {
 	if (!debug_on) return;
@@ -61,29 +67,18 @@ void progress(char *prompt, size_t count, size_t max, bool percent)
 	fflush(stdout);
 }
 
-void slow_query_log(char *md5_hex, char *filename, long elapsed)
+void slow_query_log(scan_data scan)
 {
+	long elapsed = microseconds_now() - scan.timer;
 	if (elapsed > SLOW_QUERY_LIMIT_IN_USEC)
 	{
 		scanlog("SLOW QUERY!\n");
 		char data[1024] = "\0";
-		sprintf(data, "%lu, %.6fs, %s\n", (unsigned long)time(NULL), (double) elapsed / 1000000, filename);
+		sprintf(data, "%lu, %.6fs, %s\n", (unsigned long)time(NULL), (double) elapsed / 1000000, scan.file_path);
 		FILE *log = fopen(SLOW_QUERY_LOG, "a");
 		if (!fprintf(log, data)) printf("Warning: Cannot log slow query\n");
 		fclose(log);
 	}
-}
-
-long elapsed_time(struct timeval start)
-{
-	struct timeval end; gettimeofday(&end, NULL);
-	return (end.tv_sec*(int)1e6+end.tv_usec) - (start.tv_sec*(int)1e6+start.tv_usec);
-}
-
-long microseconds_now()
-{
-	struct timeval now; gettimeofday(&now, NULL);
-	return (now.tv_sec*(int)1e6+now.tv_usec);
 }
 
 void hexdump(FILE *map, uint8_t *in, uint64_t len, char *text, bool lf, uint32_t cut) 

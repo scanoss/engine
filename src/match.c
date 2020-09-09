@@ -36,12 +36,11 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	if (!matches && json_format !=plain) return;
 
 	int match_counter = 0;
-	char *md5_hex = bin_to_hex(scan.md5, 16);
 
 	flip_slashes(scan.file_path);
 
 	/* Log slow query, if needed */
-	slow_query_log(md5_hex, scan.file_path, microseconds_now() - scan.timer);
+	slow_query_log(scan);
 
 	/* Print comma separator */
 	if (!first_file) printf("  ,\n");
@@ -61,7 +60,7 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 			if (matches[i].selected)
 			{
 				if (match_counter++) printf("  ,\n");
-				print_json_match(md5_hex, matches[i], scan.match_type, scan.timer);
+				print_json_match(scan, matches[i]);
 				selected = true;
 			}
 		}
@@ -72,7 +71,7 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 			if (!matches[i].selected) if (strcmp(matches[i].version, matches[i].latest_version))
 			{
 				if (match_counter++) printf("  ,\n");
-				print_json_match(md5_hex, matches[i], scan.match_type, scan.timer);
+				print_json_match(scan, matches[i]);
 			}
 		}
 		/* Print matches without version ranges */
@@ -81,16 +80,15 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 			if (!matches[i].selected) if (!strcmp(matches[i].version, matches[i].latest_version))
 			{
 				if (match_counter++) printf("  ,\n");
-				print_json_match(md5_hex, matches[i], scan.match_type, scan.timer);
+				print_json_match(scan, matches[i]);
 			}
 		}
 	}
 
 	/* Print no match */
-	if (!match_counter) print_json_nomatch(md5_hex, scan.timer);
+	if (!match_counter) print_json_nomatch(scan);
 
 	json_close_file(scan.file_path);
-	free(md5_hex);
 }
 
 
