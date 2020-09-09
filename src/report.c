@@ -39,6 +39,13 @@ void print_datestamp()
 	free(stamp);
 }
 
+char *md5_hex(uint8_t *md5)
+{
+	char *out =  calloc(2 * MD5_LEN + 1, 1);
+	for (int i = 0; i < MD5_LEN; i++) sprintf(out + strlen(out), "%02x", md5[i]);
+	return out;
+}
+
 void print_serial_number()
 {
 	/* Get hostname and time stamp */
@@ -50,7 +57,7 @@ void print_serial_number()
 	/* Calculate serial number */
 	uint8_t md5sum[16]="\0";
 	MD5((uint8_t *) stamp, strlen(stamp), md5sum);
-	char *md5hex = bin_to_hex(md5sum, 16);
+	char *md5hex = md5_hex(md5sum);
 
 	/* Print serial number */
 	printf("  \"serialNumber\": \"scanoss:%s-%s\",\n",hostname, md5hex);
@@ -179,15 +186,16 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	extract_csv(source, (char *) data, 1, LDB_MAX_REC_LN);
 	extract_csv(license,(char *) data, 2, LDB_MAX_REC_LN);
 
-	printable_only(source);
+	int lic_src = atoi(source);
+
 	printable_only(license);
 
-	if (*source && *license)
+	if (*license && (lic_src <= (sizeof(license_sources)/sizeof(license_sources[0]))))
 	{
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");
 		printf("          \"name\": \"%s\",\n", license);
-		printf("          \"source\": \"%s\"\n", source);
+		printf("          \"source\": \"%s\"\n", license_sources[atoi(source)]);
 		printf("        }");
 	}
 
@@ -197,7 +205,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	return false;
 }
 
-void print_licenses(uint8_t *key)
+void print_licenses(uint8_t *pair, match_data match)
 {
 	printf("[");
 
@@ -213,7 +221,13 @@ void print_licenses(uint8_t *key)
 	uint32_t records = 0;
 
 	if (ldb_table_exists("oss", "license"))
-		records = ldb_fetch_recordset(NULL, table, key, false, print_licenses_item, NULL);
+	{
+		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_licenses_item, NULL);
+		if (!records)
+			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_licenses_item, NULL);
+		if (!records)
+			records = ldb_fetch_recordset(NULL, table, pair, false, print_licenses_item, NULL);
+	}
 
 	if (records) printf("\n      ");
 	printf("],\n");
@@ -249,7 +263,7 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	return false;
 }
 
-void print_dependencies(uint8_t *key)
+void print_dependencies(uint8_t *pair, uint8_t *key)
 {
 	printf("[");
 
@@ -265,15 +279,19 @@ void print_dependencies(uint8_t *key)
 	uint32_t records = 0;
 
 	if (ldb_table_exists("oss", "dependency"))
+	{
 		records = ldb_fetch_recordset(NULL, table, key, false, print_dependencies_item, NULL);
+		if (!records) 
+			records = ldb_fetch_recordset(NULL, table, pair, false, print_dependencies_item, NULL);
+	}
 
 	if (records) printf("\n      ");
 	printf("],\n");
 }
 
-void print_json_nomatch(char *md5_hex, long timer)
+void print_json_nomatch(scan_data scan)
 {
-	double elapsed = (microseconds_now() - timer);
+	double elapsed = (microseconds_now() - scan.timer);
 	printf("    {\n");
 	printf("      \"id\": \"none\",\n");
 	printf("      \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
@@ -281,14 +299,14 @@ void print_json_nomatch(char *md5_hex, long timer)
 	fflush(stdout);
 }
 
-void print_json_match_plain(char *md5_hex, match_data match, matchtype match_type, long timer)
+void print_json_match_plain(scan_data scan, match_data match)
 {
 	/* Calculate component/vendor md5 for license and dependency query */
 	uint8_t pair_md5[16]="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 	component_vendor_md5(match.vendor, match.component, pair_md5);
 
 	printf("    {\n");
-	printf("      \"id\": \"%s\",\n", matchtypes[match_type]);
+	printf("      \"id\": \"%s\",\n", matchtypes[match.type]);
 	printf("      \"lines\": \"%s\",\n", match.lines);
 	printf("      \"oss_lines\": \"%s\",\n", match.oss_lines);
 	printf("      \"matched\": \"%s\",\n", match.matched);
@@ -296,22 +314,34 @@ void print_json_match_plain(char *md5_hex, match_data match, matchtype match_typ
 	printf("      \"component\": \"%s\",\n", match.component);
 	printf("      \"version\": \"%s\",\n", match.version);
 	printf("      \"latest\": \"%s\",\n", match.latest_version);
+
+	if (debug_on)
+	{
+		char *component_id = md5_hex(match.component_md5);
+		printf("      \"component_id\": \"%s\",\n", component_id);
+		free(component_id);
+
+		char *file_id = md5_hex(match.file_md5);
+		printf("      \"file_id\": \"%s\",\n", file_id);
+		free(file_id);
+	}
+
 	printf("      \"url\": \"%s\",\n", match.url);
 	printf("      \"file\": \"%s\",\n", match.file);
 	printf("      \"size\": \"%s\",\n", match.size);
 	printf("      \"dependencies\": ");
-	print_dependencies(pair_md5);
+	print_dependencies(pair_md5, match.component_md5);
 	printf("      \"licenses\": ");
-	print_licenses(pair_md5);
+	print_licenses(pair_md5, match);
 
-	double elapsed = microseconds_now() - timer;
+	double elapsed = microseconds_now() - scan.timer;
 	printf("      \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
 
 	printf("    }\n");
 	fflush(stdout);
 }
 
-void print_json_match_cyclonedx(char *md5_hex, match_data match, matchtype match_type)
+void print_json_match_cyclonedx(scan_data scan, match_data match)
 {
 	printf("    {\n");
 	printf("      \"type\": \"file\",\n");
@@ -327,7 +357,9 @@ void print_json_match_cyclonedx(char *md5_hex, match_data match, matchtype match
 	printf("      \"hashes\": [\n");
 	printf("        {\n");
 	printf("          \"alg\": \"MD5\",\n");
-	printf("          \"content\": \"%s\"\n", md5_hex);
+	char *md5 = md5_hex(scan.md5);
+	printf("          \"content\": \"%s\"\n", md5);
+	free(md5);
 	printf("        }\n");
 	printf("      ],\n");
 	printf("      \"licenses\": [],\n");
@@ -342,18 +374,18 @@ void print_json_match_cyclonedx(char *md5_hex, match_data match, matchtype match
 	fflush(stdout);
 }
 
-void print_json_match_spdx(char *md5_hex, match_data match, matchtype match_type)
+void print_json_match_spdx(scan_data scan, match_data match)
 {
 	printf("        \"Package\": {\n");
 	printf("          \"name\": \"%s\",\n", match.component);
 
-    if (strcmp(match.version, match.latest_version))
+	if (strcmp(match.version, match.latest_version))
 	{
-        printf("          \"versionInfo\": \"%s-%s\",\n", match.version, match.latest_version);
+		printf("          \"versionInfo\": \"%s-%s\",\n", match.version, match.latest_version);
 	}
-    else
+	else
 	{
-        printf("          \"versionInfo\": \"%s\",\n", match.version);
+		printf("          \"versionInfo\": \"%s\",\n", match.version);
 	}
 
 	printf("          \"supplier\": \"%s\",\n", match.vendor);
@@ -361,7 +393,11 @@ void print_json_match_spdx(char *md5_hex, match_data match, matchtype match_type
 	printf("          \"checksum\": [\n");
 	printf("            {\n");
 	printf("              \"algorithm\": \"checksumAlgorithm_md5\",\n");
-	printf("              \"value\": \"%s\"\n", md5_hex);
+
+	char *md5 = md5_hex(scan.md5);
+	printf("              \"value\": \"%s\"\n", md5);
+	free(md5);
+
 	printf("            }\n");
 	printf("          ],\n");
 	printf("          \"description\": \"Detected by SCANOSS Inventorying Engine.\",\n");
@@ -372,21 +408,21 @@ void print_json_match_spdx(char *md5_hex, match_data match, matchtype match_type
 	fflush(stdout);
 }
 
-void print_json_match(char *md5_hex, match_data match, matchtype match_type, long timer)
+void print_json_match(scan_data scan, match_data match)
 {
 	switch(json_format)
 	{
 
 		case plain:
-			print_json_match_plain(md5_hex, match, match_type, timer);
+			print_json_match_plain(scan, match);
 			break;
 
 		case cyclonedx:
-			print_json_match_cyclonedx(md5_hex, match, match_type);
+			print_json_match_cyclonedx(scan, match);
 			break;
 
 		case spdx:
-			print_json_match_spdx(md5_hex, match, match_type);
+			print_json_match_spdx(scan, match);
 			break;
 	}
 }

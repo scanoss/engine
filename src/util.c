@@ -72,22 +72,3 @@ void trim(char *str)
     str[i + 1] = 0;
 }
 
-/*
-    Returns a hexadecimal representation of the first "len" bytes in "bin"
-*/
-char *bin_to_hex(uint8_t *bin, uint32_t len)
-{
-	uint8_t digits[] = "0123456789abcdef";
-	char *out = malloc(2 * len + 1);
-	uint32_t ptr = 0;
-
-	for (uint32_t i = 0; i < len; i++)
-	{
-		out[ptr++] = digits[(bin[i] & 0xF0) >> 4];
-		out[ptr++] = digits[bin[i] & 0x0F];
-	}
-
-	out[ptr] = 0;
-	return out;
-}
-

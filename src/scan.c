@@ -359,6 +359,8 @@ match_data match_init()
 	*match.matched=0;
 	*match.size=0;
 	match.selected = false;
+	memcpy(match.component_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
+	memcpy(match.file_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
 	return match;
 }
 
@@ -370,8 +372,9 @@ match_data fill_match(uint8_t *file_record, uint8_t *component_record)
 	/* Extract fields from file record */
 	if (file_record)
 	{
-		extract_csv(match.size, (char *) file_record, 1, sizeof(match.size));
-		extract_csv(match.file, (char *) file_record, 2, sizeof(match.file));
+		memcpy(match.component_md5, file_record, MD5_LEN);
+		extract_csv(match.size, (char *) file_record + MD5_LEN, 1, sizeof(match.size));
+		extract_csv(match.file, (char *) file_record + MD5_LEN, 2, sizeof(match.file));
 	}
 	else
 	{
@@ -459,6 +462,8 @@ bool add_match(match_data match, match_data *matches, bool component_match)
 			strcpy(matches[n].url, match.url);
 			strcpy(matches[n].file, match.file);
 			strcpy(matches[n].size, match.size);
+			memcpy(matches[n].component_md5, match.component_md5, MD5_LEN);
+			memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
 			matches[n].selected = match.selected;
 		}
 
@@ -494,6 +499,11 @@ bool handle_match_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	if (component_match)
 	{
 		match = fill_match(NULL, data);
+
+		/* Save match component id */
+		memcpy(match.component_md5, key, LDB_KEY_LN);
+		memcpy(match.component_md5 + LDB_KEY_LN, subkey, subkey_ln);
+		memcpy(match.file_md5, match.component_md5, MD5_LEN);
 	}
 	else
 	{
@@ -508,7 +518,11 @@ bool handle_match_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 		get_component_record(data, component);
 		if (*component)
 		{
-			match = fill_match(data + MD5_LEN, component);
+			match = fill_match(data, component);
+
+			/* Save match file id */
+			memcpy(match.file_md5, key, LDB_KEY_LN);
+			memcpy(match.file_md5 + LDB_KEY_LN, subkey, subkey_ln);
 		}
 		else scanlog("No component data found\n");
 	}
