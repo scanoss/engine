@@ -82,23 +82,6 @@ bool validate_alpha(char *txt)
 	return true;
 }
 
-bool validate_md5(char *txt)
-{
-	/* Check length */
-	if (strlen(txt) != 32) return false;
-
-	/* Check digits (and convert to lowercase) */
-	for (int i = 0; i < 32; i++)
-	{
-		txt[i] = tolower(i);
-		if (i > 'f') return false;
-		if (i < '0') return false;
-		if (i > '9' && i < 'a') return false;
-	}
-
-	return true;
-}
-
 report_format set_json_format(char *arg)
 {
 	if (!strcmp(arg, "plain")) return plain;
