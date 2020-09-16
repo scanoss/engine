@@ -58,14 +58,25 @@ void file_md5(char *filepath, uint8_t *md5_result)
 	FILE *in = fopen(filepath, "rb");
 	fseek(in, 0L, SEEK_END);
 	long filesize = ftell(in);
-	fseek(in, 0L, SEEK_SET);
-	uint8_t *buffer = malloc(filesize);
-    if (!fread(buffer, filesize, 1, in)) fprintf(stderr, "Warning: cannot open file %s\n", filepath);
-	fclose(in);
 
-	/* Calculate MD5sum */
-	MD5(buffer, filesize, md5_result);
-	free (buffer);
+	if (!filesize)
+	{
+		MD5(NULL, 0, md5_result);
+	}
+
+	else
+	{
+		/* Read file contents */
+		fseek(in, 0L, SEEK_SET);
+		uint8_t *buffer = malloc(filesize);
+		if (!fread(buffer, filesize, 1, in)) fprintf(stderr, "Warning: cannot open file %s\n", filepath);
+
+		/* Calculate MD5sum */
+		MD5(buffer, filesize, md5_result);
+		free (buffer);
+	}
+
+	fclose(in);
 }
 
 void read_file(char *out, char *path, uint64_t maxlen)
