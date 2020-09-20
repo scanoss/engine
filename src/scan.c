@@ -102,7 +102,7 @@ void adjust_tolerance(uint32_t wfpcount)
 	min_match_lines = 3 + floor(wfpcount / 5);
 	if (min_match_lines > 10) min_match_lines = 10;
 
-	scanlog("Tolerance: range=%d, lines=%d\n", range_tolerance, min_match_lines);
+	scanlog("Tolerance: range=%d, lines=%d, wfpcount=%u\n", range_tolerance, min_match_lines, wfpcount);
 
 }
 
@@ -841,6 +841,7 @@ bool ldb_scan(scan_data *scan)
 				}
 				free(src);
 			}
+			else scan->total_lines = scan->lines[scan->hash_count - 1];
 
 			/* Perform snippet scan */
 			if (scan->total_lines) scan->match_type = ldb_scan_snippets(scan);
