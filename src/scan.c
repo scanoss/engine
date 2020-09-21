@@ -841,7 +841,7 @@ bool ldb_scan(scan_data *scan)
 				}
 				free(src);
 			}
-			else scan->total_lines = scan->lines[scan->hash_count - 1];
+			else if (scan->hash_count) scan->total_lines = scan->lines[scan->hash_count - 1];
 
 			/* Perform snippet scan */
 			if (scan->total_lines) scan->match_type = ldb_scan_snippets(scan);
