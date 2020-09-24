@@ -178,6 +178,22 @@ void component_vendor_md5(char *component, char *vendor, uint8_t *out)
 	MD5((uint8_t *)pair, strlen(pair), out);
 }
 
+bool print_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+{
+	char *license = calloc(LDB_MAX_REC_LN, 1);
+
+	extract_csv(license,(char *) data, 2, LDB_MAX_REC_LN);
+	printable_only(license);
+
+	if (*license) printf(license);
+
+	free(license);
+
+	if (*license) return true;
+
+	return false;
+}
+
 bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	char *source  = calloc(LDB_MAX_REC_LN, 1);
@@ -203,6 +219,29 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	free(license);
 
 	return false;
+}
+
+void print_first_license(uint8_t *pair, match_data match)
+{
+	/* Open sector */
+	struct ldb_table table;
+	strcpy(table.db, "oss");
+	strcpy(table.table, "license");
+	table.key_ln = 16;
+	table.rec_ln = 0;
+	table.ts_ln = 2;
+	table.tmp = false;
+
+	uint32_t records = 0;
+
+	if (ldb_table_exists("oss", "license"))
+	{
+		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_first_license_item, NULL);
+		if (!records)
+			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_first_license_item, NULL);
+		if (!records)
+			records = ldb_fetch_recordset(NULL, table, pair, false, print_first_license_item, NULL);
+	}
 }
 
 void print_licenses(uint8_t *pair, match_data match)
@@ -343,6 +382,10 @@ void print_json_match_plain(scan_data scan, match_data match)
 
 void print_json_match_cyclonedx(scan_data scan, match_data match)
 {
+	/* Calculate component/vendor md5 for license and dependency query */
+	uint8_t pair_md5[16]="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+	component_vendor_md5(match.vendor, match.component, pair_md5);
+
 	printf("    {\n");
 	printf("      \"type\": \"file\",\n");
 	printf("      \"publisher\": \"%s\",\n", match.vendor);
@@ -362,7 +405,15 @@ void print_json_match_cyclonedx(scan_data scan, match_data match)
 	free(md5);
 	printf("        }\n");
 	printf("      ],\n");
-	printf("      \"licenses\": [],\n");
+	printf("      \"licenses\": [\n");
+	printf("        {\n");
+	printf("          \"license\": {\n");
+    printf("             \"id\": \"");
+	print_first_license(pair_md5, match);
+	printf("\"\n");
+	printf("          }\n");
+	printf("        }\n");
+	printf("      ],\n");
 
 	if (strcmp(match.lines,"all"))
 		printf("      \"purl\": \"%s#%s\",\n", match.url, match.file);
@@ -376,6 +427,10 @@ void print_json_match_cyclonedx(scan_data scan, match_data match)
 
 void print_json_match_spdx(scan_data scan, match_data match)
 {
+	/* Calculate component/vendor md5 for license and dependency query */
+	uint8_t pair_md5[16]="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+	component_vendor_md5(match.vendor, match.component, pair_md5);
+
 	printf("        \"Package\": {\n");
 	printf("          \"name\": \"%s\",\n", match.component);
 
@@ -402,7 +457,9 @@ void print_json_match_spdx(scan_data scan, match_data match)
 	printf("          ],\n");
 	printf("          \"description\": \"Detected by SCANOSS Inventorying Engine.\",\n");
 	printf("          \"licenseConcluded\": \"\",\n");
-	printf("          \"licenseInfoFromFiles\": []\n");
+	printf("          \"licenseInfoFromFiles\": \"");
+	print_first_license(pair_md5, match);
+	printf("\"\n");
 	printf("        }\n");
 
 	fflush(stdout);
