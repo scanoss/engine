@@ -411,6 +411,7 @@ match_data fill_match(uint8_t *file_record, uint8_t *component_record)
 
 int count_matches(match_data *matches)
 {
+	if (!matches) return 0;
 	int c = 0;
 	for (int i = 0; i < scan_limit && *matches[i].component; i++) c++;
 	return c;
