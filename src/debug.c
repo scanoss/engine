@@ -34,6 +34,13 @@ void scanlog(const char *fmt, ...)
 
     va_list args;
     va_start(args, fmt);
+
+	if (quiet)
+	{
+		if (*fmt) vfprintf(stderr, fmt, args);
+		return;
+	}
+
 	FILE *log = fopen(SCAN_LOG, "a");
 
 	/* Add entry to log */
@@ -44,7 +51,7 @@ void scanlog(const char *fmt, ...)
 	{
 		time_t now;
 		time(&now);
-		fprintf(log, ">>> %s", ctime(&now));
+		fprintf(log, "\n>>>>>> %s", ctime(&now));
 	}
 
 	fclose(log);
@@ -114,23 +121,23 @@ void map_dump(uint8_t *mmap, uint64_t mmap_ptr)
 	for (long i = 0; i<mmap_ptr; i++) {
 		
 		/* Print matching MD5 */
-		hexdump (map, mmap+i*map_rec_len,    16 , "", false, 0);
+		hexdump(map, mmap + i * MAP_REC_LEN, 16 , "", false, 0);
 
 		/* Print hits */
-		hexdump (map, mmap+i*map_rec_len+16,  2 , " ", false, 0);
+		hexdump(map, mmap + i * MAP_REC_LEN + 16,  2 , " ", false, 0);
 
 		/* Print ranges */
 		for (int j = 18; j <= 72; j += 6)
 		{
-			hexdump(map, mmap + i * map_rec_len + j,  2 , " ", false, 0);
+			hexdump(map, mmap + i * MAP_REC_LEN + j,  2 , " ", false, 0);
 			fprintf(map, "-");
-			hexdump(map, mmap + i * map_rec_len + j + 1,  2 , "", false, 0);
+			hexdump(map, mmap + i * MAP_REC_LEN + j + 1,  2 , "", false, 0);
 			fprintf(map, "<");
-			hexdump(map, mmap + i * map_rec_len + j + 2,  2 , "", false, 0);
+			hexdump(map, mmap + i * MAP_REC_LEN + j + 2,  2 , "", false, 0);
 		}
 
 		/* Print last wfp */
-		hexdump (map, mmap+i*map_rec_len+78,  4 , " ", true, 0);
+		hexdump (map, mmap + i * MAP_REC_LEN + 78,  4 , " ", true, 0);
 	}
 	fclose(map);
 }

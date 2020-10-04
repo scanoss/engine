@@ -31,6 +31,7 @@ FILE *ldb_open(struct ldb_table table, uint8_t *key, char *mode) {
 
 	/* Open data sector */
 	FILE *out = fopen(sector_path, mode);
+	if (!out) fprintf(stderr, "Cannot open LDB with mode %s: %s\n", mode, strerror(errno));
 	free(sector_path);
 	return out;
 }

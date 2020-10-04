@@ -20,48 +20,40 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/* Constants */
 #define MD5_LEN 16
 #define WFP_REC_LN 18
+
+/* Limits */
 #define MAX_ARGLN 512       // Max command line argument length
+#define MAX_PATH 1024
 #define MAX_MAP_RANGES 10
 #define MAX_HASHES_READ 65535
-#define MAX_FILES 10000     // Max number of files evaluated in snippet matching
+#define MAX_FILE_SIZE (1024 * 1024 * 4)
+#define MAX_QUERY_RESPONSE (1024 * 1024 * 8)
 #define SLOW_QUERY_LIMIT_IN_USEC 2000000
 
-/* Skip snippets */
+/* Map record:[MD5(16)][hits(2)][range1(4)]....[rangeN(4)][lastwfp(4)] */
+#define MAP_REC_LEN (16 + 2 + (MAX_MAP_RANGES * 6) + 4)
+
+/* Snippets */
+#define MAX_FILES 25000     // Max number of files evaluated in snippet matching
+#define WFP_POPULARITY_THRESHOLD 2000  // wfp hash with more hits than this will be ignored. This should never be higher than MAX_FILES;
 #define SKIP_SNIPPETS_IF_FILE_BIGGER (1024 * 1024 * 4)
 #define SKIP_SNIPPETS_IF_1ST_LINE_LONGER 1000
-const char *SKIP_SNIPPETS_IF_STARTS_WITH[] = {"{", "<?xml", "<html"};
+#define SKIP_SNIPPETS_IF_STARTS_WITH (const char*[3]) {"{", "<?xml", "<html"}
+#define MAX_SNIPPETS_SCANNED 2500
 
-const uint32_t  wsi_per_line = 8;
-const uint64_t  max_record_len     = 256 * 256;
-const uint32_t  max_records        = 10000;
-const uint32_t  max_lines          = 65536;
-const uint32_t  max_files_per_line = 500;
-const uint32_t  max_query_response = 8 * 1048576;
-const uint32_t  max_username       = 50;
-const uint 	    max_variable_len   = 4096;
-const int       max_field_name     = 50;
-const int       max_snippets_scanned = 2500;
-const int		max_path = 1024;
-const int		max_file_size = 4 * 1048576;
-const uint32_t wfp_popularity_threshold = 25000 ; // wfp hash with more hits than this will be ignored. This should never be higher than MAX_FILES;
+/* Variables */
 
-const uint32_t detect_maxread = 10000; 	// Max # bytes to read from file or licenses
-const uint32_t detect_threshold = 80;   // Match score threshold under which match is ignored
-const uint32_t detect_minwords	 = 2;	// Min # words to group for comparison
-const uint32_t detect_minbytes	 = 20;	// Min # bytes to group for comparison
+/* During snippet scanning, when a wfp (with more than consecutive_threshold wfps) produces a score higher 
+   than consecutive_score by consecutive_hits in a row, the scan will skip consecutive_jump snippets */
+int scan_limit=10;
 
-/* Map record:[MD5(16)][hits(2)][range1(4)]....[rangeN(4)][lastwfp(4)] */
-int map_rec_len = 16 + 2 + (MAX_MAP_RANGES * 6) + 4;
-
-/* During snippet scanning, when a wfp produces a score higher than consecutive_score by consecutive_hits in
-   a row, the scan will skip consecutive_jump snippets */
 int consecutive_score = 4000;
 int consecutive_hits = 4;
 int consecutive_jump = 5;
+int consecutive_threshold = 50;
 
-const int match_analyze_keyword_limit = 10000; // Maximum number of keywords to be considered when analyzing matches
-
-int range_tolerance = 5;             // A maximum number of non-matched lines tolerated inside a matching range
-int min_match_lines = 10;		 // Minimum number of lines matched for a match range to be acepted
+int range_tolerance = 5;  // A maximum number of non-matched lines tolerated inside a matching range
+int min_match_lines = 10; // Minimum number of lines matched for a match range to be acepted

@@ -46,7 +46,7 @@ void recurse_directory(char *name)
 	while ((entry = readdir(dir)))
 	{
 		read = true;
-		char *path =calloc (max_path, 1);
+		char *path =calloc (MAX_PATH, 1);
 		sprintf (path, "%s/%s", name, entry->d_name);
 			
 		if (!strcmp(entry->d_name,".") || !strcmp(entry->d_name,"..")) continue;
@@ -94,7 +94,6 @@ report_format set_json_format(char *arg)
 
 int main(int argc, char **argv)
 {
-
 	if (argc <= 1)
 	{
 		fprintf (stdout, "Missing parameters. Please use -h\n");
@@ -129,12 +128,12 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:wtvhd")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:wtvhdq")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
 		{
-			if ((strlen(optarg) > MAX_ARGLN) || !validate_alpha(optarg))
+			if ((strlen(optarg) > MAX_ARGLN))
 			{
 				invalid_argument = true;
 				break;
@@ -172,6 +171,12 @@ int main(int argc, char **argv)
 			case 'h':
 				help();
 				exit(EXIT_SUCCESS);
+				break;
+
+			case 'q':
+				debug_on = true;
+				quiet = true;
+				scanlog("Quiet mode enabled. Displaying only debugging info via STDERR.\n");
 				break;
 
 			case 'd':
@@ -218,7 +223,13 @@ int main(int argc, char **argv)
 			exit(EXIT_FAILURE);
 		}
 
-		char *target = calloc (max_record_len, 1);
+		char *target = calloc(MAX_ARGLN, 1);
+
+		if (strlen(argv[argc-1]) >= MAX_ARGLN)
+		{
+			fprintf(stdout, "Target cannot exceed %d bytes\n", MAX_ARGLN);
+			exit(EXIT_FAILURE);
+		}
 
 		/* Remove trailing backslashes from target (if any) */
 		strcpy (target, argv[argc-1]);

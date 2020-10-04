@@ -70,6 +70,8 @@ void print_serial_number()
 /* Open JSON report */
 void json_open()
 {
+	if (quiet) return;
+
 	switch(json_format)
 	{
 		case plain:
@@ -113,6 +115,8 @@ void json_open()
 /* Close JSON report */
 void json_close()
 {
+	if (quiet) return;
+
 	switch(json_format)
 	{
 		case plain:
@@ -133,6 +137,8 @@ void json_close()
 }
 void json_open_file(char *filename)
 {    
+	if (quiet) return;
+
 	switch(json_format)
 	{
 		case plain:
@@ -149,6 +155,8 @@ void json_open_file(char *filename)
 
 void json_close_file()
 {
+	if (quiet) return;
+
 	switch(json_format)
 	{
 		case plain:
@@ -330,6 +338,8 @@ void print_dependencies(uint8_t *pair, uint8_t *key)
 
 void print_json_nomatch(scan_data scan)
 {
+	if (quiet) return;
+
 	double elapsed = (microseconds_now() - scan.timer);
 	printf("    {\n");
 	printf("      \"id\": \"none\",\n");
@@ -467,6 +477,8 @@ void print_json_match_spdx(scan_data scan, match_data match)
 
 void print_json_match(scan_data scan, match_data match)
 {
+	if (quiet) return;
+
 	switch(json_format)
 	{
 
