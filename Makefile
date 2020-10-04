@@ -2,7 +2,7 @@ CC=gcc
 LIBFLAGS=-O -Wall -g -lm -lpthread
 BINFLAGS=-O -Wall -g -lm -lpthread -lcrypto
 
-all: ldb scanoss
+all: clean ldb scanoss
 
 ldb: src/external/ldb/ldb.c src/external/ldb/ldb.h src/external/ldb/command.c
 	@$(CC) -c src/external/ldb/ldb.c src/external/ldb/command.c $(LIBFLAGS)
@@ -13,6 +13,7 @@ scanoss: src/main.c src/scanoss.h src/limits.h
 	@echo Scanoss built
 
 clean:
+	@echo Cleaning...
 	@rm -f scanoss *.o
 
 distclean: clean

@@ -33,12 +33,12 @@
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-char SCANOSS_VERSION[7] = "3.30";
+char SCANOSS_VERSION[7] = "3.31";
 
 typedef enum { none, component, file, snippet } matchtype;
-typedef enum {plain, cyclonedx, spdx} report_format;
-char *matchtypes[] = {"none", "component", "file", "snippet"};
-char *license_sources[] = {"declared", "detected"};
+typedef enum { plain, cyclonedx, spdx } report_format;
+const char *matchtypes[] = {"none", "component", "file", "snippet"};
+const char *license_sources[] = {"declared", "detected"};
 
 typedef struct keywords
 {
@@ -73,6 +73,7 @@ typedef struct match_data
 	char latest_version[64];
 	char url[1024];
 	char file[4096];
+	int  path_ln;
 	char license[64];
 	char matched[64];
 	char size[16];
@@ -85,10 +86,8 @@ unsigned char *linemap;
 unsigned char *map;
 int map_rec_len;
 bool debug_on = false;
+bool quiet = false;
 int json_format = plain;
-
-/*  Parameters */
-int scan_limit=10;
 
 #include "external/wfp/winnowing.c"
 #include "external/ldb/ldb.h"

@@ -33,7 +33,7 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	scan_data scan = *scan_ptr;
 
 	/* Files not matching are only reported with -f plain */
-	if (!matches && json_format !=plain) return;
+	if (!matches && json_format != plain) return;
 
 	int match_counter = 0;
 
@@ -43,7 +43,7 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	slow_query_log(scan);
 
 	/* Print comma separator */
-	if (!first_file) printf("  ,\n");
+	if (!quiet) if (!first_file) printf("  ,\n");
 	first_file = false;
 
 	/* Open file structure */
@@ -59,7 +59,7 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		{
 			if (matches[i].selected)
 			{
-				if (match_counter++) printf("  ,\n");
+				if (match_counter++) if (!quiet) printf("  ,\n");
 				print_json_match(scan, matches[i]);
 				selected = true;
 			}
@@ -70,16 +70,17 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		{
 			if (!matches[i].selected) if (strcmp(matches[i].version, matches[i].latest_version))
 			{
-				if (match_counter++) printf("  ,\n");
+				if (match_counter++) if (!quiet) printf("  ,\n");
 				print_json_match(scan, matches[i]);
 			}
 		}
+
 		/* Print matches without version ranges */
 		if (!selected) for (int i = 0; i < scan_limit && *matches[i].component; i++)
 		{
 			if (!matches[i].selected) if (!strcmp(matches[i].version, matches[i].latest_version))
 			{
-				if (match_counter++) printf("  ,\n");
+				if (match_counter++) if (!quiet) printf("  ,\n");
 				print_json_match(scan, matches[i]);
 			}
 		}

@@ -23,6 +23,7 @@
 #define _GNU_SOURCE
 #include <ctype.h>
 #include <dirent.h>
+#include <errno.h>
 #include <locale.h>
 #include <stdint.h>
 #include <stdbool.h>

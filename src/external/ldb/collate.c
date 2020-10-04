@@ -360,6 +360,7 @@ void ldb_collate(struct ldb_table table, struct ldb_table out_table, int max_rec
 			}
 
 			total_records += collate.rec_count;
+			printf("%'ld records read\n", collate.rec_count);
 
 			/* Close .out sector */
 			fclose(collate.out_sector);

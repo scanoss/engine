@@ -39,7 +39,8 @@ Options:\n\
 -t  Tests engine performance\n\
 -v  Display version and exit\n\
 -h  Display this help and exit\n\
--d  Enable debugging information\n\
+-d  Save debugging information to disk (/tmp)\n\
+-q  Produces no JSON output. Only debugging info via STDERR\n\
 \n\
 Copyright (C) 2018-2020 ScanOSS LTD\n");
 }
