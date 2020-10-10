@@ -33,7 +33,7 @@
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-char SCANOSS_VERSION[7] = "3.31";
+char SCANOSS_VERSION[7] = "3.32";
 
 typedef enum { none, component, file, snippet } matchtype;
 typedef enum { plain, cyclonedx, spdx } report_format;
@@ -80,6 +80,7 @@ typedef struct match_data
 	uint8_t file_md5[16];
 	uint8_t component_md5[16];
 	bool selected;
+	bool snippet_to_component;
 } match_data;
 
 unsigned char *linemap;

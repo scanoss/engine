@@ -40,7 +40,6 @@
 #define MAX_FILES 25000     // Max number of files evaluated in snippet matching
 #define WFP_POPULARITY_THRESHOLD 2000  // wfp hash with more hits than this will be ignored. This should never be higher than MAX_FILES;
 #define SKIP_SNIPPETS_IF_FILE_BIGGER (1024 * 1024 * 4)
-#define SKIP_SNIPPETS_IF_1ST_LINE_LONGER 1000
 #define SKIP_SNIPPETS_IF_STARTS_WITH (const char*[3]) {"{", "<?xml", "<html"}
 #define MAX_SNIPPETS_SCANNED 2500
 

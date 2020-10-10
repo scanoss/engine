@@ -86,32 +86,39 @@ matchtype ldb_scan_file(uint8_t *fid) {
 	return match_type;
 }
 
-void adjust_tolerance(uint32_t wfpcount)
+void adjust_tolerance(scan_data *scan)
 {
+	bool skip = false;
+	uint32_t wfpcount = scan->hash_count;
 
-	/* Range tolerance is the maximum amount of non-matched lines accepted
-		within a matched range. This goes from 15 in small files to 5 in large files */
+	if (!wfpcount) skip = true;
+	else if (scan->lines[wfpcount-1] < 10) skip = true;
 
-	range_tolerance = 15 - floor(wfpcount / 20);
-	if (range_tolerance < 5) range_tolerance = 5;
+	if (skip) min_match_lines = 1;
+	else
+	{
+		/* Range tolerance is the maximum amount of non-matched lines accepted
+		   within a matched range. This goes from 15 in small files to 5 in large files */
 
-	/* Min matched lines is the number of matched lines in total under which the result
-       is ignored. This goes from 3 in small files to 10 in large files */
+		range_tolerance = 15 - floor(wfpcount / 20);
+		if (range_tolerance < 5) range_tolerance = 5;
 
+		/* Min matched lines is the number of matched lines in total under which the result
+		   is ignored. This goes from 3 in small files to 10 in large files */
 
-	min_match_lines = 3 + floor(wfpcount / 5);
-	if (min_match_lines > 10) min_match_lines = 10;
+		min_match_lines = 3 + floor(wfpcount / 5);
+		if (min_match_lines > 10) min_match_lines = 10;
+	}
 
 	scanlog("Tolerance: range=%d, lines=%d, wfpcount=%u\n", range_tolerance, min_match_lines, wfpcount);
-
 }
 
 /* Handler function to collect all file ids */
 bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-    uint8_t *record = (uint8_t *) ptr;
-    if (datalen)
-    {
+	uint8_t *record = (uint8_t *) ptr;
+	if (datalen)
+	{
 		uint32_t size = uint32_read(record);
 
 		/* End recordset fetch if MAX_QUERY_RESPONSE is reached */
@@ -122,8 +129,8 @@ bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *dat
 
 		/* Save data and update dataln */
 		memcpy(record + size + 4, data, datalen);
-        uint32_write(record, size + datalen);
- 	}
+		uint32_write(record, size + datalen);
+	}
 	return false;
 }
 
@@ -136,7 +143,7 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 	if (!scan->hash_count) return none;
 	scanlog("Checking snippets\n");
 
-	adjust_tolerance(scan->hash_count);
+	adjust_tolerance(scan);
 
 	uint32_t line = 0;
 	uint32_t prev_line = 1;
@@ -240,7 +247,16 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 				}
 
 				/* Another hit in the same line, no need to expand range */
-				else if (to == line) break;
+				else if (to == line)
+				{
+					/* Update hits count (if we are not hitting the same wfp again) */
+					if (memcmp(wfp,lastwfp,4))
+					{
+						uint16_write (scan->matchmap + record_offset + MD5_LEN, (uint16_t) (1 + hits));
+						memcpy(lastwfp,wfp,4);
+					}
+					break;
+				}
 
 				/* Increase range */
 				else if ((prev_line - to) < range_tolerance)
@@ -285,8 +301,16 @@ int ldb_matched_percent(matchtype match_type, int hits, unsigned int total) {
 uint32_t compile_ranges(uint8_t *matchmap_matching, char *ranges, char *oss_ranges) {
 
 	if (uint16_read(matchmap_matching + MD5_LEN) < 2) return 0;
-
 	int hits = 0;
+
+	/* Lowest tolerance simply requires selecting the higher match count */
+	if (min_match_lines == 1)
+	{
+		strcpy(ranges, "N/A");
+		strcpy(oss_ranges, "N/A");
+		return uint16_read(matchmap_matching + MD5_LEN);
+	}
+
 	ranges [0] = 0;
 	oss_ranges [0] = 0;
 
@@ -411,6 +435,11 @@ match_data fill_match(uint8_t *file_record, uint8_t *component_record)
 
 int count_matches(match_data *matches)
 {
+	if (!matches) 
+	{
+		scanlog("Match metadata is empty\n");
+		return 0;
+	}
 	int c = 0;
 	for (int i = 0; i < scan_limit && *matches[i].component; i++) c++;
 	return c;
@@ -491,7 +520,33 @@ bool longer_path_in_set(match_data *matches, int total_matches, int rec_ln)
 	return (rec_ln > max_ln);
 }
 
-bool handle_match_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+bool handle_component_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+{
+	if (!datalen && datalen >= MAX_PATH) return false;
+
+	uint8_t data[MAX_PATH] = "\0";
+	memcpy(data, raw_data, datalen);
+	data[datalen] = 0;
+
+	match_data *matches = (match_data*) ptr;
+	struct match_data match = match_init();
+
+	/* Exit if we have enough matches */
+	int total_matches = count_matches(matches);
+	if (total_matches >= scan_limit) return true;
+
+	match = fill_match(NULL, data);
+
+	/* Save match component id */
+	memcpy(match.component_md5, key, LDB_KEY_LN);
+	memcpy(match.component_md5 + LDB_KEY_LN, subkey, subkey_ln);
+	memcpy(match.file_md5, match.component_md5, MD5_LEN);
+
+	add_match(match, total_matches, matches, true);
+
+	return false;
+}
+bool handle_file_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen && datalen >= MAX_PATH) return false;
 
@@ -503,60 +558,37 @@ bool handle_match_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	if (skip_file_path(data, datalen)) return false;
 
 	match_data *matches = (match_data*) ptr;
-
 	struct match_data match = match_init();
-
-	uint8_t *component = NULL;
-
-	bool component_match = (matches[0].type == 1);
 
 	int total_matches = count_matches(matches);
 
-	/* Handle component record */
-	if (component_match)
+	/* If we have a full set, and this path is longer than others, skip it*/
+	if (longer_path_in_set(matches, total_matches, datalen)) return false;
+
+	/* Check if matched file is a blacklisted extension */
+	if (blacklisted((char *) data + MD5_LEN)) return false;
+
+	/* If component does not exist (orphan file) skip it */
+	if (!ldb_key_exists(oss_component, data))
 	{
-		/* Exit if we have enough matches */
-		if (total_matches >= scan_limit) return true;
-
-		match = fill_match(NULL, data);
-
-		/* Save match component id */
-		memcpy(match.component_md5, key, LDB_KEY_LN);
-		memcpy(match.component_md5 + LDB_KEY_LN, subkey, subkey_ln);
-		memcpy(match.file_md5, match.component_md5, MD5_LEN);
+		scanlog("Orphan file\n");
+		return false;
 	}
 
-	/* Handle file record */
-	else
+	uint8_t *component = calloc(LDB_MAX_REC_LN, 1);
+	get_component_record(data, component);
+	if (*component)
 	{
-		/* If we have a full set, and this path is longer than others, skip it*/
-		if (longer_path_in_set(matches, total_matches, datalen)) return false;
+		match = fill_match(data, component);
 
-		/* Check if matched file is a blacklisted extension */
-		if (blacklisted((char *) data + MD5_LEN)) return false;
-
-		/* If component does not exist (orphan file) skip it */
-		if (!ldb_key_exists(oss_component, data))
-		{
-			scanlog("Orphan file\n");
-			return false;
-		}
-
-		component = calloc(LDB_MAX_REC_LN, 1);
-		get_component_record(data, component);
-		if (*component)
-		{
-			match = fill_match(data, component);
-
-			/* Save match file id */
-			memcpy(match.file_md5, key, LDB_KEY_LN);
-			memcpy(match.file_md5 + LDB_KEY_LN, subkey, subkey_ln);
-		}
-		else scanlog("No component data found\n");
+		/* Save match file id */
+		memcpy(match.file_md5, key, LDB_KEY_LN);
+		memcpy(match.file_md5 + LDB_KEY_LN, subkey, subkey_ln);
 	}
+	else scanlog("No component data found\n");
 
-	add_match(match, total_matches, matches, component_match);
-	if (component) free(component);
+	add_match(match, total_matches, matches, false);
+	free(component);
 
 	return false;
 }
@@ -614,13 +646,13 @@ match_data *load_matches(scan_data *scan, uint8_t *matching_md5)
 	/* Snippet and component match should look for the matching_md5 in components */
 	if (scan->match_type != file)
 	{
-		records = ldb_fetch_recordset(NULL, oss_component, matching_md5, false, handle_match_record, (void *) matches);
+		records = ldb_fetch_recordset(NULL, oss_component, matching_md5, false, handle_component_record, (void *) matches);
 		scanlog("Component recordset contains %u records\n", records);
 	}
 
 	if (!records)
 	{
-		records = ldb_fetch_recordset(NULL, oss_file, matching_md5, false, handle_match_record, (void *) matches);
+		records = ldb_fetch_recordset(NULL, oss_file, matching_md5, false, handle_file_record, (void *) matches);
 		scanlog("File recordset contains %u records\n", records);
 	}
 
@@ -632,18 +664,44 @@ match_data *load_matches(scan_data *scan, uint8_t *matching_md5)
 	return NULL;
 }
 
+/* Set map hits to zero for the given match */
+void clear_hits(uint8_t *match)
+{
+	match[MD5_LEN] = 0;
+	match[MD5_LEN + 1] = 0;
+}
+
+/* Check if the provided file id (md5) is orphan */
+bool orphan_file(uint8_t *fid)
+{
+	if (ldb_key_exists(oss_component, fid)) return false;
+	if (ldb_key_exists(oss_file, fid)) return false;
+	scanlog("Orphan MD5\n");
+	return true;
+}
+
 /* If we have snippet matches, select the one with more hits */
 uint8_t *biggest_snippet(uint8_t *matchmap, uint64_t matchmap_ptr)
 {
 	uint8_t *out = NULL;
 	int most_hits = 0;
 	int hits = 0;
-	for (int i = 0; i < matchmap_ptr; i++) {
-		hits = uint16_read (matchmap + i * MAP_REC_LEN + MD5_LEN);
-		if (hits >= most_hits) {
-			most_hits = hits;
-			out = matchmap + i * MAP_REC_LEN;
+
+	while (true)
+	{
+		/* Select biggest snippet */
+		for (int i = 0; i < matchmap_ptr; i++) {
+			hits = uint16_read (matchmap + i * MAP_REC_LEN + MD5_LEN);
+			if (hits >= most_hits) {
+				most_hits = hits;
+				out = matchmap + i * MAP_REC_LEN;
+			}
 		}
+		if (!hits) break;
+
+		/* Erase match from map if MD5 is orphan */
+		if (orphan_file(out)) clear_hits(out); else break;
+
 	}
 	return out;
 }
@@ -665,6 +723,12 @@ match_data *compile_matches(scan_data *scan)
 		scan->match_type = none;
 		scanlog("No matching file id\n");
 		return NULL;
+	}
+	else
+	{
+		/* Log matching MD5 */
+		for (int i = 0; i < MD5_LEN; i++) scanlog("%02x", matching_md5[i]);
+		scanlog(" selected\n");
 	}
 
 	/* Dump match map */
@@ -738,7 +802,7 @@ int wfp_scan(char *path)
 		}
 
 		/* Save hash/es to memory. Parse file information with format:
-			linenr=wfp(6)[,wfp(6)]+ */
+		   linenr=wfp(6)[,wfp(6)]+ */
 
 		if (is_wfp && (scan.hash_count < MAX_HASHES_READ))
 		{
@@ -792,16 +856,12 @@ bool skip_snippets(char *src, uint64_t srcln)
 	if (!memcmp(src, "<html", 5)) return true; // is html
 	if (!memcmp(src, "<HTML", 5)) return true; // is html
 
-	/* Skip if first line is too long */
-	if (srcln < SKIP_SNIPPETS_IF_1ST_LINE_LONGER) return false;
-	for (int i = 0; i < SKIP_SNIPPETS_IF_1ST_LINE_LONGER; i++)
-		if (src[i] == 10) return false;
-	return true;
+	return false;
 }
 
 /* Scans a file and returns JSON matches via STDOUT
-	scan structure can be already preloaded (.wfp scan)
-	otherwise, it will be loaded here (scanning a physical file) */
+   scan structure can be already preloaded (.wfp scan)
+   otherwise, it will be loaded here (scanning a physical file) */
 bool ldb_scan(scan_data *scan)
 {
 	scan->matchmap_ptr = 0;
