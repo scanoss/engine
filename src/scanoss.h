@@ -33,7 +33,7 @@
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-char SCANOSS_VERSION[7] = "3.32";
+char SCANOSS_VERSION[7] = "3.33";
 
 typedef enum { none, component, file, snippet } matchtype;
 typedef enum { plain, cyclonedx, spdx } report_format;

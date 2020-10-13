@@ -684,11 +684,12 @@ bool orphan_file(uint8_t *fid)
 uint8_t *biggest_snippet(uint8_t *matchmap, uint64_t matchmap_ptr)
 {
 	uint8_t *out = NULL;
-	int most_hits = 0;
 	int hits = 0;
 
 	while (true)
 	{
+		int most_hits = 0;
+
 		/* Select biggest snippet */
 		for (int i = 0; i < matchmap_ptr; i++) {
 			hits = uint16_read (matchmap + i * MAP_REC_LEN + MD5_LEN);
@@ -697,11 +698,11 @@ uint8_t *biggest_snippet(uint8_t *matchmap, uint64_t matchmap_ptr)
 				out = matchmap + i * MAP_REC_LEN;
 			}
 		}
+
 		if (!hits) break;
 
 		/* Erase match from map if MD5 is orphan */
 		if (orphan_file(out)) clear_hits(out); else break;
-
 	}
 	return out;
 }
