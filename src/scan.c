@@ -865,6 +865,8 @@ bool skip_snippets(char *src, uint64_t srcln)
    otherwise, it will be loaded here (scanning a physical file) */
 bool ldb_scan(scan_data *scan)
 {
+	bool skip = false;
+
 	scan->matchmap_ptr = 0;
 	scan->match_type = none;
 	scan->timer = microseconds_now();
@@ -880,8 +882,12 @@ bool ldb_scan(scan_data *scan)
 	/* Calculate MD5 hash (if not already preloaded) */
 	if (!scan->preload) file_md5(scan->file_path, scan->md5);
 
+	if (!scan->preload) if (blacklisted(scan->file_path)) skip = true;
+
 	/* Ignore <=1 byte */
-	if (file_size > 1)
+	if (file_size <= 1) skip = true;
+
+	if (!skip)
 	{
 		/* Scan full file */
 		scan->match_type = ldb_scan_file(scan->md5);
