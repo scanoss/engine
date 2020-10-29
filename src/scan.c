@@ -554,10 +554,11 @@ bool handle_file_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *r
 	memcpy(data, raw_data, datalen);
 	data[datalen] = 0;
 
-	/* Skip unwanted paths */
-	if (skip_file_path(data, datalen)) return false;
-
 	match_data *matches = (match_data*) ptr;
+
+	/* Skip unwanted paths */
+	if (skip_file_path(data, datalen, matches)) return false;
+
 	struct match_data match = match_init();
 
 	int total_matches = count_matches(matches);
@@ -593,16 +594,17 @@ bool handle_file_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *r
 	return false;
 }
 
-struct match_data *prefill_match(matchtype match_type, char *lines, char *oss_lines, int matched_percent)
+struct match_data *prefill_match(scan_data *scan, char *lines, char *oss_lines, int matched_percent)
 {
 	struct match_data *matches = calloc(sizeof(match_data), scan_limit);
 	for (int i = 0; i < scan_limit; i++)
 	{
-		matches[i].type = match_type;
+		matches[i].type = scan->match_type;
 		strcpy(matches[i].lines,lines);
 		strcpy(matches[i].oss_lines, oss_lines);
 		sprintf(matches[i].matched,"%u%%", matched_percent);
 		matches[i].selected = false;
+		matches[i].scandata = scan;
 	}
 	return matches;
 }
@@ -637,7 +639,7 @@ match_data *load_matches(scan_data *scan, uint8_t *matching_md5)
 		}
 	}
 
-	struct match_data *matches = prefill_match(scan->match_type, line_ranges, oss_ranges, matched_percent);
+	struct match_data *matches = prefill_match(scan, line_ranges, oss_ranges, matched_percent);
 	free(oss_ranges);
 	free(line_ranges);
 

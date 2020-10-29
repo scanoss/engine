@@ -81,6 +81,7 @@ typedef struct match_data
 	uint8_t component_md5[16];
 	bool selected;
 	bool snippet_to_component;
+	scan_data *scandata;
 } match_data;
 
 unsigned char *linemap;
