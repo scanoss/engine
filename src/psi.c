@@ -20,7 +20,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-bool skip_file_path(uint8_t *file_record, int filerec_ln)
+bool skip_file_path(uint8_t *file_record, int filerec_ln, match_data *matches)
 {
 	return false;
 }
