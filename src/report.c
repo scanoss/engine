@@ -210,11 +210,11 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	extract_csv(source, (char *) data, 1, LDB_MAX_REC_LN);
 	extract_csv(license,(char *) data, 2, LDB_MAX_REC_LN);
 
-	int lic_src = atoi(source);
+	int src = atoi(source);
 
 	printable_only(license);
 
-	if (*license && (lic_src <= (sizeof(license_sources)/sizeof(license_sources[0]))))
+	if (*license && (src <= (sizeof(license_sources) / sizeof(license_sources[0]))))
 	{
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");
@@ -228,6 +228,68 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 	return false;
 }
+
+/* Returns a pointer to the character following the first comma in "data" */
+char *skip_first_comma(char *data)
+{
+    char *ptr = data;
+    while (*ptr)
+    {
+        if (*ptr == ',') return ++ptr;
+        ptr++;
+    }
+    return data;
+}
+
+bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+{
+	if ((datalen + 1) >= MAX_COPYRIGHT) datalen = MAX_COPYRIGHT;
+	data[datalen] = 0;
+	strcpy(ptr, skip_first_comma((char *) data));
+	return true;
+}
+
+void clean_copyright(char *out, char *copyright)
+{
+	int i;
+	char byte[2] = "\0\0";
+
+	for (i = 0; i < (MAX_COPYRIGHT - 1); i++)
+	{
+		*byte = copyright[i];
+		if (!*byte) break;
+		else if (isalnum(*byte)) out[i] = *byte; 
+		else if (strstr(" @#^()[]-_+;:.<>",byte)) out[i] = *byte;
+		else out[i] = '*';
+	}
+	out[i] = 0;
+}
+
+bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+{
+	char *source  = calloc(LDB_MAX_REC_LN, 1);
+	char *copyright = calloc(MAX_COPYRIGHT, 1);
+
+	extract_csv(source, (char *) data, 1, LDB_MAX_REC_LN);
+	clean_copyright(copyright, skip_first_comma((char *) data));
+
+	int src = atoi(source);
+
+	if (*copyright && (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0]))))
+	{
+		if (iteration) printf(",\n"); else printf("\n");
+		printf("        {\n");
+		printf("          \"name\": \"%s\",\n", copyright);
+		printf("          \"source\": \"%s\"\n", copyright_sources[atoi(source)]);
+		printf("        }");
+	}
+
+	free(source);
+	free(copyright);
+
+	return false;
+}
+
 
 void print_first_license(uint8_t *pair, match_data match)
 {
@@ -274,6 +336,49 @@ void print_licenses(uint8_t *pair, match_data match)
 			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_licenses_item, NULL);
 		if (!records)
 			records = ldb_fetch_recordset(NULL, table, pair, false, print_licenses_item, NULL);
+	}
+
+	if (records) printf("\n      ");
+	printf("],\n");
+}
+
+void get_copyright(match_data match, char *copyright)
+{
+	/* Open sector */
+	struct ldb_table table;
+	strcpy(table.db, "oss");
+	strcpy(table.table, "copyright");
+	table.key_ln = 16;
+	table.rec_ln = 0;
+	table.ts_ln = 2;
+	table.tmp = false;
+
+	if (ldb_table_exists("oss", "copyright"))
+		ldb_fetch_recordset(NULL, table, match.file_md5, false, get_first_copyright, copyright);
+}
+
+void print_copyrights(uint8_t *pair, match_data match)
+{
+	printf("[");
+
+	/* Open sector */
+	struct ldb_table table;
+	strcpy(table.db, "oss");
+	strcpy(table.table, "copyright");
+	table.key_ln = 16;
+	table.rec_ln = 0;
+	table.ts_ln = 2;
+	table.tmp = false;
+
+	uint32_t records = 0;
+
+	if (ldb_table_exists("oss", "copyright"))
+	{
+		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_copyrights_item, NULL);
+		if (!records)
+			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_copyrights_item, NULL);
+		if (!records)
+			records = ldb_fetch_recordset(NULL, table, pair, false, print_copyrights_item, NULL);
 	}
 
 	if (records) printf("\n      ");
@@ -377,11 +482,12 @@ void print_json_match_plain(scan_data scan, match_data match)
 
 	printf("      \"url\": \"%s\",\n", match.url);
 	printf("      \"file\": \"%s\",\n", match.file);
-	printf("      \"size\": \"%s\",\n", match.size);
 	printf("      \"dependencies\": ");
 	print_dependencies(pair_md5, match.component_md5);
 	printf("      \"licenses\": ");
 	print_licenses(pair_md5, match);
+	printf("      \"copyrights\": ");
+	print_copyrights(pair_md5, match);
 
 	double elapsed = microseconds_now() - scan.timer;
 	printf("      \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
@@ -454,6 +560,9 @@ void print_json_match_spdx(scan_data scan, match_data match)
 	}
 
 	printf("          \"supplier\": \"%s\",\n", match.vendor);
+	char copyright[MAX_COPYRIGHT];
+	get_copyright(match, copyright);
+	printf("          \"copyrightText\": \"%s\",\n", copyright);
 	printf("          \"downloadLocation\": \"%s\",\n", match.url);
 	printf("          \"checksum\": [\n");
 	printf("            {\n");
