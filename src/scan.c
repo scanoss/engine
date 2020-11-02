@@ -386,7 +386,6 @@ match_data match_init()
 	*match.url = 0;
 	*match.file = 0;
 	*match.matched = 0;
-	*match.size = 0;
 	match.path_ln = 0;
 	match.selected = false;
 	memcpy(match.component_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
@@ -404,15 +403,10 @@ match_data fill_match(uint8_t *file_record, uint8_t *component_record)
 	if (file_record)
 	{
 		memcpy(match.component_md5, file_record, MD5_LEN);
-		extract_csv(match.size, (char *) file_record + MD5_LEN, 1, sizeof(match.size));
-		extract_csv(match.file, (char *) file_record + MD5_LEN, 2, sizeof(match.file));
+		strcpy(match.file, (char *) file_record + MD5_LEN);
 		match.path_ln = strlen((char *) file_record + MD5_LEN);
 	}
-	else
-	{
-		strcpy(match.size, "N/A");
-		strcpy(match.file, "all");
-	}
+	else strcpy(match.file, "all");
 
 	/* Extract fields from url record */
 	extract_csv(match.vendor,    (char *) component_record, 1, sizeof(match.vendor));
@@ -427,7 +421,7 @@ match_data fill_match(uint8_t *file_record, uint8_t *component_record)
 	flip_slashes(match.url);
 	flip_slashes(match.file);
 
-	if (!*match.vendor || !*match.component || !*match.url || !*match.version || !*match.file || !*match.size)
+	if (!*match.vendor || !*match.component || !*match.url || !*match.version || !*match.file)
 		return match_init();
 
 	return match;
@@ -450,9 +444,9 @@ void add_match(match_data match, int total_matches, match_data *matches, bool co
 {
 
 	/* Verify if metadata is complete */
-	if (!*match.vendor || !*match.component || !*match.url || !*match.version || !*match.file || !*match.size)
+	if (!*match.vendor || !*match.component || !*match.url || !*match.version || !*match.file)
 	{
-		scanlog("Metadata is incomplete: %s,%s,%s,%s,%s,%s\n",match.vendor,match.component,match.version,match.size,match.url,match.file);
+		scanlog("Metadata is incomplete: %s,%s,%s,%s,%s\n",match.vendor,match.component,match.version,match.url,match.file);
 		return;
 	}
 
@@ -494,7 +488,6 @@ void add_match(match_data match, int total_matches, match_data *matches, bool co
 				strcpy(matches[n].latest_version, match.latest_version);
 				strcpy(matches[n].url, match.url);
 				strcpy(matches[n].file, match.file);
-				strcpy(matches[n].size, match.size);
 				memcpy(matches[n].component_md5, match.component_md5, MD5_LEN);
 				memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
 				matches[n].path_ln = match.path_ln;
