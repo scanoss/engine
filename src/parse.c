@@ -114,6 +114,8 @@ void extract_csv(char *out, char *in, int n, long limit)
 	int strln = strlen(in);
 	if (strln < limit) limit = strln;
 
+	limit--; // need an extra byte for chr(0)
+
 	char *tmp = in;
 	int n_counter = 1;
 	int out_ptr = 0;

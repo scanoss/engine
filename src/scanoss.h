@@ -33,13 +33,14 @@
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-char SCANOSS_VERSION[7] = "3.34";
+char SCANOSS_VERSION[7] = "3.35";
 
 typedef enum { none, component, file, snippet } matchtype;
 typedef enum { plain, cyclonedx, spdx } report_format;
 const char *matchtypes[] = {"none", "component", "file", "snippet"};
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
 const char *copyright_sources[] = {"component_declared", "file_header"};
+const char *vulnerability_sources[] = {"nvd", "github_advisories"};
 
 typedef struct keywords
 {
