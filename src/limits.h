@@ -33,6 +33,7 @@
 #define MAX_FILE_SIZE (1024 * 1024 * 4)
 #define MAX_QUERY_RESPONSE (1024 * 1024 * 8)
 #define SLOW_QUERY_LIMIT_IN_USEC 2000000
+#define MAX_JSON_VALUE_LEN 4096
 
 /* Map record:[MD5(16)][hits(2)][range1(4)]....[rangeN(4)][lastwfp(4)] */
 #define MAP_REC_LEN (16 + 2 + (MAX_MAP_RANGES * 6) + 4)

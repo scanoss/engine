@@ -188,9 +188,9 @@ void component_vendor_md5(char *component, char *vendor, uint8_t *out)
 
 bool print_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char *license = calloc(LDB_MAX_REC_LN, 1);
+	char *license = calloc(MAX_JSON_VALUE_LEN, 1);
 
-	extract_csv(license,(char *) data, 2, LDB_MAX_REC_LN);
+	extract_csv(license,(char *) data, 2, MAX_JSON_VALUE_LEN);
 	printable_only(license);
 
 	if (*license) printf(license);
@@ -204,11 +204,11 @@ bool print_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint
 
 bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char *source  = calloc(LDB_MAX_REC_LN, 1);
-	char *license = calloc(LDB_MAX_REC_LN, 1);
+	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *license = calloc(MAX_JSON_VALUE_LEN, 1);
 
-	extract_csv(source, (char *) data, 1, LDB_MAX_REC_LN);
-	extract_csv(license,(char *) data, 2, LDB_MAX_REC_LN);
+	extract_csv(source, (char *) data, 1, MAX_JSON_VALUE_LEN);
+	extract_csv(license,(char *) data, 2, MAX_JSON_VALUE_LEN);
 
 	int src = atoi(source);
 
@@ -267,10 +267,10 @@ void clean_copyright(char *out, char *copyright)
 
 bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char *source  = calloc(LDB_MAX_REC_LN, 1);
+	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *copyright = calloc(MAX_COPYRIGHT, 1);
 
-	extract_csv(source, (char *) data, 1, LDB_MAX_REC_LN);
+	extract_csv(source, (char *) data, 1, MAX_JSON_VALUE_LEN);
 	clean_copyright(copyright, skip_first_comma((char *) data));
 
 	int src = atoi(source);
@@ -385,15 +385,89 @@ void print_copyrights(uint8_t *pair, match_data match)
 	printf("],\n");
 }
 
+bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+{
+	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *introduced = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *patched = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *CVE  = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *ID  = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *severity = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *date = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *summary = calloc(MAX_JSON_VALUE_LEN, 1);
+
+	extract_csv(source, (char *) data, 1, MAX_JSON_VALUE_LEN);
+	extract_csv(introduced, (char *) data, 3, MAX_JSON_VALUE_LEN);
+	extract_csv(patched, (char *) data, 4, MAX_JSON_VALUE_LEN);
+	extract_csv(CVE, (char *) data, 5, MAX_JSON_VALUE_LEN);
+	extract_csv(ID, (char *) data, 6, MAX_JSON_VALUE_LEN);
+	extract_csv(severity, (char *) data, 7, MAX_JSON_VALUE_LEN);
+	extract_csv(date, (char *) data, 8, MAX_JSON_VALUE_LEN);
+	extract_csv(summary, (char *) data, 9, MAX_JSON_VALUE_LEN);
+
+	int src = atoi(source);
+
+	if (*ID && (src <= (sizeof(vulnerability_sources) / sizeof(vulnerability_sources[0]))))
+	{
+		if (iteration) printf(",\n"); else printf("\n");
+		printf("        {\n");
+		printf("          \"ID\": \"%s\",\n", ID);
+		printf("          \"CVE\": \"%s\",\n", CVE);
+		printf("          \"severity\": \"%s\",\n", severity);
+		printf("          \"reported\": \"%s\",\n", date);
+		printf("          \"introduced\": \"%s\",\n", introduced);
+		printf("          \"patched\": \"%s\",\n", patched);
+		printf("          \"summary\": \"%s\",\n", summary);
+		printf("          \"source\": \"%s\"\n", vulnerability_sources[src]);
+		printf("        }");
+	}
+
+	free(source);
+	free(introduced);
+	free(patched);
+	free(CVE);
+	free(ID);
+	free(severity);
+	free(date);
+	free(summary);
+
+	return false;
+}
+
+void print_vulnerabilities(uint8_t *pair, match_data match)
+{
+	printf("[");
+
+	/* Open sector */
+	struct ldb_table table;
+	strcpy(table.db, "oss");
+	strcpy(table.table, "vulnerability");
+	table.key_ln = 16;
+	table.rec_ln = 0;
+	table.ts_ln = 2;
+	table.tmp = false;
+
+	uint32_t records = 0;
+
+	if (ldb_table_exists("oss", "vulnerability"))
+	{
+		records = ldb_fetch_recordset(NULL, table, pair, false, print_vulnerability_item, NULL);
+	}
+
+	if (records) printf("\n      ");
+	printf("],\n");
+}
+
+
 bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char *source = calloc(LDB_MAX_REC_LN, 1);
-	char *type   = calloc(LDB_MAX_REC_LN, 1);
-	char *dep    = calloc(LDB_MAX_REC_LN, 1);
+	char *source = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *type   = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *dep    = calloc(MAX_JSON_VALUE_LEN, 1);
 
-	extract_csv(source, (char *) data, 1, LDB_MAX_REC_LN);
-	extract_csv(type,   (char *) data, 2, LDB_MAX_REC_LN);
-	extract_csv(dep,    (char *) data, 3, LDB_MAX_REC_LN);
+	extract_csv(source, (char *) data, 1, MAX_JSON_VALUE_LEN);
+	extract_csv(type,   (char *) data, 2, MAX_JSON_VALUE_LEN);
+	extract_csv(dep,    (char *) data, 3, MAX_JSON_VALUE_LEN);
 
 	printable_only(source);
 	printable_only(type);
@@ -482,12 +556,19 @@ void print_json_match_plain(scan_data scan, match_data match)
 
 	printf("      \"url\": \"%s\",\n", match.url);
 	printf("      \"file\": \"%s\",\n", match.file);
+
+	char *md5 = md5_hex(scan.md5);
+	printf("      \"md5\": \"%s\",\n", md5);
+	free(md5);
+
 	printf("      \"dependencies\": ");
 	print_dependencies(pair_md5, match.component_md5);
 	printf("      \"licenses\": ");
 	print_licenses(pair_md5, match);
 	printf("      \"copyrights\": ");
 	print_copyrights(pair_md5, match);
+	printf("      \"vulnerabilities\": ");
+	print_vulnerabilities(pair_md5, match);
 
 	double elapsed = microseconds_now() - scan.timer;
 	printf("      \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
