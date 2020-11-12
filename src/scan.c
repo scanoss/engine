@@ -539,6 +539,35 @@ bool handle_component_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 
 	return false;
 }
+
+/* Determine if a file is to be skipped based on extension or path content */
+bool skip_file_path(uint8_t *file_record, int filerec_ln, match_data *matches)
+{
+	bool unwanted = false;
+	char *file_path = (char *)file_record + MD5_LEN;
+
+	/* Skip blacklisted path */
+	if (unwanted_path(file_path)) unwanted = true;
+
+	/* Skip blacklisted extension */
+	else if (blacklisted_extension(file_path)) unwanted = true;
+
+	/* Compare extension of matched file with scanned file */
+	else
+	{
+		char *oss_ext = extension(file_path);
+		char *my_ext = extension(matches->scandata->file_path);
+		if (oss_ext) if (my_ext) if (strcmp(oss_ext, my_ext))
+		{
+			scanlog("Matched file extension does not match source\n");
+			unwanted = true;
+		}
+	}
+
+	if (unwanted) scanlog("Unwanted path %s\n", file_record + 16);
+	return unwanted;
+}
+
 bool handle_file_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen && datalen >= MAX_PATH) return false;
@@ -560,7 +589,7 @@ bool handle_file_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *r
 	if (longer_path_in_set(matches, total_matches, datalen)) return false;
 
 	/* Check if matched file is a blacklisted extension */
-	if (blacklisted((char *) data + MD5_LEN)) return false;
+	if (blacklisted_extension((char *) data + MD5_LEN)) return false;
 
 	/* If component does not exist (orphan file) skip it */
 	if (!ldb_key_exists(oss_component, data))
@@ -877,7 +906,7 @@ bool ldb_scan(scan_data *scan)
 	/* Calculate MD5 hash (if not already preloaded) */
 	if (!scan->preload) file_md5(scan->file_path, scan->md5);
 
-	if (!scan->preload) if (blacklisted(scan->file_path)) skip = true;
+	if (!scan->preload) if (blacklisted_extension(scan->file_path)) skip = true;
 
 	/* Ignore <=1 byte */
 	if (file_size <= 1) skip = true;
@@ -938,7 +967,11 @@ bool ldb_scan(scan_data *scan)
 	}
 
 	/* Perform post scan intelligence */
-	if (scan->match_type != none) post_scan(matches);
+	if (scan->match_type != none)
+	{
+		scanlog("Starting post-scan analysis\n");
+		post_scan(matches);
+	}
 
 	/* Output matches */
 	scanlog("Match output starts\n");
