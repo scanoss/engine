@@ -15,18 +15,12 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-bool skip_file_path(uint8_t *file_record, int filerec_ln, match_data *matches)
-{
-	return false;
-}
-
-/* Perform additional post-scan tasks */
+/* Meta post scanning function */
 void post_scan(match_data *matches)
 {
+	keyword_analysis(matches);
 }
-

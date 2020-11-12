@@ -22,7 +22,7 @@
 
 #include "scanoss.h"
 #include "external/json-parser/json.c"
-#include "blacklist_ext.h"
+#include "blacklist.h"
 #include "limits.h"
 #include "util.c"
 #include "file.c"
@@ -30,10 +30,11 @@
 #include "query.c"
 #include "report.c"
 #include "match.c"
+#include "parse.c"
+#include "keywords.c"
 #include "psi.c"
 #include "scan.c"
 #include "help.c"
-#include "parse.c"
 
 void recurse_directory(char *name)
 {

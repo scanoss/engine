@@ -183,6 +183,7 @@ void component_vendor_md5(char *component, char *vendor, uint8_t *out)
 	char pair[1024] = "\0";
 	if (strlen(component) + strlen(vendor) + 2 >= 1024) return;
 	sprintf(pair, "%s/%s", component, vendor);
+	for (int i = 0; i < strlen(pair); i++) pair[i] = tolower(pair[i]);
 	MD5((uint8_t *)pair, strlen(pair), out);
 }
 
@@ -226,7 +227,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	free(source);
 	free(license);
 
-	return false;
+	return true;
 }
 
 /* Returns a pointer to the character following the first comma in "data" */
@@ -332,10 +333,17 @@ void print_licenses(uint8_t *pair, match_data match)
 	if (ldb_table_exists("oss", "license"))
 	{
 		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_licenses_item, NULL);
+		if (records) scanlog("File license returns hits\n");
 		if (!records)
+		{
 			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_licenses_item, NULL);
+			if (records) scanlog("Component license returns hits\n");
+		}
 		if (!records)
+		{
 			records = ldb_fetch_recordset(NULL, table, pair, false, print_licenses_item, NULL);
+			if (records) scanlog("Vendor/component license returns hits\n");
+		}
 	}
 
 	if (records) printf("\n      ");

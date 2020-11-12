@@ -132,3 +132,20 @@ void extract_csv(char *out, char *in, int n, long limit)
 	out[out_ptr] = 0;
 }
 
+/* Returns a pointer to the path after the domain name in the provided url */
+char *skip_domain(char *url)
+{
+	char *out = url;
+	int counter = 0;
+	while (*out) if (*out++ == '/') if (++counter == 3) break;
+
+	if (counter == 3 && strlen(out) > 1) return out + 1;
+	return NULL;
+}
+
+/* Converts word to lowercase */
+void lowercase(char *word)
+{
+	for (char *w = word ; *w; w++) *w = tolower(*w);
+}
+
