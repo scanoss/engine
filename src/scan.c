@@ -364,26 +364,6 @@ bool blacklist_match(uint8_t *component_record)
 	return found;
 }
 
-match_data match_init()
-{
-	match_data match;
-	*match.lines = 0;
-	*match.vendor = 0;
-	*match.component = 0;
-	*match.version = 0;
-	*match.latest_version = 0;
-	*match.lines = 0;
-	*match.oss_lines = 0;
-	*match.url = 0;
-	*match.file = 0;
-	*match.matched = 0;
-	match.path_ln = 0;
-	match.selected = false;
-	memcpy(match.component_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
-	memcpy(match.file_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
-	return match;
-}
-
 match_data fill_match(uint8_t *file_record, uint8_t *component_record)
 {
 	match_data match;

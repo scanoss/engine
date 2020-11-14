@@ -92,4 +92,24 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	json_close_file(scan.file_path);
 }
 
+match_data match_init()
+{
+	match_data match;
+	*match.lines = 0;
+	*match.vendor = 0;
+	*match.component = 0;
+	*match.version = 0;
+	*match.latest_version = 0;
+	*match.lines = 0;
+	*match.oss_lines = 0;
+	*match.url = 0;
+	*match.file = 0;
+	*match.matched = 0;
+	match.vulnerabilities = 0;
+	match.path_ln = 0;
+	match.selected = false;
+	memcpy(match.component_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
+	memcpy(match.file_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
+	return match;
+}
 

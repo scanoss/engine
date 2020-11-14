@@ -81,6 +81,7 @@ typedef struct match_data
 	uint8_t file_md5[16];
 	uint8_t component_md5[16];
 	uint8_t pair_md5[16];
+	int vulnerabilities;
 	bool selected;
 	bool snippet_to_component;
 	scan_data *scandata;
