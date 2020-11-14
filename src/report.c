@@ -184,6 +184,7 @@ void component_vendor_md5(char *component, char *vendor, uint8_t *out)
 	if (strlen(component) + strlen(vendor) + 2 >= 1024) return;
 	sprintf(pair, "%s/%s", component, vendor);
 	for (int i = 0; i < strlen(pair); i++) pair[i] = tolower(pair[i]);
+	scanlog("vendor/component: %s\n",pair);
 	MD5((uint8_t *)pair, strlen(pair), out);
 }
 
@@ -292,7 +293,7 @@ bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t
 }
 
 
-void print_first_license(uint8_t *pair, match_data match)
+void print_first_license(match_data match)
 {
 	/* Open sector */
 	struct ldb_table table;
@@ -311,11 +312,11 @@ void print_first_license(uint8_t *pair, match_data match)
 		if (!records)
 			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_first_license_item, NULL);
 		if (!records)
-			records = ldb_fetch_recordset(NULL, table, pair, false, print_first_license_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_first_license_item, NULL);
 	}
 }
 
-void print_licenses(uint8_t *pair, match_data match)
+void print_licenses(match_data match)
 {
 	printf("[");
 
@@ -341,7 +342,7 @@ void print_licenses(uint8_t *pair, match_data match)
 		}
 		if (!records)
 		{
-			records = ldb_fetch_recordset(NULL, table, pair, false, print_licenses_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_licenses_item, NULL);
 			if (records) scanlog("Vendor/component license returns hits\n");
 		}
 	}
@@ -365,7 +366,7 @@ void get_copyright(match_data match, char *copyright)
 		ldb_fetch_recordset(NULL, table, match.file_md5, false, get_first_copyright, copyright);
 }
 
-void print_copyrights(uint8_t *pair, match_data match)
+void print_copyrights(match_data match)
 {
 	printf("[");
 
@@ -386,16 +387,52 @@ void print_copyrights(uint8_t *pair, match_data match)
 		if (!records)
 			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_copyrights_item, NULL);
 		if (!records)
-			records = ldb_fetch_recordset(NULL, table, pair, false, print_copyrights_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_copyrights_item, NULL);
 	}
 
 	if (records) printf("\n      ");
 	printf("],\n");
 }
 
+/* Returns true if versions are equal (or if one version starts with the other version) */
+bool version_equal(char *version1, char *version2)
+{
+	char *v1 = version1;
+	if (*v1 == 'v') v1++; // skip leading "v" in version
+	char *v2 = version2;
+	while (*v1 && *v2) if (*(v1++) != (*(v2++))) return false;
+	return true;
+}
+
+/* Returns true if version1 fulfills version2 condition */
+bool version_condition(char *version1, char *version2)
+{
+	if (!*version2) return true;
+
+	if (!memcmp(version2, ">=", 2)) return (strcmp(version1, version2 + 3) >= 0);
+	if (!memcmp(version2, "<=", 2)) return (strcmp(version1, version2 + 3) <= 0);
+	if (*version2 == '>') return (strcmp(version1, version2 + 2) > 0);
+	if (*version2 == '<') return (strcmp(version1, version2 + 2) < 0);
+	if (*version2 == '=') return (strcmp(version1, version2 + 2) == 0);
+
+	return version_equal(version1, version2);
+}
+		
+bool vulnerability_version_matches(match_data *match, int src, char *introduced, char *patched)
+{
+	/* NVD vulnerabilities must match version */
+	if (src == 0) return version_equal(match->version, introduced);
+
+	if (!version_condition(match->version, introduced)) return false;
+	if (!version_condition(match->version, patched)) return false;
+
+	return true;
+}
+
 bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *CSV = calloc(datalen + 1, 1);
+	char *source = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *introduced = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *patched = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *CVE  = calloc(MAX_JSON_VALUE_LEN, 1);
@@ -404,32 +441,38 @@ bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint
 	char *date = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *summary = calloc(MAX_JSON_VALUE_LEN, 1);
 
-	extract_csv(source, (char *) data, 1, MAX_JSON_VALUE_LEN);
-	extract_csv(introduced, (char *) data, 3, MAX_JSON_VALUE_LEN);
-	extract_csv(patched, (char *) data, 4, MAX_JSON_VALUE_LEN);
-	extract_csv(CVE, (char *) data, 5, MAX_JSON_VALUE_LEN);
-	extract_csv(ID, (char *) data, 6, MAX_JSON_VALUE_LEN);
-	extract_csv(severity, (char *) data, 7, MAX_JSON_VALUE_LEN);
-	extract_csv(date, (char *) data, 8, MAX_JSON_VALUE_LEN);
-	extract_csv(summary, (char *) data, 9, MAX_JSON_VALUE_LEN);
+	memcpy(CSV, data, datalen);
+
+	extract_csv(source, CSV, 1, MAX_JSON_VALUE_LEN);
+	extract_csv(introduced, CSV, 3, MAX_JSON_VALUE_LEN);
+	extract_csv(patched, CSV, 4, MAX_JSON_VALUE_LEN);
+	extract_csv(CVE, CSV, 5, MAX_JSON_VALUE_LEN);
+	extract_csv(ID, CSV, 6, MAX_JSON_VALUE_LEN);
+	extract_csv(severity, CSV, 7, MAX_JSON_VALUE_LEN);
+	extract_csv(date, CSV, 8, MAX_JSON_VALUE_LEN);
+	extract_csv(summary, CSV, 9, MAX_JSON_VALUE_LEN);
 
 	int src = atoi(source);
 
-	if (*ID && (src <= (sizeof(vulnerability_sources) / sizeof(vulnerability_sources[0]))))
+	if (*ID && (src < (sizeof(vulnerability_sources) / sizeof(vulnerability_sources[0]))))
 	{
-		if (iteration) printf(",\n"); else printf("\n");
-		printf("        {\n");
-		printf("          \"ID\": \"%s\",\n", ID);
-		printf("          \"CVE\": \"%s\",\n", CVE);
-		printf("          \"severity\": \"%s\",\n", severity);
-		printf("          \"reported\": \"%s\",\n", date);
-		printf("          \"introduced\": \"%s\",\n", introduced);
-		printf("          \"patched\": \"%s\",\n", patched);
-		printf("          \"summary\": \"%s\",\n", summary);
-		printf("          \"source\": \"%s\"\n", vulnerability_sources[src]);
-		printf("        }");
+		if (vulnerability_version_matches(ptr, src, introduced, patched))
+		{
+			if (iteration) printf(",\n"); else printf("\n");
+			printf("        {\n");
+			printf("          \"ID\": \"%s\",\n", ID);
+			printf("          \"CVE\": \"%s\",\n", CVE);
+			printf("          \"severity\": \"%s\",\n", severity);
+			printf("          \"reported\": \"%s\",\n", date);
+			printf("          \"introduced\": \"%s\",\n", introduced);
+			printf("          \"patched\": \"%s\",\n", patched);
+			printf("          \"summary\": \"%s\",\n", summary);
+			printf("          \"source\": \"%s\"\n", vulnerability_sources[src]);
+			printf("        }");
+		}
 	}
 
+	free(CSV);
 	free(source);
 	free(introduced);
 	free(patched);
@@ -442,7 +485,7 @@ bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint
 	return false;
 }
 
-void print_vulnerabilities(uint8_t *pair, match_data match)
+void print_vulnerabilities(match_data match)
 {
 	printf("[");
 
@@ -459,7 +502,7 @@ void print_vulnerabilities(uint8_t *pair, match_data match)
 
 	if (ldb_table_exists("oss", "vulnerability"))
 	{
-		records = ldb_fetch_recordset(NULL, table, pair, false, print_vulnerability_item, NULL);
+		records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_vulnerability_item, &match);
 	}
 
 	if (records) printf("\n      ");
@@ -497,7 +540,7 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	return false;
 }
 
-void print_dependencies(uint8_t *pair, uint8_t *key)
+void print_dependencies(match_data match)
 {
 	printf("[");
 
@@ -514,9 +557,9 @@ void print_dependencies(uint8_t *pair, uint8_t *key)
 
 	if (ldb_table_exists("oss", "dependency"))
 	{
-		records = ldb_fetch_recordset(NULL, table, key, false, print_dependencies_item, NULL);
+		records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_dependencies_item, NULL);
 		if (!records) 
-			records = ldb_fetch_recordset(NULL, table, pair, false, print_dependencies_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_dependencies_item, NULL);
 	}
 
 	if (records) printf("\n      ");
@@ -537,10 +580,6 @@ void print_json_nomatch(scan_data scan)
 
 void print_json_match_plain(scan_data scan, match_data match)
 {
-	/* Calculate component/vendor md5 for license and dependency query */
-	uint8_t pair_md5[16]="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-	component_vendor_md5(match.vendor, match.component, pair_md5);
-
 	printf("    {\n");
 	printf("      \"id\": \"%s\",\n", matchtypes[match.type]);
 	printf("      \"lines\": \"%s\",\n", match.lines);
@@ -570,13 +609,13 @@ void print_json_match_plain(scan_data scan, match_data match)
 	free(md5);
 
 	printf("      \"dependencies\": ");
-	print_dependencies(pair_md5, match.component_md5);
+	print_dependencies(match);
 	printf("      \"licenses\": ");
-	print_licenses(pair_md5, match);
+	print_licenses(match);
 	printf("      \"copyrights\": ");
-	print_copyrights(pair_md5, match);
+	print_copyrights(match);
 	printf("      \"vulnerabilities\": ");
-	print_vulnerabilities(pair_md5, match);
+	print_vulnerabilities(match);
 
 	double elapsed = microseconds_now() - scan.timer;
 	printf("      \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
@@ -587,10 +626,6 @@ void print_json_match_plain(scan_data scan, match_data match)
 
 void print_json_match_cyclonedx(scan_data scan, match_data match)
 {
-	/* Calculate component/vendor md5 for license and dependency query */
-	uint8_t pair_md5[16]="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-	component_vendor_md5(match.vendor, match.component, pair_md5);
-
 	printf("    {\n");
 	printf("      \"type\": \"file\",\n");
 	printf("      \"publisher\": \"%s\",\n", match.vendor);
@@ -614,7 +649,7 @@ void print_json_match_cyclonedx(scan_data scan, match_data match)
 	printf("        {\n");
 	printf("          \"license\": {\n");
     printf("             \"id\": \"");
-	print_first_license(pair_md5, match);
+	print_first_license(match);
 	printf("\"\n");
 	printf("          }\n");
 	printf("        }\n");
@@ -632,10 +667,6 @@ void print_json_match_cyclonedx(scan_data scan, match_data match)
 
 void print_json_match_spdx(scan_data scan, match_data match)
 {
-	/* Calculate component/vendor md5 for license and dependency query */
-	uint8_t pair_md5[16]="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-	component_vendor_md5(match.vendor, match.component, pair_md5);
-
 	printf("        \"Package\": {\n");
 	printf("          \"name\": \"%s\",\n", match.component);
 
@@ -666,7 +697,7 @@ void print_json_match_spdx(scan_data scan, match_data match)
 	printf("          \"description\": \"Detected by SCANOSS Inventorying Engine.\",\n");
 	printf("          \"licenseConcluded\": \"\",\n");
 	printf("          \"licenseInfoFromFiles\": \"");
-	print_first_license(pair_md5, match);
+	print_first_license(match);
 	printf("\"\n");
 	printf("        }\n");
 
@@ -675,6 +706,9 @@ void print_json_match_spdx(scan_data scan, match_data match)
 
 void print_json_match(scan_data scan, match_data match)
 {
+	/* Calculate component/vendor md5 for aggregated data queries */
+	component_vendor_md5(match.vendor, match.component, match.pair_md5);
+
 	if (quiet) return;
 
 	switch(json_format)

@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:wtvhdq")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:wtvhedq")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -172,6 +172,10 @@ int main(int argc, char **argv)
 			case 'h':
 				help();
 				exit(EXIT_SUCCESS);
+				break;
+
+			case 'e':
+				match_extensions = true;
 				break;
 
 			case 'q':
