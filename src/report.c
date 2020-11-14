@@ -214,21 +214,24 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 	int src = atoi(source);
 
+	scanlog("Fetched license %s\n", license);
 	printable_only(license);
+	bool reported = false;
 
-	if (*license && (src <= (sizeof(license_sources) / sizeof(license_sources[0]))))
+	if (*license && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
 	{
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");
 		printf("          \"name\": \"%s\",\n", license);
 		printf("          \"source\": \"%s\"\n", license_sources[atoi(source)]);
 		printf("        }");
+		reported = true;
 	}
 
 	free(source);
 	free(license);
 
-	return true;
+	return reported;
 }
 
 /* Returns a pointer to the character following the first comma in "data" */
@@ -408,6 +411,7 @@ bool version_equal(char *version1, char *version2)
 bool version_condition(char *version1, char *version2)
 {
 	if (!*version2) return true;
+	if (*version1 == 'v') version1++; // skip leading "v" in version
 
 	if (!memcmp(version2, ">=", 2)) return (strcmp(version1, version2 + 3) >= 0);
 	if (!memcmp(version2, "<=", 2)) return (strcmp(version1, version2 + 3) <= 0);
@@ -421,12 +425,22 @@ bool version_condition(char *version1, char *version2)
 bool vulnerability_version_matches(match_data *match, int src, char *introduced, char *patched)
 {
 	/* NVD vulnerabilities must match version */
-	if (src == 0) return version_equal(match->version, introduced);
+	if (src == 0)
+	{
+		if (version_equal(match->version, introduced)) return true;
+		if (version_equal(match->latest_version, introduced)) return true;
+		return false;
+	}
 
-	if (!version_condition(match->version, introduced)) return false;
-	if (!version_condition(match->version, patched)) return false;
+	/* Test version against affected range */
+	if (version_condition(match->version, introduced))
+		if (version_condition(match->version, patched)) return true;
 
-	return true;
+	/* Test latest version against affected range */
+	if (version_condition(match->latest_version, introduced))
+		if (version_condition(match->latest_version, patched)) return true;
+
+	return false;
 }
 
 bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
@@ -440,6 +454,8 @@ bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint
 	char *severity = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *date = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *summary = calloc(MAX_JSON_VALUE_LEN, 1);
+
+	match_data *match = ptr;
 
 	memcpy(CSV, data, datalen);
 
@@ -456,9 +472,9 @@ bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint
 
 	if (*ID && (src < (sizeof(vulnerability_sources) / sizeof(vulnerability_sources[0]))))
 	{
-		if (vulnerability_version_matches(ptr, src, introduced, patched))
+		if (vulnerability_version_matches(match, src, introduced, patched))
 		{
-			if (iteration) printf(",\n"); else printf("\n");
+			if (match->vulnerabilities) printf(",\n"); else printf("\n");
 			printf("        {\n");
 			printf("          \"ID\": \"%s\",\n", ID);
 			printf("          \"CVE\": \"%s\",\n", CVE);
@@ -469,6 +485,7 @@ bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint
 			printf("          \"summary\": \"%s\",\n", summary);
 			printf("          \"source\": \"%s\"\n", vulnerability_sources[src]);
 			printf("        }");
+			match->vulnerabilities++;
 		}
 	}
 
@@ -498,14 +515,12 @@ void print_vulnerabilities(match_data match)
 	table.ts_ln = 2;
 	table.tmp = false;
 
-	uint32_t records = 0;
-
 	if (ldb_table_exists("oss", "vulnerability"))
 	{
-		records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_vulnerability_item, &match);
+		ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_vulnerability_item, &match);
 	}
 
-	if (records) printf("\n      ");
+	if (match.vulnerabilities) printf("\n      ");
 	printf("],\n");
 }
 
