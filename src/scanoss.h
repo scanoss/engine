@@ -80,6 +80,7 @@ typedef struct match_data
 	char matched[64];
 	uint8_t file_md5[16];
 	uint8_t component_md5[16];
+	uint8_t pair_md5[16];
 	bool selected;
 	bool snippet_to_component;
 	scan_data *scandata;
@@ -90,6 +91,7 @@ unsigned char *map;
 int map_rec_len;
 bool debug_on = false;
 bool quiet = false;
+bool match_extensions = false;
 int json_format = plain;
 
 #include "external/wfp/winnowing.c"

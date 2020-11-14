@@ -553,7 +553,7 @@ bool skip_file_path(uint8_t *file_record, int filerec_ln, match_data *matches)
 	else if (blacklisted_extension(file_path)) unwanted = true;
 
 	/* Compare extension of matched file with scanned file */
-	else
+	else if (match_extensions)
 	{
 		char *oss_ext = extension(file_path);
 		char *my_ext = extension(matches->scandata->file_path);

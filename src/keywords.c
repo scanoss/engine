@@ -146,14 +146,26 @@ bool good_version_range(match_data match)
 {
 	if (*match.version)
 	if (*match.latest_version)
-	if (strlen(match.version) <= MD5_LEN)
-	if (strlen(match.latest_version) <= MD5_LEN) return true;
+	if (strlen(match.version) < 2 * MD5_LEN)
+	if (strlen(match.latest_version) < 2 * MD5_LEN) return true;
 	return false;
 }
 
 int select_exact_component_by_keyword(match_data *matches, char *component)
 {
-	/* Search for matches with version ranges first */
+	/* Search for keyword match in vendor and component with version ranges */
+	for (int i = 0; i < scan_limit && *matches[i].component; i++)
+	{
+		if (good_version_range(matches[i]))
+			if (!strcmp(matches[i].component, component))
+			if (!strcmp(matches[i].vendor, component))
+			{
+				matches[i].selected = true;
+				return i;
+			}
+	}
+
+	/* Search for matches in component with version ranges */
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
 		if (good_version_range(matches[i]))
@@ -164,7 +176,7 @@ int select_exact_component_by_keyword(match_data *matches, char *component)
 			}
 	}
 
-	/* Search for matches without version ranges */
+	/* Search for matches in component without version ranges */
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
 		if (!strcmp(matches[i].component, component))
@@ -243,7 +255,8 @@ bool select_match(match_data *matches, struct keywords *kwlist)
 			/* Search for matches with version ranges first */
 			for (int i = 0; i < scan_limit && *matches[i].component; i++)
 			{
-				scanlog("Matched: %d %s version %s %s\n", i, matches[i].component, matches[i].version, i==selected?"[SELECTED]":"");
+				scanlog("Matched: %d %s/%s version %s %s\n", i, matches[i].vendor,matches[i].component, matches[i].version, i==selected?"[SELECTED]":"");
+				scanlog("          %s\n", matches[i].url);
 			}
 		}
 		if (!*matches[selected].vendor) strcpy(matches[selected].vendor, kwlist[best].word);

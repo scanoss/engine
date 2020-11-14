@@ -119,11 +119,10 @@ void extract_csv(char *out, char *in, int n, long limit)
 	char *tmp = in;
 	int n_counter = 1;
 	int out_ptr = 0;
-	int ASCII_COMMA = 44;
 
 	do
 	{
-		if (*tmp == ASCII_COMMA)
+		if (*tmp == ',')
 			n_counter++;
 		else if (n_counter == n)
 			out[out_ptr++] = *tmp;
