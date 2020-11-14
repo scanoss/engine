@@ -288,15 +288,6 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 	return none;
 }
 
-int ldb_matched_percent(matchtype match_type, int hits, unsigned int total) {
-	int out;
-	if (match_type == snippet)
-		out = ((total > 0 ? ((100 * hits) / total) : 0));
-	else
-		out = 100;
-	return out;
-}
-
 /* Compiles list of line ranges, returning total number of hits (lines matched) */
 uint32_t compile_ranges(uint8_t *matchmap_matching, char *ranges, char *oss_ranges) {
 
@@ -619,6 +610,7 @@ bool handle_file_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *r
 struct match_data *prefill_match(scan_data *scan, char *lines, char *oss_lines, int matched_percent)
 {
 	struct match_data *matches = calloc(sizeof(match_data), scan_limit);
+	if (matched_percent > 100) matched_percent = 100;
 	for (int i = 0; i < scan_limit; i++)
 	{
 		matches[i].type = scan->match_type;
