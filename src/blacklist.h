@@ -77,6 +77,7 @@ char *BLACKLISTED_EXTENSIONS[] = {
 "gitignore",
 "glif",
 "gmo",
+"gradle",
 "guess",
 "hex",
 "html",

@@ -190,9 +190,13 @@ void component_vendor_md5(char *component, char *vendor, uint8_t *out)
 
 bool print_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
+	char *CSV = calloc(datalen + 1, 1);
+	memcpy(CSV, (char *) data, datalen);
 	char *license = calloc(MAX_JSON_VALUE_LEN, 1);
 
-	extract_csv(license,(char *) data, 2, MAX_JSON_VALUE_LEN);
+	extract_csv(license, CSV, 2, MAX_JSON_VALUE_LEN);
+	free(CSV);
+
 	printable_only(license);
 
 	if (*license) printf(license);
@@ -206,11 +210,15 @@ bool print_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint
 
 bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
+	char *CSV  = calloc(datalen + 1, 1);
+	memcpy(CSV, data, datalen);
+
 	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *license = calloc(MAX_JSON_VALUE_LEN, 1);
 
-	extract_csv(source, (char *) data, 1, MAX_JSON_VALUE_LEN);
-	extract_csv(license,(char *) data, 2, MAX_JSON_VALUE_LEN);
+	extract_csv(source, CSV, 1, MAX_JSON_VALUE_LEN);
+	extract_csv(license, CSV, 2, MAX_JSON_VALUE_LEN);
+	free(CSV);
 
 	int src = atoi(source);
 
@@ -272,10 +280,15 @@ void clean_copyright(char *out, char *copyright)
 
 bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
+	char *CSV = calloc(datalen + 1, 1);
+	memcpy(CSV, (char *) data, datalen);
+
 	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *copyright = calloc(MAX_COPYRIGHT, 1);
 
-	extract_csv(source, (char *) data, 1, MAX_JSON_VALUE_LEN);
+	extract_csv(source, CSV, 1, MAX_JSON_VALUE_LEN);
+	free(CSV);
+
 	clean_copyright(copyright, skip_first_comma((char *) data));
 
 	int src = atoi(source);
@@ -446,6 +459,8 @@ bool vulnerability_version_matches(match_data *match, int src, char *introduced,
 bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	char *CSV = calloc(datalen + 1, 1);
+	memcpy(CSV, (char *) data, datalen);
+
 	char *source = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *introduced = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *patched = calloc(MAX_JSON_VALUE_LEN, 1);
@@ -457,8 +472,6 @@ bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint
 
 	match_data *match = ptr;
 
-	memcpy(CSV, data, datalen);
-
 	extract_csv(source, CSV, 1, MAX_JSON_VALUE_LEN);
 	extract_csv(introduced, CSV, 3, MAX_JSON_VALUE_LEN);
 	extract_csv(patched, CSV, 4, MAX_JSON_VALUE_LEN);
@@ -467,6 +480,8 @@ bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint
 	extract_csv(severity, CSV, 7, MAX_JSON_VALUE_LEN);
 	extract_csv(date, CSV, 8, MAX_JSON_VALUE_LEN);
 	extract_csv(summary, CSV, 9, MAX_JSON_VALUE_LEN);
+
+	free(CSV);
 
 	int src = atoi(source);
 
@@ -489,7 +504,6 @@ bool print_vulnerability_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint
 		}
 	}
 
-	free(CSV);
 	free(source);
 	free(introduced);
 	free(patched);
@@ -527,13 +541,18 @@ void print_vulnerabilities(match_data match)
 
 bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
+	char *CSV = calloc(datalen + 1, 1);
+	memcpy(CSV, (char *) data, datalen);
+
 	char *source = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *type   = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *dep    = calloc(MAX_JSON_VALUE_LEN, 1);
 
-	extract_csv(source, (char *) data, 1, MAX_JSON_VALUE_LEN);
-	extract_csv(type,   (char *) data, 2, MAX_JSON_VALUE_LEN);
-	extract_csv(dep,    (char *) data, 3, MAX_JSON_VALUE_LEN);
+	extract_csv(source, CSV, 1, MAX_JSON_VALUE_LEN);
+	extract_csv(type,   CSV, 2, MAX_JSON_VALUE_LEN);
+	extract_csv(dep,    CSV, 3, MAX_JSON_VALUE_LEN);
+
+	free(CSV);
 
 	printable_only(source);
 	printable_only(type);

@@ -44,8 +44,11 @@ void scan_data_reset(scan_data *scan)
 	*scan->file_path = 0;
 	*scan->file_size = 0;
 	scan->hash_count = 0;
+	scan->timer = 0;
 	scan->total_lines = 0;
 	scan->matchmap_ptr = 0;
+	scan->hash_count = 0;
+	scan->match_type = none;
 }
 
 void scan_data_free(scan_data scan)
@@ -220,6 +223,11 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 			{
 				/* Not found. Add MD5 to map */
 				if (scan->matchmap_ptr >= MAX_FILES) break;
+
+				/* Clear row */
+				memset(scan->matchmap + (scan->matchmap_ptr * MAP_REC_LEN), 0, MAP_REC_LEN);
+
+				/* Write MD5 */
 				memcpy(scan->matchmap + (scan->matchmap_ptr * MAP_REC_LEN), scan->md5, MD5_LEN);
 				found = scan->matchmap_ptr;
 			}
@@ -694,7 +702,7 @@ uint8_t *biggest_snippet(uint8_t *matchmap, uint64_t matchmap_ptr)
 				out = matchmap + i * MAP_REC_LEN;
 			}
 		}
-
+		scanlog("Biggest snippet: %d\n", most_hits);
 		if (!hits) break;
 
 		/* Erase match from map if MD5 is orphan */
@@ -779,9 +787,7 @@ int wfp_scan(char *path)
 		/* Parse file information with format: file=MD5(32),file_size,file_path */
 		if (is_file)
 		{
-
 			scan_data_reset(&scan);
-
 			const int tagln = 5; // len of 'file='
 
 			/* Get file MD5 */
@@ -950,5 +956,6 @@ bool ldb_scan(scan_data *scan)
 	output_matches_json(matches, scan);
 
 	if (matches) free(matches);
+	scan_data_reset(scan);
 	return true;
 }
