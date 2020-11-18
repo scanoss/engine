@@ -852,13 +852,7 @@ bool skip_snippets(char *src, uint64_t srcln)
 {
 	if (srcln > SKIP_SNIPPETS_IF_FILE_BIGGER) return true;
 	if (srcln != strlen(src)) return true; // is binary
-
-	if (!memcmp(src, "{", 1)) return true;     // is json
-	if (!memcmp(src, "<?xml", 5)) return true; // is xml
-	if (!memcmp(src, "<?XML", 5)) return true; // is xml
-	if (!memcmp(src, "<html", 5)) return true; // is html
-	if (!memcmp(src, "<HTML", 5)) return true; // is html
-
+	if (unwanted_header(src)) return true;
 	return false;
 }
 
@@ -884,7 +878,7 @@ bool ldb_scan(scan_data *scan)
 	/* Calculate MD5 hash (if not already preloaded) */
 	if (!scan->preload) file_md5(scan->file_path, scan->md5);
 
-	if (!scan->preload) if (blacklisted_extension(scan->file_path)) skip = true;
+	if (blacklisted_extension(scan->file_path)) skip = true;
 
 	/* Ignore <=1 byte */
 	if (file_size <= 1) skip = true;

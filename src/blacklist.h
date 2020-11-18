@@ -104,6 +104,7 @@ char *BLACKLISTED_EXTENSIONS[] = {
 "mxml",
 "notice",
 "out",
+"pbtxt",
 "pdf",
 "pem",
 "phtml",
