@@ -41,7 +41,7 @@ const char *matchtypes[] = {"none", "component", "file", "snippet"};
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
 const char *copyright_sources[] = {"component_declared", "file_header"};
 const char *vulnerability_sources[] = {"nvd", "github_advisories"};
-const char *quality_sources[] = {"best_prectices"};
+const char *quality_sources[] = {"best_practices"};
 
 typedef struct keywords
 {
