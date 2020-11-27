@@ -850,9 +850,21 @@ int wfp_scan(char *path)
 
 bool skip_snippets(char *src, uint64_t srcln)
 {
-	if (srcln > SKIP_SNIPPETS_IF_FILE_BIGGER) return true;
-	if (srcln != strlen(src)) return true; // is binary
-	if (unwanted_header(src)) return true;
+	if (srcln > SKIP_SNIPPETS_IF_FILE_BIGGER)
+	{
+		scanlog("Skipping snippets: File over size limit\n");
+		return true;
+	}
+	if (srcln != strlen(src))
+	{
+		scanlog("Skipping snippets: Binary file\n");
+		return true; // is binary
+	}
+	if (unwanted_header(src))
+	{
+		scanlog("Skipping snippets: Blacklisted contents\n");
+		return true;
+	}
 	return false;
 }
 
