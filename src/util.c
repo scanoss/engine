@@ -2,7 +2,7 @@
 /*
  * src/util.c
  *
- * Data conversion utilities
+ * Data conversion and handling utilities
  *
  * Copyright (C) 2018-2020 SCANOSS.COM
  *
@@ -31,6 +31,7 @@ void uint32_reverse(uint8_t *data)
 	data[2] = tmp;
 }
 
+/* Returns the numeric value of hex h */
 uint8_t h2d(uint8_t h)
 {
 	if (h >= '0' && h <= '9')
@@ -42,6 +43,7 @@ uint8_t h2d(uint8_t h)
 	return 0;
 }
 
+/* Converts hex to binary */
 void hex_to_bin(char *hex, uint32_t len, uint8_t *out)
 {
 	uint32_t ptr = 0;
@@ -49,6 +51,7 @@ void hex_to_bin(char *hex, uint32_t len, uint8_t *out)
 		out[ptr++] = 16 * h2d(hex[i]) + h2d(hex[i + 1]);
 }
 
+/* Compares two MD5 checksums */
 bool md5cmp(uint8_t *md51, uint8_t *md52)
 {
 	for (int i = 0; i < 16; i++)
@@ -57,6 +60,7 @@ bool md5cmp(uint8_t *md51, uint8_t *md52)
 	return true;
 }
 
+/* Trim str */
 void trim(char *str)
 {
     int i = 0;
@@ -70,5 +74,51 @@ void trim(char *str)
     len = strlen(str);
     for (i = len - 1; i >= 0 ; i--) if (!isspace(str[i])) break;
     str[i + 1] = 0;
+}
+
+/* Trim string at first non-printable char */
+void printable_only(char *text)
+{
+	for (int i = 0; i < strlen(text); i++)
+		if (text[i] < '"' || text[i] > 'z') text[i] = 0;
+}
+
+/* Returns the pair md5 of "component/vendor" */
+void component_vendor_md5(char *component, char *vendor, uint8_t *out)
+{
+	char pair[1024] = "\0";
+	if (strlen(component) + strlen(vendor) + 2 >= 1024) return;
+	sprintf(pair, "%s/%s", component, vendor);
+	for (int i = 0; i < strlen(pair); i++) pair[i] = tolower(pair[i]);
+	scanlog("vendor/component: %s\n",pair);
+	MD5((uint8_t *)pair, strlen(pair), out);
+}
+
+/* Returns the current date stamp */
+char *datestamp()
+{
+	time_t timestamp;
+	struct tm *times;
+	time(&timestamp);
+	times = localtime(&timestamp);
+	char *stamp = malloc(MAX_ARGLN);
+	strftime(stamp, MAX_ARGLN, "%FT%T%z", times);
+	return stamp;
+}
+
+/* Prints a "created" JSON element with the current datestamp */
+void print_datestamp()
+{
+	char *stamp = datestamp();
+	printf("      \"created\": \"%s\"\n", stamp);
+	free(stamp);
+}
+
+/* Returns a string with a hex representation of md5 */
+char *md5_hex(uint8_t *md5)
+{
+	char *out =  calloc(2 * MD5_LEN + 1, 1);
+	for (int i = 0; i < MD5_LEN; i++) sprintf(out + strlen(out), "%02x", md5[i]);
+	return out;
 }
 

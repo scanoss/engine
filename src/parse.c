@@ -104,6 +104,18 @@ char *parse_sbom(char *filepath)
 	return out;
 }
 
+/* Returns a pointer to the character following the first comma in "data" */
+char *skip_first_comma(char *data)
+{
+    char *ptr = data;
+    while (*ptr)
+    {
+        if (*ptr == ',') return ++ptr;
+        ptr++;
+    }
+    return data;
+}
+
 /* Extracts the "n"th value from the comma separated "in" string */
 void extract_csv(char *out, char *in, int n, long limit)
 {

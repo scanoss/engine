@@ -32,9 +32,11 @@ char *BLACKLISTED_PATHS[] = {
 char *BLACKLISTED_HEADERS[] =
 {
 	"{",
+	"[",
+	"<!doc",
 	"<?xml",
 	"<html",
-	"<AC3D",
+	"<ac3d",
 	NULL
 };
 
@@ -137,6 +139,7 @@ char *BLACKLISTED_EXTENSIONS[] = {
 "wav",
 "xht",
 "xhtml",
+"xls",
 "xml",
 "xpm",
 "xsd",
@@ -235,13 +238,20 @@ bool unwanted_path(char *path)
 	return false;
 }
 
+/* Case insensitive string comparison of starting of either string */
+bool headicmp(char *a, char *b)
+{
+	while (*a && *b) if (tolower(*a++) != tolower(*b++)) return false;
+	return true;
+}
+
 /* Returns true when src starts with any of the unwanted BLACKLISTED_HEADER strings */
 bool unwanted_header(char *src)
 {
 	int i=0;
 	while (BLACKLISTED_HEADERS[i])
 	{
-		if (!memcmp(src,BLACKLISTED_HEADERS[i],strlen(BLACKLISTED_HEADERS[i])))
+		if (headicmp(src,BLACKLISTED_HEADERS[i]))
 		{
 			return true;
 		}
