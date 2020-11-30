@@ -110,23 +110,16 @@ void print_json_match_plain(scan_data scan, match_data match)
 	printf("      \"version\": \"%s\",\n", match.version);
 	printf("      \"latest\": \"%s\",\n", match.latest_version);
 
-	if (debug_on)
-	{
-		char *component_id = md5_hex(match.component_md5);
-		printf("      \"component_id\": \"%s\",\n", component_id);
-		free(component_id);
-
-		char *file_id = md5_hex(match.file_md5);
-		printf("      \"file_id\": \"%s\",\n", file_id);
-		free(file_id);
-	}
-
 	printf("      \"url\": \"%s\",\n", match.url);
 	printf("      \"file\": \"%s\",\n", match.file);
 
-	char *md5 = md5_hex(scan.md5);
-	printf("      \"md5\": \"%s\",\n", md5);
-	free(md5);
+	char *component_id = md5_hex(match.component_md5);
+	printf("      \"component_id\": \"%s\",\n", component_id);
+	free(component_id);
+
+	char *file_id = md5_hex(match.file_md5);
+	printf("      \"file_id\": \"%s\",\n", file_id);
+	free(file_id);
 
 	printf("      \"dependencies\": ");
 	print_dependencies(match);
