@@ -26,32 +26,36 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	memcpy(CSV, (char *) data, datalen);
 
 	char *source = calloc(MAX_JSON_VALUE_LEN, 1);
-	char *type   = calloc(MAX_JSON_VALUE_LEN, 1);
-	char *dep    = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *vendor = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *component = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *version = calloc(MAX_JSON_VALUE_LEN, 1);
 
 	extract_csv(source, CSV, 1, MAX_JSON_VALUE_LEN);
-	extract_csv(type,   CSV, 2, MAX_JSON_VALUE_LEN);
-	extract_csv(dep,    CSV, 3, MAX_JSON_VALUE_LEN);
+	extract_csv(vendor, CSV, 2, MAX_JSON_VALUE_LEN);
+	extract_csv(component, CSV, 3, MAX_JSON_VALUE_LEN);
+	extract_csv(version, CSV, 4, MAX_JSON_VALUE_LEN);
 
 	free(CSV);
 
-	printable_only(source);
-	printable_only(type);
-	printable_only(dep);
+	int src = atoi(source);
+	printable_only(vendor);
+	printable_only(component);
 
-	if (*source && *type && *dep)
+	if (*vendor && *component)
 	{
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");
-		printf("          \"name\": \"%s\",\n", dep);
-		printf("          \"type\": \"%s\",\n", type);
-		printf("          \"source\": \"%s\"\n", source);
+		printf("          \"vendor\": \"%s\",\n", vendor);
+		printf("          \"component\": \"%s\",\n", component);
+		printf("          \"version\": \"%s\",\n", version);
+		printf("          \"source\": \"%s\"\n", dependency_sources[src]);
 		printf("        }");
 	}
 
 	free(source);
-	free(type);
-	free(dep);
+	free(vendor);
+	free(component);
+	free(version);
 	return false;
 }
 
