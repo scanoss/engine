@@ -64,16 +64,16 @@ void recurse_directory(char *name)
 
 		else if (is_file(path))
 		{
+
 			/* Scan file directly */
-			scan_data scan = scan_data_init();
-			strcpy(scan.file_path, path);
+			scan_data scan = scan_data_init(path);
 
 			ldb_scan(&scan);
 
 			scan_data_free(scan);
 		}
 
-		free (path);
+		free(path);
 	}
 
 	if (read) closedir(dir);
@@ -90,11 +90,12 @@ bool validate_alpha(char *txt)
 	return true;
 }
 
-report_format set_json_format(char *arg)
+output_format set_format(char *arg)
 {
 	if (!strcmp(arg, "plain")) return plain;
 	if (!strcmp(arg, "spdx")) return spdx;
 	if (!strcmp(arg, "cyclonedx")) return cyclonedx;
+	if (!strcmp(arg, "spdx_xml")) return spdx_xml;
 	printf("Unsupported report format\n");
 	exit(EXIT_FAILURE);
 	return plain;
@@ -151,7 +152,7 @@ int main(int argc, char **argv)
 		switch (option)
 		{
 			case 'f':
-				json_format = set_json_format(optarg);
+				report_format = set_format(optarg);
 				break;
 
 			case 's':
@@ -247,8 +248,11 @@ int main(int argc, char **argv)
 		strcpy (target, argv[argc-1]);
 		for (int i=strlen(target)-1; i>=0; i--) if (target[i]=='/') target[i]=0; else break;
 
-		/* Open main JSON structure */
-		json_open();
+		/* Init scan structure */
+		scan_data scan = scan_data_init(target);
+
+		/* Open main report structure */
+		report_open(&scan);
 
 		/* Scan directory */
 		if (isdir) recurse_directory(target);
@@ -258,25 +262,22 @@ int main(int argc, char **argv)
 		{
 			bool wfp_extension = false;
 			if (extension(target)) if (!strcmp(extension(target), "wfp")) wfp_extension = true;
+
 			if (force_wfp) wfp_extension = true;
 
-			if (wfp_extension)
-				/* Scan wfp file */
-				wfp_scan(target);
-			else
-			{
-				/* Scan file directly */
-				scan_data scan = scan_data_init();
-				strcpy(scan.file_path, target);
+			/* Scan wfp file */
+			if (wfp_extension) wfp_scan(&scan);
 
-				ldb_scan(&scan);
+			/* Scan file directly */
+			else ldb_scan(&scan);
 
-				scan_data_free(scan);
-			}
 		}
+
+		/* Close main report structure */
+		report_close();
 			
-		/* Close main JSON structure */
-		json_close();
+		/* Free scan data */
+		scan_data_free(scan);
 
 		if (target) free (target);
 	}

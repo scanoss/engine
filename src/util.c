@@ -110,7 +110,7 @@ char *datestamp()
 void print_datestamp()
 {
 	char *stamp = datestamp();
-	printf("      \"created\": \"%s\"\n", stamp);
+	printf("%s", stamp);
 	free(stamp);
 }
 

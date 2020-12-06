@@ -20,24 +20,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-bool print_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	char *CSV = calloc(datalen + 1, 1);
 	memcpy(CSV, (char *) data, datalen);
-	char *license = calloc(MAX_JSON_VALUE_LEN, 1);
 
-	extract_csv(license, CSV, 2, MAX_JSON_VALUE_LEN);
+	extract_csv(ptr, CSV, 2, MAX_JSON_VALUE_LEN);
 	free(CSV);
 
-	printable_only(license);
-
-	if (*license) printf(license);
-
-	free(license);
-
-	if (*license) return true;
-
-	return false;
+	return true;
 }
 
 bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
@@ -74,7 +65,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	return reported;
 }
 
-void print_first_license(match_data match)
+void get_license(match_data match, char *license)
 {
 	/* Open sector */
 	struct ldb_table table;
@@ -89,11 +80,11 @@ void print_first_license(match_data match)
 
 	if (ldb_table_exists("oss", "license"))
 	{
-		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_first_license_item, NULL);
+		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, get_first_license_item, license);
 		if (!records)
-			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_first_license_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, get_first_license_item, license);
 		if (!records)
-			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_first_license_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, get_first_license_item, license);
 	}
 }
 

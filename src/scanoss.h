@@ -33,10 +33,10 @@
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-char SCANOSS_VERSION[7] = "4.0.2";
+char SCANOSS_VERSION[7] = "4.0.3";
 
-typedef enum { none, component, file, snippet } matchtype;
-typedef enum { plain, cyclonedx, spdx } report_format;
+typedef enum {none, component, file, snippet} matchtype;
+typedef enum {plain, cyclonedx, spdx, spdx_xml} output_format;
 const char *matchtypes[] = {"none", "component", "file", "snippet"};
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
 const char *copyright_sources[] = {"component_declared", "file_header"};
@@ -55,6 +55,7 @@ typedef struct scan_data
 	uint8_t *md5;
 	char *file_path;
 	char *file_size;
+	char source_md5[33];
 	uint32_t *hashes;
 	uint32_t *lines;
 	uint32_t hash_count;
@@ -95,7 +96,7 @@ int map_rec_len;
 bool debug_on = false;
 bool quiet = false;
 bool match_extensions = false;
-int json_format = plain;
+int report_format = plain;
 
 #include "external/wfp/winnowing.c"
 #include "external/ldb/ldb.h"
@@ -111,7 +112,7 @@ char *sbom = NULL;
 char *blacklisted_assets = NULL;
 
 /* Prototype declarations */
-int wfp_scan(char *path);
+int wfp_scan(scan_data *scan);
 bool ldb_scan(scan_data *scan);
 matchtype ldb_scan_snippets(scan_data *scan_ptr);
 bool key_find(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);

@@ -33,7 +33,7 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	scan_data scan = *scan_ptr;
 
 	/* Files not matching are only reported with -f plain */
-	if (!matches && json_format != plain) return;
+	if (!matches && report_format != plain) return;
 
 	int match_counter = 0;
 
@@ -43,7 +43,7 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	slow_query_log(scan);
 
 	/* Print comma separator */
-	if (!quiet) if (!first_file) printf("  ,\n");
+	if (!quiet) if (!first_file && report_format != spdx_xml) printf("  ,\n");
 	first_file = false;
 
 	/* Open file structure */
@@ -59,8 +59,8 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		{
 			if (matches[i].selected)
 			{
-				if (match_counter++) if (!quiet) printf("  ,\n");
-				print_json_match(scan, matches[i]);
+				if (match_counter++) if (!quiet && report_format != spdx_xml) printf("  ,\n");
+				print_match(scan, matches[i]);
 				selected = true;
 			}
 		}
@@ -70,8 +70,8 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		{
 			if (!matches[i].selected) if (strcmp(matches[i].version, matches[i].latest_version))
 			{
-				if (match_counter++) if (!quiet) printf("  ,\n");
-				print_json_match(scan, matches[i]);
+				if (match_counter++) if (!quiet && report_format != spdx_xml) printf("  ,\n");
+				print_match(scan, matches[i]);
 			}
 		}
 
@@ -80,8 +80,8 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		{
 			if (!matches[i].selected) if (!strcmp(matches[i].version, matches[i].latest_version))
 			{
-				if (match_counter++) if (!quiet) printf("  ,\n");
-				print_json_match(scan, matches[i]);
+				if (match_counter++) if (!quiet && report_format != spdx_xml) printf("  ,\n");
+				print_match(scan, matches[i]);
 			}
 		}
 	}
