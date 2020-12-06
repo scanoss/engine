@@ -24,6 +24,7 @@
 #define MD5_LEN 16
 #define WFP_REC_LN 18
 #define MAX_COPYRIGHT 128
+#define MAX_LICENSE 64
 
 /* Limits */
 #define MAX_ARGLN 512       // Max command line argument length

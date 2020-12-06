@@ -20,12 +20,27 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-scan_data scan_data_init()
+/* Calculate and write source wfp md5 in scan->source_md5 */
+void calc_wfp_md5(scan_data *scan)
+{
+	uint8_t tmp_md5[16];
+	file_md5(scan->file_path, tmp_md5);
+	char *tmp_md5_hex = md5_hex(tmp_md5);
+	strcpy(scan->source_md5, tmp_md5_hex);
+	free(tmp_md5_hex);
+}
+
+/* Init scan structure */
+scan_data scan_data_init(char *target)
 {
 	scan_data scan;
 	scan.md5 = calloc (MD5_LEN,1);
 	scan.file_path = calloc(LDB_MAX_REC_LN, 1);
+	strcpy(scan.file_path, target);
+
 	scan.file_size = calloc(LDB_MAX_REC_LN, 1);
+
+	strcpy(scan.source_md5, "00000000000000000000000000000000\0");
 	scan.hashes = malloc(MAX_FILE_SIZE);
 	scan.lines  = malloc(MAX_FILE_SIZE);
 	scan.hash_count = 0;
@@ -36,6 +51,10 @@ scan_data scan_data_init()
 	scan.matchmap_ptr = 0;
 	scan.match_type = none;
 	scan.preload = false;
+
+	/* Get wfp MD5 hash */
+	if (extension(target)) if (!strcmp(extension(target), "wfp")) calc_wfp_md5(&scan);
+
 	return scan;
 }
 
@@ -753,18 +772,16 @@ match_data *compile_matches(scan_data *scan)
 }
 
 /* Scans a wfp file with winnowing fingerprints */
-int wfp_scan(char *path)
+int wfp_scan(scan_data *scan)
 {
 	char * line = NULL;
 	size_t len = 0;
 	ssize_t lineln;
 	uint8_t *rec = calloc(LDB_MAX_REC_LN, 1);
-
-	scan_data scan = scan_data_init();
-	scan.preload = true;
+	scan->preload = true;
 
 	/* Open WFP file */
-	FILE *fp = fopen(path, "r");
+	FILE *fp = fopen(scan->file_path, "r");
 	if (fp == NULL)
 	{
 		fprintf(stdout, "E017 Cannot open target");
@@ -782,24 +799,24 @@ int wfp_scan(char *path)
 		bool is_wfp = (!is_file && !is_component);
 
 		/* Scan previous file */
-		if ((is_component || is_file) && read_data) ldb_scan(&scan);
+		if ((is_component || is_file) && read_data) ldb_scan(scan);
 
 		/* Parse file information with format: file=MD5(32),file_size,file_path */
 		if (is_file)
 		{
-			scan_data_reset(&scan);
+			scan_data_reset(scan);
 			const int tagln = 5; // len of 'file='
 
 			/* Get file MD5 */
 			char *hexmd5 = calloc(MD5_LEN * 2 + 1, 1);
 			memcpy(hexmd5, line + tagln, MD5_LEN * 2);
-			hex_to_bin(hexmd5, MD5_LEN * 2, scan.md5);
+			hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
 			free(hexmd5);
 
 			/* Extract fields from file record */
 			strcpy((char *)rec, line + tagln + (MD5_LEN * 2) + 1);
-			extract_csv(scan.file_size, (char *)rec, 1, LDB_MAX_REC_LN);
-			extract_csv(scan.file_path, (char *)rec, 2, LDB_MAX_REC_LN);
+			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
+			extract_csv(scan->file_path, (char *)rec, 2, LDB_MAX_REC_LN);
 
 			read_data = true;
 		}
@@ -807,7 +824,7 @@ int wfp_scan(char *path)
 		/* Save hash/es to memory. Parse file information with format:
 		   linenr=wfp(6)[,wfp(6)]+ */
 
-		if (is_wfp && (scan.hash_count < MAX_HASHES_READ))
+		if (is_wfp && (scan->hash_count < MAX_HASHES_READ))
 		{
 			/* Split string by the equal and commas */
 			int line_ln = strlen(line);
@@ -823,28 +840,27 @@ int wfp_scan(char *path)
 			while (*hexhash) {
 
 				/* Convert hash to binary */
-				hex_to_bin(hexhash, 8, (uint8_t *)&scan.hashes[scan.hash_count]);
-				uint32_reverse((uint8_t *)&scan.hashes[scan.hash_count]);
+				hex_to_bin(hexhash, 8, (uint8_t *)&scan->hashes[scan->hash_count]);
+				uint32_reverse((uint8_t *)&scan->hashes[scan->hash_count]);
 
 				/* Save line number */
-				scan.lines[scan.hash_count] = line_nr;
+				scan->lines[scan->hash_count] = line_nr;
 
 				/* Move pointer to the next hash */
 				hexhash += strlen(hexhash) + 1;
 
-				scan.hash_count++;
+				scan->hash_count++;
 			}
 		}
 	}
 
 	/* Scan the last file */
-	if (read_data) ldb_scan(&scan);
+	if (read_data) ldb_scan(scan);
 
 	fclose(fp);
 	if (line) free(line);
 	free(rec);
 
-	scan_data_free(scan);
 	return EXIT_SUCCESS;
 }
 

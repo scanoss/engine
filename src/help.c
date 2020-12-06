@@ -34,7 +34,7 @@ Configuration:\n\
 -e         Expect matching extensions to equal the file extension being scanned (default: off)\n\
 -s FILE    Use assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification\n\
 -b FILE    Blacklist matches to assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format)\n\
--f FORMAT  Set output format as: plain(default)|spdx|cyclonedx\n\
+-f FORMAT  Set output format as: plain(default)|spdx|cyclonedx|spdx_xml\n\
 \n\
 Options:\n\
 -t  Tests engine performance\n\

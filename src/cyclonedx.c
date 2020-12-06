@@ -79,9 +79,9 @@ void print_json_match_cyclonedx(scan_data scan, match_data match)
     printf("      \"licenses\": [\n");
     printf("        {\n");
     printf("          \"license\": {\n");
-    printf("             \"id\": \"");
-    print_first_license(match);
-    printf("\"\n");
+		char license[MAX_LICENSE] = "\0";
+    get_license(match, license);
+    printf("             \"id\": \"%s\"\n", license);
     printf("          }\n");
     printf("        }\n");
     printf("      ],\n");

@@ -25,7 +25,7 @@ void json_open()
 {
 	if (quiet) return;
 
-	switch(json_format)
+	switch(report_format)
 	{
 		case plain:
 			printf("{\n");
@@ -41,12 +41,12 @@ void json_open()
 	}
 }
 
-/* Close JSON report */
-void json_close()
+/* Close main report */
+void report_close()
 {
 	if (quiet) return;
 
-	switch(json_format)
+	switch(report_format)
 	{
 		case plain:
 			printf("}\n");
@@ -59,6 +59,10 @@ void json_close()
 		case spdx:
 			spdx_close();
 			break;
+
+		case spdx_xml:
+			spdx_xml_close();
+			break;
 	}
 }
 
@@ -66,7 +70,7 @@ void json_open_file(char *filename)
 {    
 	if (quiet) return;
 
-	switch(json_format)
+	switch(report_format)
 	{
 		case plain:
 			printf("  \"%s\": [\n", filename);
@@ -78,7 +82,7 @@ void json_close_file()
 {
 	if (quiet) return;
 
-	switch(json_format)
+	switch(report_format)
 	{
 		case plain:
 			printf("  ]\n");
@@ -139,14 +143,14 @@ void print_json_match_plain(scan_data scan, match_data match)
 	fflush(stdout);
 }
 
-void print_json_match(scan_data scan, match_data match)
+void print_match(scan_data scan, match_data match)
 {
 	/* Calculate component/vendor md5 for aggregated data queries */
 	component_vendor_md5(match.vendor, match.component, match.pair_md5);
 
 	if (quiet) return;
 
-	switch(json_format)
+	switch(report_format)
 	{
 
 		case plain:
@@ -160,5 +164,16 @@ void print_json_match(scan_data scan, match_data match)
 		case spdx:
 			print_json_match_spdx(scan, match);
 			break;
+
+		case spdx_xml:
+			print_xml_match_spdx(scan, match);
+			break;
 	}
 }
+
+void report_open(scan_data *scan)
+{
+	if (report_format != spdx_xml) json_open();
+	else spdx_xml_open(scan);
+}
+
