@@ -722,6 +722,12 @@ uint8_t *biggest_snippet(uint8_t *matchmap, uint64_t matchmap_ptr)
 			}
 		}
 		scanlog("Biggest snippet: %d\n", most_hits);
+		if (most_hits < min_match_hits)
+		{
+			out = NULL;
+			scanlog("Not reaching min_match_hits\n");
+			break;
+		}
 		if (!hits) break;
 
 		/* Erase match from map if MD5 is orphan */
