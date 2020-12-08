@@ -44,8 +44,9 @@ void spdx_open()
     printf("    \"name\": \"SPDX-Tools-v2.0\",\n");
     printf("    \"comment\": \"This document was automatically generated with SCANOSS.\",\n");
     printf("    \"externalDocumentRefs\": [],\n");
-    printf("    \"documentDescribes\": [\n");
-    printf("      {\n");
+    //printf("    \"documentDescribes\": [\n");
+    //printf("      {\n");
+    printf("    \"Packages\": [\n");
 }
 
 void spdx_xml_open(scan_data *scan)
@@ -102,9 +103,10 @@ void spdx_xml_open(scan_data *scan)
 
 void spdx_close()
 {
+    printf("       ]\n"); //added
     printf("      }\n");
-    printf("    ]\n");
-    printf("  }\n");
+    //printf("    ]\n");
+    //printf("  }\n");
     printf("}\n");
 }
 
@@ -120,7 +122,7 @@ void spdx_xml_close()
 
 void print_json_match_spdx(scan_data scan, match_data match)
 {
-    printf("        \"Package\": {\n");
+    printf("         {\n");
     printf("          \"name\": \"%s\",\n", match.component);
 
     if (strcmp(match.version, match.latest_version))
@@ -152,7 +154,8 @@ void print_json_match_spdx(scan_data scan, match_data match)
 		char license[MAX_LICENSE] = "\0";
     get_license(match, license);
     printf("          \"licenseInfoFromFiles\": \"%s\"\n", license);
-    printf("        }\n");
+ 
+    printf("         }\n"); //cierro y coma
 
     fflush(stdout);
 }
