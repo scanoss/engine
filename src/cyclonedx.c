@@ -19,6 +19,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <openssl/md5.h>
+
+#include "cyclonedx.h"
+#include "limits.h"
+#include "util.h"
+#include "license.h"
 
 void print_serial_number()
 {

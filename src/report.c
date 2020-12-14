@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "debug.h"
+#include "report.h"
+#include "quality.h"
+#include "vulnerability.h"
+#include "cyclonedx.h"
+#include "spdx.h"
+#include "util.h"
+#include "dependency.h"
+#include "license.h"
+#include "copyright.h"
 
 /* Open JSON report */
 void json_open()

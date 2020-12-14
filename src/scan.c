@@ -19,6 +19,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+//#include <openssl/md5.h>
+
+#include "scan.h"
+#include "match.h"
+#include "query.h"
+#include "file.h"
+#include "util.h"
+#include "parse.h"
+#include "debug.h"
+#include "psi.h"
+#include "limits.h"
+#include "blacklist.h"
+#include "external/ldb/ldb.h"
 
 /* Calculate and write source wfp md5 in scan->source_md5 */
 void calc_wfp_md5(scan_data *scan)
@@ -80,7 +93,6 @@ void scan_data_free(scan_data scan)
 	free(scan.matchmap);
 }
 
-char *parse_sbom(char *filepath);
 
 /* Returns true if md5 is the md5sum for NULL */
 bool zero_bytes (uint8_t *md5)

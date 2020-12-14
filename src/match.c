@@ -19,6 +19,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "match.h"
+#include "report.h"
+#include "debug.h"
+#include "limits.h"
 
 /* This script replaces \ with / */
 void flip_slashes(char *data)
@@ -89,7 +93,7 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	/* Print no match */
 	if (!match_counter) print_json_nomatch(scan);
 
-	json_close_file(scan.file_path);
+	json_close_file();//json_close_file(scan.file_path); MODIFICADO!!!
 }
 
 match_data match_init()

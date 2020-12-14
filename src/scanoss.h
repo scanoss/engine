@@ -1,3 +1,6 @@
+#ifndef __SCANOSS_H
+    #define __SCANOSS_H
+    
 #define _GNU_SOURCE
 
 #include <arpa/inet.h>
@@ -33,16 +36,16 @@
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-char SCANOSS_VERSION[7] = "4.0.3";
+extern char SCANOSS_VERSION[7];
 
 typedef enum {none, component, file, snippet} matchtype;
 typedef enum {plain, cyclonedx, spdx, spdx_xml} output_format;
-const char *matchtypes[] = {"none", "component", "file", "snippet"};
-const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
-const char *copyright_sources[] = {"component_declared", "file_header"};
-const char *vulnerability_sources[] = {"nvd", "github_advisories"};
-const char *quality_sources[] = {"best_practices"};
-const char *dependency_sources[] = {"component_declared"};
+extern const char *matchtypes[];// = {"none", "component", "file", "snippet"};
+//extern const char *license_sources[];// = {"component_declared", "file_spdx_tag", "file_header"};
+extern const char *copyright_sources[];// = {"component_declared", "file_header"};
+//extern const char *vulnerability_sources[];// = {"nvd", "github_advisories"};
+//extern const char *quality_sources[];// = {"best_practices"};
+extern const char *dependency_sources[];// = {"component_declared"};
 
 typedef struct keywords
 {
@@ -93,12 +96,10 @@ typedef struct match_data
 unsigned char *linemap;
 unsigned char *map;
 int map_rec_len;
-bool debug_on = false;
-bool quiet = false;
-bool match_extensions = false;
-int report_format = plain;
+extern bool match_extensions;// = false;
+extern int report_format;// = plain;
 
-#include "external/wfp/winnowing.c"
+//#include "external/wfp/winnowing.c"
 #include "external/ldb/ldb.h"
 
 /* DB tables */
@@ -106,10 +107,10 @@ struct ldb_table oss_component;
 struct ldb_table oss_file;
 struct ldb_table oss_wfp;
 
-bool first_file = true;
+extern bool first_file;
 
-char *sbom = NULL;
-char *blacklisted_assets = NULL;
+extern char *sbom;
+extern char *blacklisted_assets;
 
 /* Prototype declarations */
 int wfp_scan(scan_data *scan);
@@ -118,10 +119,9 @@ matchtype ldb_scan_snippets(scan_data *scan_ptr);
 bool key_find(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);
 void recurse_directory (char *path);
 match_data match_init();
-void extract_csv(char *out, char *in, int n, long limit);
 bool blacklist_match(uint8_t *component_record);
-void extract_csv(char *out, char *in, int n, long limit);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
-scan_data scan_data_init();
 void scan_data_free(scan_data scan);
 int count_matches(match_data *matches);
+
+#endif

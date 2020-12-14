@@ -20,6 +20,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "copyright.h"
+#include "limits.h"
+#include "parse.h"
 bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if ((datalen + 1) >= MAX_COPYRIGHT) datalen = MAX_COPYRIGHT;
@@ -59,7 +62,7 @@ bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t
 
 	int src = atoi(source);
 
-	if (*copyright && (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0]))))
+	if (*copyright) //&& (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0])))) MODIFICADO!!!
 	{
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");
