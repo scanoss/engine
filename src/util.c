@@ -19,6 +19,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
+
+#include "util.h"
+
+#include "limits.h"
+#include "debug.h"
 
 /* Reverse an uint32 number  */
 void uint32_reverse(uint8_t *data)

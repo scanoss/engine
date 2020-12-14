@@ -19,6 +19,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "query.h"
+#include "util.h"
+#include "limits.h"
+#include "ldb.h"
+#include "scanoss.h"
 
 /* Obtain the first file name for the given file MD5 hash */
 char *get_filename(char *md5)

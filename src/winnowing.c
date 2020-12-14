@@ -22,12 +22,14 @@
 
 
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/md5.h>
-#include "external/crc32c/crc32c.c"
+//#include "external/crc32c/crc32c.c"
+#include "crc32c.h"
+#include "winnowing.h"
+
 
 uint8_t GRAM  = 30;   // Winnowing gram size in bytes
 uint8_t WINDOW = 64;  // Winnowing window size in bytes

@@ -19,6 +19,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "keywords.h"
+#include "blacklist.h"
+#include "limits.h"
+#include "debug.h"
+#include "parse.h"
+
 /* Add a keyword to the keyword list structure array */
 void add_keyword(struct keywords *kwlist, char *word, int word_len)
 {

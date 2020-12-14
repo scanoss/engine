@@ -20,6 +20,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+
+#include <sys/stat.h>
+#include <openssl/md5.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "file.h"
+
 bool is_file(char *path)
 {
 	struct stat pstat;
