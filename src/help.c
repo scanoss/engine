@@ -22,6 +22,8 @@
 #include "help.h"
 #include "scanoss.h"
 
+char SCANOSS_VERSION[7] = "4.0.3";
+
 void help ()
 {
 	printf ("ScanOSS Engine v%s\n", SCANOSS_VERSION);

@@ -37,7 +37,7 @@ uint32_t MAX_UINT32 = 4294967295;
 
 /* Convert case to lowercase, and return zero if it isn't a letter or number
    Do it fast and independent from the locale configuration (avoid string.h) */
-uint8_t normalize (uint8_t byte)
+static uint8_t normalize (uint8_t byte)
 {
 	if (byte < '0')  return 0;
 	if (byte > 'z')  return 0;
@@ -48,7 +48,7 @@ uint8_t normalize (uint8_t byte)
 }
 
 /* Left shift one window */
-void shift_window(uint32_t *window)
+static void shift_window(uint32_t *window)
 {
 	for (uint32_t i = 0; i < (WINDOW - 1); i++)
 	{
@@ -58,7 +58,7 @@ void shift_window(uint32_t *window)
 }
 
 /* Left shift one gram */
-void shift_gram(uint8_t *gram)
+static void shift_gram(uint8_t *gram)
 {
 	for (uint32_t i = 0; i < (GRAM - 1); i++)
 	{
@@ -68,7 +68,7 @@ void shift_gram(uint8_t *gram)
 }
 
 /* Select smaller hash for the given window */
-uint32_t smaller_hash(uint32_t *window)
+static uint32_t smaller_hash(uint32_t *window)
 {
 	uint32_t hash = MAX_UINT32;
 	for (uint32_t h = 0; h < WINDOW; h++)
@@ -80,7 +80,7 @@ uint32_t smaller_hash(uint32_t *window)
 
 /* Add the given "hash" to the "hashes" array and the corresponding "line" to the "lines" array
    updating the hash counter and returning the last added hash */
-uint32_t add_hash(uint32_t hash, uint32_t line, uint32_t *hashes, uint32_t *lines, uint32_t last, uint32_t *counter)
+static uint32_t add_hash(uint32_t hash, uint32_t line, uint32_t *hashes, uint32_t *lines, uint32_t last, uint32_t *counter)
 {
 
 	/* Consecutive repeating hashes are ignored */

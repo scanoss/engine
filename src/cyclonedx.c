@@ -29,7 +29,7 @@
 #include "util.h"
 #include "license.h"
 
-void print_serial_number()
+static void print_serial_number()
 {
 	/* Get hostname and time stamp */
 	char *stamp = datestamp();

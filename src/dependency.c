@@ -27,6 +27,7 @@
 #include "parse.h"
 #include "util.h"
 
+const char *dependency_sources[] = {"component_declared"};
 
 bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {

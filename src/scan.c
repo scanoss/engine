@@ -31,10 +31,16 @@
 #include "psi.h"
 #include "limits.h"
 #include "blacklist.h"
-#include "external/ldb/ldb.h"
+#include "winnowing.h"
+#include "ldb.h"
+
+
+char *sbom = NULL;
+char *blacklisted_assets = NULL;
+
 
 /* Calculate and write source wfp md5 in scan->source_md5 */
-void calc_wfp_md5(scan_data *scan)
+static void calc_wfp_md5(scan_data *scan)
 {
 	uint8_t tmp_md5[16];
 	file_md5(scan->file_path, tmp_md5);
@@ -71,7 +77,7 @@ scan_data scan_data_init(char *target)
 	return scan;
 }
 
-void scan_data_reset(scan_data *scan)
+static void scan_data_reset(scan_data *scan)
 {
 	*scan->file_path = 0;
 	*scan->file_size = 0;
@@ -95,7 +101,7 @@ void scan_data_free(scan_data scan)
 
 
 /* Returns true if md5 is the md5sum for NULL */
-bool zero_bytes (uint8_t *md5)
+static bool zero_bytes (uint8_t *md5)
 {
 	uint8_t empty[] = "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e";
 
@@ -106,7 +112,7 @@ bool zero_bytes (uint8_t *md5)
 }
 
 /* Performs component and file comparison */
-matchtype ldb_scan_file(uint8_t *fid) {
+static matchtype ldb_scan_file(uint8_t *fid) {
 			
 	scanlog("Checking entire file\n");
 	
@@ -120,7 +126,7 @@ matchtype ldb_scan_file(uint8_t *fid) {
 	return match_type;
 }
 
-void adjust_tolerance(scan_data *scan)
+static void adjust_tolerance(scan_data *scan)
 {
 	bool skip = false;
 	uint32_t wfpcount = scan->hash_count;
@@ -148,7 +154,7 @@ void adjust_tolerance(scan_data *scan)
 }
 
 /* Handler function to collect all file ids */
-bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *) ptr;
 	if (datalen)
@@ -328,7 +334,7 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 }
 
 /* Compiles list of line ranges, returning total number of hits (lines matched) */
-uint32_t compile_ranges(uint8_t *matchmap_matching, char *ranges, char *oss_ranges) {
+static uint32_t compile_ranges(uint8_t *matchmap_matching, char *ranges, char *oss_ranges) {
 
 	if (uint16_read(matchmap_matching + MD5_LEN) < 2) return 0;
 	int hits = 0;
