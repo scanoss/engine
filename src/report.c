@@ -30,6 +30,9 @@
 #include "license.h"
 #include "copyright.h"
 
+
+int report_format = plain;
+
 /* Open JSON report */
 void json_open()
 {

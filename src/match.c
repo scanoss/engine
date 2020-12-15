@@ -24,6 +24,10 @@
 #include "debug.h"
 #include "limits.h"
 
+bool first_file = true;
+const char *matchtypes[] = {"none", "component", "file", "snippet"};
+bool match_extensions = false;
+
 /* This script replaces \ with / */
 void flip_slashes(char *data)
 {

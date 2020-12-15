@@ -23,7 +23,10 @@
 #include "copyright.h"
 #include "limits.h"
 #include "parse.h"
-bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+
+const char *copyright_sources[] = {"component_declared", "file_header"};
+
+static bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if ((datalen + 1) >= MAX_COPYRIGHT) datalen = MAX_COPYRIGHT;
 	data[datalen] = 0;
@@ -31,7 +34,7 @@ bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	return true;
 }
 
-void clean_copyright(char *out, char *copyright)
+static void clean_copyright(char *out, char *copyright)
 {
 	int i;
 	char byte[2] = "\0\0";
@@ -47,7 +50,7 @@ void clean_copyright(char *out, char *copyright)
 	out[i] = 0;
 }
 
-bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	char *CSV = calloc(datalen + 1, 1);
 	memcpy(CSV, (char *) data, datalen);
@@ -62,7 +65,7 @@ bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t
 
 	int src = atoi(source);
 
-	if (*copyright) //&& (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0])))) MODIFICADO!!!
+	if ((*copyright) && (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0])))) 
 	{
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");

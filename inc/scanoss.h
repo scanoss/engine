@@ -41,10 +41,10 @@ extern char SCANOSS_VERSION[7];
 typedef enum {none, component, file, snippet} matchtype;
 typedef enum {plain, cyclonedx, spdx, spdx_xml} output_format;
 extern const char *matchtypes[];// = {"none", "component", "file", "snippet"};
-//extern const char *license_sources[];// = {"component_declared", "file_spdx_tag", "file_header"};
+extern const char *license_sources[];// = {"component_declared", "file_spdx_tag", "file_header"};
 extern const char *copyright_sources[];// = {"component_declared", "file_header"};
-//extern const char *vulnerability_sources[];// = {"nvd", "github_advisories"};
-//extern const char *quality_sources[];// = {"best_practices"};
+extern const char *vulnerability_sources[];// = {"nvd", "github_advisories"};
+extern const char *quality_sources[];// = {"best_practices"};
 extern const char *dependency_sources[];// = {"component_declared"};
 
 typedef struct keywords
@@ -100,7 +100,7 @@ extern bool match_extensions;// = false;
 extern int report_format;// = plain;
 
 //#include "external/wfp/winnowing.c"
-#include "external/ldb/ldb.h"
+#include "ldb.h"
 
 /* DB tables */
 struct ldb_table oss_component;
