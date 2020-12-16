@@ -19,6 +19,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "dependency.h"
+#include "limits.h"
+#include "parse.h"
+#include "util.h"
+
+const char *dependency_sources[] = {"component_declared"};
 
 bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {

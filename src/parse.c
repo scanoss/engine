@@ -20,6 +20,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#include "parse.h"
+#include "json.h"
+#include "debug.h"
+
 static void json_process_value(json_value* value, int depth, char *out);
 
 static void json_process_object(json_value* value, int depth, char *out)

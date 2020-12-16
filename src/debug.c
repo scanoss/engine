@@ -19,6 +19,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdio.h>
+#include <sys/time.h>
+#include "scanoss.h"
+#include "limits.h"
+#include "debug.h"
+#include "scan.h"
 
 double progress_timer = 0;
 

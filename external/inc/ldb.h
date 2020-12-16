@@ -19,7 +19,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
+#ifndef __LDB_H
+    #define __LDB_h
+    
 #define _GNU_SOURCE
 #include <ctype.h>
 #include <dirent.h>
@@ -195,3 +197,5 @@ bool ldb_hexprint16(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 void ldb_collate(struct ldb_table table, struct ldb_table tmp_table, int max_rec_ln, bool merge);
 void ldb_sector_update(struct ldb_table table, uint8_t *key);
 void ldb_sector_erase(struct ldb_table table, uint8_t *key);
+
+#endif
