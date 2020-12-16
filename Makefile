@@ -12,7 +12,6 @@ OBJ= bin/main.o bin/blacklist.o bin/blacklist.o bin/scan.o bin/psi.o bin/keyword
 
 scanoss: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^ -L. -lldb -lm -lpthread -lcrypto
-	export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH
 	@echo Scanoss built
 clean:
 	@echo Cleaning...

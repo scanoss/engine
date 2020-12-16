@@ -40,7 +40,7 @@ void uint32_reverse(uint8_t *data)
 }
 
 /* Returns the numeric value of hex h */
-uint8_t h2d(uint8_t h)
+static uint8_t h2d(uint8_t h)
 {
 	if (h >= '0' && h <= '9')
 		return h - '0';
