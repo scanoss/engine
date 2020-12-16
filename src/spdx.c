@@ -19,6 +19,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "copyright.h"
+#include "limits.h"
+#include "spdx.h"
+#include "util.h"
+#include "license.h"
 
 void spdx_open()
 {

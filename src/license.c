@@ -19,6 +19,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "limits.h"
+#include "license.h"
+#include "debug.h"
+#include "util.h"
+#include "parse.h"
+
+const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
+
 
 bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {

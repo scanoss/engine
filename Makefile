@@ -1,16 +1,21 @@
-CC=gcc
-LIBFLAGS=-O -Wall -g -lm -lpthread
-BINFLAGS=-O -Wall -g -lm -lpthread -lcrypto -L. -lldb 
+CC = gcc
+CFLAGS = -O -Wall -g -Iinc -Iexternal/inc -Iexternal/inc
+OBJ= bin/main.o bin/blacklist.o bin/blacklist.o bin/scan.o bin/psi.o bin/keywords.o bin/match.o bin/report.o bin/spdx.o bin/cyclonedx.o bin/copyright.o bin/vulnerability.o bin/quality.o bin/license.o bin/dependency.o bin/file.o bin/parse.o bin/query.o bin/debug.o bin/help.o bin/winnowing.o bin/crc32c.o bin/util.o bin/limits.o bin/json.o
+ 
+ bin/%.o: src/%.c
+	@echo Building deps
+	$(CC) $(CFLAGS) -c -o $@ $<
+	
+ bin/%.o: external/src/%.c
+	@echo Building external deps
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-all: clean scanoss
-
-scanoss: src/main.c src/scanoss.h src/limits.h 
-	@$(CC) -o scanoss src/main.c $(BINFLAGS)
-	@export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH
+scanoss: $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^ -L. -lldb -lm -lpthread -lcrypto
 	@echo Scanoss built
-
 clean:
 	@echo Cleaning...
+	@rm -f bin/*.o
 	@rm -f scanoss *.o
 
 distclean: clean
@@ -18,3 +23,8 @@ distclean: clean
 install:
 	@cp libldb.so /usr/lib
 	@cp scanoss /usr/bin
+
+uninstall:
+	@rm libldb.so /usr/lib
+	@rm scanoss /usr/bin
+

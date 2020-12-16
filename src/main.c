@@ -21,27 +21,34 @@
  */
 
 #include "scanoss.h"
-#include "external/json-parser/json.c"
+#include "scan.h"
+#include "debug.h"
+//#include "external/json-parser/json.c"
 #include "blacklist.h"
 #include "limits.h"
-#include "debug.c"
-#include "util.c"
-#include "file.c"
-#include "query.c"
-#include "parse.c"
-#include "dependency.c"
-#include "license.c"
-#include "quality.c"
-#include "vulnerability.c"
-#include "copyright.c"
-#include "cyclonedx.c"
-#include "spdx.c"
-#include "report.c"
-#include "match.c"
-#include "keywords.c"
-#include "psi.c"
-#include "scan.c"
-#include "help.c"
+#include "debug.h"
+#include "report.h"
+#include "file.h"
+
+
+//#include "debug.c"
+//#include "util.c"
+//#include "file.c"
+//#include "query.c"
+//#include "parse.c"
+//#include "dependency.c"
+//#include "license.c"
+//#include "quality.c"
+//#include "vulnerability.c"
+//#include "copyright.c"
+//#include "cyclonedx.c"
+//#include "spdx.c"
+//#include "report.c"
+//#include "match.c"
+//#include "keywords.c"
+//#include "psi.c"
+//#include "scan.c"
+#include "help.h"
 
 void recurse_directory(char *name)
 {
@@ -103,7 +110,11 @@ output_format set_format(char *arg)
 
 int main(int argc, char **argv)
 {
-	if (argc <= 1)
+	//global var initialization - it must be improved
+    debug_on = false;
+    quiet = false;
+    
+    if (argc <= 1)
 	{
 		fprintf (stdout, "Missing parameters. Please use -h\n");
 		exit(EXIT_FAILURE);

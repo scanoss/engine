@@ -19,6 +19,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "help.h"
+#include "scanoss.h"
+
+char SCANOSS_VERSION[7] = "4.0.3";
 
 void help ()
 {
