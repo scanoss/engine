@@ -22,7 +22,7 @@ cd ..
 scanoss -v
 ```
 
-If you want to try scanoss witout install it, the execute this command in bash:
+If you want to try scanoss without install it, the execute this command in bash:
 ```
 export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH
 ```
