@@ -94,30 +94,13 @@ void slow_query_log(scan_data scan)
 	}
 }
 
-void hexdump(FILE *map, uint8_t *in, uint64_t len, char *text, bool lf, uint32_t cut) 
+void hexdump(FILE *map, uint8_t *in, uint64_t len, char *text) 
 {
-	uint8_t *out = malloc (len*3+1);
-	uint64_t c=0;
-	uint64_t i;
-	uint64_t p=0;
-	uint32_t hi,lo;
-	uint8_t hex[] = "0123456789abcdef";
-	for (i=0; i<len; i++) 
-	{
-		hi = (in[i] & 0xF0) >> 4;
-		lo = (in[i] & 0x0F);
-		out[p++] = hex[hi];
-		out[p++] = hex[lo];
-		if (++c == cut && cut > 0) {
-			out[p++] = 10;
-			c = 0;
-		}
-	}
-	out[p] = 0;
-	fprintf (map, "%s%s", text, out);
-	if (lf) fprintf(map, "\n");
+	/* Print leading text */
+	fprintf(map, "%s", text);
 
-	free (out);
+	/* Print hex data */
+	for (int i = 0; i < len; i++) fprintf(map, "%02x", in[i]);
 }
 
 void map_dump(uint8_t *mmap, uint64_t mmap_ptr) 
@@ -127,23 +110,24 @@ void map_dump(uint8_t *mmap, uint64_t mmap_ptr)
 	for (long i = 0; i<mmap_ptr; i++) {
 		
 		/* Print matching MD5 */
-		hexdump(map, mmap + i * MAP_REC_LEN, 16 , "", false, 0);
+		hexdump(map, mmap + i * MAP_REC_LEN, 16 , "");
 
 		/* Print hits */
-		hexdump(map, mmap + i * MAP_REC_LEN + 16,  2 , " ", false, 0);
+		hexdump(map, mmap + i * MAP_REC_LEN + 16,  2 , " ");
 
 		/* Print ranges */
 		for (int j = 18; j <= 72; j += 6)
 		{
-			hexdump(map, mmap + i * MAP_REC_LEN + j,  2 , " ", false, 0);
+			hexdump(map, mmap + i * MAP_REC_LEN + j,  2 , " ");
 			fprintf(map, "-");
-			hexdump(map, mmap + i * MAP_REC_LEN + j + 1,  2 , "", false, 0);
+			hexdump(map, mmap + i * MAP_REC_LEN + j + 1,  2 , "");
 			fprintf(map, "<");
-			hexdump(map, mmap + i * MAP_REC_LEN + j + 2,  2 , "", false, 0);
+			hexdump(map, mmap + i * MAP_REC_LEN + j + 2,  2 , "");
 		}
 
 		/* Print last wfp */
-		hexdump (map, mmap + i * MAP_REC_LEN + 78,  4 , " ", true, 0);
+		hexdump (map, mmap + i * MAP_REC_LEN + 78,  4 , " ");
+		fprintf(map, "\n");
 	}
 	fclose(map);
 }
