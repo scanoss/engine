@@ -557,21 +557,28 @@ bool handle_component_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 }
 
 /* Determine if a file is to be skipped based on extension or path content */
-bool skip_file_path(uint8_t *file_record, int filerec_ln, match_data *matches)
+bool skip_file_path(char *path, match_data *matches)
 {
 	bool unwanted = false;
-	char *file_path = (char *)file_record + MD5_LEN;
 
 	/* Skip blacklisted path */
-	if (unwanted_path(file_path)) unwanted = true;
+	if (unwanted_path(path))
+	{
+		scanlog("Unwanted path\n");
+		unwanted = true;
+	}
 
 	/* Skip blacklisted extension */
-	else if (blacklisted_extension(file_path)) unwanted = true;
+	else if (extension(path) && blacklisted_extension(path))
+	{
+		scanlog("Blacklisted extension\n");
+		unwanted = true;
+	}
 
 	/* Compare extension of matched file with scanned file */
 	else if (match_extensions)
 	{
-		char *oss_ext = extension(file_path);
+		char *oss_ext = extension(path);
 		char *my_ext = extension(matches->scandata->file_path);
 		if (oss_ext) if (my_ext) if (strcmp(oss_ext, my_ext))
 		{
@@ -580,32 +587,45 @@ bool skip_file_path(uint8_t *file_record, int filerec_ln, match_data *matches)
 		}
 	}
 
-	if (unwanted) scanlog("Unwanted path %s\n", file_record + 16);
+	if (unwanted) scanlog("Unwanted path %s\n", path);
 	return unwanted;
 }
 
 bool handle_file_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
-	if (!datalen && datalen >= MAX_PATH) return false;
+	if (!datalen || datalen >= MAX_PATH) return false;
 
 	uint8_t data[MAX_PATH] = "\0";
 	memcpy(data, raw_data, datalen);
 	data[datalen] = 0;
 
+	/* Save pointer to path in data */
+	char *path = (char *) data + MD5_LEN;
+	scanlog("Analysing %s\n", path);
+
 	match_data *matches = (match_data*) ptr;
 
 	/* Skip unwanted paths */
-	if (skip_file_path(data, datalen, matches)) return false;
+	if (skip_file_path(path, matches)) return false;
 
 	struct match_data match = match_init();
 
 	int total_matches = count_matches(matches);
 
 	/* If we have a full set, and this path is longer than others, skip it*/
-	if (longer_path_in_set(matches, total_matches, datalen)) return false;
+	if (longer_path_in_set(matches, total_matches, datalen))
+	{
+		scanlog("Discarding in favour of a shorter path\n");
+		return false;
+	}
 
 	/* Check if matched file is a blacklisted extension */
-	if (blacklisted_extension((char *) data + MD5_LEN)) return false;
+	if (extension(path))
+		if (blacklisted_extension(path))
+		{
+			scanlog("Blacklisted extension\n");
+			return false;
+		}
 
 	/* If component does not exist (orphan file) skip it */
 	if (!ldb_key_exists(oss_component, data))
@@ -930,7 +950,8 @@ bool ldb_scan(scan_data *scan)
 	/* Calculate MD5 hash (if not already preloaded) */
 	if (!scan->preload) file_md5(scan->file_path, scan->md5);
 
-	if (blacklisted_extension(scan->file_path)) skip = true;
+	if (extension(scan->file_path))
+		if (blacklisted_extension(scan->file_path)) skip = true;
 
 	/* Ignore <=1 byte */
 	if (file_size <= 1) skip = true;
