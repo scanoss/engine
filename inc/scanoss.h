@@ -32,6 +32,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define MD5_LEN 16
+#define WFP_LN 4
+#define WFP_REC_LN 18
+#define MATCHMAP_RANGES 10
+
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
@@ -53,12 +58,27 @@ typedef struct keywords
 	char word[128];
 } keywords;
 
+typedef struct matchmap_range
+{
+	uint16_t from;
+	uint16_t to;
+	uint16_t oss_line;
+} matchmap_range;
+
+typedef struct matchmap_entry
+{
+	uint8_t md5[MD5_LEN];
+	uint16_t hits;
+	matchmap_range range[MATCHMAP_RANGES];
+	uint8_t lastwfp[WFP_LN];
+} matchmap_entry;
+
 typedef struct scan_data
 {
 	uint8_t *md5;
 	char *file_path;
 	char *file_size;
-	char source_md5[33];
+	char source_md5[MD5_LEN * 2 + 1];
 	uint32_t *hashes;
 	uint32_t *lines;
 	uint32_t hash_count;
@@ -66,8 +86,8 @@ typedef struct scan_data
 	bool preload;
 	int total_lines;
 	matchtype match_type;
-	uint8_t *matchmap;
-	uint64_t matchmap_ptr;
+	matchmap_entry *matchmap;
+	uint32_t matchmap_size;
 } scan_data;
 
 typedef struct match_data
@@ -99,7 +119,6 @@ int map_rec_len;
 extern bool match_extensions;// = false;
 extern int report_format;// = plain;
 
-//#include "external/wfp/winnowing.c"
 #include "ldb.h"
 
 /* DB tables */
