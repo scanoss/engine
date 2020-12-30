@@ -36,6 +36,6 @@ char *BLACKLISTED_EXTENSIONS[] = {
 	"pyc", "readme", "result", "rgb", "rst", "scss", "sha", "sha1", "sha2",
 	"sha256", "sln", "spec", "sql", "sub", "svg", "svn-base", "tab", "template",
 	"test", "tex", "tiff", "todo", "ttf", "txt", "utf-8", "version", "vim",
-	"wav", "wfp", "whl", "woff", "xht", "xhtml", "xls", "xml", "xpm", "xsd",
+	"wav", "whl", "woff", "xht", "xhtml", "xls", "xml", "xpm", "xsd",
 	"xul", "yaml", "yml", NULL
 };
