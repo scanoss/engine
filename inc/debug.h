@@ -11,7 +11,7 @@ bool quiet;
 
 
 void scanlog(const char *fmt, ...);
-void map_dump(uint8_t *mmap, uint64_t mmap_ptr) ;    
+void map_dump(scan_data *scan);
 long microseconds_now(void);
 void scan_benchmark(void);
 void slow_query_log(scan_data scan);

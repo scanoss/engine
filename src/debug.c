@@ -94,40 +94,39 @@ void slow_query_log(scan_data scan)
 	}
 }
 
-void hexdump(FILE *map, uint8_t *in, uint64_t len, char *text) 
-{
-	/* Print leading text */
-	fprintf(map, "%s", text);
-
-	/* Print hex data */
-	for (int i = 0; i < len; i++) fprintf(map, "%02x", in[i]);
-}
-
-void map_dump(uint8_t *mmap, uint64_t mmap_ptr) 
+/* Output matchmap to a file (MAP_DUMP) */
+void map_dump(scan_data *scan)
 {
 	FILE *map = fopen(MAP_DUMP, "w");
-	fprintf(map, "[MATCHING MD5                  ] HITS [   RANGE0   ] [   RANGE1   ] [   RANGE2   ] [   RANGE3   ] [   RANGE4   ] [   RANGE5   ] [   RANGE6   ] [   RANGE7   ] [   RANGE8   ] [   RANGE9   ] [LASTWFP]\n");
-	for (long i = 0; i<mmap_ptr; i++) {
+
+	/* Output column names */
+	fprintf(map, "[MATCHING MD5                  ] HITS ");
+	for (int j = 0; j < MATCHMAP_RANGES; j ++)
+	{
+		fprintf(map, "[   RANGE%02d  ] ", j);
+	}
+	fprintf(map, "[LASTWFP]\n");
+
+	/* Output data rows */
+	for (long i = 0; i < scan->matchmap_size; i++) {
 		
 		/* Print matching MD5 */
-		hexdump(map, mmap + i * MAP_REC_LEN, 16 , "");
+		uint8_t *md5 = scan->matchmap[i].md5;
+		for (int j = 0; j < MD5_LEN; j++) fprintf(map, "%02x", md5[j]);
 
 		/* Print hits */
-		hexdump(map, mmap + i * MAP_REC_LEN + 16,  2 , " ");
+		fprintf(map, " %04x ", scan->matchmap[i].hits);
 
 		/* Print ranges */
-		for (int j = 18; j <= 72; j += 6)
+		for (int j = 0; j < MATCHMAP_RANGES; j ++)
 		{
-			hexdump(map, mmap + i * MAP_REC_LEN + j,  2 , " ");
-			fprintf(map, "-");
-			hexdump(map, mmap + i * MAP_REC_LEN + j + 1,  2 , "");
-			fprintf(map, "<");
-			hexdump(map, mmap + i * MAP_REC_LEN + j + 2,  2 , "");
+			matchmap_range *range = &scan->matchmap[i].range[j];
+			fprintf(map, "%04x-%04x<%04x ", range->from, range->to, range->oss_line);
 		}
 
 		/* Print last wfp */
-		hexdump (map, mmap + i * MAP_REC_LEN + 78,  4 , " ");
-		fprintf(map, "\n");
+		uint8_t *lwfp = scan->matchmap[i].lastwfp;
+		fprintf(map, "%02x%02x%02x%02x\n", lwfp[0], lwfp[1], lwfp[2], lwfp[3]);
 	}
 	fclose(map);
 }
