@@ -143,7 +143,7 @@ void scan_benchmark()
 
 	for (int f = 0; f < total_files ; f++)
 	{
-		scan_data scan = scan_data_init();
+		scan_data scan = scan_data_init("");
 		scan.preload = true;
 		memcpy(scan.md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
 		strcpy(scan.file_path, "pseudo_file");
