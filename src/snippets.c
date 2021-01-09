@@ -27,20 +27,43 @@
 #include "scanoss.h"
 #include "ldb.h"
 
-/* Check if the provided file id (md5) is orphan */
-bool orphan_file(uint8_t *fid)
-{
-	if (ldb_key_exists(oss_component, fid)) return false;
-	if (ldb_key_exists(oss_file, fid)) return false;
-	scanlog("Orphan MD5\n");
-	return true;
-}
-
 /* Set map hits to zero for the given match */
 void clear_hits(uint8_t *match)
 {
 	match[MD5_LEN] = 0;
 	match[MD5_LEN + 1] = 0;
+}
+
+/* Recordset handler function to find shortest path */
+static bool shortest_path_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+{
+	int *shortest = (int *) ptr;
+	if (datalen)
+	{
+		int path_ln = datalen - MD5_LEN;
+		if (path_ln < 1) return false;
+
+		if (!*shortest)
+			*shortest = path_ln;
+		else if (path_ln < *shortest)
+			*shortest = path_ln;
+	}
+	return false;
+}
+
+/* Returns the length of the shortest path among files matching md5 */
+int get_shortest_path(uint8_t *md5)
+{
+	/* Direct component match has a top priority */
+	if (ldb_key_exists(oss_component, md5)) return 1;
+
+	int *shortest = calloc(1, sizeof(int));
+	ldb_fetch_recordset(NULL, oss_file, md5, false, shortest_path_handler, (void *) shortest);
+
+	int out = *shortest;
+	free(shortest);
+
+	return out;
 }
 
 /* If we have snippet matches, select the one with more hits */
@@ -52,26 +75,39 @@ uint8_t *biggest_snippet(scan_data *scan)
 	while (true)
 	{
 		int most_hits = 0;
+		int shortest_path = MAX_PATH;
 
 		/* Select biggest snippet */
-		for (int i = 0; i < scan->matchmap_size; i++) {
+		for (int i = 0; i < scan->matchmap_size; i++)
+		{
 			hits = scan->matchmap[i].hits;
-			if (hits >= most_hits) {
-				most_hits = hits;
-				out = scan->matchmap[i].md5;
+
+			if (hits >= most_hits)
+			{
+				int shortest = get_shortest_path(scan->matchmap[i].md5);
+				if (shortest && shortest < shortest_path)
+				{
+					shortest_path = shortest;
+					most_hits = hits;
+					out = scan->matchmap[i].md5;
+				}
 			}
 		}
+
 		scanlog("Biggest snippet: %d\n", most_hits);
+		scanlog("File path len: %d\n", shortest_path);
+
 		if (most_hits < min_match_hits)
 		{
 			out = NULL;
 			scanlog("Not reaching min_match_hits\n");
 			break;
 		}
+
 		if (!hits) break;
 
-		/* Erase match from map if MD5 is orphan */
-		if (orphan_file(out)) clear_hits(out); else break;
+		/* Erase match from map if MD5 is orphan (no files/components found) */
+		if (shortest_path == MAX_PATH) clear_hits(out); else break;
 	}
 	return out;
 }
@@ -87,7 +123,7 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 		/* End recordset fetch if MAX_QUERY_RESPONSE is reached */
 		if (size + datalen + 4 >= MAX_QUERY_RESPONSE) return true;
 
-		/* End recordeet fetch if MAX_FILES are reached for the snippet */
+		/* End recordset fetch if MAX_FILES are reached for the snippet */
 		if ((WFP_REC_LN * MAX_FILES) <= (size + datalen)) return true;
 
 		/* Save data and update dataln */
