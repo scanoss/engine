@@ -82,7 +82,15 @@ uint8_t *biggest_snippet(scan_data *scan)
 		{
 			hits = scan->matchmap[i].hits;
 
-			if (hits >= most_hits)
+			/* Select match if hits is greater */
+			if (hits > most_hits)
+			{
+				most_hits = hits;
+				out = scan->matchmap[i].md5;
+			}
+
+			/* Select match if hits are equal and path is shorter */
+			else if (hits == most_hits)
 			{
 				int shortest = get_shortest_path(scan->matchmap[i].md5);
 				if (shortest && shortest < shortest_path)
@@ -92,6 +100,7 @@ uint8_t *biggest_snippet(scan_data *scan)
 					out = scan->matchmap[i].md5;
 				}
 			}
+
 		}
 
 		scanlog("Biggest snippet: %d\n", most_hits);
