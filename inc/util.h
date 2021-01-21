@@ -33,5 +33,7 @@ void print_datestamp(void);
 /* Returns a string with a hex representation of md5 */
 char *md5_hex(uint8_t *md5);
 
+/* Removes chr from str */
+void remove_char(char *str, char chr);
 
 #endif
