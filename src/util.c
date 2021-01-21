@@ -59,6 +59,14 @@ void hex_to_bin(char *hex, uint32_t len, uint8_t *out)
 		out[ptr++] = 16 * h2d(hex[i]) + h2d(hex[i + 1]);
 }
 
+/* Converts bin to hex */
+void bin_to_hex(uint8_t *bin, uint32_t len, char *out)
+{
+	*out = 0;
+	for (uint32_t i = 0; i < len; i++)
+		sprintf(out + strlen(out), "%02x", bin[i]);
+}
+
 /* Compares two MD5 checksums */
 bool md5cmp(uint8_t *md51, uint8_t *md52)
 {
@@ -96,11 +104,29 @@ void component_vendor_md5(char *component, char *vendor, uint8_t *out)
 {
 	char pair[1024] = "\0";
 	if (strlen(component) + strlen(vendor) + 2 >= 1024) return;
+
+	/* Calculate pair_md5 */
 	sprintf(pair, "%s/%s", component, vendor);
 	for (int i = 0; i < strlen(pair); i++) pair[i] = tolower(pair[i]);
-	scanlog("vendor/component: %s\n",pair);
 	MD5((uint8_t *)pair, strlen(pair), out);
+
+	/* Log pair_md5 */
+	char hex[MD5_LEN * 2 + 1] = "\0";
+	bin_to_hex(out, MD5_LEN, hex);
+	scanlog("vendor/component: %s = %s\n", pair, hex);
 }
+
+/* Removes chr from str */
+void remove_char(char *str, char chr)
+{
+	char *s = str;
+	while (*s)
+	{
+		if (*s == chr) memmove(s, s + 1, strlen(s + 1) + 1);
+		else s++;
+	}
+}
+
 
 /* Returns the current date stamp */
 char *datestamp()

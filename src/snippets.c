@@ -100,7 +100,6 @@ uint8_t *biggest_snippet(scan_data *scan)
 					out = scan->matchmap[i].md5;
 				}
 			}
-
 		}
 
 		scanlog("Biggest snippet: %d\n", most_hits);
