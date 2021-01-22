@@ -270,7 +270,6 @@ bool select_match(match_data *matches, struct keywords *kwlist)
 			}
 		}
 		if (!*matches[selected].vendor) strcpy(matches[selected].vendor, kwlist[best].word);
-		strcpy(matches[selected].component, kwlist[best].word);
 		if (!*matches[selected].version) strcpy(matches[selected].version, "?");
 		if (!*matches[selected].latest_version) strcpy(matches[selected].latest_version, "?");
 		matches[selected].selected = true;
