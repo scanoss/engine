@@ -157,14 +157,32 @@ bool good_version_range(match_data match)
 	return false;
 }
 
+bool wordicmp(char *word1, char *word2)
+{
+	char *w1 = word1;
+	char *w2 = word2;
+	while (*w1 && *w2)
+	{
+		if (tolower(*(w1++)) != tolower(*(w2++))) return false;
+	}
+	return true;
+}
+
+bool stristr(char *haystack, char *needle)
+{
+	char *h = haystack;
+	while (*h) if (wordicmp(h++, needle)) return true;
+	return false;
+}
+
 int select_exact_component_by_keyword(match_data *matches, char *component)
 {
 	/* Search for keyword match in vendor and component with version ranges */
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
 		if (good_version_range(matches[i]))
-			if (!strcmp(matches[i].component, component))
-			if (!strcmp(matches[i].vendor, component))
+			if (stristr(matches[i].component, component))
+			if (stristr(matches[i].vendor, component))
 			{
 				matches[i].selected = true;
 				scanlog("Selected keyword match in vendor and component with version range\n");
@@ -176,7 +194,7 @@ int select_exact_component_by_keyword(match_data *matches, char *component)
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
 		if (good_version_range(matches[i]))
-			if (!strcmp(matches[i].component, component))
+			if (stristr(matches[i].component, component))
 			{
 				matches[i].selected = true;
 				scanlog("Selected match in component with version range\n");
