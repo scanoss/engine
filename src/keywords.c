@@ -167,6 +167,7 @@ int select_exact_component_by_keyword(match_data *matches, char *component)
 			if (!strcmp(matches[i].vendor, component))
 			{
 				matches[i].selected = true;
+				scanlog("Selected keyword match in vendor and component with version range\n");
 				return i;
 			}
 	}
@@ -178,6 +179,7 @@ int select_exact_component_by_keyword(match_data *matches, char *component)
 			if (!strcmp(matches[i].component, component))
 			{
 				matches[i].selected = true;
+				scanlog("Selected match in component with version range\n");
 				return i;
 			}
 	}
@@ -188,6 +190,7 @@ int select_exact_component_by_keyword(match_data *matches, char *component)
 		if (!strcmp(matches[i].component, component))
 		{
 			matches[i].selected = true;
+			scanlog("Selected match in component without version range\n");
 			return i;
 		}
 	}
@@ -253,6 +256,7 @@ bool select_match(match_data *matches, struct keywords *kwlist)
 	selected = select_exact_component_by_keyword(matches, kwlist[best].word);
 
 	if (selected < 0) selected = select_by_keyword_in_path(matches, kwlist[best].word);
+	if (selected) scanlog("Selected by keyword in path\n");
 
 	if (selected >= 0)
 	{

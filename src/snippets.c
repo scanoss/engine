@@ -34,19 +34,26 @@ void clear_hits(uint8_t *match)
 	match[MD5_LEN + 1] = 0;
 }
 
+int path_depth(uint8_t *path, int len)
+{
+	int depth = 0;
+	for (int i = 0; i < len ; i++) if (path[i] == '/') depth++;
+	return depth;
+}
+
 /* Recordset handler function to find shortest path */
 static bool shortest_path_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	int *shortest = (int *) ptr;
 	if (datalen)
 	{
-		int path_ln = datalen - MD5_LEN;
-		if (path_ln < 1) return false;
+		int depth = path_depth(data, datalen - MD5_LEN);
+		if (depth < 1) return false;
 
 		if (!*shortest)
-			*shortest = path_ln;
-		else if (path_ln < *shortest)
-			*shortest = path_ln;
+			*shortest = depth;
+		else if (depth < *shortest)
+			*shortest = depth;
 	}
 	return false;
 }
@@ -66,7 +73,7 @@ int get_shortest_path(uint8_t *md5)
 	return out;
 }
 
-/* If we have snippet matches, select the one with more hits */
+/* If we have snippet matches, select the one with more hits (and shortest file path) */
 uint8_t *biggest_snippet(scan_data *scan)
 {
 	uint8_t *out = NULL;
@@ -75,30 +82,32 @@ uint8_t *biggest_snippet(scan_data *scan)
 	while (true)
 	{
 		int most_hits = 0;
-		int shortest_path = MAX_PATH;
+		int shortest_path = 0;
 
 		/* Select biggest snippet */
 		for (int i = 0; i < scan->matchmap_size; i++)
 		{
 			hits = scan->matchmap[i].hits;
 
-			/* Select match if hits is greater */
-			if (hits > most_hits)
+			if (hits < most_hits) continue;
+
+			/* Calculate length of shortest path */
+			int shortest = get_shortest_path(scan->matchmap[i].md5);
+			bool shorter = false;
+			if (shortest && shortest < shortest_path)
+			{
+				shorter = true;
+				shortest_path = shortest;
+			}
+
+			/* Select match if hits is greater, or equal and shorter path */
+			if ((hits > most_hits) || (hits == most_hits && shorter))
 			{
 				most_hits = hits;
 				out = scan->matchmap[i].md5;
-			}
 
-			/* Select match if hits are equal and path is shorter */
-			else if (hits == most_hits)
-			{
-				int shortest = get_shortest_path(scan->matchmap[i].md5);
-				if (shortest && shortest < shortest_path)
-				{
-					shortest_path = shortest;
-					most_hits = hits;
-					out = scan->matchmap[i].md5;
-				}
+				/* reset shortest_path in case we have > most_hits */
+				shortest_path = shortest;
 			}
 		}
 
