@@ -28,6 +28,15 @@
 #include "limits.h"
 #include "debug.h"
 
+/* Case insensitive string start comparison,
+	returns true if a starts with b or viceversa */
+bool stristart(char *a, char *b)
+{
+	if (!*a || !*b) return false;
+	while (*a && *b) if (tolower(*a++) != tolower(*b++)) return false;
+	return true;
+}
+
 /* Reverse an uint32 number  */
 void uint32_reverse(uint8_t *data)
 {

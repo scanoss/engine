@@ -102,6 +102,9 @@ int main(int argc, char **argv)
 
 	bool force_wfp = false;
 
+	*component_hint = 0;
+	*vendor_hint = 0;
+
 	/* Table definitions */
 	strcpy(oss_component.db, "oss");
 	strcpy(oss_component.table, "component");
@@ -128,7 +131,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:wtvhedq")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:wtvhedq")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -152,6 +155,10 @@ int main(int argc, char **argv)
 
 			case 'b':
 				blacklisted_assets = parse_sbom(optarg);
+				break;
+
+			case 'c':
+				strcpy(component_hint, optarg);
 				break;
 
 			case 'w':

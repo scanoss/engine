@@ -150,10 +150,16 @@ struct keywords *load_keywords(match_data *matches)
    than 16 bytes (rules out commit IDs and hashes in version) */
 bool good_version_range(match_data match)
 {
-	if (*match.version)
-	if (*match.latest_version)
-	if (strlen(match.version) < 2 * MD5_LEN)
-	if (strlen(match.latest_version) < 2 * MD5_LEN) return true;
+	/* Both versions must be present */
+	if (!*match.version || !*match.latest_version) return false;
+
+	/* Ignore commit hashes in version */
+	if (strlen(match.version) >= (2 * MD5_LEN)) return false;
+	if (strlen(match.latest_version) >= (2 * MD5_LEN)) return false;
+
+	/* Return true if there is a verson range */
+	if (strcmp(match.version, match.latest_version)) return true;
+
 	return false;
 }
 
@@ -177,24 +183,11 @@ bool stristr(char *haystack, char *needle)
 
 int select_exact_component_by_keyword(match_data *matches, char *component)
 {
-	/* Search for keyword match in vendor and component with version ranges */
-	for (int i = 0; i < scan_limit && *matches[i].component; i++)
-	{
-		if (good_version_range(matches[i]))
-			if (stristr(matches[i].component, component))
-			if (stristr(matches[i].vendor, component))
-			{
-				matches[i].selected = true;
-				scanlog("Selected keyword match in vendor and component with version range\n");
-				return i;
-			}
-	}
-
 	/* Search for matches in component with version ranges */
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
-		if (good_version_range(matches[i]))
-			if (stristr(matches[i].component, component))
+		if (stricmp(matches[i].component, component))
+			if (good_version_range(matches[i]))
 			{
 				matches[i].selected = true;
 				scanlog("Selected match in component with version range\n");
@@ -212,7 +205,7 @@ int select_exact_component_by_keyword(match_data *matches, char *component)
 			return i;
 		}
 	}
-	
+
 	return -1;
 }
 
@@ -222,29 +215,29 @@ int select_by_keyword_in_path(match_data *matches, char *keyword)
 	/* Search for matches in URL with version ranges */
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
-		if (good_version_range(matches[i])) 
-		if (found_keyword(keyword, matches[i].url)) return true;
-		{
-			matches[i].selected = true;
-			return i;
-		}
+		if (found_keyword(keyword, matches[i].url))
+			if (good_version_range(matches[i]))
+			{
+				matches[i].selected = true;
+				return i;
+			}
 	}
 
 	/* Search for matches in file path with version ranges */
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
-		if (good_version_range(matches[i])) 
-		if (found_keyword(keyword, matches[i].file)) return true;
-		{
-			matches[i].selected = true;
-			return i;
-		}
+		if (found_keyword(keyword, matches[i].file))
+			if (good_version_range(matches[i]))
+			{
+				matches[i].selected = true;
+				return i;
+			}
 	}
 
 	/* Search for matches in URL without version ranges */
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
-		if (found_keyword(keyword, matches[i].url)) return true;
+		if (found_keyword(keyword, matches[i].url))
 		{
 			matches[i].selected = true;
 			return i;
@@ -254,7 +247,7 @@ int select_by_keyword_in_path(match_data *matches, char *keyword)
 	/* Search for matches in file path without version ranges */
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
-		if (found_keyword(keyword, matches[i].file)) return true;
+		if (found_keyword(keyword, matches[i].file))
 		{
 			matches[i].selected = true;
 			return i;
@@ -265,15 +258,31 @@ int select_by_keyword_in_path(match_data *matches, char *keyword)
 
 bool select_match(match_data *matches, struct keywords *kwlist)
 {
-	int best = best_keyword(kwlist);
+	int	best = best_keyword(kwlist);
 	int selected = -1;
 
-	if (kwlist[best].count < 2) return false;
-	scanlog("Best component: %s (%d)\n", kwlist[best].word, kwlist[best].count);
+	char *best_component = component_hint;
+	if (!*best_component && kwlist[best].count < 2) return false;
 
-	selected = select_exact_component_by_keyword(matches, kwlist[best].word);
+	if (!*best_component)
+	{
+			best_component = kwlist[best].word;
+			scanlog("Best component: %s\n", best_component);
+	}
 
-	if (selected < 0) selected = select_by_keyword_in_path(matches, kwlist[best].word);
+	/* Attempt selection by exact component match */
+	selected = select_exact_component_by_keyword(matches, best_component);
+	if (selected >= 0)
+	{
+		scanlog("Selected by exact component name\n");
+	}
+
+	/* Attempt selection by presence of component in path */
+	else
+	{
+		selected = select_by_keyword_in_path(matches, best_component);
+	}
+
 	if (selected) scanlog("Selected by keyword in path\n");
 
 	if (selected >= 0)
@@ -287,7 +296,7 @@ bool select_match(match_data *matches, struct keywords *kwlist)
 				scanlog("          %s\n", matches[i].url);
 			}
 		}
-		if (!*matches[selected].vendor) strcpy(matches[selected].vendor, kwlist[best].word);
+		if (!*matches[selected].vendor) strcpy(matches[selected].vendor, best_component);
 		if (!*matches[selected].version) strcpy(matches[selected].version, "?");
 		if (!*matches[selected].latest_version) strcpy(matches[selected].latest_version, "?");
 		matches[selected].selected = true;
@@ -297,7 +306,7 @@ bool select_match(match_data *matches, struct keywords *kwlist)
 }
 
 /* Perform keyword analysis among URL and file paths, find a common denominator and
-   pick a URL/file containing such keyboard as the only match */
+	 pick a URL/file containing such keyboard as the only match */
 void keyword_analysis(match_data *matches)
 {
 	/* A single match does not need to be analyzed */	
@@ -306,7 +315,7 @@ void keyword_analysis(match_data *matches)
 	scanlog("Loading keywords\n");
 	struct keywords *kwlist = load_keywords(matches);
 
-	scanlog("Selecting match\n");
+	scanlog("Selecting match from keywords\n");
 	select_match(matches, kwlist);
 
 	free(kwlist);

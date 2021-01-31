@@ -36,6 +36,9 @@
 #define WFP_LN 4
 #define WFP_REC_LN 18
 #define MATCHMAP_RANGES 10
+#define MAX_FILE_PATH 1024
+#define FETCH_MAX_FILES 20000
+#define MAX_FIELD_LN 64
 
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
@@ -55,7 +58,7 @@ extern const char *dependency_sources[];// = {"component_declared"};
 typedef struct keywords
 {
 	int  count;
-	char word[128];
+	char word[MAX_FIELD_LN];
 } keywords;
 
 typedef struct matchmap_range
@@ -72,6 +75,14 @@ typedef struct matchmap_entry
 	matchmap_range range[MATCHMAP_RANGES];
 	uint8_t lastwfp[WFP_LN];
 } matchmap_entry;
+
+typedef struct file_recordset
+{
+	uint8_t component_id[MD5_LEN];
+	char path[MAX_FILE_PATH];
+	int path_ln;
+	bool external;
+} file_recordset;
 
 typedef struct scan_data
 {
@@ -93,31 +104,55 @@ typedef struct scan_data
 typedef struct match_data
 {
 	matchtype type;
-	char lines[128];
-	char oss_lines[128];
-	char vendor[64];
-	char component[64];
-	char version[64];
-	char latest_version[64];
-	char url[1024];
-	char file[4096];
+	char lines[MAX_FIELD_LN * 2];
+	char oss_lines[MAX_FIELD_LN * 2];
+	char vendor[MAX_FIELD_LN];
+	char component[MAX_FIELD_LN];
+	char version[MAX_FIELD_LN];
+	char latest_version[MAX_FIELD_LN];
+	char url[MAX_FILE_PATH];
+	char file[MAX_FILE_PATH];
 	int  path_ln;
-	char license[64];
-	char matched[64];
-	uint8_t file_md5[16];
-	uint8_t component_md5[16];
-	uint8_t pair_md5[16];
+	char license[MAX_FIELD_LN];
+	char matched[MAX_FIELD_LN];
+	uint8_t file_md5[MD5_LEN];
+	uint8_t component_md5[MD5_LEN];
+	uint8_t pair_md5[MD5_LEN];
 	int vulnerabilities;
 	bool selected;
 	bool snippet_to_component;
 	scan_data *scandata;
 } match_data;
 
+/* Component ranking for evaluating /external/ paths */
+typedef struct component_name_rank
+{
+	char vendor[MAX_FIELD_LN];
+	char component[MAX_FIELD_LN];
+	uint8_t component_id[MD5_LEN];
+	char component_record[MAX_FILE_PATH];
+	char file[MAX_FILE_PATH];
+	long score;
+} component_name_rank;
+
+/* Path ranking when looking for shortest paths / component age */
+typedef struct path_ranking
+{
+	int pathid;
+	long score; // Score will store path length or component age
+	char component[MAX_FIELD_LN];
+	char vendor[MAX_FIELD_LN];
+} path_ranking;
+
 unsigned char *linemap;
 unsigned char *map;
 int map_rec_len;
 extern bool match_extensions;// = false;
 extern int report_format;// = plain;
+
+/* Vendor and component hint hold the last component matched/guessed */
+char vendor_hint[MAX_FIELD_LN];
+char component_hint[MAX_FIELD_LN];
 
 #include "ldb.h"
 
@@ -127,6 +162,7 @@ struct ldb_table oss_file;
 struct ldb_table oss_wfp;
 
 extern bool first_file;
+extern int max_vulnerabilities;
 
 extern char *sbom;
 extern char *blacklisted_assets;
@@ -142,5 +178,28 @@ bool blacklist_match(uint8_t *component_record);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
 void scan_data_free(scan_data scan);
 int count_matches(match_data *matches);
+bool component_hint_matches_path(file_recordset *files, int records, char *component_hint);
+void external_component_hint_in_path(file_recordset *files, int records, char *hint, component_name_rank *component_rank);
+void select_best_component_from_rank(component_name_rank *component_rank, char *component_hint);
+void add_files_to_matches(\
+		file_recordset *files,\
+		int records,\
+		char *component_hint,\
+		uint8_t *file_md5,\
+		match_data *matches);
+bool component_hint_from_shortest_paths(file_recordset *files, int records, char *hint1, char *hint2, component_name_rank *component_rank, path_ranking *path_rank);
+void consider_file_record(\
+		uint8_t *component_id,\
+		char *path,\
+		match_data *matches,\
+		char *component_hint,\
+		uint8_t *matching_md5);
+int seek_component_hint_in_path(\
+		file_recordset *files,\
+		int records,\
+		char *hint,\
+		component_name_rank *component_rank);
+void init_path_ranking(path_ranking *path_rank);
+bool select_best_match(match_data *matches);
 
 #endif
