@@ -24,5 +24,10 @@
 /* Meta post scanning function */
 void post_scan(match_data *matches)
 {
-	keyword_analysis(matches);
+	/* Find best match based on component_hint */
+	if (!select_best_match(matches))
+	{
+		/* Select best match from keyword analysis */
+		keyword_analysis(matches);
+	}
 }

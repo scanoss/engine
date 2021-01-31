@@ -152,7 +152,7 @@ void print_json_match_spdx(scan_data scan, match_data match)
     printf("          ],\n");
     printf("          \"description\": \"Detected by SCANOSS Inventorying Engine.\",\n");
     printf("          \"licenseConcluded\": \"\",\n");
-		char license[MAX_LICENSE] = "\0";
+		char license[MAX_FIELD_LN] = "\0";
     get_license(match, license);
     printf("          \"licenseInfoFromFiles\": \"%s\"\n", license);
  
@@ -176,7 +176,7 @@ void print_xml_match_spdx(scan_data scan, match_data match)
 	printf("              <spdx:licenseConcluded rdf:resource=\"http://spdx.org/rdf/terms#noassertion\" />\n");
 
 	/* Print license */
-	char license[MAX_LICENSE] = "\0";
+	char license[MAX_FIELD_LN] = "\0";
 	get_license(match, license);
 	if (*license)
 	printf("              <spdx:licenseInfoInFile rdf:resource=\"http://spdx.org/licenses/%s\" />\n", license);

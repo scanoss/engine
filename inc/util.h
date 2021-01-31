@@ -36,4 +36,8 @@ char *md5_hex(uint8_t *md5);
 /* Removes chr from str */
 void remove_char(char *str, char chr);
 
+/* Case insensitive string start comparison,
+	returns true if a starts with b or viceversa */
+bool stristart(char *a, char *b);
+
 #endif

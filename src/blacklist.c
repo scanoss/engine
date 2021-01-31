@@ -102,10 +102,6 @@ char *BLACKLISTED_PATHS[] = {
 	"/.svn/",
 	"/.vscode/",
 	"/__pycache__/",
-	"/external/",
-	"/node_modules/",
-	"/third/",
-	"/vendor/",
 	NULL
 };
 

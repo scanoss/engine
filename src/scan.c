@@ -156,18 +156,31 @@ bool blacklist_match(uint8_t *component_record)
 	return found;
 }
 
-match_data fill_match(uint8_t *file_record, uint8_t *component_record)
+void clean_version(char *version)
+{
+	if (*version == 'v') memmove(version, version + 1, strlen(version) + 1);
+	char *orig = strstr(version, ".orig");
+	if (orig) *orig = 0;
+}
+
+void clean_versions(match_data *matches)
+{
+	clean_version(matches->version);
+	clean_version(matches->latest_version);
+}
+
+match_data fill_match(uint8_t *component_key, char *file_path, uint8_t *component_record)
 {
 	match_data match;
 	match.selected = false;
 	match.path_ln = 0;
 
 	/* Extract fields from file record */
-	if (file_record)
+	if (component_key)
 	{
-		memcpy(match.component_md5, file_record, MD5_LEN);
-		strcpy(match.file, (char *) file_record + MD5_LEN);
-		match.path_ln = strlen((char *) file_record + MD5_LEN);
+		memcpy(match.component_md5, component_key, MD5_LEN);
+		strcpy(match.file, file_path);
+		match.path_ln = strlen(file_path);
 	}
 	else strcpy(match.file, "all");
 
@@ -187,6 +200,7 @@ match_data fill_match(uint8_t *file_record, uint8_t *component_record)
 	if (!*match.vendor || !*match.component || !*match.url || !*match.version || !*match.file)
 		return match_init();
 
+	clean_versions(&match);
 	return match;
 }
 
@@ -203,7 +217,7 @@ int count_matches(match_data *matches)
 }
 
 /* Adds match to matches */
-void add_match(match_data match, int total_matches, match_data *matches, bool component_match)
+void add_match(int position, match_data match, int total_matches, match_data *matches, bool component_match)
 {
 
 	/* Verify if metadata is complete */
@@ -241,39 +255,53 @@ void add_match(match_data match, int total_matches, match_data *matches, bool co
 	/* Otherwise add a new match */
 	if (!placed)
 	{
-		for (int n = 0; n < scan_limit; n++)
+
+		/* Locate free position */
+		int n = 0;
+
+		/* Match position is given */
+		if (position >= 0) n = position;
+
+		/* Search for a free match position */
+		else
 		{
-			if (matches[n].path_ln > match.path_ln || !matches[n].path_ln)
+			for (n = 0; n < scan_limit; n++)
 			{
-				strcpy(matches[n].vendor, match.vendor);
-				strcpy(matches[n].component, match.component);
-				strcpy(matches[n].version, match.version);
-				strcpy(matches[n].latest_version, match.latest_version);
-				strcpy(matches[n].url, match.url);
-				strcpy(matches[n].file, match.file);
-				memcpy(matches[n].component_md5, match.component_md5, MD5_LEN);
-				memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
-				matches[n].path_ln = match.path_ln;
-				matches[n].selected = match.selected;
-				break;
+				if (matches[n].path_ln > match.path_ln || !matches[n].path_ln) break;
 			}
 		}
+
+		/* Copy match information */
+		strcpy(matches[n].vendor, match.vendor);
+		strcpy(matches[n].component, match.component);
+		strcpy(matches[n].version, match.version);
+		strcpy(matches[n].latest_version, match.latest_version);
+		strcpy(matches[n].url, match.url);
+		strcpy(matches[n].file, match.file);
+		memcpy(matches[n].component_md5, match.component_md5, MD5_LEN);
+		memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
+		matches[n].path_ln = match.path_ln;
+		matches[n].selected = match.selected;
 	}
 }
 
-/* Returns true if rec_ln is longer than everything else in "matches" */
-bool longer_path_in_set(match_data *matches, int total_matches, int rec_ln)
+/* Returns true if rec_ln is longer than everything else in "matches"
+	also, update position with the position of a longer path */
+bool longer_path_in_set(match_data *matches, int total_matches, int rec_ln, int *position)
 {
-	if (scan_limit > total_matches) return false;
+  if (scan_limit > total_matches) return false;
 
-	int max_ln = 0;
-
+	/* Search for a longer path than rec_ln */
 	for (int i = 0; i < total_matches; i++)
 	{
-		if (matches[i].path_ln > max_ln) max_ln = matches[i].path_ln;
+		if (matches[i].path_ln > rec_ln)
+		{
+			*position = i;
+			return false;
+		}
 	}
 
-	return (rec_ln > max_ln);
+	return true;
 }
 
 bool handle_component_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
@@ -291,14 +319,14 @@ bool handle_component_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	int total_matches = count_matches(matches);
 	if (total_matches >= scan_limit) return true;
 
-	match = fill_match(NULL, data);
+	match = fill_match(NULL, NULL, data);
 
 	/* Save match component id */
 	memcpy(match.component_md5, key, LDB_KEY_LN);
 	memcpy(match.component_md5 + LDB_KEY_LN, subkey, subkey_ln);
 	memcpy(match.file_md5, match.component_md5, MD5_LEN);
 
-	add_match(match, total_matches, matches, true);
+	add_match(-1, match, total_matches, matches, true);
 
 	return false;
 }
@@ -309,11 +337,7 @@ bool skip_file_path(char *path, match_data *matches)
 	bool unwanted = false;
 
 	/* Skip blacklisted path */
-	if (unwanted_path(path))
-	{
-		scanlog("Unwanted path\n");
-		unwanted = true;
-	}
+	if (unwanted_path(path)) unwanted = true;
 
 	/* Skip blacklisted extension */
 	else if (extension(path) && blacklisted_extension(path))
@@ -334,69 +358,76 @@ bool skip_file_path(char *path, match_data *matches)
 		}
 	}
 
-	if (unwanted) scanlog("Unwanted path %s\n", path);
 	return unwanted;
 }
 
-bool handle_file_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
-	if (!datalen || datalen >= MAX_PATH) return false;
 
-	uint8_t data[MAX_PATH] = "\0";
-	memcpy(data, raw_data, datalen);
-	data[datalen] = 0;
+	/* Leave if FETCH_MAX_FILES is reached */
+	if (iteration >= FETCH_MAX_FILES) return true;
 
-	/* Save pointer to path in data */
-	char *path = (char *) data + MD5_LEN;
-	scanlog("Analysing %s\n", path);
+	/* Ignore path lengths over the limit */
+	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
 
-	match_data *matches = (match_data*) ptr;
+	/* Copy data to memory */
+	file_recordset *files = ptr;
+	int path_ln = datalen - MD5_LEN;
+	files[iteration].path_ln = path_ln;
+	memcpy(files[iteration].component_id, raw_data, MD5_LEN);
+	memcpy(files[iteration].path, raw_data + MD5_LEN, path_ln);
+	files[iteration].path[path_ln] = 0;
 
+	scanlog("File %s\n", files[iteration].path);
+	return false;
+}
+
+/* Evaluate file and decide whether or not to add it to *matches */
+void consider_file_record(\
+		uint8_t *component_id,\
+		char *path,\
+		match_data *matches,\
+		char *component_hint,\
+		uint8_t *matching_md5)
+{
 	/* Skip unwanted paths */
-	if (skip_file_path(path, matches)) return false;
+	if (skip_file_path(path, matches)) return;
 
 	struct match_data match = match_init();
 
 	int total_matches = count_matches(matches);
 
 	/* If we have a full set, and this path is longer than others, skip it*/
-	if (longer_path_in_set(matches, total_matches, datalen))
-	{
-		scanlog("Discarding in favour of a shorter path\n");
-		return false;
-	}
+	int position = -1;
+	if (longer_path_in_set(matches, total_matches, strlen(path), &position)) return;
 
 	/* Check if matched file is a blacklisted extension */
 	if (extension(path))
+	{
 		if (blacklisted_extension(path))
 		{
 			scanlog("Blacklisted extension\n");
-			return false;
+			return;
 		}
-
-	/* If component does not exist (orphan file) skip it */
-	if (!ldb_key_exists(oss_component, data))
-	{
-		scanlog("Orphan file\n");
-		return false;
 	}
 
 	uint8_t *component = calloc(LDB_MAX_REC_LN, 1);
-	get_component_record(data, component);
+	get_component_record(component_id, component);
 	if (*component)
 	{
-		match = fill_match(data, component);
+		match = fill_match(component_id, path, component);
 
 		/* Save match file id */
-		memcpy(match.file_md5, key, LDB_KEY_LN);
-		memcpy(match.file_md5 + LDB_KEY_LN, subkey, subkey_ln);
+		memcpy(match.file_md5, matching_md5, MD5_LEN);
 	}
-	else scanlog("No component data found\n");
+	else
+	{
+		scanlog("Orphan file\n");
+		return;
+	}
 
-	add_match(match, total_matches, matches, false);
+	add_match(position, match, total_matches, matches, false);
 	free(component);
-
-	return false;
 }
 
 struct match_data *prefill_match(scan_data *scan, char *lines, char *oss_lines, int matched_percent)
@@ -413,6 +444,27 @@ struct match_data *prefill_match(scan_data *scan, char *lines, char *oss_lines, 
 		matches[i].scandata = scan;
 	}
 	return matches;
+}
+
+/* Add file record to matches */
+void add_selected_file_to_matches(\
+match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *file_md5)
+{
+	scanlog("Identified #%d: %s\n", rank_id, component_rank[rank_id].component_record);
+
+	/* Create empty match item */
+	struct match_data match = match_init();
+
+	/* Fill match with component info */
+	match = fill_match(component_rank[rank_id].component_id,\
+			component_rank[rank_id].file,\
+			(uint8_t *) component_rank[rank_id].component_record);
+
+	/* Add file MD5 */
+	memcpy(match.file_md5, file_md5, MD5_LEN);
+
+	/* Add match to matches */
+	add_match(0, match, 0, matches, false);
 }
 
 match_data *load_matches(scan_data *scan, uint8_t *matching_md5)
@@ -460,8 +512,72 @@ match_data *load_matches(scan_data *scan, uint8_t *matching_md5)
 
 	if (!records)
 	{
-		records = ldb_fetch_recordset(NULL, oss_file, matching_md5, false, handle_file_record, (void *) matches);
-		scanlog("File recordset contains %u records\n", records);
+		file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
+		records = ldb_fetch_recordset(NULL, oss_file, matching_md5, false, collect_all_files, (void *) files);
+
+		if (records)
+		{
+			char new_component_hint[MAX_FIELD_LN] = "\0";
+			component_name_rank *component_rank = calloc(sizeof(struct component_name_rank), rank_items);
+			scanlog("Inherited component hint from context: %s\n", *component_hint ? component_hint : "NULL");
+
+			/* Try the contextual component_hint, if any */
+			int selected = seek_component_hint_in_path(files, records, component_hint, component_rank);
+
+			/* Get new component hint and try that instead */
+			if (selected < 0)
+			{
+				/* Mark external files and collect new_component_hint */
+				external_component_hint_in_path(files, records, new_component_hint, component_rank);
+
+				/* Attempt to identify hints in start of path and component name */
+				selected = seek_component_hint_in_path(files, records, new_component_hint, component_rank);
+			}
+
+			if (selected >= 0)
+			{
+				add_selected_file_to_matches(matches, component_rank, selected, matching_md5);
+
+				/* Update component_hint for the next file */
+				strcpy(component_hint, component_rank[selected].component);
+			}
+
+			/* Attempt matching selecting the shortest paths */
+			else
+			{
+				/* Init path ranking */
+				path_ranking path_rank[rank_items];
+				init_path_ranking(path_rank);
+
+				/* Attempt matching start of short paths with their respective components names */
+				bool hint_found = component_hint_from_shortest_paths(\
+						files, records,\
+						component_hint, new_component_hint,\
+						component_rank,\
+						path_rank\
+						);
+
+				/* Otherwise try again without passing hints, just ranking from shortest paths */
+				if (!hint_found) hint_found = component_hint_from_shortest_paths(\
+						files, records,\
+						"", "",\
+						component_rank,\
+						path_rank\
+						);
+
+				/* Select the best component hint from the collected rank */
+				if (hint_found) select_best_component_from_rank(component_rank, component_hint);
+
+				/* Show component hint, if found */
+				if (hint_found) scanlog("Component hint = %s/%s\n", *vendor_hint ? vendor_hint : "?", component_hint);
+
+				/* Add relevant files to matches */
+				add_files_to_matches(files, records, component_hint, matching_md5, matches);
+			}
+
+			free(component_rank);
+		}
+		free(files);
 	}
 
 	if (records) return matches;
@@ -564,7 +680,7 @@ int wfp_scan(scan_data *scan)
 		}
 
 		/* Save hash/es to memory. Parse file information with format:
-		   linenr=wfp(6)[,wfp(6)]+ */
+			 linenr=wfp(6)[,wfp(6)]+ */
 
 		if (is_wfp && (scan->hash_count < MAX_HASHES_READ))
 		{
@@ -607,8 +723,8 @@ int wfp_scan(scan_data *scan)
 }
 
 /* Scans a file and returns JSON matches via STDOUT
-   scan structure can be already preloaded (.wfp scan)
-   otherwise, it will be loaded here (scanning a physical file) */
+	 scan structure can be already preloaded (.wfp scan)
+	 otherwise, it will be loaded here (scanning a physical file) */
 bool ldb_scan(scan_data *scan)
 {
 	bool skip = false;
@@ -672,9 +788,10 @@ bool ldb_scan(scan_data *scan)
 	int total_matches = count_matches(matches);
 
 	/* Debug match info */
-	scanlog("%d matches compiled\n", total_matches);
+	scanlog("%d matches compiled:\n", total_matches);
 	if (debug_on) for (int i = 0; i < total_matches; i++)
-		scanlog("%d, %s\n", matches[i].path_ln, matches[i].file);
+		scanlog("%s/%s, %s\n", matches[i].vendor, matches[i].component, matches[i].file);
+	scanlog("\n", total_matches);
 
 	/* Matched asset in SBOM.json? */
 	for (int i = 0; i < total_matches; i++)

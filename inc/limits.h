@@ -23,7 +23,6 @@
     #define __LIMITS_H
 /* Constants */
 #define MAX_COPYRIGHT 128
-#define MAX_LICENSE 64
 
 /* Limits */
 #define MAX_ARGLN 512       // Max command line argument length
@@ -56,5 +55,7 @@ extern int consecutive_threshold;
 extern int range_tolerance;  // A maximum number of non-matched lines tolerated inside a matching range
 extern int min_match_lines; // Minimum number of lines matched for a match range to be acepted
 extern int min_match_hits;  // Minimum number of snippet ID hits to produce a snippet match
+
+extern const int rank_items;
 
 #endif

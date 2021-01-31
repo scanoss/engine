@@ -22,7 +22,7 @@
 #include "help.h"
 #include "scanoss.h"
 
-char SCANOSS_VERSION[7] = "4.0.5";
+char SCANOSS_VERSION[7] = "4.1.0";
 
 void help ()
 {
@@ -39,6 +39,7 @@ Configuration:\n\
 -s FILE    Use assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification\n\
 -b FILE    Blacklist matches to assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format)\n\
 -f FORMAT  Set output format as: plain(default)|spdx|cyclonedx|spdx_xml\n\
+-c HINT    Provide a component HINT to influence scan results\n\
 \n\
 Options:\n\
 -t  Tests engine performance\n\
