@@ -4,7 +4,7 @@
  *
  * Data conversion and handling utilities
  *
- * Copyright (C) 2018-2020 SCANOSS.COM
+ * Copyright (C) 2018-2021 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,9 +24,9 @@
 #include <sys/time.h>
 
 #include "util.h"
-
 #include "limits.h"
 #include "debug.h"
+#include "ldb.h"
 
 /* Case insensitive string start comparison,
 	returns true if a starts with b or viceversa */
@@ -46,34 +46,6 @@ void uint32_reverse(uint8_t *data)
 	tmp = data[1];
 	data[1] = data[2];
 	data[2] = tmp;
-}
-
-/* Returns the numeric value of hex h */
-static uint8_t h2d(uint8_t h)
-{
-	if (h >= '0' && h <= '9')
-		return h - '0';
-	else if (h >= 'a' && h <= 'f')
-		return h - 'a' + 10;
-	else if (h >= 'A' && h <= 'F')
-		return h - 'A' + 10;
-	return 0;
-}
-
-/* Converts hex to binary */
-void hex_to_bin(char *hex, uint32_t len, uint8_t *out)
-{
-	uint32_t ptr = 0;
-	for (uint32_t i = 0; i < len; i += 2)
-		out[ptr++] = 16 * h2d(hex[i]) + h2d(hex[i + 1]);
-}
-
-/* Converts bin to hex */
-void bin_to_hex(uint8_t *bin, uint32_t len, char *out)
-{
-	*out = 0;
-	for (uint32_t i = 0; i < len; i++)
-		sprintf(out + strlen(out), "%02x", bin[i]);
 }
 
 /* Compares two MD5 checksums */
@@ -121,7 +93,7 @@ void component_vendor_md5(char *component, char *vendor, uint8_t *out)
 
 	/* Log pair_md5 */
 	char hex[MD5_LEN * 2 + 1] = "\0";
-	bin_to_hex(out, MD5_LEN, hex);
+	ldb_bin_to_hex(out, MD5_LEN, hex);
 	scanlog("vendor/component: %s = %s\n", pair, hex);
 }
 

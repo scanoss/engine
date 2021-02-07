@@ -39,6 +39,7 @@
 #define MAX_FILE_PATH 1024
 #define FETCH_MAX_FILES 20000
 #define MAX_FIELD_LN 64
+#define MIN_FILE_SIZE 256 // files below this size will be ignored
 
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
@@ -201,5 +202,6 @@ int seek_component_hint_in_path(\
 		component_name_rank *component_rank);
 void init_path_ranking(path_ranking *path_rank);
 bool select_best_match(match_data *matches);
+void mz_file_contents(char *key);
 
 #endif

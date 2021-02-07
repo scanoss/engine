@@ -4,7 +4,7 @@
  *
  * File handling functions
  *
- * Copyright (C) 2018-2020 SCANOSS.COM
+ * Copyright (C) 2018-2021 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,34 +60,6 @@ uint64_t get_file_size(char *path)
 	return length;
 }
 
-void file_md5(char *filepath, uint8_t *md5_result)
-{
-
-	/* Read file contents into buffer */
-	FILE *in = fopen(filepath, "rb");
-	fseek(in, 0L, SEEK_END);
-	long filesize = ftell(in);
-
-	if (!filesize)
-	{
-		MD5(NULL, 0, md5_result);
-	}
-
-	else
-	{
-		/* Read file contents */
-		fseek(in, 0L, SEEK_SET);
-		uint8_t *buffer = malloc(filesize);
-		if (!fread(buffer, filesize, 1, in)) fprintf(stderr, "Warning: cannot open file %s\n", filepath);
-
-		/* Calculate MD5sum */
-		MD5(buffer, filesize, md5_result);
-		free (buffer);
-	}
-
-	fclose(in);
-}
-
 void read_file(char *out, char *path, uint64_t maxlen)
 {
 
@@ -119,4 +91,35 @@ void read_file(char *out, char *path, uint64_t maxlen)
 		free(src);
 	}
 }
+
+/* Calculate the MD5 for filepath contents */
+void get_file_md5(char *filepath, uint8_t *md5_result)
+{
+
+	/* Read file contents into buffer */
+	FILE *in = fopen(filepath, "rb");
+	fseek(in, 0L, SEEK_END);
+	long filesize = ftell(in);
+
+	if (!filesize)
+	{
+		MD5(NULL, 0, md5_result);
+	}
+
+	else
+	{
+		/* Read file contents */
+		fseek(in, 0L, SEEK_SET);
+		uint8_t *buffer = malloc(filesize);
+		if (!fread(buffer, filesize, 1, in)) fprintf(stderr, "Warning: cannot open file %s\n", filepath);
+
+		/* Calculate MD5sum */
+		MD5(buffer, filesize, md5_result);
+		free (buffer);
+	}
+
+	fclose(in);
+}
+
+
 
