@@ -4,7 +4,7 @@
  *
  * Scan-related subroutines
  *
- * Copyright (C) 2018-2020 SCANOSS.COM
+ * Copyright (C) 2018-2021 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ char *blacklisted_assets = NULL;
 static void calc_wfp_md5(scan_data *scan)
 {
 	uint8_t tmp_md5[16];
-	file_md5(scan->file_path, tmp_md5);
+	get_file_md5(scan->file_path, tmp_md5);
 	char *tmp_md5_hex = md5_hex(tmp_md5);
 	strcpy(scan->source_md5, tmp_md5_hex);
 	free(tmp_md5_hex);
@@ -668,7 +668,7 @@ int wfp_scan(scan_data *scan)
 			/* Get file MD5 */
 			char *hexmd5 = calloc(MD5_LEN * 2 + 1, 1);
 			memcpy(hexmd5, line + tagln, MD5_LEN * 2);
-			hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
+			ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
 			free(hexmd5);
 
 			/* Extract fields from file record */
@@ -698,7 +698,7 @@ int wfp_scan(scan_data *scan)
 			while (*hexhash) {
 
 				/* Convert hash to binary */
-				hex_to_bin(hexhash, 8, (uint8_t *)&scan->hashes[scan->hash_count]);
+				ldb_hex_to_bin(hexhash, 8, (uint8_t *)&scan->hashes[scan->hash_count]);
 				uint32_reverse((uint8_t *)&scan->hashes[scan->hash_count]);
 
 				/* Save line number */
@@ -742,13 +742,13 @@ bool ldb_scan(scan_data *scan)
 	if (file_size < 0) ldb_error("Cannot access file");
 
 	/* Calculate MD5 hash (if not already preloaded) */
-	if (!scan->preload) file_md5(scan->file_path, scan->md5);
+	if (!scan->preload) get_file_md5(scan->file_path, scan->md5);
 
 	if (extension(scan->file_path))
 		if (blacklisted_extension(scan->file_path)) skip = true;
 
 	/* Ignore <=1 byte */
-	if (file_size <= 1) skip = true;
+	if (file_size <= MIN_FILE_SIZE) skip = true;
 
 	if (!skip)
 	{

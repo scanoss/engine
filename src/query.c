@@ -4,7 +4,7 @@
  *
  * High level data queries
  *
- * Copyright (C) 2018-2020 SCANOSS.COM
+ * Copyright (C) 2018-2021 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ char *get_filename(char *md5)
 {
 	/* Convert md5 to bin */
 	uint8_t md5bin[MD5_LEN];
-	hex_to_bin(md5, MD5_LEN * 2, md5bin);
+	ldb_hex_to_bin(md5, MD5_LEN * 2, md5bin);
 
 	/* Init record */
 	uint8_t *record = calloc(LDB_MAX_REC_LN + 1, 1);

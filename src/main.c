@@ -4,7 +4,7 @@
  *
  * SCANOSS Inventory Scanner
  *
- * Copyright (C) 2018-2020 SCANOSS.COM
+ * Copyright (C) 2018-2021 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #include "report.h"
 #include "file.h"
 #include "help.h"
+#include "mz.h"
 
 void recurse_directory(char *name)
 {
@@ -131,7 +132,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:wtvhedq")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:wtvhedq")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -159,6 +160,11 @@ int main(int argc, char **argv)
 
 			case 'c':
 				strcpy(component_hint, optarg);
+				break;
+
+			case 'k':
+				mz_file_contents(optarg);
+				exit(EXIT_SUCCESS);
 				break;
 
 			case 'w':
