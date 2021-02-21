@@ -363,7 +363,7 @@ long component_age(char *vendor, char *component)
 	if (!*vendor || !*component) return 0;
 
 	uint8_t pair_md5[16] = "\0";
-	component_vendor_md5(vendor, component, pair_md5);
+	vendor_component_md5(vendor, component, pair_md5);
 	return get_component_age(pair_md5);
 }
 

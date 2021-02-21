@@ -45,17 +45,34 @@ bool stricmp(char *a, char *b)
 	return (*a == *b);
 }
 
-/* Returns true when the file "name" contains a blacklisted code extension */
+/* Compare if strings have the same ending */
+bool ends_with(char *a, char *b)
+{
+
+	/* Obtain string lengths */
+	int a_ln = strlen(a);
+	int b_ln = strlen(b);
+	int shortest = a_ln < b_ln ? a_ln : b_ln;
+
+	/* Get pointers to last bytes */
+	char *a_ptr = a + a_ln - 1;
+	char *b_ptr = b + b_ln - 1;
+
+	/* Walk the strings backwards */
+	for (int i = 0; i < shortest; i++)
+	{
+		if (tolower(*a_ptr--) != tolower(*b_ptr--)) return false;
+	}
+
+	return true;
+}
+
+/* Returns true when the file "name" ends with a BLACKLISTED_EXTENSIONS[] string */
 bool blacklisted_extension(char *name)
 {
-	char *ext = extension(name);
-	if (!ext) return true;
-	if (!*ext) return true;
-
 	int i=0;
-	while (BLACKLISTED_EXTENSIONS[i]) 
-		if (stricmp(BLACKLISTED_EXTENSIONS[i++], ext))
-			return true;
+	while (BLACKLISTED_EXTENSIONS[i])
+		if (ends_with(BLACKLISTED_EXTENSIONS[i++], name)) return true;
 
 	return false;
 }

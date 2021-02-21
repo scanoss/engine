@@ -159,7 +159,7 @@ void print_json_match_plain(scan_data scan, match_data match)
 void print_match(scan_data scan, match_data match)
 {
 	/* Calculate component/vendor md5 for aggregated data queries */
-	component_vendor_md5(match.vendor, match.component, match.pair_md5);
+	vendor_component_md5(match.vendor, match.component, match.pair_md5);
 
 	if (quiet) return;
 

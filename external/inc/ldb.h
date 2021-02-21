@@ -185,6 +185,7 @@ struct mz_job
 	uint64_t xkeys_ln; // Length of xkeys
 	void *licenses; // Array of known license identifiers
 	int license_count;            // Number of known license identifiers
+	bool key_found;			// Used with mz_key_exists
 };
 
 
@@ -266,12 +267,14 @@ void ldb_dump(struct ldb_table table, int hex_bytes);
 void ldb_dump_keys(struct ldb_table table);
 int ldb_collate_cmp(const void * a, const void * b);
 
+bool mz_key_exists(struct mz_job *job, uint8_t *key);
 bool mz_id_exists(uint8_t *mz, uint64_t size, uint8_t *id);
 uint8_t *file_read(char *filename, uint64_t *size);
 void mz_deflate(struct mz_job *job);
 void mz_id_fill(char *md5, uint8_t *mz_id);
 void mz_parse(struct mz_job *job, bool (*mz_parse_handler) ());
 void file_write(char *filename, uint8_t *src, uint64_t src_ln);
+void mz_id_fill(char *md5, uint8_t *mz_id);
 void mz_deflate(struct mz_job *job);
 void mz_corrupted(void);
 void mz_add(char *mined_path, uint8_t *md5, char *src, int src_ln, bool check, uint8_t *zsrc, struct mz_cache_item *mz_cache);

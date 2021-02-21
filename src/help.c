@@ -22,7 +22,7 @@
 #include "help.h"
 #include "scanoss.h"
 
-char SCANOSS_VERSION[7] = "4.1.1";
+char SCANOSS_VERSION[7] = "4.1.2";
 
 void help ()
 {
@@ -36,8 +36,9 @@ Syntax: scanoss [parameters] [TARGET]\n\
 Configuration:\n\
 -w         Treats TARGET as a .wfp file regardless of the actual file extension\n\
 -e         Expect matching extensions to equal the file extension being scanned (default: off)\n\
--s FILE    Use assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification\n\
--b FILE    Blacklist matches to assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format)\n\
+-s SBOM    Use assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification\n\
+-b SBOM    Blacklist matches to assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format)\n\
+-a SBOM    Displays attribution notices for provided SBOM.json\n\
 -f FORMAT  Set output format as: plain(default)|spdx|cyclonedx|spdx_xml\n\
 -c HINT    Provide a component HINT to influence scan results\n\
 -k KEY     Displays contents of file KEY from MZ sources archive\n\

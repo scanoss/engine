@@ -1,10 +1,10 @@
-#ifndef __SCAN_H
-    #define __SCAN_H
+#ifndef __RANK_H
+    #define __RANK_H
 
 #include "scanoss.h"
 
 scan_data scan_data_init();
-char *parse_sbom(char *filepath);
+char *parse_sbom(char *filepath, bool load_vendor);
 uint8_t *biggest_snippet(scan_data *scan);
 int get_component_age(uint8_t *md5);
 bool component_hint_matches_path(file_recordset *files, int records, char *component_hint);
