@@ -22,6 +22,7 @@
 
 #include "scanoss.h"
 #include "scan.h"
+#include "attributions.h"
 #include "debug.h"
 #include "blacklist.h"
 #include "limits.h"
@@ -132,7 +133,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:wtvhedq")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:wtvhedq")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -151,11 +152,11 @@ int main(int argc, char **argv)
 				break;
 
 			case 's':
-				sbom = parse_sbom(optarg);
+				sbom = parse_sbom(optarg, false);
 				break;
 
 			case 'b':
-				blacklisted_assets = parse_sbom(optarg);
+				blacklisted_assets = parse_sbom(optarg, false);
 				break;
 
 			case 'c':
@@ -165,6 +166,10 @@ int main(int argc, char **argv)
 			case 'k':
 				mz_file_contents(optarg);
 				exit(EXIT_SUCCESS);
+				break;
+
+			case 'a':
+				exit(attribution_notices(optarg));
 				break;
 
 			case 'w':
@@ -177,7 +182,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'v':
-				printf ("scanoss-%s\n", SCANOSS_VERSION);
+				printf("scanoss-%s\n", SCANOSS_VERSION);
 				exit(EXIT_SUCCESS);
 				break;
 

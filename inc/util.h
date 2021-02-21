@@ -20,7 +20,7 @@ void trim(char *str);
 void printable_only(char *text);
 
 /* Returns the pair md5 of "component/vendor" */
-void component_vendor_md5(char *component, char *vendor, uint8_t *out);
+void vendor_component_md5(char *component, char *vendor, uint8_t *out);
 
 /* Returns the current date stamp */
 char *datestamp(void);

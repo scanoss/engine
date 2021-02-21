@@ -1,5 +1,5 @@
-#ifndef __SCAN_H
-    #define __SCAN_H
+#ifndef __MZ_H
+    #define __MZ_H
 
 #include "scanoss.h"
 

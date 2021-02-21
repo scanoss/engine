@@ -24,60 +24,114 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "limits.h"
 #include "parse.h"
 #include "json.h"
 #include "debug.h"
 
-static void json_process_value(json_value* value, int depth, char *out);
-
-static void json_process_object(json_value* value, int depth, char *out)
+static bool is_component(char *str)
 {
-        int length, x;
-        if (value == NULL) return;
-        
-        length = value->u.object.length;
-        for (x = 0; x < length; x++) {
-			if ((!strcmp(value->u.object.values[x].name,"name")) ||
-					(!strcmp(value->u.object.values[x].name,"components")) ||
-					(!strcmp(value->u.object.values[x].name,"Document")) ||
-					(!strcmp(value->u.object.values[x].name,"packages")))
-				json_process_value(value->u.object.values[x].value, depth+1, out);
-		}
+	if (!strcmp(str, "name")) return true;
+	if (!strcmp(str, "component")) return true;
+	return false;
 }
 
-static void json_process_array(json_value* value, int depth, char *out)
+static bool is_vendor(char *str)
+{
+	if (!strcmp(str, "publisher")) return true;
+	if (!strcmp(str, "vendor")) return true;
+	return false;
+}
+
+static void json_process_value(json_value* value, int depth, char *out, bool load_vendor);
+
+static void json_process_object(json_value* value, int depth, char *out, bool load_vendor)
 {
 	int length, x;
 	if (value == NULL) return;
-	
-	length = value->u.array.length;
-	for (x = 0; x < length; x++) {
-		json_process_value(value->u.array.values[x], depth, out);
+
+	char vendor[MAX_ARGLN]="\0";
+	char component[MAX_ARGLN]="\0";
+
+	length = value->u.object.length;
+	for (x = 0; x < length; x++)
+	{
+		json_value *data = value->u.object.values[x].value;
+		char *name = value->u.object.values[x].name;
+
+		if (!strcmp(value->u.object.values[x].name,"Document") ||
+				(!strcmp(value->u.object.values[x].name,"components")) ||
+				(!strcmp(value->u.object.values[x].name,"packages")))
+		{
+			json_process_value(value->u.object.values[x].value, depth+1, out, load_vendor);
+		}
+		if (data->type == json_string)
+		{
+			/* Copy vendor name */
+			if (is_vendor(name))
+			{
+				strcpy(vendor, data->u.string.ptr);
+			}
+
+			/* Copy component name */
+			if (is_component(name))
+			{
+				strcpy(component, data->u.string.ptr);
+			}
+		}
+	}
+
+	if (!*component && !*vendor) return;
+
+	if (!load_vendor)
+	{
+		sprintf(out + strlen(out), "%s,", component);
+		return;
+	}
+
+	if (*component && *vendor)
+	{
+		sprintf(out + strlen(out), "%s/%s,", vendor, component);
+	}
+	else
+	{
+		printf("Incomplete pair for %s/%s\n", vendor, component);
+		exit(EXIT_FAILURE);
 	}
 }
 
-static void json_process_value(json_value* value, int depth, char *out)
+static void json_process_array(json_value* value, int depth, char *out, bool load_vendor)
+{
+	int length, x;
+	if (value == NULL) return;
+
+	length = value->u.array.length;
+	for (x = 0; x < length; x++) {
+		json_process_value(value->u.array.values[x], depth, out, load_vendor);
+	}
+}
+
+static void json_process_value(json_value* value, int depth, char *out, bool load_vendor)
 {
 	if (value == NULL) return;
 
-	switch (value->type) {
+	switch (value->type)
+	{
 		case json_object:
-			json_process_object(value, depth+1, out);
+			json_process_object(value, depth+1, out, load_vendor);
 			break;
+
 		case json_array:
-			json_process_array(value, depth+1, out);
+			json_process_array(value, depth+1, out, load_vendor);
 			break;
-		case json_string:
-			strcat(out, value->u.string.ptr);
-			strcat(out,",");
-			break;
+
 		default:
 			break;
 	}
 }
 
 /* Loads assets (SBOM.json) into memory */
-char *parse_sbom(char *filepath)
+char *parse_sbom(char *filepath, bool load_vendor)
 {
 	json_char* json;
 	json_value* value;
@@ -102,12 +156,15 @@ char *parse_sbom(char *filepath)
 	}
 
 	char *out = calloc(file_size + 1, 1);
-	json_process_value(value, 0, out);
+	json_process_value(value, 0, out, load_vendor);
 
 	json_value_free(value);
 	free(buffer);
-					
-	scanlog("Blacklisted: %s\n", out);
+
+	/* Convert to lowercase */
+	for (int i = 0; i < strlen(out); i++) out[i] = tolower(out[i]);
+
+	scanlog("SBOM contents: %s\n", out);
 
 	return out;
 }
@@ -115,13 +172,13 @@ char *parse_sbom(char *filepath)
 /* Returns a pointer to the character following the first comma in "data" */
 char *skip_first_comma(char *data)
 {
-    char *ptr = data;
-    while (*ptr)
-    {
-        if (*ptr == ',') return ++ptr;
-        ptr++;
-    }
-    return data;
+	char *ptr = data;
+	while (*ptr)
+	{
+		if (*ptr == ',') return ++ptr;
+		ptr++;
+	}
+	return data;
 }
 
 /* Extracts the "n"th value from the comma separated "in" string */

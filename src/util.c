@@ -81,7 +81,7 @@ void printable_only(char *text)
 }
 
 /* Returns the pair md5 of "component/vendor" */
-void component_vendor_md5(char *component, char *vendor, uint8_t *out)
+void vendor_component_md5(char *component, char *vendor, uint8_t *out)
 {
 	char pair[1024] = "\0";
 	if (strlen(component) + strlen(vendor) + 2 >= 1024) return;

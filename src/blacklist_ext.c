@@ -24,18 +24,28 @@
 
 /* File extensions to be skipped */
 char *BLACKLISTED_EXTENSIONS[] = {
-  "1", "2", "3", "4", "5", "6", "7", "8", "9", "ac", "am", "bmp", "build",
-  "cfg", "changelog", "chm", "class", "cmake", "cnf", "conf", "config",
-  "contributors", "copying", "crt", "csproj", "css", "csv", "cvsignore",
-  "dat", "data", "doc", "ds_store", "dtd", "dts", "dtsi", "dump", "eot",
-  "eps", "geojson", "gif", "gitignore", "glif", "gmo", "gradle", "guess",
-  "hex", "htm", "html", "ico", "in", "inc", "info", "ini", "ipynb",
-  "jpeg", "jpg", "json", "jsonld", "license", "log", "m4", "makefile", "map",
-  "markdown", "md", "md5", "meta", "mk", "mxml", "notice", "o", "otf", "out",
-  "pbtxt", "pdf", "pem", "phtml", "plist", "png", "po", "ppt", "prefs",
-  "properties", "pyc", "readme", "result", "rgb", "rst", "scss", "sha",
-  "sha1", "sha2", "sha256", "sln", "spec", "sql", "sub", "svg", "svn-base",
-  "tab", "template", "test", "tex", "tiff", "todo", "ttf", "txt", "utf-8",
-  "version", "vim", "wav", "whl", "woff", "xht", "xhtml", "xls", "xml",
-  "xpm", "xsd", "xul", "yaml", "yml", NULL
+
+	/* File extensions */
+	".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9", ".ac", ".adoc", ".am",
+	".asciidoc", ".bmp", ".build", ".cfg", ".chm", ".class", ".cmake", ".cnf",
+	".conf", ".config", ".contributors", ".copying", ".crt", ".csproj", ".css",
+	".csv", ".cvsignore", ".dat", ".data", ".doc", ".ds_store", ".dtd", ".dts",
+	".dtsi", ".dump", ".eot", ".eps", ".geojson", ".gdoc", ".gif", ".gitignore",
+	".glif", ".gmo", ".gradle", ".guess", ".hex", ".htm", ".html", ".ico", ".in",
+	".inc", ".info", ".ini", ".ipynb", ".jpeg", ".jpg", ".json", ".jsonld",
+	".log", ".m4", ".map", ".markdown", ".md", ".md5", ".meta", ".mk", ".mxml",
+	".o", ".otf", ".out", ".pbtxt", ".pdf", ".pem", ".phtml", ".plist", ".png",
+	".po", ".ppt", ".prefs", ".properties", ".pyc", ".qdoc", ".result", ".rgb",
+	".rst", ".scss", ".sha", ".sha1", ".sha2", ".sha256", ".sln", ".spec", ".sql",
+	".sub", ".svg", ".svn-base", ".tab", ".template", ".test", ".tex", ".tiff",
+	".toml", ".ttf", ".txt", ".utf-8", ".vim", ".wav", ".whl", ".woff", ".xht",
+	".xhtml", ".xls", ".xml", ".xpm", ".xsd", ".xul", ".yaml", ".yml",
+
+	/* File endings */
+	"-DOC", "CHANGELOG", "CONFIG", "COPYING", "COPYING.LIB", "LICENSE",
+	"LICENSE.MD", "LICENSE.TXT", "LICENSES", "MAKEFILE", "NOTICE", "NOTICE",
+	"README", "SWIFTDOC", "TEXIDOC", "TODO", "VERSION",
+
+	/* End with null */
+	NULL
 };
