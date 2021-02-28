@@ -22,6 +22,7 @@
 #include "debug.h"
 #include "report.h"
 #include "quality.h"
+#include "cryptography.h"
 #include "vulnerability.h"
 #include "cyclonedx.h"
 #include "spdx.h"
@@ -148,6 +149,8 @@ void print_json_match_plain(scan_data scan, match_data match)
 	print_vulnerabilities(match);
 	printf("      \"quality\": ");
 	print_quality(match);
+	printf("      \"cryptography\": ");
+	print_cryptography(match);
 
 	double elapsed = microseconds_now() - scan.timer;
 	printf("      \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
