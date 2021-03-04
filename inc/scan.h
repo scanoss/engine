@@ -12,6 +12,6 @@ void consider_file_record(\
 		char *path,\
 		match_data *matches,\
 		char *component_hint,\
-		uint8_t *matching_md5);
+		uint8_t *match_md5);
 
 #endif

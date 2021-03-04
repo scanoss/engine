@@ -40,6 +40,7 @@
 #define FETCH_MAX_FILES 20000
 #define MAX_FIELD_LN 64
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
+#define MAX_SNIPPET_IDS_RETURNED 10000
 
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
@@ -100,13 +101,18 @@ typedef struct scan_data
 	matchtype match_type;
 	matchmap_entry *matchmap;
 	uint32_t matchmap_size;
+	char line_ranges[MAX_FIELD_LN * 2];
+	char oss_ranges[MAX_FIELD_LN * 2];
+	uint8_t *match_ptr; // pointer to matching record in match_map
+	/* comma separated list of matching snippet ids */
+	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1];
+	int snippet_hits;
+	char matched_percent[5];
 } scan_data;
 
 typedef struct match_data
 {
 	matchtype type;
-	char lines[MAX_FIELD_LN * 2];
-	char oss_lines[MAX_FIELD_LN * 2];
 	char vendor[MAX_FIELD_LN];
 	char component[MAX_FIELD_LN];
 	char version[MAX_FIELD_LN];
@@ -115,7 +121,6 @@ typedef struct match_data
 	char file[MAX_FILE_PATH];
 	int  path_ln;
 	char license[MAX_FIELD_LN];
-	char matched[MAX_FIELD_LN];
 	uint8_t file_md5[MD5_LEN];
 	uint8_t component_md5[MD5_LEN];
 	uint8_t pair_md5[MD5_LEN];
@@ -182,19 +187,13 @@ int count_matches(match_data *matches);
 bool component_hint_matches_path(file_recordset *files, int records, char *component_hint);
 void external_component_hint_in_path(file_recordset *files, int records, char *hint, component_name_rank *component_rank);
 void select_best_component_from_rank(component_name_rank *component_rank, char *component_hint);
-void add_files_to_matches(\
-		file_recordset *files,\
-		int records,\
-		char *component_hint,\
-		uint8_t *file_md5,\
-		match_data *matches);
 bool component_hint_from_shortest_paths(file_recordset *files, int records, char *hint1, char *hint2, component_name_rank *component_rank, path_ranking *path_rank);
 void consider_file_record(\
 		uint8_t *component_id,\
 		char *path,\
 		match_data *matches,\
 		char *component_hint,\
-		uint8_t *matching_md5);
+		uint8_t *match_md5);
 int seek_component_hint_in_path(\
 		file_recordset *files,\
 		int records,\

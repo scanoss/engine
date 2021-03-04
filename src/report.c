@@ -120,9 +120,10 @@ void print_json_match_plain(scan_data scan, match_data match)
 {
 	printf("    {\n");
 	printf("      \"id\": \"%s\",\n", matchtypes[match.type]);
-	printf("      \"lines\": \"%s\",\n", match.lines);
-	printf("      \"oss_lines\": \"%s\",\n", match.oss_lines);
-	printf("      \"matched\": \"%s\",\n", match.matched);
+	printf("      \"lines\": \"%s\",\n", scan.line_ranges);
+	printf("      \"oss_lines\": \"%s\",\n", scan.oss_ranges);
+	printf("      \"snippet_ids\": \"%s\",\n", scan.snippet_ids);
+	printf("      \"matched\": \"%s\",\n", scan.matched_percent);
 	printf("      \"vendor\": \"%s\",\n", match.vendor);
 	printf("      \"component\": \"%s\",\n", match.component);
 	printf("      \"version\": \"%s\",\n", match.version);
