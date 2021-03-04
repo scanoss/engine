@@ -21,6 +21,7 @@
  */
 
 #include "scan.h"
+#include "rank.h"
 #include "snippets.h"
 #include "match.h"
 #include "query.h"
@@ -388,7 +389,7 @@ void consider_file_record(\
 		char *path,\
 		match_data *matches,\
 		char *component_hint,\
-		uint8_t *matching_md5)
+		uint8_t *match_md5)
 {
 	/* Skip unwanted paths */
 	if (skip_file_path(path, matches)) return;
@@ -418,7 +419,7 @@ void consider_file_record(\
 		match = fill_match(component_id, path, component);
 
 		/* Save match file id */
-		memcpy(match.file_md5, matching_md5, MD5_LEN);
+		memcpy(match.file_md5, match_md5, MD5_LEN);
 	}
 	else
 	{
@@ -428,22 +429,6 @@ void consider_file_record(\
 
 	add_match(position, match, total_matches, matches, false);
 	free(component);
-}
-
-struct match_data *prefill_match(scan_data *scan, char *lines, char *oss_lines, int matched_percent)
-{
-	struct match_data *matches = calloc(sizeof(match_data), scan_limit);
-	if (matched_percent > 100) matched_percent = 100;
-	for (int i = 0; i < scan_limit; i++)
-	{
-		matches[i].type = scan->match_type;
-		strcpy(matches[i].lines,lines);
-		strcpy(matches[i].oss_lines, oss_lines);
-		sprintf(matches[i].matched,"%u%%", matched_percent);
-		matches[i].selected = false;
-		matches[i].scandata = scan;
-	}
-	return matches;
 }
 
 /* Add file record to matches */
@@ -467,53 +452,54 @@ match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *
 	add_match(0, match, 0, matches, false);
 }
 
-match_data *load_matches(scan_data *scan, uint8_t *matching_md5)
+match_data *load_matches(scan_data *scan)
 {
-	match_data match;
-
-	/* Compile line ranges */
-	char *oss_ranges = malloc(sizeof(match.lines)-1);
-	strcpy(oss_ranges, "all");
-	char *line_ranges = malloc(sizeof(match.lines)-1);
-	strcpy(line_ranges, "all");
+	strcpy(scan->line_ranges, "all");
+	strcpy(scan->oss_ranges, "all");
+	sprintf(scan->matched_percent,"100%%");
 
 	/* Compile match ranges and fill up matched percent */
 	int hits = 100;
 	int matched_percent = 100;
 
+	/* Get matching line ranges (snippet match) */
 	if (scan->match_type == snippet)
 	{
 		scanlog("%d hits before compiling ranges\n", hits);
-		hits = compile_ranges(matching_md5, line_ranges, oss_ranges);
+		hits = compile_ranges(scan);
+
 		float percent = (hits * 100) / scan->total_lines;
 		if (hits) matched_percent = floor(percent);
+		if (matched_percent > 100) matched_percent = 100;
 
 		scanlog("%d hits left after compiling ranges\n", hits);
-		if (!hits)
-		{
-			free(line_ranges);
-			free(oss_ranges);
-			return NULL;
-		}
+		if (!hits) return NULL;
+
+		sprintf(scan->matched_percent,"%u%%", matched_percent);
 	}
 
-	struct match_data *matches = prefill_match(scan, line_ranges, oss_ranges, matched_percent);
-	free(oss_ranges);
-	free(line_ranges);
+	/* Init matches structure */
+	struct match_data *matches = calloc(sizeof(match_data), scan_limit);
+	for (int i = 0; i < scan_limit; i++)
+	{
+		matches[i].type = scan->match_type;
+		matches[i].selected = false;
+		matches[i].scandata = scan;
+	}
 
 	uint32_t records = 0;
 
-	/* Snippet and component match should look for the matching_md5 in components */
+	/* Snippet and component match should look for the matching md5 in components */
 	if (scan->match_type != file)
 	{
-		records = ldb_fetch_recordset(NULL, oss_component, matching_md5, false, handle_component_record, (void *) matches);
+		records = ldb_fetch_recordset(NULL, oss_component, scan->match_ptr, false, handle_component_record, (void *) matches);
 		scanlog("Component recordset contains %u records\n", records);
 	}
 
 	if (!records)
 	{
 		file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
-		records = ldb_fetch_recordset(NULL, oss_file, matching_md5, false, collect_all_files, (void *) files);
+		records = ldb_fetch_recordset(NULL, oss_file, scan->match_ptr, false, collect_all_files, (void *) files);
 
 		if (records)
 		{
@@ -534,9 +520,15 @@ match_data *load_matches(scan_data *scan, uint8_t *matching_md5)
 				selected = seek_component_hint_in_path(files, records, new_component_hint, component_rank);
 			}
 
+			/* Attempt to identify components from paths starting with the component name */
+			if (selected < 0)
+			{
+				selected = seek_component_hint_in_path_start(files, records, component_rank);
+			}
+
 			if (selected >= 0)
 			{
-				add_selected_file_to_matches(matches, component_rank, selected, matching_md5);
+				add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
 
 				/* Update component_hint for the next file */
 				strcpy(component_hint, component_rank[selected].component);
@@ -572,7 +564,18 @@ match_data *load_matches(scan_data *scan, uint8_t *matching_md5)
 				if (hint_found) scanlog("Component hint = %s/%s\n", *vendor_hint ? vendor_hint : "?", component_hint);
 
 				/* Add relevant files to matches */
-				add_files_to_matches(files, records, component_hint, matching_md5, matches);
+				if (!add_files_to_matches(files, records, component_hint, scan->match_ptr, matches))
+				{
+					/* If this did not work, attempt finding the component name in the path */
+					selected = seek_component_hint_in_path_start(files, records, component_rank);
+					if (selected >= 0)
+					{
+						add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
+
+						/* Update component_hint for the next file */
+						strcpy(component_hint, component_rank[selected].component);
+					}
+				}
 			}
 
 			free(component_rank);
@@ -590,17 +593,17 @@ match_data *load_matches(scan_data *scan, uint8_t *matching_md5)
 
 match_data *compile_matches(scan_data *scan)
 {
-	uint8_t *matching_md5 = scan->md5;
+	scan->match_ptr = scan->md5;
 
 	/* Search for biggest snippet */
 	if (scan->match_type == snippet)
 	{
-		matching_md5 = biggest_snippet(scan);
+		scan->match_ptr = biggest_snippet(scan);
 		scanlog("%ld matches in snippet map\n", scan->matchmap_size);
 	}
 
 	/* Return NULL if no matches */
-	if (!matching_md5)
+	if (!scan->match_ptr)
 	{
 		scan->match_type = none;
 		scanlog("No matching file id\n");
@@ -609,7 +612,7 @@ match_data *compile_matches(scan_data *scan)
 	else
 	{
 		/* Log matching MD5 */
-		for (int i = 0; i < MD5_LEN; i++) scanlog("%02x", matching_md5[i]);
+		for (int i = 0; i < MD5_LEN; i++) scanlog("%02x", scan->match_ptr[i]);
 		scanlog(" selected\n");
 	}
 
@@ -620,7 +623,7 @@ match_data *compile_matches(scan_data *scan)
 	match_data *matches = NULL;
 
 	scanlog("Starting match: %s\n",matchtypes[scan->match_type]);
-	if (scan->match_type != none) matches = load_matches(scan, matching_md5);
+	if (scan->match_type != none) matches = load_matches(scan);
 
 	/* The latter could result in no matches */
 	if (!matches) scan->match_type = none;

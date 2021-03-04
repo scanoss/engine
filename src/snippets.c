@@ -126,6 +126,8 @@ uint8_t *biggest_snippet(scan_data *scan)
 		/* Erase match from map if MD5 is orphan (no files/components found) */
 		if (shortest_path == MAX_PATH) clear_hits(out); else break;
 	}
+
+	scan->match_ptr = out;
 	return out;
 }
 
@@ -170,45 +172,78 @@ bool skip_snippets(char *src, uint64_t srcln)
 	return false;
 }
 
-/* Compiles list of line ranges, returning total number of hits (lines matched) */
-uint32_t compile_ranges(uint8_t *matchmap_matching, char *ranges, char *oss_ranges) {
+void add_snippet_ids(scan_data *scan, long from, long to)
+{
+	int maxlen = MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES;
+	bool found = false;
 
-	if (uint16_read(matchmap_matching + MD5_LEN) < 2) return 0;
+	/* Walk scan->lines array */
+	for (int i = 0; i < scan->hash_count; i++)
+	{
+		if (scan->lines[i] > to - 1) break;
+
+		/* If line is within from and to, add snippet id to list */
+		if (scan->lines[i] >= from - 1)
+		{
+			found = true;
+
+			char hex[9] = "\0";
+			hex[8] = 0;
+			uint32_t hash = scan->hashes[i];
+			uint32_reverse((uint8_t *)&hash);
+			ldb_bin_to_hex((uint8_t *)&hash, WFP_LN, hex);
+
+			if (strlen(scan->snippet_ids) + WFP_LN * 2 + 1 >= maxlen) break;
+			sprintf(scan->snippet_ids + strlen(scan->snippet_ids), "%s", hex);
+		}
+	}
+
+	if (found) strcat(scan->snippet_ids, ",");
+}
+
+/* Compiles list of line ranges, returning total number of hits (lines matched) */
+uint32_t compile_ranges(scan_data *scan) {
+
+	*scan->line_ranges = 0;
+	*scan->oss_ranges = 0;
+	*scan->snippet_ids = 0;
+
+	if (uint16_read(scan->match_ptr + MD5_LEN) < 2) return 0;
 	int hits = 0;
 
 	/* Lowest tolerance simply requires selecting the higher match count */
 	if (min_match_lines == 1)
 	{
-		strcpy(ranges, "N/A");
-		strcpy(oss_ranges, "N/A");
-		return uint16_read(matchmap_matching + MD5_LEN);
+		strcpy(scan->line_ranges, "N/A");
+		strcpy(scan->oss_ranges, "N/A");
+		return uint16_read(scan->match_ptr + MD5_LEN);
 	}
-
-	ranges [0] = 0;
-	oss_ranges [0] = 0;
 
 	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++) {
 
-		long from     = uint16_read (matchmap_matching + 16 + 2 + i * 6);
-		long to       = uint16_read (matchmap_matching + 16 + 2 + i * 6 + 2);
-		long oss_from = uint16_read (matchmap_matching + 16 + 2 + i * 6 + 4);
+		long from     = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6);
+		long to       = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6 + 2);
+		long oss_from = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6 + 4);
 
 		if (to < 1) break;
 
 		/* Add range as long as the minimum number of match lines is reached */
 		if ((to - from) >= min_match_lines) {
-			sprintf (ranges + strlen(ranges), "%ld-%ld,", from, to);
-			sprintf (oss_ranges + strlen(oss_ranges), "%ld-%ld,", oss_from, to - from + oss_from);
+			sprintf (scan->line_ranges + strlen(scan->line_ranges), "%ld-%ld,", from, to);
+			sprintf (scan->oss_ranges + strlen(scan->oss_ranges), "%ld-%ld,", oss_from, to - from + oss_from);
 			hits += (to - from);
+			add_snippet_ids(scan, from, to);
 		}
 	}
 
 	/* Remove last comma */
-	if (strlen(ranges) > 0) ranges[strlen(ranges) - 1] = 0;
-	else strcpy(ranges, "all");
+	if (strlen(scan->snippet_ids) > 0) scan->snippet_ids[strlen(scan->snippet_ids) - 1] = 0;
 
-	if (strlen(oss_ranges) > 0) oss_ranges[strlen(oss_ranges) - 1] = 0;
-	else strcpy(oss_ranges, "all");
+	if (strlen(scan->line_ranges) > 0) scan->line_ranges[strlen(scan->line_ranges) - 1] = 0;
+	else strcpy(scan->line_ranges, "all");
+
+	if (strlen(scan->oss_ranges) > 0) scan->oss_ranges[strlen(scan->oss_ranges) - 1] = 0;
+	else strcpy(scan->oss_ranges, "all");
 
 	return hits;
 }

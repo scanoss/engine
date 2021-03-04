@@ -391,6 +391,44 @@ int fill_component_age(component_name_rank *component_rank)
 	return oldest_id;
 }
 
+/* Return id of the item in rank with the highest score */
+int highest_score(component_name_rank *component_rank)
+{
+	long oldest = 0;
+
+	/* Return a negative value of no files are matched */
+	int oldest_id = -1;
+
+	/* Select highest score */
+	for (int i = 0; i < rank_items; i++)
+	{
+		if (!*component_rank[i].component) break;
+		if (component_rank[i].score > oldest)
+		{
+			oldest = component_rank[i].score;
+			oldest_id = i;
+		}
+	}
+
+	return oldest_id;
+}
+
+/* Select the vendor that appears the most in the ranking */
+int rank_by_occurrences(component_name_rank *component_rank)
+{
+	/* Increment rank by number of occurences */
+	for (int i = 0; i < rank_items; i++)
+	{
+		for (int ii = 0; ii < rank_items; ii++)
+		{
+			if (!strcmp(component_rank[i].vendor,component_rank[ii].vendor)) component_rank[i].score++;
+		}
+	}
+
+	/* Return highest score */
+	return highest_score(component_rank);
+}
+
 /* Erase values in component_rank */
 void clear_component_rank(component_name_rank *component_rank)
 {
@@ -471,7 +509,7 @@ bool component_hint_from_shortest_paths(\
 }
 
 /* Add relevant files into matches structure */
-void add_files_to_matches(\
+int add_files_to_matches(\
 		file_recordset *files,\
 		int records,\
 		char *component_hint,\
@@ -498,6 +536,7 @@ void add_files_to_matches(\
 		}
 	}
 	scanlog("%u of %u files considered\n", considered, records);
+	return considered;
 }
 
 /* Analyse files, selecting those matching the provided hints
@@ -554,6 +593,50 @@ int seek_component_hint_in_path(\
 
 	scanlog("seek_component_hint_in_path for %s results in no hits\n", hint);
 	return -1;
+}
+
+/* Analyse files, selecting those with a component name matching the beginning of the path */
+int seek_component_hint_in_path_start(\
+		file_recordset *files,\
+		int records,\
+		component_name_rank *component_rank)
+{
+	uint8_t *component_rec = calloc(LDB_MAX_REC_LN, 1);
+	bool hits = false;
+	clear_component_rank(component_rank);
+
+	/* Walk files, adding to rank those starting with its component name */
+	for (int i = 0; i < records; i++)
+	{
+		/* Fetch vendor and component name */
+		get_component_record(files[i].component_id, component_rec);
+		char vendor[64] = "\0";
+		char component[64] = "\0";
+		extract_csv(vendor, (char *) component_rec, 1, 64);
+		extract_csv(component, (char *) component_rec, 2, 64);
+
+		/* If the path starts with the component name, add it to the rank */
+		if (stristart(component, files[i].path))
+		{
+			update_component_rank(component_rank, vendor, component, files[i].path, files[i].component_id, (char *) component_rec);
+			hits = true;
+		}
+	}
+	free(component_rec);
+
+	int selected = -1;
+
+	/* Select most repeated component */
+	if (hits)
+	{
+		selected = rank_by_occurrences(component_rank);
+		log_component_ranking(component_rank);
+	}
+
+	if (selected >= 0) scanlog("seek_component_hint_in_path_start selected path #%d\n",selected);
+	else scanlog("seek_component_hint_in_path_start results in no hits\n");
+
+	return selected;
 }
 
 /* Select match based on hint and age */
