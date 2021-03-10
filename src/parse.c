@@ -137,7 +137,13 @@ char *parse_sbom(char *filepath, bool load_vendor)
 	json_value* value;
 
 	/* Read file into buffer */
-	FILE *file = fopen(filepath, "rb");
+	FILE *file;
+	if((file = fopen(filepath, "rb"))==NULL)
+	{ 
+		printf("Error: %s cannot be loaded\n",filepath);
+		exit(EXIT_FAILURE);
+	}
+	
 	fseek(file, 0, SEEK_END);
 	long file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
