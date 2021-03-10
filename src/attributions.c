@@ -122,7 +122,7 @@ bool validate_pairs(struct ldb_table oss_attributions, char *pairs)
   while (pair)
   {
 		uint8_t md5[16];
-    pair = strtok(NULL, ",");
+    
 		if (pair)
 		{
 			/* Get vendor/component pair */
@@ -138,6 +138,7 @@ bool validate_pairs(struct ldb_table oss_attributions, char *pairs)
 				valid = false;
 			}
 		}
+	  	pair = strtok(NULL, ",");
   }
 	return valid;
 }
@@ -149,7 +150,7 @@ void print_pairs_attribution_notices(struct ldb_table oss_attributions, char *pa
   while (pair)
   {
 		uint8_t md5[16];
-    pair = strtok(NULL, ",");
+    
 		if (pair)
 		{
 			/* Get vendor/component pair */
@@ -157,6 +158,7 @@ void print_pairs_attribution_notices(struct ldb_table oss_attributions, char *pa
 			print_notices(oss_attributions, md5, pair);
 		}
   }
+		pair = strtok(NULL, ",");
 }
 
 int attribution_notices(char *sbom)
