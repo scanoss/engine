@@ -21,7 +21,6 @@ clean:
 distclean: clean
 
 install:
-	@cp libldb.so /usr/lib
 	@cp scanoss /usr/bin
 
 uninstall:
