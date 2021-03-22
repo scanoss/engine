@@ -362,6 +362,7 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
 				/* Update to */
 				scan->matchmap[found].range[t].from = line;
 				scan->matchmap[found].hits++;
+				scan->matchmap[found].range[t].oss_line = oss_line;
 				break;
 			}
 		}
