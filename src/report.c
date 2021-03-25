@@ -122,7 +122,8 @@ void print_json_match_plain(scan_data scan, match_data match)
 	printf("      \"id\": \"%s\",\n", matchtypes[match.type]);
 	printf("      \"lines\": \"%s\",\n", scan.line_ranges);
 	printf("      \"oss_lines\": \"%s\",\n", scan.oss_ranges);
-	printf("      \"snippet_ids\": \"%s\",\n", scan.snippet_ids);
+	if (match.type == snippet) printf("      \"snippet_ids\": \"%s\",\n", scan.snippet_ids);
+
 	printf("      \"matched\": \"%s\",\n", scan.matched_percent);
 	printf("      \"vendor\": \"%s\",\n", match.vendor);
 	printf("      \"component\": \"%s\",\n", match.component);
@@ -130,14 +131,15 @@ void print_json_match_plain(scan_data scan, match_data match)
 	printf("      \"latest\": \"%s\",\n", match.latest_version);
 
 	printf("      \"url\": \"%s\",\n", match.url);
+	printf("      \"release_date\": \"%s\",\n", match.release_date);
 	printf("      \"file\": \"%s\",\n", match.file);
 
-	char *component_id = md5_hex(match.component_md5);
-	printf("      \"component_id\": \"%s\",\n", component_id);
-	free(component_id);
+	char *url_id = md5_hex(match.url_md5);
+	printf("      \"url_hash\": \"%s\",\n", url_id);
+	free(url_id);
 
 	char *file_id = md5_hex(match.file_md5);
-	printf("      \"file_id\": \"%s\",\n", file_id);
+	printf("      \"file_hash\": \"%s\",\n", file_id);
 	free(file_id);
 
 	printf("      \"dependencies\": ");

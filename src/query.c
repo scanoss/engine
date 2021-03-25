@@ -49,7 +49,7 @@ char *get_filename(char *md5)
 	return (char *)record;
 }
 
-/* Handler function for get_component_record */
+/* Handler function for get_url_record */
 bool ldb_get_first_non_blacklisted(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *) ptr;
@@ -68,7 +68,7 @@ bool ldb_get_first_non_blacklisted(uint8_t *key, uint8_t *subkey, int subkey_ln,
 
 
 /* Obtain the first available component record for the given MD5 hash */
-void get_component_record(uint8_t *md5, uint8_t *record)
+void get_url_record(uint8_t *md5, uint8_t *record)
 {
 	/* Erase byte count */
 	uint32_write(record, 0);

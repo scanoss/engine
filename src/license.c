@@ -93,7 +93,7 @@ void get_license(match_data match, char *license)
 	{
 		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, get_first_license_item, license);
 		if (!records)
-			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, get_first_license_item, license);
+			records = ldb_fetch_recordset(NULL, table, match.url_md5, false, get_first_license_item, license);
 		if (!records)
 			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, get_first_license_item, license);
 	}
@@ -114,13 +114,23 @@ void print_licenses(match_data match)
 
 	uint32_t records = 0;
 
-	if (ldb_table_exists("oss", "license"))
+	/* Print URL license */
+	if (*match.license)
+	{
+		printf("        {\n");
+		printf("          \"name\": \"%s\",\n", match.license);
+		printf("          \"source\": \"%s\"\n", license_sources[0]);
+		printf("        }");
+	}
+
+	/* Look for component or file license */
+	else if (ldb_table_exists("oss", "license"))
 	{
 		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_licenses_item, NULL);
 		if (records) scanlog("File license returns hits\n");
 		if (!records)
 		{
-			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_licenses_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.url_md5, false, print_licenses_item, NULL);
 			if (records) scanlog("Component license returns hits\n");
 		}
 		if (!records)

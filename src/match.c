@@ -25,7 +25,7 @@
 #include "limits.h"
 
 bool first_file = true;
-const char *matchtypes[] = {"none", "component", "file", "snippet"};
+const char *matchtypes[] = {"none", "url", "file", "snippet"};
 bool match_extensions = false;
 
 /* This script replaces \ with / */
@@ -109,10 +109,12 @@ match_data match_init()
 	*match.latest_version = 0;
 	*match.url = 0;
 	*match.file = 0;
+	*match.release_date = 0;
+	*match.license = 0;
 	match.vulnerabilities = 0;
 	match.path_ln = 0;
 	match.selected = false;
-	memcpy(match.component_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
+	memcpy(match.url_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
 	memcpy(match.file_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
 	return match;
 }

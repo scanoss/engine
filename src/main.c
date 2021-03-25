@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 
 	/* Table definitions */
 	strcpy(oss_component.db, "oss");
-	strcpy(oss_component.table, "component");
+	strcpy(oss_component.table, "url");
 	oss_component.key_ln = 16;
 	oss_component.rec_ln = 0;
 	oss_component.ts_ln = 2;

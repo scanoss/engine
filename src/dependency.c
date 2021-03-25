@@ -85,7 +85,7 @@ void print_dependencies(match_data match)
 
 	if (ldb_table_exists("oss", "dependency"))
 	{
-		records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_dependencies_item, NULL);
+		records = ldb_fetch_recordset(NULL, table, match.url_md5, false, print_dependencies_item, NULL);
 		if (!records) 
 			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_dependencies_item, NULL);
 	}
