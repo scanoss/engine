@@ -114,7 +114,7 @@ void print_copyrights(match_data match)
 	{
 		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_copyrights_item, NULL);
 		if (!records)
-			records = ldb_fetch_recordset(NULL, table, match.component_md5, false, print_copyrights_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.url_md5, false, print_copyrights_item, NULL);
 		if (!records)
 			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_copyrights_item, NULL);
 	}

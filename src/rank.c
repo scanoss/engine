@@ -91,8 +91,8 @@ component_name_rank *component_rank,
 char *vendor,
 char *component,
 char *path,
-uint8_t *component_id,
-char *component_record)
+uint8_t *url_id,
+char *url_record)
 {
 	/* Walk ranking items */
 	for (int i = 0; i < rank_items; i++)
@@ -102,8 +102,8 @@ char *component_record)
 			strcpy(component_rank[i].vendor, vendor);
 			strcpy(component_rank[i].component, component);
 			strcpy(component_rank[i].file, path);
-			strcpy(component_rank[i].component_record, component_record);
-			if (component_id) memcpy(component_rank[i].component_id, component_id, MD5_LEN);
+			strcpy(component_rank[i].url_record, url_record);
+			if (url_id) memcpy(component_rank[i].url_id, url_id, MD5_LEN);
 			component_rank[i].score++;
 			return;
 		}
@@ -299,7 +299,7 @@ bool select_paths_matching_component_names_in_rank(\
 {
 	bool found = false;
 
-	uint8_t *component_rec = calloc(LDB_MAX_REC_LN, 1);
+	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
 
 	if (*hint1 || *hint2) scanlog("Hints %s, %s\n", hint1, hint2);
 
@@ -332,9 +332,9 @@ bool select_paths_matching_component_names_in_rank(\
 			{
 				*path_rank[i].component = 0;
 				/* Fetch vendor and component name */
-				get_component_record(files[path_rank[i].pathid].component_id, component_rec);
-				extract_csv(path_rank[i].vendor, (char *) component_rec, 1, sizeof(path_rank[0].vendor));
-				extract_csv(path_rank[i].component, (char *) component_rec, 2, sizeof(path_rank[0].component));
+				get_url_record(files[path_rank[i].pathid].url_id, url_rec);
+				extract_csv(path_rank[i].vendor, (char *) url_rec, 1, sizeof(path_rank[0].vendor));
+				extract_csv(path_rank[i].component, (char *) url_rec, 2, sizeof(path_rank[0].component));
 
 				/* If the path starts with the component name, add it to the rank */
 				if (stristart(path_rank[i].component, files[path_rank[i].pathid].path))
@@ -344,15 +344,15 @@ bool select_paths_matching_component_names_in_rank(\
 							path_rank[i].vendor,\
 							path_rank[i].component,\
 							files[path_rank[i].pathid].path,\
-							files[path_rank[i].pathid].component_id,\
-							(char *) component_rec);
+							files[path_rank[i].pathid].url_id,\
+							(char *) url_rec);
 					found = true;
 				}
 			}
 		}
 	}
 
-	free(component_rec);
+	free(url_rec);
 
 	scanlog("select_paths_matching_component_names_in_rank returned %shints\n", found?"":"NO ");
 	return found;
@@ -437,7 +437,7 @@ void clear_component_rank(component_name_rank *component_rank)
 		component_rank[i].score = 0;
 		*component_rank[i].component = 0;
 		*component_rank[i].vendor = 0;
-		*component_rank[i].component_record = 0;
+		*component_rank[i].url_record = 0;
 		*component_rank[i].file = 0;
 	}
 }
@@ -526,7 +526,7 @@ int add_files_to_matches(\
 			if (strstr(files[i].path, component_hint))
 			{
 				consider_file_record(\
-						files[i].component_id,\
+						files[i].url_id,\
 						files[i].path,\
 						matches,\
 						component_hint,\
@@ -550,7 +550,7 @@ int seek_component_hint_in_path(\
 	/* No hits returns a negative value */
 	if (!*hint) return -1;
 
-	uint8_t *component_rec = calloc(LDB_MAX_REC_LN, 1);
+	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
 	bool hits = false;
 	clear_component_rank(component_rank);
 
@@ -567,21 +567,21 @@ int seek_component_hint_in_path(\
 		if (!skip)
 		{
 			/* Fetch vendor and component name */
-			get_component_record(files[i].component_id, component_rec);
+			get_url_record(files[i].url_id, url_rec);
 			char vendor[64] = "\0";
 			char component[64] = "\0";
-			extract_csv(vendor, (char *) component_rec, 1, 64);
-			extract_csv(component, (char *) component_rec, 2, 64);
+			extract_csv(vendor, (char *) url_rec, 1, 64);
+			extract_csv(component, (char *) url_rec, 2, 64);
 
 			/* If the path starts with the component name, add it to the rank */
 			if (stristart(component, files[i].path))
 			{
-				update_component_rank(component_rank, vendor, component, files[i].path, files[i].component_id, (char *) component_rec);
+				update_component_rank(component_rank, vendor, component, files[i].path, files[i].url_id, (char *) url_rec);
 				hits = true;
 			}
 		}
 	}
-	free(component_rec);
+	free(url_rec);
 
 	/* Add component age to rank */
 	if (hits)
@@ -601,7 +601,7 @@ int seek_component_hint_in_path_start(\
 		int records,\
 		component_name_rank *component_rank)
 {
-	uint8_t *component_rec = calloc(LDB_MAX_REC_LN, 1);
+	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
 	bool hits = false;
 	clear_component_rank(component_rank);
 
@@ -609,20 +609,20 @@ int seek_component_hint_in_path_start(\
 	for (int i = 0; i < records; i++)
 	{
 		/* Fetch vendor and component name */
-		get_component_record(files[i].component_id, component_rec);
+		get_url_record(files[i].url_id, url_rec);
 		char vendor[64] = "\0";
 		char component[64] = "\0";
-		extract_csv(vendor, (char *) component_rec, 1, 64);
-		extract_csv(component, (char *) component_rec, 2, 64);
+		extract_csv(vendor, (char *) url_rec, 1, 64);
+		extract_csv(component, (char *) url_rec, 2, 64);
 
 		/* If the path starts with the component name, add it to the rank */
 		if (stristart(component, files[i].path))
 		{
-			update_component_rank(component_rank, vendor, component, files[i].path, files[i].component_id, (char *) component_rec);
+			update_component_rank(component_rank, vendor, component, files[i].path, files[i].url_id, (char *) url_rec);
 			hits = true;
 		}
 	}
-	free(component_rec);
+	free(url_rec);
 
 	int selected = -1;
 

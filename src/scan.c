@@ -69,6 +69,7 @@ scan_data scan_data_init(char *target)
 	scan.matchmap_size = 0;
 	scan.match_type = none;
 	scan.preload = false;
+	*scan.snippet_ids = 0;
 
 	/* Get wfp MD5 hash */
 	if (extension(target)) if (!strcmp(extension(target), "wfp")) calc_wfp_md5(&scan);
@@ -86,6 +87,7 @@ static void scan_data_reset(scan_data *scan)
 	scan->matchmap_size = 0;
 	scan->hash_count = 0;
 	scan->match_type = none;
+	*scan->snippet_ids = 0;
 }
 
 void scan_data_free(scan_data scan)
@@ -118,7 +120,7 @@ static matchtype ldb_scan_file(uint8_t *fid) {
 	
 	matchtype match_type = none;
 
-	if (ldb_key_exists(oss_component, fid)) match_type = component;
+	if (ldb_key_exists(oss_component, fid)) match_type = url;
 	else if (ldb_key_exists(oss_file, fid)) match_type = file;
 
 	return match_type;
@@ -139,57 +141,69 @@ bool assets_match(match_data match)
 	return found;
 }
 
-bool blacklist_match(uint8_t *component_record)
+bool blacklist_match(uint8_t *url_record)
 {
 	if (!blacklisted_assets) return false;
 
 	bool found = false;	
 
 	char *asset = calloc(LDB_MAX_REC_LN, 1);
-	extract_csv(asset, (char *) component_record, 2, LDB_MAX_REC_LN);
+	extract_csv(asset, (char *) url_record, 2, LDB_MAX_REC_LN);
 	strcat(asset, ",");
 
 	if (strcasestr(blacklisted_assets, asset)) found = true;
 	free(asset);
 
-	if (found) scanlog("Component blacklisted: %s\n", component_record);
+	if (found) scanlog("Component blacklisted: %s\n", url_record);
 
 	return found;
 }
 
-void clean_version(char *version)
+void normalise_version(char *version, char *component)
 {
+	/* Remove leading component name from version */
+	if (stristart(version, component))
+	{
+		memmove(version, version + strlen(component), strlen(version + strlen(component)) + 1);
+		if (*version == '-') memmove(version, version + 1, strlen(version + 1) + 1);
+	}
+
+	/* Remove leading v from version */
 	if (*version == 'v') memmove(version, version + 1, strlen(version) + 1);
+
+	/* Remove trailing ".orig" from version */
 	char *orig = strstr(version, ".orig");
 	if (orig) *orig = 0;
 }
 
-void clean_versions(match_data *matches)
+void clean_versions(match_data *match)
 {
-	clean_version(matches->version);
-	clean_version(matches->latest_version);
+	normalise_version(match->version, match->component);
+	normalise_version(match->latest_version, match->component);
 }
 
-match_data fill_match(uint8_t *component_key, char *file_path, uint8_t *component_record)
+match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 {
 	match_data match;
 	match.selected = false;
 	match.path_ln = 0;
 
 	/* Extract fields from file record */
-	if (component_key)
+	if (url_key)
 	{
-		memcpy(match.component_md5, component_key, MD5_LEN);
+		memcpy(match.url_md5, url_key, MD5_LEN);
 		strcpy(match.file, file_path);
 		match.path_ln = strlen(file_path);
 	}
 	else strcpy(match.file, "all");
 
 	/* Extract fields from url record */
-	extract_csv(match.vendor,    (char *) component_record, 1, sizeof(match.vendor));
-	extract_csv(match.component, (char *) component_record, 2, sizeof(match.component));
-	extract_csv(match.version,   (char *) component_record, 3, sizeof(match.version));
-	extract_csv(match.url,       (char *) component_record, 4, sizeof(match.url));
+	extract_csv(match.vendor,       (char *) url_record, 1, sizeof(match.vendor));
+	extract_csv(match.component,    (char *) url_record, 2, sizeof(match.component));
+	extract_csv(match.version,      (char *) url_record, 3, sizeof(match.version));
+	extract_csv(match.release_date, (char *) url_record, 4, sizeof(match.release_date));
+	extract_csv(match.license,      (char *) url_record, 5, sizeof(match.license));
+	extract_csv(match.url,          (char *) url_record, 6, sizeof(match.url));
 	strcpy(match.latest_version, match.version);
 
 	flip_slashes(match.vendor);
@@ -279,7 +293,9 @@ void add_match(int position, match_data match, int total_matches, match_data *ma
 		strcpy(matches[n].latest_version, match.latest_version);
 		strcpy(matches[n].url, match.url);
 		strcpy(matches[n].file, match.file);
-		memcpy(matches[n].component_md5, match.component_md5, MD5_LEN);
+		strcpy(matches[n].license, match.license);
+		strcpy(matches[n].release_date, match.release_date);
+		memcpy(matches[n].url_md5, match.url_md5, MD5_LEN);
 		memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
 		matches[n].path_ln = match.path_ln;
 		matches[n].selected = match.selected;
@@ -305,7 +321,7 @@ bool longer_path_in_set(match_data *matches, int total_matches, int rec_ln, int 
 	return true;
 }
 
-bool handle_component_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen && datalen >= MAX_PATH) return false;
 
@@ -323,9 +339,9 @@ bool handle_component_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	match = fill_match(NULL, NULL, data);
 
 	/* Save match component id */
-	memcpy(match.component_md5, key, LDB_KEY_LN);
-	memcpy(match.component_md5 + LDB_KEY_LN, subkey, subkey_ln);
-	memcpy(match.file_md5, match.component_md5, MD5_LEN);
+	memcpy(match.url_md5, key, LDB_KEY_LN);
+	memcpy(match.url_md5 + LDB_KEY_LN, subkey, subkey_ln);
+	memcpy(match.file_md5, match.url_md5, MD5_LEN);
 
 	add_match(-1, match, total_matches, matches, true);
 
@@ -375,7 +391,7 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	file_recordset *files = ptr;
 	int path_ln = datalen - MD5_LEN;
 	files[iteration].path_ln = path_ln;
-	memcpy(files[iteration].component_id, raw_data, MD5_LEN);
+	memcpy(files[iteration].url_id, raw_data, MD5_LEN);
 	memcpy(files[iteration].path, raw_data + MD5_LEN, path_ln);
 	files[iteration].path[path_ln] = 0;
 
@@ -385,7 +401,7 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 
 /* Evaluate file and decide whether or not to add it to *matches */
 void consider_file_record(\
-		uint8_t *component_id,\
+		uint8_t *url_id,\
 		char *path,\
 		match_data *matches,\
 		char *component_hint,\
@@ -412,11 +428,11 @@ void consider_file_record(\
 		}
 	}
 
-	uint8_t *component = calloc(LDB_MAX_REC_LN, 1);
-	get_component_record(component_id, component);
-	if (*component)
+	uint8_t *url = calloc(LDB_MAX_REC_LN, 1);
+	get_url_record(url_id, url);
+	if (*url)
 	{
-		match = fill_match(component_id, path, component);
+		match = fill_match(url_id, path, url);
 
 		/* Save match file id */
 		memcpy(match.file_md5, match_md5, MD5_LEN);
@@ -428,22 +444,22 @@ void consider_file_record(\
 	}
 
 	add_match(position, match, total_matches, matches, false);
-	free(component);
+	free(url);
 }
 
 /* Add file record to matches */
 void add_selected_file_to_matches(\
 match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *file_md5)
 {
-	scanlog("Identified #%d: %s\n", rank_id, component_rank[rank_id].component_record);
+	scanlog("Identified #%d: %s\n", rank_id, component_rank[rank_id].url_record);
 
 	/* Create empty match item */
 	struct match_data match = match_init();
 
 	/* Fill match with component info */
-	match = fill_match(component_rank[rank_id].component_id,\
+	match = fill_match(component_rank[rank_id].url_id,\
 			component_rank[rank_id].file,\
-			(uint8_t *) component_rank[rank_id].component_record);
+			(uint8_t *) component_rank[rank_id].url_record);
 
 	/* Add file MD5 */
 	memcpy(match.file_md5, file_md5, MD5_LEN);
@@ -492,7 +508,7 @@ match_data *load_matches(scan_data *scan)
 	/* Snippet and component match should look for the matching md5 in components */
 	if (scan->match_type != file)
 	{
-		records = ldb_fetch_recordset(NULL, oss_component, scan->match_ptr, false, handle_component_record, (void *) matches);
+		records = ldb_fetch_recordset(NULL, oss_component, scan->match_ptr, false, handle_url_record, (void *) matches);
 		scanlog("Component recordset contains %u records\n", records);
 	}
 

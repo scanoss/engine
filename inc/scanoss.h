@@ -48,9 +48,9 @@
 
 extern char SCANOSS_VERSION[7];
 
-typedef enum {none, component, file, snippet} matchtype;
+typedef enum {none, url, file, snippet} matchtype;
 typedef enum {plain, cyclonedx, spdx, spdx_xml} output_format;
-extern const char *matchtypes[];// = {"none", "component", "file", "snippet"};
+extern const char *matchtypes[];// = {"none", "url", "file", "snippet"};
 extern const char *license_sources[];// = {"component_declared", "file_spdx_tag", "file_header"};
 extern const char *copyright_sources[];// = {"component_declared", "file_header"};
 extern const char *vulnerability_sources[];// = {"nvd", "github_advisories"};
@@ -80,7 +80,7 @@ typedef struct matchmap_entry
 
 typedef struct file_recordset
 {
-	uint8_t component_id[MD5_LEN];
+	uint8_t url_id[MD5_LEN];
 	char path[MAX_FILE_PATH];
 	int path_ln;
 	bool external;
@@ -116,13 +116,14 @@ typedef struct match_data
 	char vendor[MAX_FIELD_LN];
 	char component[MAX_FIELD_LN];
 	char version[MAX_FIELD_LN];
+	char release_date[MAX_FIELD_LN];
 	char latest_version[MAX_FIELD_LN];
+	char license[MAX_FIELD_LN];
 	char url[MAX_FILE_PATH];
 	char file[MAX_FILE_PATH];
 	int  path_ln;
-	char license[MAX_FIELD_LN];
 	uint8_t file_md5[MD5_LEN];
-	uint8_t component_md5[MD5_LEN];
+	uint8_t url_md5[MD5_LEN];
 	uint8_t pair_md5[MD5_LEN];
 	int vulnerabilities;
 	bool selected;
@@ -135,8 +136,8 @@ typedef struct component_name_rank
 {
 	char vendor[MAX_FIELD_LN];
 	char component[MAX_FIELD_LN];
-	uint8_t component_id[MD5_LEN];
-	char component_record[MAX_FILE_PATH];
+	uint8_t url_id[MD5_LEN];
+	char url_record[MAX_FILE_PATH];
 	char file[MAX_FILE_PATH];
 	long score;
 } component_name_rank;
@@ -180,7 +181,7 @@ matchtype ldb_scan_snippets(scan_data *scan_ptr);
 bool key_find(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);
 void recurse_directory (char *path);
 match_data match_init();
-bool blacklist_match(uint8_t *component_record);
+bool blacklist_match(uint8_t *url_record);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
 void scan_data_free(scan_data scan);
 int count_matches(match_data *matches);
