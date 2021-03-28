@@ -90,24 +90,46 @@ output_format set_format(char *arg)
 	return plain;
 }
 
+/* Read flags from /etc/scanoss_flags.cfg */
+uint64_t read_flags()
+{
+	FILE *file = fopen(ENGINE_FLAGS_FILE, "rb");
+	if (file)
+	{
+		char flags[MAX_ARGLN] = "0";
+		fseek(file, 0, SEEK_END);
+		int length = ftell(file);
+		if (length <= MAX_ARGLN)
+		{
+			fseek(file, 0, SEEK_SET);
+			fread(flags, 1, length, file);
+		}
+		fclose(file);
+		return atol(flags);
+	}
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	//global var initialization - it must be improved
-    debug_on = false;
-    quiet = false;
-    
-    if (argc <= 1)
+	debug_on = false;
+	quiet = false;
+
+	if (argc <= 1)
 	{
 		fprintf (stdout, "Missing parameters. Please use -h\n");
 		exit(EXIT_FAILURE);
 	}
+
+	engine_flags = read_flags();
 
 	bool force_wfp = false;
 
 	*component_hint = 0;
 	*vendor_hint = 0;
 
-	/* Table definitions */
+	/* Initialise LDB tables */
 	strcpy(oss_component.db, "oss");
 	strcpy(oss_component.table, "url");
 	oss_component.key_ln = 16;
@@ -133,7 +155,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:wtvhedq")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:wtvhedq")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -170,6 +192,10 @@ int main(int argc, char **argv)
 
 			case 'a':
 				exit(attribution_notices(optarg));
+				break;
+
+			case 'F':
+				engine_flags = atol(optarg);
 				break;
 
 			case 'w':

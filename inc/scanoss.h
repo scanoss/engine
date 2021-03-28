@@ -42,9 +42,22 @@
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
 #define MAX_SNIPPET_IDS_RETURNED 10000
 
+/* Log files */
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
+
+/* Engine configuration flags */
+#define ENGINE_FLAGS_FILE "/var/lib/scanoss/etc/flags"
+#define DISABLE_SNIPPET_MATCHING 1
+#define ENABLE_SNIPPET_IDS 2
+#define DISABLE_DEPENDENCIES 4
+#define DISABLE_LICENSES 8
+#define DISABLE_COPYRIGHTS 16
+#define DISABLE_VULNERABILITIES 32
+#define DISABLE_QUALITY 64
+#define DISABLE_CRIPTOGRAPHY 128
+#define DISABLE_BEST_MATCH 256
 
 extern char SCANOSS_VERSION[7];
 

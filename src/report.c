@@ -19,6 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #include "debug.h"
 #include "report.h"
 #include "quality.h"
@@ -30,7 +31,7 @@
 #include "dependency.h"
 #include "license.h"
 #include "copyright.h"
-
+#include "limits.h"
 
 int report_format = plain;
 
@@ -122,7 +123,11 @@ void print_json_match_plain(scan_data scan, match_data match)
 	printf("      \"id\": \"%s\",\n", matchtypes[match.type]);
 	printf("      \"lines\": \"%s\",\n", scan.line_ranges);
 	printf("      \"oss_lines\": \"%s\",\n", scan.oss_ranges);
-	if (match.type == snippet) printf("      \"snippet_ids\": \"%s\",\n", scan.snippet_ids);
+
+	if ((engine_flags & ENABLE_SNIPPET_IDS) && match.type == snippet)
+	{
+		printf("      \"snippet_ids\": \"%s\",\n", scan.snippet_ids);
+	}
 
 	printf("      \"matched\": \"%s\",\n", scan.matched_percent);
 	printf("      \"vendor\": \"%s\",\n", match.vendor);
@@ -142,18 +147,41 @@ void print_json_match_plain(scan_data scan, match_data match)
 	printf("      \"file_hash\": \"%s\",\n", file_id);
 	free(file_id);
 
-	printf("      \"dependencies\": ");
-	print_dependencies(match);
-	printf("      \"licenses\": ");
-	print_licenses(match);
-	printf("      \"copyrights\": ");
-	print_copyrights(match);
-	printf("      \"vulnerabilities\": ");
-	print_vulnerabilities(match);
-	printf("      \"quality\": ");
-	print_quality(match);
-	printf("      \"cryptography\": ");
-	print_cryptography(match);
+	if (!(engine_flags & DISABLE_DEPENDENCIES))
+	{
+		printf("      \"dependencies\": ");
+		print_dependencies(match);
+	}
+
+	if (!(engine_flags & DISABLE_LICENSES))
+	{
+		printf("      \"licenses\": ");
+		print_licenses(match);
+	}
+
+	if (!(engine_flags & DISABLE_COPYRIGHTS))
+	{
+		printf("      \"copyrights\": ");
+		print_copyrights(match);
+	}
+
+	if (!(engine_flags & DISABLE_VULNERABILITIES))
+	{
+		printf("      \"vulnerabilities\": ");
+		print_vulnerabilities(match);
+	}
+
+	if (!(engine_flags & DISABLE_QUALITY))
+	{
+		printf("      \"quality\": ");
+		print_quality(match);
+	}
+
+	if (!(engine_flags & DISABLE_CRIPTOGRAPHY))
+	{
+		printf("      \"cryptography\": ");
+		print_cryptography(match);
+	}
 
 	double elapsed = microseconds_now() - scan.timer;
 	printf("      \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);

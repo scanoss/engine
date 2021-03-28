@@ -378,6 +378,9 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
 matchtype ldb_scan_snippets(scan_data *scan) {
 
 	if (!scan->hash_count) return none;
+
+	if (engine_flags & DISABLE_SNIPPET_MATCHING) return none;
+
 	scanlog("Checking snippets\n");
 
 	adjust_tolerance(scan);

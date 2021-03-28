@@ -19,6 +19,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdint.h>
+
 #ifndef __LIMITS_H
     #define __LIMITS_H
 /* Constants */
@@ -46,6 +48,8 @@
 /* During snippet scanning, when a wfp (with more than consecutive_threshold wfps) produces a score higher 
    than consecutive_score by consecutive_hits in a row, the scan will skip consecutive_jump snippets */
 extern int scan_limit;
+
+extern uint64_t engine_flags;
 
 extern int consecutive_score;
 extern int consecutive_hits;
