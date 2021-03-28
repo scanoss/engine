@@ -213,7 +213,10 @@ match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 	flip_slashes(match.file);
 
 	if (!*match.vendor || !*match.component || !*match.url || !*match.version || !*match.file)
+	{
+		scanlog("Incomplete metadata for %s\n", file_path);
 		return match_init();
+	}
 
 	clean_versions(&match);
 	return match;
@@ -232,7 +235,7 @@ int count_matches(match_data *matches)
 }
 
 /* Adds match to matches */
-void add_match(int position, match_data match, int total_matches, match_data *matches, bool component_match)
+void add_match(int position, match_data match, match_data *matches, bool component_match)
 {
 
 	/* Verify if metadata is complete */
@@ -343,7 +346,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	memcpy(match.url_md5 + LDB_KEY_LN, subkey, subkey_ln);
 	memcpy(match.file_md5, match.url_md5, MD5_LEN);
 
-	add_match(-1, match, total_matches, matches, true);
+	add_match(-1, match, matches, true);
 
 	return false;
 }
@@ -443,7 +446,7 @@ void consider_file_record(\
 		return;
 	}
 
-	add_match(position, match, total_matches, matches, false);
+	add_match(position, match, matches, false);
 	free(url);
 }
 
@@ -465,7 +468,35 @@ match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *
 	memcpy(match.file_md5, file_md5, MD5_LEN);
 
 	/* Add match to matches */
-	add_match(0, match, 0, matches, false);
+	add_match(0, match, matches, false);
+}
+
+/* Add all files in recordset to matches */
+int add_all_files_to_matches(file_recordset *files, int file_count, uint8_t *md5, match_data *matches)
+{
+	scanlog("Adding %d file records to matches\n", file_count);
+
+	for (int i = 0; i < file_count; i++)
+	{
+		/* Create empty match item */
+		struct match_data match = match_init();
+
+		/* Get URL record */
+		uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
+		get_url_record(files[i].url_id, url_rec);
+
+		/* Fill match with component info */
+		match = fill_match(files[i].url_id, files[i].path, url_rec);
+		free(url_rec);
+
+		/* Add file MD5 */
+		memcpy(match.file_md5, md5, MD5_LEN);
+		memcpy(match.url_md5, files[i].url_id, MD5_LEN);
+
+		/* Add match to matches */
+		add_match(-1, match, matches, false);
+	}
+	return file_count;
 }
 
 match_data *load_matches(scan_data *scan)
@@ -505,11 +536,11 @@ match_data *load_matches(scan_data *scan)
 
 	uint32_t records = 0;
 
-	/* Snippet and component match should look for the matching md5 in components */
+	/* Snippet and component match should look for the matching md5 in urls */
 	if (scan->match_type != file)
 	{
 		records = ldb_fetch_recordset(NULL, oss_component, scan->match_ptr, false, handle_url_record, (void *) matches);
-		scanlog("Component recordset contains %u records\n", records);
+		scanlog("URL recordset contains %u records\n", records);
 	}
 
 	if (!records)
@@ -519,82 +550,89 @@ match_data *load_matches(scan_data *scan)
 
 		if (records)
 		{
-			char new_component_hint[MAX_FIELD_LN] = "\0";
-			component_name_rank *component_rank = calloc(sizeof(struct component_name_rank), rank_items);
-			scanlog("Inherited component hint from context: %s\n", *component_hint ? component_hint : "NULL");
-
-			/* Try the contextual component_hint, if any */
-			int selected = seek_component_hint_in_path(files, records, component_hint, component_rank);
-
-			/* Get new component hint and try that instead */
-			if (selected < 0)
+			if (engine_flags & DISABLE_BEST_MATCH)
 			{
-				/* Mark external files and collect new_component_hint */
-				external_component_hint_in_path(files, records, new_component_hint, component_rank);
-
-				/* Attempt to identify hints in start of path and component name */
-				selected = seek_component_hint_in_path(files, records, new_component_hint, component_rank);
+				records = add_all_files_to_matches(files, records, scan->match_ptr, matches);
 			}
-
-			/* Attempt to identify components from paths starting with the component name */
-			if (selected < 0)
-			{
-				selected = seek_component_hint_in_path_start(files, records, component_rank);
-			}
-
-			if (selected >= 0)
-			{
-				add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
-
-				/* Update component_hint for the next file */
-				strcpy(component_hint, component_rank[selected].component);
-			}
-
-			/* Attempt matching selecting the shortest paths */
 			else
 			{
-				/* Init path ranking */
-				path_ranking path_rank[rank_items];
-				init_path_ranking(path_rank);
 
-				/* Attempt matching start of short paths with their respective components names */
-				bool hint_found = component_hint_from_shortest_paths(\
-						files, records,\
-						component_hint, new_component_hint,\
-						component_rank,\
-						path_rank\
-						);
+				char new_component_hint[MAX_FIELD_LN] = "\0";
+				component_name_rank *component_rank = calloc(sizeof(struct component_name_rank), rank_items);
+				scanlog("Inherited component hint from context: %s\n", *component_hint ? component_hint : "NULL");
 
-				/* Otherwise try again without passing hints, just ranking from shortest paths */
-				if (!hint_found) hint_found = component_hint_from_shortest_paths(\
-						files, records,\
-						"", "",\
-						component_rank,\
-						path_rank\
-						);
+				/* Try the contextual component_hint, if any */
+				int selected = seek_component_hint_in_path(files, records, component_hint, component_rank);
 
-				/* Select the best component hint from the collected rank */
-				if (hint_found) select_best_component_from_rank(component_rank, component_hint);
-
-				/* Show component hint, if found */
-				if (hint_found) scanlog("Component hint = %s/%s\n", *vendor_hint ? vendor_hint : "?", component_hint);
-
-				/* Add relevant files to matches */
-				if (!add_files_to_matches(files, records, component_hint, scan->match_ptr, matches))
+				/* Get new component hint and try that instead */
+				if (selected < 0)
 				{
-					/* If this did not work, attempt finding the component name in the path */
-					selected = seek_component_hint_in_path_start(files, records, component_rank);
-					if (selected >= 0)
-					{
-						add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
+					/* Mark external files and collect new_component_hint */
+					external_component_hint_in_path(files, records, new_component_hint, component_rank);
 
-						/* Update component_hint for the next file */
-						strcpy(component_hint, component_rank[selected].component);
+					/* Attempt to identify hints in start of path and component name */
+					selected = seek_component_hint_in_path(files, records, new_component_hint, component_rank);
+				}
+
+				/* Attempt to identify components from paths starting with the component name */
+				if (selected < 0)
+				{
+					selected = seek_component_hint_in_path_start(files, records, component_rank);
+				}
+
+				if (selected >= 0)
+				{
+					add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
+
+					/* Update component_hint for the next file */
+					strcpy(component_hint, component_rank[selected].component);
+				}
+
+				/* Attempt matching selecting the shortest paths */
+				else
+				{
+					/* Init path ranking */
+					path_ranking path_rank[rank_items];
+					init_path_ranking(path_rank);
+
+					/* Attempt matching start of short paths with their respective components names */
+					bool hint_found = component_hint_from_shortest_paths(\
+							files, records,\
+							component_hint, new_component_hint,\
+							component_rank,\
+							path_rank\
+							);
+
+					/* Otherwise try again without passing hints, just ranking from shortest paths */
+					if (!hint_found) hint_found = component_hint_from_shortest_paths(\
+							files, records,\
+							"", "",\
+							component_rank,\
+							path_rank\
+							);
+
+					/* Select the best component hint from the collected rank */
+					if (hint_found) select_best_component_from_rank(component_rank, component_hint);
+
+					/* Show component hint, if found */
+					if (hint_found) scanlog("Component hint = %s/%s\n", *vendor_hint ? vendor_hint : "?", component_hint);
+
+					/* Add relevant files to matches */
+					if (!add_files_to_matches(files, records, component_hint, scan->match_ptr, matches))
+					{
+						/* If this did not work, attempt finding the component name in the path */
+						selected = seek_component_hint_in_path_start(files, records, component_rank);
+						if (selected >= 0)
+						{
+							add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
+
+							/* Update component_hint for the next file */
+							strcpy(component_hint, component_rank[selected].component);
+						}
 					}
 				}
+				free(component_rank);
 			}
-
-			free(component_rank);
 		}
 		free(files);
 	}
@@ -699,7 +737,7 @@ int wfp_scan(scan_data *scan)
 		}
 
 		/* Save hash/es to memory. Parse file information with format:
-			 linenr=wfp(6)[,wfp(6)]+ */
+		   linenr=wfp(6)[,wfp(6)]+ */
 
 		if (is_wfp && (scan->hash_count < MAX_HASHES_READ))
 		{
@@ -742,8 +780,8 @@ int wfp_scan(scan_data *scan)
 }
 
 /* Scans a file and returns JSON matches via STDOUT
-	 scan structure can be already preloaded (.wfp scan)
-	 otherwise, it will be loaded here (scanning a physical file) */
+   scan structure can be already preloaded (.wfp scan)
+   otherwise, it will be loaded here (scanning a physical file) */
 bool ldb_scan(scan_data *scan)
 {
 	bool skip = false;
