@@ -105,18 +105,33 @@ void json_close_file()
 	}
 }
 
+/* Add server statistics to JSON */
+void print_server_stats(scan_data scan)
+{
+	char hostname[MAX_ARGLN + 1];
+	gethostname(hostname, MAX_ARGLN + 1);
+	double elapsed = (microseconds_now() - scan.timer);
+	printf("      \"server\": {\n");
+	printf("        \"hostname\": \"%s\",\n", hostname);
+	printf("        \"version\": \"%s\",\n", SCANOSS_VERSION);
+	printf("        \"flags\": \"%ld\",\n", engine_flags);
+	printf("        \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
+	printf("      }\n");
+}
+
+/* Return a match=none result */
 void print_json_nomatch(scan_data scan)
 {
 	if (quiet) return;
 
-	double elapsed = (microseconds_now() - scan.timer);
 	printf("    {\n");
 	printf("      \"id\": \"none\",\n");
-	printf("      \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
+	print_server_stats(scan);
 	printf("    }\n");
 	fflush(stdout);
 }
 
+/* Return full match detail */
 void print_json_match_plain(scan_data scan, match_data match)
 {
 	printf("    {\n");
@@ -183,9 +198,7 @@ void print_json_match_plain(scan_data scan, match_data match)
 		print_cryptography(match);
 	}
 
-	double elapsed = microseconds_now() - scan.timer;
-	printf("      \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
-
+	print_server_stats(scan);
 	printf("    }\n");
 	fflush(stdout);
 }
