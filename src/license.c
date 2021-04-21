@@ -29,7 +29,30 @@
 #include "parse.h"
 
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
+const char *osadl_licenses[] = {"AFL-2.0", "AFL-2.1", "AGPL-3.0-only", \
+"AGPL-3.0-or-later", "Apache-1.0", "Apache-1.1", "Apache-2.0", \
+"Artistic-1.0-Perl", "BSD-2-Clause", "BSD-2-Clause-Patent", "BSD-3-Clause", \
+"BSD-4-Clause", "BSD-4-Clause-UC", "BSL-1.0", "bzip2-1.0.5", "bzip2-1.0.6", \
+"CC0-1.0", "CDDL-1.0", "CPL-1.0", "curl", "EFL-2.0", "EPL-1.0", "EPL-2.0", \
+"EUPL-1.1", "FTL", "GPL-2.0-only", "Classpath-exception-2.0", "GPL-2.0-or-later",\
+"GPL-3.0-only", "GPL-3.0-or-later", "HPND", "IBM-pibs", "ICU", "IJG", "IPL-1.0", \
+"ISC", "LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "LGPL-3.0-or-later", \
+"Libpng", "libtiff", "MirOS", "MIT", "MIT-CMU", "MPL-1.1", "MPL-2.0", \
+"MPL-2.0-no-copyleft-exception", "MS-PL", "MS-RL", "NBPL-1.0", "NTP", "OpenSSL", \
+"OSL-3.0", "Python-2.0", "Qhull", "RPL-1.5", "n.a.", "Unicode-DFS-2015", \
+"Unicode-DFS-2016", "UPL-1.0", "WTFPL", "X11", "XFree86-1.1", "Zlib", \
+"zlib-acknowledgement", NULL};
 
+/* Return true if license is in the osadl license list */
+bool is_osadl_license(char *license)
+{
+	int i = 0;
+	while (osadl_licenses[i])
+	{
+		if (!strcmp(license,osadl_licenses[i++])) return true;
+	}
+	return false;
+}
 
 bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
@@ -65,6 +88,10 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");
 		printf("          \"name\": \"%s\",\n", license);
+		if (is_osadl_license(license))
+		{
+			printf("          \"license_obligations\": \"https://www.osadl.org/fileadmin/checklists/unreflicenses/%s.txt\",\n", license);
+		}
 		printf("          \"source\": \"%s\"\n", license_sources[atoi(source)]);
 		printf("        }");
 		reported = true;
@@ -119,6 +146,10 @@ void print_licenses(match_data match)
 	{
 		printf("        {\n");
 		printf("          \"name\": \"%s\",\n", match.license);
+		if (is_osadl_license(match.license))
+		{
+			printf("          \"license_obligations\": \"https://www.osadl.org/fileadmin/checklists/unreflicenses/%s.txt\",\n", match.license);
+		}
 		printf("          \"source\": \"%s\"\n", license_sources[0]);
 		printf("        }");
 	}
