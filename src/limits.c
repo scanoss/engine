@@ -7,8 +7,6 @@ int consecutive_hits = 4;
 int consecutive_jump = 5;
 int consecutive_threshold = 50;
 
-uint64_t engine_flags = 0;
-
 int range_tolerance = 5;  // A maximum number of non-matched lines tolerated inside a matching range
 int min_match_lines = 10; // Minimum number of lines matched for a match range to be acepted
 int min_match_hits  = 5;  // Minimum number of snippet ID hits to produce a snippet match

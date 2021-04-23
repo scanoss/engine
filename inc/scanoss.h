@@ -58,6 +58,9 @@
 #define DISABLE_QUALITY 64
 #define DISABLE_CRIPTOGRAPHY 128
 #define DISABLE_BEST_MATCH 256
+#define DISABLE_REPORT_OPEN_CLOSE 512
+
+extern uint64_t engine_flags;
 
 extern char SCANOSS_VERSION[7];
 
