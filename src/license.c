@@ -27,27 +27,9 @@
 #include "debug.h"
 #include "util.h"
 #include "parse.h"
+#include "osadl_metadata.h"
 
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
-const char *osadl_licenses[] = {"AFL-2.0", "AFL-2.1", "AGPL-3.0-only", \
-"AGPL-3.0-or-later", "Apache-1.0", "Apache-1.1", "Apache-2.0", \
-"Artistic-1.0-Perl", "BSD-2-Clause", "BSD-2-Clause-Patent", "BSD-3-Clause", \
-"BSD-4-Clause", "BSD-4-Clause-UC", "BSL-1.0", "bzip2-1.0.5", "bzip2-1.0.6", \
-"CC0-1.0", "CDDL-1.0", "CPL-1.0", "curl", "EFL-2.0", "EPL-1.0", "EPL-2.0", \
-"EUPL-1.1", "FTL", "GPL-2.0-only", "Classpath-exception-2.0", "GPL-2.0-or-later",\
-"GPL-3.0-only", "GPL-3.0-or-later", "HPND", "IBM-pibs", "ICU", "IJG", "IPL-1.0", \
-"ISC", "LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "LGPL-3.0-or-later", \
-"Libpng", "libtiff", "MirOS", "MIT", "MIT-CMU", "MPL-1.1", "MPL-2.0", \
-"MPL-2.0-no-copyleft-exception", "MS-PL", "MS-RL", "NBPL-1.0", "NTP", "OpenSSL", \
-"OSL-3.0", "Python-2.0", "Qhull", "RPL-1.5", "n.a.", "Unicode-DFS-2015", \
-"Unicode-DFS-2016", "UPL-1.0", "WTFPL", "X11", "XFree86-1.1", "Zlib", \
-"zlib-acknowledgement", NULL};
-const char *copyleft_licenses[] = {"AGPL-3.0-only", "AGPL-3.0-or-later", "CDDL-1.0", \
-"CPL-1.0", "EPL-1.0", "EPL-2.0", "EUPL-1.1", "GPL-2.0-only", "GPL-2.0-or-later", \
-"GPL-3.0-only", "GPL-3.0-or-later", "IPL-1.0", "LGPL-2.1-only", "LGPL-2.1-or-later", \
-"LGPL-3.0-only", "LGPL-3.0-or-later", "MPL-1.1", "MPL-2.0", \
-"MPL-2.0-no-copyleft-exception", "MS-PL", "MS-RL", "OpenSSL", "OSL-3.0", \
-"RPL-1.5", NULL};
 
 /* Return true if license is in the osadl license list */
 bool is_osadl_license(char *license)
@@ -62,7 +44,7 @@ bool is_osadl_license(char *license)
 
 /* Return true if license is copyleft */
 bool is_copyleft(char *license)
-{return true;
+{
 	int i = 0;
 	while (copyleft_licenses[i])
 	{
@@ -71,19 +53,65 @@ bool is_copyleft(char *license)
 	return false;
 }
 
+/* Return true if patent hints are found in the license */
+bool has_patent_hints(char *license)
+{
+	int i = 0;
+	while (patent_hints[i])
+	{
+		if (!strcmp(license,patent_hints[i++])) return true;
+	}
+	return false;
+}
+
+/* Return pointer to incompatible license list (or NULL) */
+char *incompatible_licenses(char *license)
+{
+	int i = 0;
+	int lic_ln = strlen(license);
+	while (incompatibilities[i])
+	{
+		if (!strncmp(license,incompatibilities[i], lic_ln))
+		{
+			/* Skip colon and space after license name */
+			return (char *) incompatibilities[i] + lic_ln + 2;
+		}
+		i++;
+	}
+	return NULL;
+}
+
 /* Output OSADL license metadata */
 void oasdl_license_data(char *license)
 {
 	if (is_osadl_license(license))
 	{
 		printf("          \"obligations\": \"https://www.osadl.org/fileadmin/checklists/unreflicenses/%s.txt\",\n", license);
-		if (is_copyleft(license))
-			printf("          \"copyleft\": \"yes\",\n");
-		else
-			printf("          \"copyleft\": \"no\",\n");
+		printf("          \"copyleft\": \"%s\",\n", is_copyleft(license) ? "yes": "no");
+		printf("          \"patent_hints\": \"%s\",\n", has_patent_hints(license) ? "yes": "no");
+		char *incompatible = incompatible_licenses(license);
+		if (incompatible)
+		printf("          \"incompatible_with\": \"%s\",\n", incompatible);
 	}
 }
 
+/* Print OSADL license metadata */
+void print_osadl_license_data(char *license)
+{
+	printf("{\n  \"%s\": [\n", license);
+	if (is_osadl_license(license))
+	{
+		printf("    {\n");
+		printf("      \"obligations\": \"https://www.osadl.org/fileadmin/checklists/unreflicenses/%s.txt\",\n", license);
+		printf("      \"copyleft\": \"%s\",\n", is_copyleft(license) ? "yes": "no");
+		printf("      \"patent_hints\": \"%s\",\n", has_patent_hints(license) ? "yes": "no");
+		char *incompatible = incompatible_licenses(license);
+		if (incompatible)
+			printf("      \"incompatible_with\": \"%s\"\n", incompatible);
+		printf("    }\n");
+	}
+	printf("  ]\n}\n");
+}
 
 bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {

@@ -42,6 +42,7 @@ Configuration:\n\
 -f FORMAT  Set output format as: plain(default)|spdx|cyclonedx|spdx_xml\n\
 -c HINT    Provide a component HINT to influence scan results\n\
 -k KEY     Displays contents of file KEY from MZ sources archive\n\
+-l LICENSE Displays OSADL metadata for the provided SPDX license ID\n\
 \n\
 Options:\n\
 -t  Tests engine performance\n\

@@ -31,6 +31,7 @@
 #include "file.h"
 #include "help.h"
 #include "mz.h"
+#include "license.h"
 
 void recurse_directory(char *name)
 {
@@ -155,7 +156,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:wtvhedq")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:wtvhedq")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -196,6 +197,11 @@ int main(int argc, char **argv)
 
 			case 'F':
 				engine_flags = atol(optarg);
+				break;
+
+			case 'l':
+				print_osadl_license_data(optarg);
+				exit(EXIT_SUCCESS);
 				break;
 
 			case 'w':
