@@ -34,6 +34,8 @@
 #include "limits.h"
 
 int report_format = plain;
+uint64_t engine_flags = 0;
+
 
 /* Open JSON report */
 void json_open()

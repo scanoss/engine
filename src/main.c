@@ -293,7 +293,8 @@ int main(int argc, char **argv)
 		scan_data scan = scan_data_init(target);
 
 		/* Open main report structure */
-		report_open(&scan);
+		if (!(engine_flags & DISABLE_REPORT_OPEN_CLOSE))
+			report_open(&scan);
 
 		/* Scan directory */
 		if (isdir) recurse_directory(target);
@@ -315,7 +316,8 @@ int main(int argc, char **argv)
 		}
 
 		/* Close main report structure */
-		report_close();
+		if (!(engine_flags & DISABLE_REPORT_OPEN_CLOSE))
+			report_close();
 			
 		/* Free scan data */
 		scan_data_free(scan);

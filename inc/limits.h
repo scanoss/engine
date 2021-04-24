@@ -48,9 +48,6 @@
 /* During snippet scanning, when a wfp (with more than consecutive_threshold wfps) produces a score higher 
    than consecutive_score by consecutive_hits in a row, the scan will skip consecutive_jump snippets */
 extern int scan_limit;
-
-extern uint64_t engine_flags;
-
 extern int consecutive_score;
 extern int consecutive_hits;
 extern int consecutive_jump;
