@@ -30,6 +30,8 @@
 
 bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
+	match_data *match = ptr;
+
 	char *CSV  = calloc(datalen + 1, 1);
 	memcpy(CSV, data, datalen);
 
@@ -40,9 +42,13 @@ bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
 	extract_csv(strength, CSV, 2, MAX_JSON_VALUE_LEN);
 	free(CSV);
 
+	/* Calculate CRC to avoid duplicates */
+	uint32_t CRC = string_crc32c(algorithm) + string_crc32c(strength);
+	bool dup = add_CRC(match->crclist, CRC);
+
 	scanlog("Fetched cryptography %s (%s)\n", algorithm, strength);
 
-	if (*algorithm)
+	if (!dup && *algorithm)
 	{
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");
@@ -70,11 +76,14 @@ void print_cryptography(match_data match)
 	table.ts_ln = 2;
 	table.tmp = false;
 
+	/* Clean crc list (used to avoid duplicates) */
+	for (int i = 0; i < CRC_LIST_LEN; i++) match.crclist[i] = 0;
+
 	uint32_t records = 0;
 
 	if (ldb_table_exists("oss", "cryptography"))
 	{
-		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_crypto_item, NULL);
+		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_crypto_item, &match);
 	}
 
 	if (records) printf("\n      ");
