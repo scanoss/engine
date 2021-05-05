@@ -40,4 +40,7 @@ void remove_char(char *str, char chr);
 	returns true if a starts with b or viceversa */
 bool stristart(char *a, char *b);
 
+/* Cleans str from unprintable characters or quotes */
+void string_clean(char *str);
+
 #endif
