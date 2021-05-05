@@ -33,6 +33,33 @@
 
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
 
+/* Replace license with its correct SPDX identifier, if found */
+void normalize_license(char *license)
+{
+	for (int i = 0; license_normalization[i]; i++)
+	{
+		char def[MAX_ARGLN];
+		strcpy(def, license_normalization[i]);
+		char *token;
+
+		/* get the first token */
+		token = strtok(def, ",");
+
+		char *spdx = token;
+
+		/* walk through other tokens */
+		while (token != NULL)
+		{
+			if (stricmp(license, token))
+			{
+				strcpy(license, spdx);
+				return;
+			}
+			token = strtok(NULL, ",");
+		}
+	}
+}
+
 /* Return true if license is in the osadl license list */
 bool is_osadl_license(char *license)
 {
@@ -128,6 +155,8 @@ bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 
 bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
+	match_data *match = ptr;
+
 	char *CSV  = calloc(datalen + 1, 1);
 	memcpy(CSV, data, datalen);
 
@@ -138,13 +167,19 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	extract_csv(license, CSV, 2, MAX_JSON_VALUE_LEN);
 	free(CSV);
 
+	normalize_license(license);
+
+	/* Calculate CRC to avoid duplicates */
+	uint32_t CRC = string_crc32c(source) + string_crc32c(license);
+	bool dup = add_CRC(match->crclist, CRC);
+
 	int src = atoi(source);
 
 	scanlog("Fetched license %s\n", license);
 	printable_only(license);
 	bool reported = false;
 
-	if (*license && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
+	if (!dup && *license && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
 	{
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");
@@ -184,33 +219,6 @@ void get_license(match_data match, char *license)
 	}
 }
 
-/* Replace license with its correct SPDX identifier, if found */
-void normalize_license(char *license)
-{
-	for (int i = 0; license_normalization[i]; i++)
-	{
-		char def[MAX_ARGLN];
-		strcpy(def, license_normalization[i]);
-		char *token;
-
-		/* get the first token */
-		token = strtok(def, ",");
-
-		char *spdx = token;
-
-		/* walk through other tokens */
-		while (token != NULL)
-		{
-			if (stricmp(license, token))
-			{
-				strcpy(license, spdx);
-				return;
-			}
-			token = strtok(NULL, ",");
-		}
-	}
-}
-
 void print_licenses(match_data match)
 {
 	printf("[");
@@ -223,6 +231,9 @@ void print_licenses(match_data match)
 	table.rec_ln = 0;
 	table.ts_ln = 2;
 	table.tmp = false;
+
+	/* Clean crc list (used to avoid duplicates) */
+	for (int i = 0; i < CRC_LIST_LEN; i++) match.crclist[i] = 0;
 
 	uint32_t records = 0;
 
@@ -240,16 +251,16 @@ void print_licenses(match_data match)
 	/* Look for component or file license */
 	else if (ldb_table_exists("oss", "license"))
 	{
-		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_licenses_item, NULL);
+		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_licenses_item, &match);
 		if (records) scanlog("File license returns hits\n");
 		if (!records)
 		{
-			records = ldb_fetch_recordset(NULL, table, match.url_md5, false, print_licenses_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.url_md5, false, print_licenses_item, &match);
 			if (records) scanlog("Component license returns hits\n");
 		}
 		if (!records)
 		{
-			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_licenses_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_licenses_item, &match);
 			if (records) scanlog("Vendor/component license returns hits\n");
 		}
 	}

@@ -27,6 +27,7 @@
 #include "limits.h"
 #include "debug.h"
 #include "ldb.h"
+#include "crc32c.h"
 
 /* Case insensitive string start comparison,
 	returns true if a starts with b or viceversa */
@@ -147,3 +148,23 @@ char *md5_hex(uint8_t *md5)
 	return out;
 }
 
+/* Returns the CRC32C for a string */
+uint32_t string_crc32c(char *str)
+{
+	return calc_crc32c (str, strlen(str));
+}
+
+/* Check if a crc is found in the list (add it if not) */
+bool add_CRC(uint32_t *list, uint32_t crc)
+{
+	for (int i = 0; i < CRC_LIST_LEN; i++)
+	{
+		if (list[i] == 0)
+		{
+			list [i] = crc;
+			return false;
+		}
+		if (list[i] == crc) return true;
+	}
+	return false;
+}

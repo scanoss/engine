@@ -41,6 +41,7 @@
 #define MAX_FIELD_LN 64
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
 #define MAX_SNIPPET_IDS_RETURNED 10000
+#define CRC_LIST_LEN 256 // list of crc checksums to avoid metadata duplicates
 
 /* Log files */
 #define SCAN_LOG "/tmp/scanoss_scan.log"
@@ -141,6 +142,7 @@ typedef struct match_data
 	uint8_t file_md5[MD5_LEN];
 	uint8_t url_md5[MD5_LEN];
 	uint8_t pair_md5[MD5_LEN];
+	uint32_t crclist[CRC_LIST_LEN];
 	int vulnerabilities;
 	bool selected;
 	bool snippet_to_component;

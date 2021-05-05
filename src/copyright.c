@@ -23,6 +23,7 @@
 #include "copyright.h"
 #include "limits.h"
 #include "parse.h"
+#include "util.h"
 
 const char *copyright_sources[] = {"component_declared", "file_header"};
 
@@ -52,6 +53,8 @@ static void clean_copyright(char *out, char *copyright)
 
 static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
+	match_data *match = ptr;
+
 	char *CSV = calloc(datalen + 1, 1);
 	memcpy(CSV, (char *) data, datalen);
 
@@ -63,9 +66,13 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 
 	clean_copyright(copyright, skip_first_comma((char *) data));
 
+	/* Calculate CRC to avoid duplicates */
+	uint32_t CRC = string_crc32c(source) + string_crc32c(copyright);
+	bool dup = add_CRC(match->crclist, CRC);
+
 	int src = atoi(source);
 
-	if ((*copyright) && (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0])))) 
+	if (!dup && (*copyright) && (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0]))))
 	{
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");
@@ -108,15 +115,18 @@ void print_copyrights(match_data match)
 	table.ts_ln = 2;
 	table.tmp = false;
 
+	/* Clean crc list (used to avoid duplicates) */
+	for (int i = 0; i < CRC_LIST_LEN; i++) match.crclist[i] = 0;
+
 	uint32_t records = 0;
 
 	if (ldb_table_exists("oss", "copyright"))
 	{
-		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_copyrights_item, NULL);
+		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_copyrights_item, &match);
 		if (!records)
-			records = ldb_fetch_recordset(NULL, table, match.url_md5, false, print_copyrights_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.url_md5, false, print_copyrights_item, &match);
 		if (!records)
-			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_copyrights_item, NULL);
+			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_copyrights_item, &match);
 	}
 
 	if (records) printf("\n      ");
