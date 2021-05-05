@@ -22,12 +22,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "blacklist.h"
 #include "limits.h"
 #include "license.h"
 #include "debug.h"
 #include "util.h"
 #include "parse.h"
 #include "osadl_metadata.h"
+#include "license_normalizacion.h"
 
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
 
@@ -182,6 +184,33 @@ void get_license(match_data match, char *license)
 	}
 }
 
+/* Replace license with its correct SPDX identifier, if found */
+void normalize_license(char *license)
+{
+	for (int i = 0; license_normalization[i]; i++)
+	{
+		char def[MAX_ARGLN];
+		strcpy(def, license_normalization[i]);
+		char *token;
+
+		/* get the first token */
+		token = strtok(def, ",");
+
+		char *spdx = token;
+
+		/* walk through other tokens */
+		while (token != NULL)
+		{
+			if (stricmp(license, token))
+			{
+				strcpy(license, spdx);
+				return;
+			}
+			token = strtok(NULL, ",");
+		}
+	}
+}
+
 void print_licenses(match_data match)
 {
 	printf("[");
@@ -200,7 +229,8 @@ void print_licenses(match_data match)
 	/* Print URL license */
 	if (*match.license)
 	{
-		printf("        {\n");
+		normalize_license(match.license);
+		printf("\n        {\n");
 		printf("          \"name\": \"%s\",\n", match.license);
 		oasdl_license_data(match.license);
 		printf("          \"source\": \"%s\"\n", license_sources[0]);
@@ -225,6 +255,6 @@ void print_licenses(match_data match)
 	}
 
 	if (records) printf("\n      ");
-	printf("],\n");
+	printf("\n      ],\n");
 }
 
