@@ -108,6 +108,16 @@ void remove_char(char *str, char chr)
 	}
 }
 
+/* Cleans str from unprintable characters or quotes */
+void string_clean(char *str)
+{
+  char *s = str;
+  while (*s)
+  {
+    if (*s < ' ' || *s == '"') *s = ' ';
+    else s++;
+  }
+}
 
 /* Returns the current date stamp */
 char *datestamp()
