@@ -56,15 +56,19 @@ Options:
 The scanning engine attempts to match files with the following criteria:
 
 ## Is the file matching an entire package (matching directly the archive downloaded from the URL)?
+
 This produces an identifycation (id) of type "url"
 
-##Otherwise, is the file matching an entire known file?
+## Otherwise, is the file matching an entire known file?
+
 This produces an identification (id) of type "file"
 
-##Otherwise, snippet comparison is executed comparing snippet hashes
+## Otherwise, snippet comparison is executed comparing snippet hashes
+
 This produces an identification (id) of type "snippet"
 
 ## If none of the above,
+
 This produces an identification (id) of type "none"
 
 # File ranking algorithm
