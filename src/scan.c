@@ -398,7 +398,7 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	memcpy(files[iteration].path, raw_data + MD5_LEN, path_ln);
 	files[iteration].path[path_ln] = 0;
 
-	scanlog("File %s\n", files[iteration].path);
+	scanlog("#%d File %s\n", iteration, files[iteration].path);
 	return false;
 }
 
@@ -618,17 +618,23 @@ match_data *load_matches(scan_data *scan)
 					if (hint_found) scanlog("Component hint = %s/%s\n", *vendor_hint ? vendor_hint : "?", component_hint);
 
 					/* Add relevant files to matches */
-					if (!add_files_to_matches(files, records, component_hint, scan->match_ptr, matches))
+					if (!add_files_to_matches(files, records, component_hint, scan->match_ptr, matches, false))
 					{
 						/* If this did not work, attempt finding the component name in the path */
 						selected = seek_component_hint_in_path_start(files, records, component_rank);
-						if (selected >= 0)
-						{
-							add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
 
-							/* Update component_hint for the next file */
-							strcpy(component_hint, component_rank[selected].component);
+						/* If still no luck, forget about hint and add all files to matches */
+						if (selected < 0)
+						{
+							add_files_to_matches(files, records, component_hint, scan->match_ptr, matches, true);
+							selected = 0;
 						}
+
+						/* Add file to matches */
+						add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
+
+						/* Update component_hint for the next file */
+						strcpy(component_hint, component_rank[selected].component);
 					}
 				}
 				free(component_rank);

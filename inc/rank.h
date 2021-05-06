@@ -15,7 +15,8 @@ int add_files_to_matches(\
 		int records,\
 		char *component_hint,\
 		uint8_t *file_md5,\
-		match_data *matches);
+		match_data *matches,
+		bool add_all);
 int seek_component_hint_in_path(\
     file_recordset *files,\
     int records,\
