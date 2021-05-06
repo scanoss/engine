@@ -514,7 +514,7 @@ int add_files_to_matches(\
 		int records,\
 		char *component_hint,\
 		uint8_t *file_md5,\
-		match_data *matches)
+		match_data *matches, bool add_all)
 {
 	int considered=0;
 
@@ -523,7 +523,7 @@ int add_files_to_matches(\
 	{
 		if (!files[i].external)
 		{
-			if (strstr(files[i].path, component_hint))
+			if (add_all || strstr(files[i].path, component_hint))
 			{
 				consider_file_record(\
 						files[i].url_id,\
