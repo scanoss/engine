@@ -28,7 +28,7 @@ const char *license_normalization[] = {
 "GPL-2.0-only,GPL-2.0","GPLv2",
 "GPL-2.0-or-later,GPL-2.0+",
 "GPL-3.0-only,GPL-3.0,GPLv3",
-"GPL-3.0-or-later,GPL-3.0+", 
+"GPL-3.0-or-later,GPL-3.0+,GPLv3+",
 "LGPL-2.1-only,LGPL-2.1",
 "LGPL-2.1-or-later,LGPL-2.1+",
 "LGPL-3.0-only,LGPL-3.0",
