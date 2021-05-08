@@ -29,7 +29,7 @@
 #include "util.h"
 #include "parse.h"
 #include "osadl_metadata.h"
-#include "license_normalizacion.h"
+#include "license_translation.h"
 
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
 
