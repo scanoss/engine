@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * src/license_normalization.c
+ * src/license_translation.c
  *
  * Contains rules for translating license names into valid SPDX identifiers
  *
