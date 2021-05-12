@@ -46,7 +46,7 @@ static void clean_copyright(char *out, char *copyright)
 		if (!*byte) break;
 		else if (isalnum(*byte)) out[i] = *byte; 
 		else if (strstr(" @#^()[]-_+;:.<>",byte)) out[i] = *byte;
-		else out[i] = '*';
+		else out[i] = ' ';
 	}
 	out[i] = 0;
 }
@@ -58,13 +58,13 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 	char *CSV = calloc(datalen + 1, 1);
 	memcpy(CSV, (char *) data, datalen);
 
-	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
-	char *copyright = calloc(MAX_COPYRIGHT, 1);
+	char *source  = calloc(MAX_JSON_VALUE_LEN + 1, 1);
+	char *copyright = calloc(MAX_COPYRIGHT + 1, 1);
 
 	extract_csv(source, CSV, 1, MAX_JSON_VALUE_LEN);
-	free(CSV);
 
-	clean_copyright(copyright, skip_first_comma((char *) data));
+	clean_copyright(copyright, skip_first_comma((char *) CSV));
+	free(CSV);
 
 	/* Calculate CRC to avoid duplicates */
 	uint32_t CRC = string_crc32c(source) + string_crc32c(copyright);
