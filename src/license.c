@@ -33,9 +33,24 @@
 
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
 
+/* Remove invalid characters from a license name */
+void clean_license(char *license)
+{
+	char *c = license;
+	char byte[2] = "\0\0";
+	while (*c)
+	{
+		*byte = *c;
+		if (!isalnum(*byte) && !strstr(" @#^()[]-_+;:.<>", byte))
+			memmove(c, c + 1, strlen(c));
+		c++;
+	}
+}
+
 /* Replace license with its correct SPDX identifier, if found */
 void normalize_license(char *license)
 {
+	clean_license(license);
 	for (int i = 0; license_normalization[i]; i++)
 	{
 		char def[MAX_ARGLN];
