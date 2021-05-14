@@ -135,6 +135,7 @@ typedef struct match_data
 	char version[MAX_FIELD_LN];
 	char release_date[MAX_FIELD_LN];
 	char latest_version[MAX_FIELD_LN];
+	char purl[MAX_FIELD_LN];
 	char license[MAX_FIELD_LN];
 	char url[MAX_FILE_PATH];
 	char file[MAX_FILE_PATH];
@@ -154,6 +155,7 @@ typedef struct component_name_rank
 {
 	char vendor[MAX_FIELD_LN];
 	char component[MAX_FIELD_LN];
+	char purl[MAX_FIELD_LN];
 	uint8_t url_id[MD5_LEN];
 	char url_record[MAX_FILE_PATH];
 	char file[MAX_FILE_PATH];
@@ -167,6 +169,7 @@ typedef struct path_ranking
 	long score; // Score will store path length or component age
 	char component[MAX_FIELD_LN];
 	char vendor[MAX_FIELD_LN];
+	char purl[MAX_FIELD_LN];
 } path_ranking;
 
 unsigned char *linemap;

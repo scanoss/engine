@@ -203,7 +203,8 @@ match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 	extract_csv(match.version,      (char *) url_record, 3, sizeof(match.version));
 	extract_csv(match.release_date, (char *) url_record, 4, sizeof(match.release_date));
 	extract_csv(match.license,      (char *) url_record, 5, sizeof(match.license));
-	extract_csv(match.url,          (char *) url_record, 6, sizeof(match.url));
+	extract_csv(match.purl,         (char *) url_record, 6, sizeof(match.purl));
+	extract_csv(match.url,          (char *) url_record, 7, sizeof(match.url));
 	strcpy(match.latest_version, match.version);
 
 	flip_slashes(match.vendor);
@@ -212,7 +213,7 @@ match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 	flip_slashes(match.url);
 	flip_slashes(match.file);
 
-	if (!*match.vendor || !*match.component || !*match.url || !*match.version || !*match.file)
+	if (!*match.url || !*match.version || !*match.file || !*match.purl)
 	{
 		scanlog("Incomplete metadata for %s\n", file_path);
 		return match_init();
@@ -239,9 +240,9 @@ void add_match(int position, match_data match, match_data *matches, bool compone
 {
 
 	/* Verify if metadata is complete */
-	if (!*match.vendor || !*match.component || !*match.url || !*match.version || !*match.file)
+	if (!*match.url || !*match.version || !*match.file || !*match.purl)
 	{
-		scanlog("Metadata is incomplete: %s,%s,%s,%s,%s\n",match.vendor,match.component,match.version,match.url,match.file);
+		scanlog("Metadata is incomplete: %s,%s,%s,%s\n",match.purl,match.version,match.url,match.file);
 		return;
 	}
 
@@ -252,9 +253,8 @@ void add_match(int position, match_data match, match_data *matches, bool compone
 
 	for (int i = 0; i < n; i++)
 	{
-		/* Are vendor/component the same? */
-		if (!strcmp(matches[i].vendor, match.vendor) &&
-				!strcmp(matches[i].component, match.component))
+		/* Are purls the same? */
+		if (!strcmp(matches[i].purl, match.purl))
 		{
 			placed = true;
 
@@ -292,6 +292,7 @@ void add_match(int position, match_data match, match_data *matches, bool compone
 		/* Copy match information */
 		strcpy(matches[n].vendor, match.vendor);
 		strcpy(matches[n].component, match.component);
+		strcpy(matches[n].purl, match.purl);
 		strcpy(matches[n].version, match.version);
 		strcpy(matches[n].latest_version, match.latest_version);
 		strcpy(matches[n].url, match.url);
