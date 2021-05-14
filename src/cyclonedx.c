@@ -95,11 +95,7 @@ void print_json_match_cyclonedx(scan_data scan, match_data match)
     printf("        }\n");
     printf("      ],\n");
 
-    if (strcmp(scan.line_ranges,"all"))
-        printf("      \"purl\": \"%s#%s\",\n", match.url, match.file);
-    else
-        printf("      \"purl\": \"%s\",\n", match.url);
-
+		printf("      \"purl\": \"%s\",\n", match.url);
     printf("      \"description\": \"Lines matched: %s\"\n", scan.line_ranges);
     printf("    }\n");
     fflush(stdout);

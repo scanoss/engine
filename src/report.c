@@ -147,6 +147,8 @@ void print_json_match_plain(scan_data scan, match_data match)
 	}
 
 	printf("      \"matched\": \"%s\",\n", scan.matched_percent);
+	printf("      \"purl\": [\n        \"%s\"", match.purl);
+	printf("\n      ],\n");
 	printf("      \"vendor\": \"%s\",\n", match.vendor);
 	printf("      \"component\": \"%s\",\n", match.component);
 	printf("      \"version\": \"%s\",\n", match.version);
