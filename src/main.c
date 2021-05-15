@@ -43,12 +43,12 @@ void recurse_directory(char *name)
 
 	while ((entry = readdir(dir)))
 	{
+		if (!strcmp(entry->d_name,".") || !strcmp(entry->d_name,"..")) continue;
+
 		read = true;
 		char *path =calloc (MAX_PATH, 1);
 		sprintf (path, "%s/%s", name, entry->d_name);
 			
-		if (!strcmp(entry->d_name,".") || !strcmp(entry->d_name,"..")) continue;
-
 		if (entry->d_type == DT_DIR)
 				recurse_directory(path);
 
@@ -58,7 +58,13 @@ void recurse_directory(char *name)
 			/* Scan file directly */
 			scan_data scan = scan_data_init(path);
 
-			ldb_scan(&scan);
+			bool wfp = false;
+			if (extension(path)) if (!strcmp(extension(path), "wfp")) wfp = true;
+
+			if (wfp)
+				wfp_scan(&scan);
+			else
+				ldb_scan(&scan);
 
 			scan_data_free(scan);
 		}
