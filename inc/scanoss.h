@@ -160,6 +160,7 @@ typedef struct component_name_rank
 	char url_record[MAX_FILE_PATH];
 	char file[MAX_FILE_PATH];
 	long score;
+	long age;
 } component_name_rank;
 
 /* Path ranking when looking for shortest paths / component age */
