@@ -105,6 +105,7 @@ char *url_record)
 			strcpy(component_rank[i].url_record, url_record);
 			if (url_id) memcpy(component_rank[i].url_id, url_id, MD5_LEN);
 			component_rank[i].score++;
+			component_rank[i].age = component_age(vendor, component);
 			return;
 		}
 		bool vendor_ok = false;
@@ -154,6 +155,17 @@ void get_external_component_name_from_path(char *file_path, char *component)
 	}
 }
 
+/* Returns the component age for a vendor/component */
+long component_age(char *vendor, char *component)
+{
+	if (!*vendor || !*component) return 0;
+
+	uint8_t pair_md5[16] = "\0";
+	vendor_component_md5(vendor, component, pair_md5);
+	return get_component_age(pair_md5);
+}
+
+
 /* Write contents of component_rank to log file */
 void log_component_ranking(component_name_rank *component_rank)
 {
@@ -163,11 +175,11 @@ void log_component_ranking(component_name_rank *component_rank)
 	for (int i = 0; i < rank_items; i++)
 	{
 		if (!component_rank[i].score) break;
-		scanlog("component_rank #%02d= %s/%s, score = %ld\n",\
+		scanlog("component_rank #%02d= %s/%s, score = %ld, age = %ld\n",\
 				i,\
 				component_rank[i].vendor,\
 				component_rank[i].component,\
-				component_rank[i].score);
+				component_rank[i].score, component_age(component_rank[i].vendor,component_rank[i].component));
 	}
 }
 
@@ -358,15 +370,6 @@ bool select_paths_matching_component_names_in_rank(\
 	return found;
 }
 
-long component_age(char *vendor, char *component)
-{
-	if (!*vendor || !*component) return 0;
-
-	uint8_t pair_md5[16] = "\0";
-	vendor_component_md5(vendor, component, pair_md5);
-	return get_component_age(pair_md5);
-}
-
 /* Update component score with component age, return file id for the oldest */
 int fill_component_age(component_name_rank *component_rank)
 {
@@ -394,23 +397,23 @@ int fill_component_age(component_name_rank *component_rank)
 /* Return id of the item in rank with the highest score */
 int highest_score(component_name_rank *component_rank)
 {
-	long oldest = 0;
+	long best = 0;
 
 	/* Return a negative value of no files are matched */
-	int oldest_id = -1;
+	int best_id = -1;
 
 	/* Select highest score */
 	for (int i = 0; i < rank_items; i++)
 	{
 		if (!*component_rank[i].component) break;
-		if (component_rank[i].score > oldest)
+		if (component_rank[i].score + component_rank[i].age > best)
 		{
-			oldest = component_rank[i].score;
-			oldest_id = i;
+			best = component_rank[i].score + component_rank[i].age;
+			best_id = i;
 		}
 	}
 
-	return oldest_id;
+	return best_id;
 }
 
 /* Select the vendor that appears the most in the ranking */
