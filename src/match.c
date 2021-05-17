@@ -114,8 +114,8 @@ match_data match_init()
 	match.vulnerabilities = 0;
 	match.path_ln = 0;
 	match.selected = false;
-	memcpy(match.url_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
-	memcpy(match.file_md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
+	memset(match.url_md5, 0, MD5_LEN);
+	memset(match.file_md5, 0, MD5_LEN);
 	return match;
 }
 
