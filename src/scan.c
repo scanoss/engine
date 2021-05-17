@@ -533,6 +533,8 @@ match_data *load_matches(scan_data *scan)
 		matches[i].type = scan->match_type;
 		matches[i].selected = false;
 		matches[i].scandata = scan;
+		memset(matches[i].file_md5, 0, MD5_LEN);
+		memset(matches[i].url_md5, 0, MD5_LEN);
 	}
 
 	uint32_t records = 0;
