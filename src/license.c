@@ -43,14 +43,13 @@ void clean_license(char *license)
 		*byte = *c;
 		if (!isalnum(*byte) && !strstr(" @#^()[]-_+;:.<>", byte))
 			memmove(c, c + 1, strlen(c));
-		c++;
+		else c++;
 	}
 }
 
 /* Replace license with its correct SPDX identifier, if found */
 void normalize_license(char *license)
 {
-	clean_license(license);
 	for (int i = 0; license_normalization[i]; i++)
 	{
 		char def[MAX_ARGLN];
@@ -182,6 +181,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	extract_csv(license, CSV, 2, MAX_JSON_VALUE_LEN);
 	free(CSV);
 
+	clean_license(license);
 	normalize_license(license);
 
 	/* Calculate CRC to avoid duplicates */
@@ -251,6 +251,7 @@ void print_licenses(match_data match)
 	for (int i = 0; i < CRC_LIST_LEN; i++) match.crclist[i] = 0;
 
 	uint32_t records = 0;
+	clean_license(match.license);
 
 	/* Print URL license */
 	if (*match.license)
