@@ -116,9 +116,9 @@ uint8_t *biggest_snippet(scan_data *scan)
 
 		if (most_hits < min_match_hits)
 		{
-			out = NULL;
+			scan->match_type = none;
 			scanlog("Not reaching min_match_hits\n");
-			break;
+			return NULL;
 		}
 
 		if (!hits) break;

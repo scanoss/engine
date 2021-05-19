@@ -662,6 +662,7 @@ match_data *compile_matches(scan_data *scan)
 	if (scan->match_type == snippet)
 	{
 		scan->match_ptr = biggest_snippet(scan);
+		if (!scan->match_ptr) return NULL;
 		scanlog("%ld matches in snippet map\n", scan->matchmap_size);
 	}
 
@@ -851,32 +852,36 @@ bool ldb_scan(scan_data *scan)
 
 	/* Compile matches */
 	match_data *matches = compile_matches(scan);
-	int total_matches = count_matches(matches);
 
-	/* Debug match info */
-	scanlog("%d matches compiled:\n", total_matches);
-	if (debug_on) for (int i = 0; i < total_matches; i++)
-		scanlog("%s/%s, %s\n", matches[i].vendor, matches[i].component, matches[i].file);
-	scanlog("\n", total_matches);
-
-	/* Matched asset in SBOM.json? */
-	for (int i = 0; i < total_matches; i++)
-	{
-		if (assets_match(matches[i]))
-		{
-			scanlog("Asset matched\n");
-			if (matches) free(matches);
-			matches = NULL;
-			scan->match_type = none;
-			break;
-		}
-	}
-
-	/* Perform post scan intelligence */
 	if (scan->match_type != none)
 	{
-		scanlog("Starting post-scan analysis\n");
-		post_scan(matches);
+		int total_matches = count_matches(matches);
+
+		/* Debug match info */
+		scanlog("%d matches compiled:\n", total_matches);
+		if (debug_on) for (int i = 0; i < total_matches; i++)
+			scanlog("%s/%s, %s\n", matches[i].vendor, matches[i].component, matches[i].file);
+		scanlog("\n", total_matches);
+
+		/* Matched asset in SBOM.json? */
+		for (int i = 0; i < total_matches; i++)
+		{
+			if (assets_match(matches[i]))
+			{
+				scanlog("Asset matched\n");
+				if (matches) free(matches);
+				matches = NULL;
+				scan->match_type = none;
+				break;
+			}
+		}
+
+		/* Perform post scan intelligence */
+		if (scan->match_type != none)
+		{
+			scanlog("Starting post-scan analysis\n");
+			post_scan(matches);
+		}
 	}
 
 	/* Output matches */
