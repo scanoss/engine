@@ -174,7 +174,7 @@ void log_component_ranking(component_name_rank *component_rank)
 	/* Walk component ranking and print contents */
 	for (int i = 0; i < rank_items; i++)
 	{
-		if (!component_rank[i].score) break;
+		if (!*component_rank[i].component) break;
 		scanlog("component_rank #%02d= %s/%s, score = %ld, age = %ld\n",\
 				i,\
 				component_rank[i].vendor,\
