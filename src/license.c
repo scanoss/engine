@@ -41,7 +41,7 @@ void clean_license(char *license)
 	while (*c)
 	{
 		*byte = *c;
-		if (!isalnum(*byte) && !strstr(" @#^()[]-_+;:.<>", byte))
+		if (!isalnum(*byte) && !strstr(" -+;:.", byte))
 			memmove(c, c + 1, strlen(c));
 		else c++;
 	}
