@@ -223,6 +223,8 @@ void print_matches()
 
 void print_match(scan_data *scan, match_data match, int *match_counter)
 {
+	add_component(&match);
+
 	if (quiet || report_format != plain) return;
 
 	if ((*match_counter)++) if (!quiet) printf("  ,\n");
