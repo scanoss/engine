@@ -39,7 +39,7 @@ Configuration:\n\
 -s SBOM    Use assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification\n\
 -b SBOM    Blacklist matches to assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format)\n\
 -a SBOM    Displays attribution notices for provided SBOM.json\n\
--f FORMAT  Set output format as: plain(default)|spdx|cyclonedx|spdx_xml\n\
+-f FORMAT  Set output format as: plain(default)|spdx|cyclonedx\n\
 -c HINT    Provide a component HINT to influence scan results\n\
 -k KEY     Displays contents of file KEY from MZ sources archive\n\
 -l LICENSE Displays OSADL metadata for the provided SPDX license ID\n\

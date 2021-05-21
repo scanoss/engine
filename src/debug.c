@@ -80,14 +80,14 @@ void progress(char *prompt, size_t count, size_t max, bool percent)
 	fflush(stdout);
 }
 
-void slow_query_log(scan_data scan)
+void slow_query_log(scan_data *scan)
 {
-	long elapsed = microseconds_now() - scan.timer;
+	long elapsed = microseconds_now() - scan->timer;
 	if (elapsed > SLOW_QUERY_LIMIT_IN_USEC)
 	{
 		scanlog("SLOW QUERY!\n");
 		char data[1024] = "\0";
-		sprintf(data, "%lu, %.6fs, %s\n", (unsigned long)time(NULL), (double) elapsed / 1000000, scan.file_path);
+		sprintf(data, "%lu, %.6fs, %s\n", (unsigned long)time(NULL), (double) elapsed / 1000000, scan->file_path);
 		FILE *log = fopen(SLOW_QUERY_LOG, "a");
 		if (!fprintf(log, data)) printf("Warning: Cannot log slow query\n");
 		fclose(log);

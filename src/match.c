@@ -23,6 +23,7 @@
 #include "report.h"
 #include "debug.h"
 #include "limits.h"
+#include "util.h"
 
 bool first_file = true;
 const char *matchtypes[] = {"none", "url", "file", "snippet"};
@@ -38,24 +39,24 @@ void flip_slashes(char *data)
 /* Output matches in JSON format via STDOUT */
 void output_matches_json(match_data *matches, scan_data *scan_ptr)
 {
-	scan_data scan = *scan_ptr;
+	scan_data *scan = scan_ptr;
 
 	/* Files not matching are only reported with -f plain */
 	if (!matches && report_format != plain) return;
 
 	int match_counter = 0;
 
-	flip_slashes(scan.file_path);
+	flip_slashes(scan->file_path);
 
 	/* Log slow query, if needed */
 	slow_query_log(scan);
 
 	/* Print comma separator */
-	if (!quiet) if (!first_file && report_format != spdx_xml) printf("  ,\n");
+	if (!quiet) if (!first_file && report_format == plain) printf("  ,\n");
 	first_file = false;
 
 	/* Open file structure */
-	json_open_file(scan.file_path);
+	json_open_file(scan->file_path);
 
 	/* Print matches */
 	if (matches)
@@ -67,37 +68,26 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		{
 			if (matches[i].selected)
 			{
-				if (match_counter++) if (!quiet && report_format != spdx_xml) printf("  ,\n");
-				print_match(scan, matches[i]);
+				add_component(&matches[i]);
+				print_match(scan, matches[i], &match_counter);
 				selected = true;
 			}
 		}
 
 		/* Print matches with version ranges first */
 		if (!selected) for (int i = 0; i < scan_limit && *matches[i].component; i++)
-		{
 			if (!matches[i].selected) if (strcmp(matches[i].version, matches[i].latest_version))
-			{
-				if (match_counter++) if (!quiet && report_format != spdx_xml) printf("  ,\n");
-				print_match(scan, matches[i]);
-			}
-		}
+				print_match(scan, matches[i], &match_counter);
 
 		/* Print matches without version ranges */
 		if (!selected) for (int i = 0; i < scan_limit && *matches[i].component; i++)
-		{
 			if (!matches[i].selected) if (!strcmp(matches[i].version, matches[i].latest_version))
-			{
-				if (match_counter++) if (!quiet && report_format != spdx_xml) printf("  ,\n");
-				print_match(scan, matches[i]);
-			}
-		}
+				print_match(scan, matches[i], &match_counter);
 	}
 
 	/* Print no match */
 	if (!match_counter) print_json_nomatch(scan);
-
-	json_close_file();//json_close_file(scan.file_path); MODIFICADO!!!
+	json_close_file();
 }
 
 match_data match_init()
