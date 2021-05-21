@@ -68,7 +68,6 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		{
 			if (matches[i].selected)
 			{
-				add_component(&matches[i]);
 				print_match(scan, matches[i], &match_counter);
 				selected = true;
 			}
