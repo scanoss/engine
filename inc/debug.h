@@ -14,7 +14,7 @@ void scanlog(const char *fmt, ...);
 void map_dump(scan_data *scan);
 long microseconds_now(void);
 void scan_benchmark(void);
-void slow_query_log(scan_data scan);
+void slow_query_log(scan_data *scan);
 
 
 #endif

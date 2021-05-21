@@ -103,6 +103,18 @@ typedef struct file_recordset
 	bool external;
 } file_recordset;
 
+typedef struct component_item
+{
+  char purl[MAX_FIELD_LN];
+  char vendor[MAX_FIELD_LN];
+  char component[MAX_FIELD_LN];
+  char version[MAX_FIELD_LN];
+  char latest_version[MAX_FIELD_LN];
+  char license[MAX_FIELD_LN];
+} component_item;
+
+component_item component_list[CRC_LIST_LEN];
+
 typedef struct scan_data
 {
 	uint8_t *md5;

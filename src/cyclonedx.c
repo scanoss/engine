@@ -64,40 +64,30 @@ void cyclonedx_close()
     printf("  ]\n}\n");
 }
 
-void print_json_match_cyclonedx(scan_data scan, match_data match)
+void print_json_match_cyclonedx(int i)
 {
     printf("    {\n");
-    printf("      \"type\": \"file\",\n");
-    printf("      \"publisher\": \"%s\",\n", match.vendor);
-    printf("      \"group\": \"%s\",\n", match.vendor);
-    printf("      \"name\": \"%s\",\n", match.component);
+    printf("      \"type\": \"library\",\n");
+    printf("      \"name\": \"%s\",\n", component_list[i].component);
+    printf("      \"publisher\": \"%s\",\n", component_list[i].vendor);
 
-    if (strcmp(match.version, match.latest_version))
-        printf("      \"version\": \"%s-%s\",\n", match.version, match.latest_version);
+    if (strcmp(component_list[i].version, component_list[i].latest_version))
+        printf("      \"version\": \"%s-%s\",\n", component_list[i].version, component_list[i].latest_version);
     else
-        printf("      \"version\": \"%s\",\n", match.version);
+        printf("      \"version\": \"%s\",\n", component_list[i].version);
 
-    printf("      \"hashes\": [\n");
-    printf("        {\n");
-    printf("          \"alg\": \"MD5\",\n");
-    char *md5 = md5_hex(scan.md5);
-    printf("          \"content\": \"%s\"\n", md5);
-    free(md5);
-    printf("        }\n");
-    printf("      ],\n");
-    printf("      \"licenses\": [\n");
-    printf("        {\n");
-    printf("          \"license\": {\n");
-		char license[MAX_FIELD_LN] = "\0";
-    get_license(match, license);
-    printf("             \"id\": \"%s\"\n", license);
-    printf("          }\n");
-    printf("        }\n");
-    printf("      ],\n");
-
-		printf("      \"purl\": \"%s@%s\",\n", match.purl, match.version);
-    printf("      \"description\": \"Lines matched: %s\"\n", scan.line_ranges);
-    printf("    }\n");
-    fflush(stdout);
+		if (*component_list[i].license)
+		{
+			printf("      \"licenses\": [\n");
+			printf("        {\n");
+			printf("          \"license\": {\n");
+			printf("             \"id\": \"%s\"\n", component_list[i].license);
+			printf("          }\n");
+			printf("        }\n");
+			printf("      ],\n");
+		}
+		printf("      \"purl\": \"%s@%s\"\n", component_list[i].purl, component_list[i].version);
+		printf("    }\n");
+		fflush(stdout);
 }
 

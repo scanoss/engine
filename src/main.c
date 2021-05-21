@@ -91,7 +91,6 @@ output_format set_format(char *arg)
 	if (!strcmp(arg, "plain")) return plain;
 	if (!strcmp(arg, "spdx")) return spdx;
 	if (!strcmp(arg, "cyclonedx")) return cyclonedx;
-	if (!strcmp(arg, "spdx_xml")) return spdx_xml;
 	printf("Unsupported report format\n");
 	exit(EXIT_FAILURE);
 	return plain;
@@ -157,6 +156,17 @@ int main(int argc, char **argv)
 	oss_wfp.rec_ln = 18;
 	oss_wfp.ts_ln = 2;
 	oss_wfp.tmp = false;
+
+	/* Init component list */
+	for (int i = 0; i < CRC_LIST_LEN; i++)
+	{
+		 *component_list[i].vendor = 0;
+		 *component_list[i].component = 0;
+		 *component_list[i].version = 0;
+		 *component_list[i].latest_version = 0;
+		 *component_list[i].license = 0;
+		 *component_list[i].purl = 0;
+	}
 
 	/* Parse arguments */
 	int option;
@@ -299,8 +309,7 @@ int main(int argc, char **argv)
 		scan_data scan = scan_data_init(target);
 
 		/* Open main report structure */
-		if (!(engine_flags & DISABLE_REPORT_OPEN_CLOSE))
-			report_open(&scan);
+		if (!(engine_flags & DISABLE_REPORT_OPEN_CLOSE)) json_open();
 
 		/* Scan directory */
 		if (isdir) recurse_directory(target);
