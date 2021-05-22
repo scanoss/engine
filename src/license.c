@@ -194,7 +194,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	printable_only(license);
 	bool reported = false;
 
-	if (!dup && *license && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
+	if (!dup && *license && (src < (sizeof(license_sources) / sizeof(license_sources[0]))) && (strlen(license) > 1))
 	{
 		if (iteration) printf(",\n"); else printf("\n");
 		printf("        {\n");
