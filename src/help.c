@@ -22,7 +22,7 @@
 #include "help.h"
 #include "scanoss.h"
 
-char SCANOSS_VERSION[7] = "4.1.9";
+char SCANOSS_VERSION[7] = "4.2.0";
 
 void help ()
 {

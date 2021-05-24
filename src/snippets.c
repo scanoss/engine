@@ -225,6 +225,8 @@ uint32_t compile_ranges(scan_data *scan) {
 		long to       = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6 + 2);
 		long oss_from = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6 + 4);
 
+		scanlog("compile_ranges #%d = %ld to %ld\n", i, from, to);
+
 		if (to < 1) break;
 
 		/* Add range as long as the minimum number of match lines is reached */
@@ -285,7 +287,7 @@ void wfp_invert(uint32_t wfpint32, uint8_t *out)
 	out[3]=ptr[0];
 }
 
-void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uint8_t *wfp, uint32_t line)
+void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uint8_t *wfp, uint32_t line, uint32_t min_tolerance)
 {
 	uint32_t from = 0;
 	uint32_t to = 0;
@@ -314,7 +316,7 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
 		if (found < 0)
 		{
 			/* Not found. Add MD5 to map */
-			if (scan->matchmap_size >= MAX_FILES) break;
+			if (scan->matchmap_size >= MAX_FILES) continue;
 
 			found = scan->matchmap_size;
 
@@ -332,6 +334,7 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
 		{
 			from = scan->matchmap[found].range[t].from;
 			to   = scan->matchmap[found].range[t].to;
+			int gap = from - line;
 
 			/* New range */
 			if (!from && !to)
@@ -357,7 +360,7 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
 			}
 
 			/* Increase range */
-			else if ((from - line) < range_tolerance)
+			else if (gap < range_tolerance || gap <= min_tolerance)
 			{
 				/* Update to */
 				scan->matchmap[found].range[t].from = line;
@@ -389,6 +392,7 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 	uint8_t wfp[4];
 	int consecutive = 0;
 	uint32_t line = 0;
+	uint32_t last_line = 0;
 
 	/* Limit snippets to be scanned  */
 	uint32_t scan_from = 0;
@@ -432,7 +436,8 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 		}
 
 		/* Add snippet records to matchmap */
-		add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line);
+		add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line, last_line - line);
+		last_line = line;
 	}
 
 	free(md5_set);

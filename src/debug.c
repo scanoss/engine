@@ -43,7 +43,11 @@ void scanlog(const char *fmt, ...)
 
 	if (quiet)
 	{
-		if (*fmt) vfprintf(stderr, fmt, args);
+		if (*fmt)
+		{
+			fprintf(stderr, "%06ld ", microseconds_now() - microseconds_start);
+			vfprintf(stderr, fmt, args);
+		}
 		return;
 	}
 

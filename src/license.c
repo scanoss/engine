@@ -281,7 +281,6 @@ void print_licenses(match_data match)
 		}
 	}
 
-	if (records) printf("\n      ");
 	printf("\n      ],\n");
 }
 
