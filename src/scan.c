@@ -513,14 +513,13 @@ match_data *load_matches(scan_data *scan)
 	/* Get matching line ranges (snippet match) */
 	if (scan->match_type == snippet)
 	{
-		scanlog("%d hits before compiling ranges\n", hits);
 		hits = compile_ranges(scan);
 
 		float percent = (hits * 100) / scan->total_lines;
 		if (hits) matched_percent = floor(percent);
 		if (matched_percent > 100) matched_percent = 100;
 
-		scanlog("%d hits left after compiling ranges\n", hits);
+		scanlog("compile_ranges returns %d hits\n", hits);
 		if (!hits) return NULL;
 
 		sprintf(scan->matched_percent,"%u%%", matched_percent);

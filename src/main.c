@@ -132,6 +132,8 @@ int main(int argc, char **argv)
 
 	bool force_wfp = false;
 
+	microseconds_start = microseconds_now();
+
 	*component_hint = 0;
 	*vendor_hint = 0;
 

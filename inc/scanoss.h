@@ -185,6 +185,7 @@ typedef struct path_ranking
 	char purl[MAX_FIELD_LN];
 } path_ranking;
 
+long microseconds_start;
 unsigned char *linemap;
 unsigned char *map;
 int map_rec_len;
