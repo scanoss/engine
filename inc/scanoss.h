@@ -192,6 +192,10 @@ int map_rec_len;
 extern bool match_extensions;// = false;
 extern int report_format;// = plain;
 
+/* File tracing -qi */
+uint8_t trace_id[MD5_LEN];
+bool trace_on;
+
 /* Vendor and component hint hold the last component matched/guessed */
 char vendor_hint[MAX_FIELD_LN];
 char component_hint[MAX_FIELD_LN];

@@ -50,6 +50,7 @@ Options:\n\
 -h  Display this help and exit\n\
 -d  Save debugging information to disk (/tmp)\n\
 -q  Produces no JSON output. Only debugging info via STDERR\n\
+-i  Trace specific file id when debugging (requires -q)\n\
 \n\
 Engine scanning flags:\n\
 The scanning engine can be configured by passing configuration flags with the -F parameter.\n\
