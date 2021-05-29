@@ -122,6 +122,10 @@ int main(int argc, char **argv)
 	debug_on = false;
 	quiet = false;
 
+	/* File tracing with -qi */
+	trace_on = false;
+	memset(trace_id, 0 ,16);
+
 	if (argc <= 1)
 	{
 		fprintf (stdout, "Missing parameters. Please use -h\n");
@@ -174,7 +178,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:wtvhedq")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:i:wtvhedq")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -220,6 +224,15 @@ int main(int argc, char **argv)
 			case 'l':
 				print_osadl_license_data(optarg);
 				exit(EXIT_SUCCESS);
+				break;
+
+			case 'i':
+				if (strlen(optarg) == (MD5_LEN * 2))
+				{
+					ldb_hex_to_bin(optarg, MD5_LEN * 2, trace_id);
+					trace_on = true;
+				}
+				else fprintf(stderr, "Ignoring -i due to invalid length\n");
 				break;
 
 			case 'w':

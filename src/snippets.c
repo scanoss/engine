@@ -384,7 +384,8 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 
 	if (engine_flags & DISABLE_SNIPPET_MATCHING) return none;
 
-	scanlog("Checking snippets\n");
+	if (trace_on) scanlog("Checking snippets. Traced (-qi) matches marked with *\n");
+	else scanlog("Checking snippets\n");
 
 	adjust_tolerance(scan);
 
@@ -393,6 +394,7 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 	int consecutive = 0;
 	uint32_t line = 0;
 	uint32_t last_line = 0;
+	bool traced = false;
 
 	/* Limit snippets to be scanned  */
 	uint32_t scan_from = 0;
@@ -420,7 +422,14 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 		/* If popularity is exceeded, matches for this snippet are ignored */
 		if (md5s_ln > (WFP_POPULARITY_THRESHOLD * WFP_REC_LN)) md5s_ln = 0;
 
-		scanlog("Snippet %02x%02x%02x%02x (line %d) -> %u hits\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln / WFP_REC_LN);
+		if (trace_on)
+		{
+			traced = false;
+			for (uint32_t j = 0; j < md5s_ln && !traced; j++)
+				if (!memcmp(md5s + j, trace_id, MD5_LEN)) traced = true;
+		}
+
+		scanlog("Snippet %02x%02x%02x%02x (line %d) -> %u hits %s\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln / WFP_REC_LN, traced ? "*" : "");
 
 		/* If a snippet brings more than "score" result by "hits" times in a row, we skip "jump" snippets */
 		if (scan->hash_count > consecutive_threshold)
@@ -431,6 +440,7 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 				{
 					i -= consecutive_jump;
 					consecutive = 0;
+					scanlog("Skipping %d snippets after %d consecutive_hits\n", consecutive_jump, consecutive_hits);
 				}
 			}
 		}
