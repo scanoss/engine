@@ -28,6 +28,9 @@
 #include <string.h>
 
 #include "file.h"
+#include "scanoss.h"
+#include "limits.h"
+#include "debug.h"
 
 bool is_file(char *path)
 {
@@ -119,6 +122,27 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 	}
 
 	fclose(in);
+}
+
+bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+{
+
+	/* Leave if FETCH_MAX_FILES is reached */
+	if (iteration >= FETCH_MAX_FILES) return true;
+
+	/* Ignore path lengths over the limit */
+	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+
+	/* Copy data to memory */
+	file_recordset *files = ptr;
+	int path_ln = datalen - MD5_LEN;
+	files[iteration].path_ln = path_ln;
+	memcpy(files[iteration].url_id, raw_data, MD5_LEN);
+	memcpy(files[iteration].path, raw_data + MD5_LEN, path_ln);
+	files[iteration].path[path_ln] = 0;
+
+	scanlog("#%d File %s\n", iteration, files[iteration].path);
+	return false;
 }
 
 

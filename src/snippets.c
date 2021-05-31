@@ -445,8 +445,8 @@ matchtype ldb_scan_snippets(scan_data *scan) {
 	uint8_t *md5_set = malloc(MAX_QUERY_RESPONSE);
 	uint8_t wfp[4];
 	int consecutive = 0;
-	uint32_t line = 0; //scan->hash_count;
-	uint32_t last_line = 0; //line;
+	uint32_t line = 0;
+	uint32_t last_line = 0;
 	bool traced = false;
 	int jump_lines = 0;
 
