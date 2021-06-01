@@ -22,7 +22,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "blacklist.h"
+#include "ignorelist.h"
 #include "limits.h"
 #include "license.h"
 #include "debug.h"

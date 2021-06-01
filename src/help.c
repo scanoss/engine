@@ -37,7 +37,7 @@ Configuration:\n\
 -w         Treats TARGET as a .wfp file regardless of the actual file extension\n\
 -e         Expect matching extensions to equal the file extension being scanned (default: off)\n\
 -s SBOM    Use assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification\n\
--b SBOM    Blacklist matches to assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format)\n\
+-b SBOM    Ignore matches to assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format)\n\
 -a SBOM    Displays attribution notices for provided SBOM.json\n\
 -f FORMAT  Set output format as: plain(default)|spdx|cyclonedx\n\
 -c HINT    Provide a component HINT to influence scan results\n\

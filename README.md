@@ -43,7 +43,7 @@ Syntax: scanoss [parameters] [TARGET]
 Configuration:
 * -w       Treats TARGET as a .wfp file regardless of the actual file extension
 * -s FILE  Use assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification
-* -b FILE  Blacklist matches to assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format)
+* -b FILE  Ignore matches to assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format)
 
 Options:
 * -t  Tests engine performance

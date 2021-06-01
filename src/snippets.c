@@ -20,7 +20,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "blacklist.h"
+#include "ignorelist.h"
 #include "util.h"
 #include "debug.h"
 #include "limits.h"
@@ -62,7 +62,7 @@ static bool shortest_path_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 int get_shortest_path(uint8_t *md5)
 {
 	/* Direct component match has a top priority */
-	if (ldb_key_exists(oss_component, md5)) return 1;
+	if (ldb_key_exists(oss_url, md5)) return 1;
 
 	int *shortest = calloc(1, sizeof(int));
 	ldb_fetch_recordset(NULL, oss_file, md5, false, shortest_path_handler, (void *) shortest);
@@ -166,7 +166,7 @@ bool skip_snippets(char *src, uint64_t srcln)
 	}
 	if (unwanted_header(src))
 	{
-		scanlog("Skipping snippets: Blacklisted contents\n");
+		scanlog("Skipping snippets: Ignored contents\n");
 		return true;
 	}
 	return false;

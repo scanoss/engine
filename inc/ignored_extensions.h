@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * src/blacklisted.h
+ * src/ignored_extensions.h
  *
- * Blacklisted data structures and routines
+ * Ignored file extensions
  *
  * Copyright (C) 2018-2021 SCANOSS.COM
  *
@@ -20,26 +20,4 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/* File paths to be skipped in results */
-#ifndef __BLACKLIST_H
-    #define __BLACKLIST_H
-    
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-
-extern char *BLACKLISTED_PATHS[];
-extern char *BLACKLISTED_HEADERS[];
-extern char *BLACKLISTED_EXTENSIONS[];
-extern char *IGNORE_KEYWORDS[];
-
-char *extension(char *path);
-bool stricmp(char *a, char *b);
-bool blacklisted_extension(char *name);
-bool unwanted_path(char *path);
-bool headicmp(char *a, char *b);
-bool unwanted_header(char *src);
-
-
-
-#endif
+extern char *IGNORED_EXTENSIONS[];

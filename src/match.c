@@ -141,9 +141,9 @@ int add_all_files_to_matches(file_recordset *files, int file_count, uint8_t *md5
 	return file_count;
 }
 
-bool blacklist_match(uint8_t *url_record)
+bool ignored_asset_match(uint8_t *url_record)
 {
-	if (!blacklisted_assets) return false;
+	if (!ignored_assets) return false;
 
 	bool found = false;
 
@@ -151,10 +151,10 @@ bool blacklist_match(uint8_t *url_record)
 	extract_csv(asset, (char *) url_record, 2, LDB_MAX_REC_LN);
 	strcat(asset, ",");
 
-	if (strcasestr(blacklisted_assets, asset)) found = true;
+	if (strcasestr(ignored_assets, asset)) found = true;
 	free(asset);
 
-	if (found) scanlog("Component blacklisted: %s\n", url_record);
+	if (found) scanlog("Component ignored: %s\n", url_record);
 
 	return found;
 }
@@ -384,10 +384,10 @@ match_data *load_matches(scan_data *scan)
 
 	uint32_t records = 0;
 
-	/* Snippet and component match should look for the matching md5 in urls */
+	/* Snippet and url match should look for the matching md5 in urls */
 	if (scan->match_type != file)
 	{
-		records = ldb_fetch_recordset(NULL, oss_component, scan->match_ptr, false, handle_url_record, (void *) matches);
+		records = ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *) matches);
 		scanlog("URL recordset contains %u records\n", records);
 	}
 
