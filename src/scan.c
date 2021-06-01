@@ -31,13 +31,13 @@
 #include "debug.h"
 #include "psi.h"
 #include "limits.h"
-#include "blacklist.h"
+#include "ignorelist.h"
 #include "winnowing.h"
 #include "ldb.h"
 #include "versions.h"
 
 char *sbom = NULL;
-char *blacklisted_assets = NULL;
+char *ignored_assets = NULL;
 
 /* Calculate and write source wfp md5 in scan->source_md5 */
 static void calc_wfp_md5(scan_data *scan)
@@ -121,7 +121,7 @@ static matchtype ldb_scan_file(uint8_t *fid) {
 	
 	matchtype match_type = none;
 
-	if (ldb_key_exists(oss_component, fid)) match_type = url;
+	if (ldb_key_exists(oss_url, fid)) match_type = url;
 	else if (ldb_key_exists(oss_file, fid)) match_type = file;
 
 	return match_type;
@@ -167,13 +167,13 @@ bool skip_file_path(char *path, match_data *matches)
 {
 	bool unwanted = false;
 
-	/* Skip blacklisted path */
+	/* Skip unwanted path */
 	if (unwanted_path(path)) unwanted = true;
 
-	/* Skip blacklisted extension */
-	else if (extension(path) && blacklisted_extension(path))
+	/* Skip ignored extension */
+	else if (extension(path) && ignored_extension(path))
 	{
-		scanlog("Blacklisted extension\n");
+		scanlog("Ignored extension\n");
 		unwanted = true;
 	}
 
@@ -211,12 +211,12 @@ void consider_file_record(\
 	int position = -1;
 	if (longer_path_in_set(matches, total_matches, strlen(path), &position)) return;
 
-	/* Check if matched file is a blacklisted extension */
+	/* Check if matched file is a ignored extension */
 	if (extension(path))
 	{
-		if (blacklisted_extension(path))
+		if (ignored_extension(path))
 		{
-			scanlog("Blacklisted extension\n");
+			scanlog("Ignored extension\n");
 			return;
 		}
 	}
@@ -356,7 +356,7 @@ bool ldb_scan(scan_data *scan)
 	if (!scan->preload) get_file_md5(scan->file_path, scan->md5);
 
 	if (extension(scan->file_path))
-		if (blacklisted_extension(scan->file_path)) skip = true;
+		if (ignored_extension(scan->file_path)) skip = true;
 
 	/* Ignore <=1 byte */
 	if (file_size <= MIN_FILE_SIZE) skip = true;

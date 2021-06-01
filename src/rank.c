@@ -24,7 +24,7 @@
 #include "util.h"
 #include "debug.h"
 #include "query.h"
-#include "blacklist.h"
+#include "ignorelist.h"
 #include "limits.h"
 
 /* Determine if a path is to be dismissed */

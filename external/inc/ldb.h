@@ -173,7 +173,7 @@ struct mz_job
 	void *ptr;         // Pointer to temporary data
 	uint64_t ptr_ln;   // Temporary data length
 	uint32_t dup_c;    // Duplicated counter
-	uint32_t bll_c;    // Blacklisted counter
+	uint32_t igl_c;    // Ignored counter
 	uint32_t orp_c;    // Orphan file counter
 	uint32_t exc_c;    // Excluded file counter
 	uint32_t min_c;    // Under MIN_FILE_SIZE file counter

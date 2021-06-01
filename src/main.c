@@ -24,7 +24,7 @@
 #include "scan.h"
 #include "attributions.h"
 #include "debug.h"
-#include "blacklist.h"
+#include "ignorelist.h"
 #include "limits.h"
 #include "debug.h"
 #include "report.h"
@@ -142,12 +142,12 @@ int main(int argc, char **argv)
 	*vendor_hint = 0;
 
 	/* Initialise LDB tables */
-	strcpy(oss_component.db, "oss");
-	strcpy(oss_component.table, "url");
-	oss_component.key_ln = 16;
-	oss_component.rec_ln = 0;
-	oss_component.ts_ln = 2;
-	oss_component.tmp = false;
+	strcpy(oss_url.db, "oss");
+	strcpy(oss_url.table, "url");
+	oss_url.key_ln = 16;
+	oss_url.rec_ln = 0;
+	oss_url.ts_ln = 2;
+	oss_url.tmp = false;
 
 	strcpy(oss_file.db, "oss");
 	strcpy(oss_file.table, "file");
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'b':
-				blacklisted_assets = parse_sbom(optarg, false);
+				ignored_assets = parse_sbom(optarg, false);
 				break;
 
 			case 'c':
@@ -356,7 +356,7 @@ int main(int argc, char **argv)
 	}
 
 	if (sbom) free (sbom);
-	if (blacklisted_assets)  free (blacklisted_assets);
+	if (ignored_assets)  free (ignored_assets);
 
 	return EXIT_SUCCESS;
 }

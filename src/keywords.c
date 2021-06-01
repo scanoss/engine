@@ -20,7 +20,7 @@
  */
 
 #include "keywords.h"
-#include "blacklist.h"
+#include "ignorelist.h"
 #include "limits.h"
 #include "debug.h"
 #include "parse.h"

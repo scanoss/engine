@@ -203,7 +203,7 @@ char component_hint[MAX_FIELD_LN];
 #include "ldb.h"
 
 /* DB tables */
-struct ldb_table oss_component;
+struct ldb_table oss_url;
 struct ldb_table oss_file;
 struct ldb_table oss_wfp;
 
@@ -211,7 +211,7 @@ extern bool first_file;
 extern int max_vulnerabilities;
 
 extern char *sbom;
-extern char *blacklisted_assets;
+extern char *ignored_assets;
 
 /* Prototype declarations */
 int wfp_scan(scan_data *scan);
@@ -220,7 +220,7 @@ matchtype ldb_scan_snippets(scan_data *scan_ptr);
 bool key_find(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);
 void recurse_directory (char *path);
 match_data match_init();
-bool blacklist_match(uint8_t *url_record);
+bool ignored_asset_match(uint8_t *url_record);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
 void scan_data_free(scan_data scan);
 int count_matches(match_data *matches);

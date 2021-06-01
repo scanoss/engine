@@ -50,13 +50,13 @@ char *get_filename(char *md5)
 }
 
 /* Handler function for get_url_record */
-bool ldb_get_first_non_blacklisted(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *) ptr;
 
-	if (datalen) if (!blacklist_match(data + 4))
+	if (datalen) if (!ignored_asset_match(data + 4))
 	{
-		/* Not blacklisted, means copy record and exit */
+		/* Not ignored, means copy record and exit */
 		uint32_write(record, datalen);
 		memcpy(record + 4, data, datalen);
 		record[datalen + 4 + 1] = 0;
@@ -74,7 +74,7 @@ void get_url_record(uint8_t *md5, uint8_t *record)
 	uint32_write(record, 0);
 
 	/* Fetch record */
-	ldb_fetch_recordset(NULL, oss_component, md5, false, ldb_get_first_non_blacklisted, (void *) record);
+	ldb_fetch_recordset(NULL, oss_url, md5, false, ldb_get_first_url_not_ignored, (void *) record);
 
 	/* Erase record length prefix from record */
 	uint32_t recln = uint32_read(record);

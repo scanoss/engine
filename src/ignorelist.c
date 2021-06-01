@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * src/blacklist.c
+ * src/ignorelist.c
  *
- * Blacklisting functions
+ * Ignore/skipping functions
  *
  * Copyright (C) 2018-2021 SCANOSS.COM
  *
@@ -23,8 +23,8 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "blacklist.h"
-#include "blacklist_ext.h"
+#include "ignorelist.h"
+#include "ignored_extensions.h"
 
 /* Returns a pointer to the file extension of "path" */
 char *extension(char *path)
@@ -67,22 +67,22 @@ bool ends_with(char *a, char *b)
 	return true;
 }
 
-/* Returns true when the file "name" ends with a BLACKLISTED_EXTENSIONS[] string */
-bool blacklisted_extension(char *name)
+/* Returns true when the file "name" ends with a IGNORED_EXTENSIONS[] string */
+bool ignored_extension(char *name)
 {
 	int i=0;
-	while (BLACKLISTED_EXTENSIONS[i])
-		if (ends_with(BLACKLISTED_EXTENSIONS[i++], name)) return true;
+	while (IGNORED_EXTENSIONS[i])
+		if (ends_with(IGNORED_EXTENSIONS[i++], name)) return true;
 
 	return false;
 }
 
-/* Returns true when any element in BLACKLISTED_PATHS is found in path */
+/* Returns true when any element in IGNORED_PATHS is found in path */
 bool unwanted_path(char *path)
 {
 	int i=0;
-	while (BLACKLISTED_PATHS[i])
-		if (strstr(path,BLACKLISTED_PATHS[i++]))
+	while (IGNORED_PATHS[i])
+		if (strstr(path,IGNORED_PATHS[i++]))
 			return true;
 
 	return false;
@@ -95,13 +95,13 @@ bool headicmp(char *a, char *b)
 	return true;
 }
 
-/* Returns true when src starts with any of the unwanted BLACKLISTED_HEADER strings */
+/* Returns true when src starts with any of the unwanted IGNORED_HEADER strings */
 bool unwanted_header(char *src)
 {
 	int i=0;
-	while (BLACKLISTED_HEADERS[i])
+	while (IGNORED_HEADERS[i])
 	{
-		if (headicmp(src,BLACKLISTED_HEADERS[i]))
+		if (headicmp(src,IGNORED_HEADERS[i]))
 		{
 			return true;
 		}
@@ -112,7 +112,7 @@ bool unwanted_header(char *src)
 }
 
 /* File paths to be skipped in results */
-char *BLACKLISTED_PATHS[] = {
+char *IGNORED_PATHS[] = {
 	"/.eggs/",
 	"/.git/",
 	"/.github/",
@@ -123,7 +123,7 @@ char *BLACKLISTED_PATHS[] = {
 };
 
 /* Files starting with any of these character sets will be skipped */
-char *BLACKLISTED_HEADERS[] =
+char *IGNORED_HEADERS[] =
 {
 	"{",
 	"[",

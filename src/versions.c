@@ -31,7 +31,7 @@
 #include "debug.h"
 #include "psi.h"
 #include "limits.h"
-#include "blacklist.h"
+#include "ignorelist.h"
 #include "winnowing.h"
 #include "ldb.h"
 
