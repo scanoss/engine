@@ -86,16 +86,6 @@ bool validate_alpha(char *txt)
 	return true;
 }
 
-output_format set_format(char *arg)
-{
-	if (!strcmp(arg, "plain")) return plain;
-	if (!strcmp(arg, "spdx")) return spdx;
-	if (!strcmp(arg, "cyclonedx")) return cyclonedx;
-	printf("Unsupported report format\n");
-	exit(EXIT_FAILURE);
-	return plain;
-}
-
 /* Read flags from /etc/scanoss_flags.cfg */
 uint64_t read_flags()
 {
@@ -163,17 +153,6 @@ int main(int argc, char **argv)
 	oss_wfp.ts_ln = 2;
 	oss_wfp.tmp = false;
 
-	/* Init component list */
-	for (int i = 0; i < CRC_LIST_LEN; i++)
-	{
-		 *component_list[i].vendor = 0;
-		 *component_list[i].component = 0;
-		 *component_list[i].version = 0;
-		 *component_list[i].latest_version = 0;
-		 *component_list[i].license = 0;
-		 *component_list[i].purl = 0;
-	}
-
 	/* Parse arguments */
 	int option;
 	bool invalid_argument = false;
@@ -192,10 +171,6 @@ int main(int argc, char **argv)
 
 		switch (option)
 		{
-			case 'f':
-				report_format = set_format(optarg);
-				break;
-
 			case 's':
 				sbom = parse_sbom(optarg, false);
 				break;

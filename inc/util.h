@@ -50,7 +50,4 @@ uint32_t string_crc32c(char *str);
 /* Searches crc in a crc list */
 bool add_CRC(uint32_t *list, uint32_t crc);
 
-/* Adds a component to component_list */
-bool add_component(match_data *match);
-
 #endif

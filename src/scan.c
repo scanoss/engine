@@ -340,22 +340,25 @@ bool ldb_scan(scan_data *scan)
 {
 	bool skip = false;
 
+	if (unwanted_path(scan->file_path)) skip = true;
+
 	scan->matchmap_size = 0;
 	scan->match_type = none;
 	scan->timer = microseconds_now();
 
 	/* Get file length */
 	uint64_t file_size;
-	if (scan->preload) file_size = atoi(scan->file_size);
-	else file_size = get_file_size(scan->file_path);
-
-	/* Error reading file */
-	if (file_size < 0) ldb_error("Cannot access file");
+	if (!skip)
+	{
+		if (scan->preload) file_size = atoi(scan->file_size);
+		else file_size = get_file_size(scan->file_path);
+		if (file_size < 0) ldb_error("Cannot access file");
+	}
 
 	/* Calculate MD5 hash (if not already preloaded) */
-	if (!scan->preload) get_file_md5(scan->file_path, scan->md5);
+	if (!skip) if (!scan->preload) get_file_md5(scan->file_path, scan->md5);
 
-	if (extension(scan->file_path))
+	if (!skip) if (extension(scan->file_path))
 		if (ignored_extension(scan->file_path)) skip = true;
 
 	/* Ignore <=1 byte */

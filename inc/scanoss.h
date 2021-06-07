@@ -48,6 +48,8 @@
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
+#define API_URL "https://osskb.org/api"
+
 /* Engine configuration flags */
 #define ENGINE_FLAGS_FILE "/var/lib/scanoss/etc/flags"
 #define DISABLE_SNIPPET_MATCHING 1
@@ -66,7 +68,6 @@ extern uint64_t engine_flags;
 extern char SCANOSS_VERSION[7];
 
 typedef enum {none, url, file, snippet} matchtype;
-typedef enum {plain, cyclonedx, spdx, spdx_xml} output_format;
 extern const char *matchtypes[];// = {"none", "url", "file", "snippet"};
 extern const char *license_sources[];// = {"component_declared", "file_spdx_tag", "file_header"};
 extern const char *copyright_sources[];// = {"component_declared", "file_header"};
@@ -102,18 +103,6 @@ typedef struct file_recordset
 	int path_ln;
 	bool external;
 } file_recordset;
-
-typedef struct component_item
-{
-  char purl[MAX_FIELD_LN];
-  char vendor[MAX_FIELD_LN];
-  char component[MAX_FIELD_LN];
-  char version[MAX_FIELD_LN];
-  char latest_version[MAX_FIELD_LN];
-  char license[MAX_FIELD_LN];
-} component_item;
-
-component_item component_list[CRC_LIST_LEN];
 
 typedef struct scan_data
 {
@@ -190,7 +179,6 @@ unsigned char *linemap;
 unsigned char *map;
 int map_rec_len;
 extern bool match_extensions;// = false;
-extern int report_format;// = plain;
 
 /* File tracing -qi */
 uint8_t trace_id[MD5_LEN];

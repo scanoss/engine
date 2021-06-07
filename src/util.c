@@ -169,30 +169,3 @@ bool add_CRC(uint32_t *list, uint32_t crc)
 	}
 	return false;
 }
-
-/* Check if a component is found in component_list (add it if not) */
-bool add_component(match_data *match)
-{
-	char *purl = match->purl;
-	char *vendor = match->vendor;
-	char *component = match->component;
-	char *version = match->version;
-	char *latest_version = match->latest_version;
-
-	/* Init component list */
-	for (int i = 0; i < CRC_LIST_LEN; i++)
-	{
-		if (!strcmp(component_list[i].purl, purl)) return true;
-		if (!*component_list[i].purl)
-		{
-			get_license(*match, component_list[i].license);
-			strcpy(component_list[i].vendor, vendor);
-			strcpy(component_list[i].component, component);
-			strcpy(component_list[i].version, version);
-			strcpy(component_list[i].latest_version, latest_version);
-			strcpy(component_list[i].purl, purl);
-			return false;
-		}
-	}
-	return false;
-}

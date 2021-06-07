@@ -2,7 +2,7 @@
 /*
  * src/report.c
  *
- * Match output support in different formats
+ * Match output support in JSON format
  *
  * Copyright (C) 2018-2021 SCANOSS.COM
  *
@@ -25,86 +25,35 @@
 #include "quality.h"
 #include "cryptography.h"
 #include "vulnerability.h"
-#include "cyclonedx.h"
-#include "spdx.h"
 #include "util.h"
 #include "dependency.h"
 #include "license.h"
 #include "copyright.h"
 #include "limits.h"
 
-int report_format = plain;
 uint64_t engine_flags = 0;
 
 
 /* Open JSON report */
 void json_open()
 {
-	if (quiet) return;
-
-	switch(report_format)
-	{
-		case plain:
-			printf("{\n");
-			break;
-
-		case cyclonedx:
-			cyclonedx_open();
-			break;
-
-		case spdx:
-			spdx_open();
-			break;
-	}
+	if (!quiet) printf("{\n");
 }
 
 /* Close main report */
 void report_close()
 {
-	if (quiet) return;
-
-	switch(report_format)
-	{
-
-		case plain:
-			printf("}\n");
-			break;
-
-		case cyclonedx:
-			print_matches();
-			cyclonedx_close();
-			break;
-
-		case spdx:
-			print_matches();
-			spdx_close();
-			break;
-
-	}
+	if (!quiet) printf("}\n");
 }
 
 void json_open_file(char *filename)
 {    
-	if (quiet) return;
-
-	switch(report_format)
-	{
-		case plain:
-			printf("  \"%s\": [\n", filename);
-			break;
-	}
+	if (!quiet) printf("  \"%s\": [\n", filename);
 }
 
 void json_close_file()
 {
-	if (quiet) return;
-
-	switch(report_format)
-	{
-		case plain:
-			printf("  ]\n");
-			break;
-	}
+	if (!quiet) printf("  ]\n");
 }
 
 /* Add server statistics to JSON */
@@ -124,7 +73,7 @@ void print_server_stats(scan_data *scan)
 /* Return a match=none result */
 void print_json_nomatch(scan_data *scan)
 {
-	if (quiet || report_format != plain) return;
+	if (quiet) return;
 
 	printf("    {\n");
 	printf("      \"id\": \"none\",\n");
@@ -133,9 +82,14 @@ void print_json_nomatch(scan_data *scan)
 	fflush(stdout);
 }
 
-/* Return full match detail */
-void print_json_match_plain(scan_data *scan, match_data match)
+/* Return match details */
+void print_json_match(scan_data *scan, match_data match, int *match_counter)
 {
+	if (quiet) return;
+
+	/* Comma separator */
+	if ((*match_counter)++) printf("  ,\n");
+
 	/* Calculate component/vendor md5 for aggregated data queries */
 	vendor_component_md5(match.vendor, match.component, match.pair_md5);
 
@@ -167,6 +121,7 @@ void print_json_match_plain(scan_data *scan, match_data match)
 
 	char *file_id = md5_hex(match.file_md5);
 	printf("      \"file_hash\": \"%s\",\n", file_id);
+	printf("      \"file_url\": \"%s/file_contents/%s\",\n", API_URL, file_id);
 	free(file_id);
 
 	if (!(engine_flags & DISABLE_DEPENDENCIES))
@@ -208,26 +163,4 @@ void print_json_match_plain(scan_data *scan, match_data match)
 	print_server_stats(scan);
 	printf("    }\n");
 	fflush(stdout);
-}
-
-/* Output contents of component_list in the requested format */
-void print_matches()
-{
-	for (int i = 0; i < CRC_LIST_LEN && *component_list[i].purl; i++)
-	{
-		if (i) printf("  ,\n");
-		if (report_format == cyclonedx) print_json_match_cyclonedx(i);
-		else print_json_match_spdx(i);
-	}
-}
-
-void print_match(scan_data *scan, match_data match, int *match_counter)
-{
-	add_component(&match);
-
-	if (quiet || report_format != plain) return;
-
-	if ((*match_counter)++) if (!quiet) printf("  ,\n");
-
-	print_json_match_plain(scan, match);
 }
