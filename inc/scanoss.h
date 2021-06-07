@@ -61,7 +61,7 @@
 #define DISABLE_QUALITY 64
 #define DISABLE_CRIPTOGRAPHY 128
 #define DISABLE_BEST_MATCH 256
-#define DISABLE_REPORT_OPEN_CLOSE 512
+#define ENABLE_REPORT_IDENTIFIED 512
 
 extern uint64_t engine_flags;
 
@@ -124,8 +124,8 @@ typedef struct scan_data
 	uint8_t *match_ptr; // pointer to matching record in match_map
 	/* comma separated list of matching snippet ids */
 	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1];
-	int snippet_hits;
 	char matched_percent[5];
+	bool identified;
 } scan_data;
 
 typedef struct match_data

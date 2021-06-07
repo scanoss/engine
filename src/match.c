@@ -47,9 +47,6 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 {
 	scan_data *scan = scan_ptr;
 
-	/* Files not matching are only reported with -f plain */
-	if (!matches) return;
-
 	int match_counter = 0;
 
 	flip_slashes(scan->file_path);

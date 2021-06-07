@@ -41,7 +41,7 @@ void json_open()
 }
 
 /* Close main report */
-void report_close()
+void json_close()
 {
 	if (!quiet) printf("}\n");
 }
@@ -95,6 +95,7 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 
 	printf("    {\n");
 	printf("      \"id\": \"%s\",\n", matchtypes[match.type]);
+	printf("      \"status\": \"%s\",\n", scan->identified ? "identified" : "pending");
 	printf("      \"lines\": \"%s\",\n", scan->line_ranges);
 	printf("      \"oss_lines\": \"%s\",\n", scan->oss_ranges);
 
@@ -121,7 +122,13 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 
 	char *file_id = md5_hex(match.file_md5);
 	printf("      \"file_hash\": \"%s\",\n", file_id);
-	printf("      \"file_url\": \"%s/file_contents/%s\",\n", API_URL, file_id);
+
+	/* Output file_url (same as url when match type = url) */
+	if (match.type != url)
+		printf("      \"file_url\": \"%s/file_contents/%s\",\n", API_URL, file_id);
+	else
+		printf("      \"file_url\": \"%s\",\n", match.url);
+
 	free(file_id);
 
 	if (!(engine_flags & DISABLE_DEPENDENCIES))

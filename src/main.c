@@ -299,7 +299,7 @@ int main(int argc, char **argv)
 		scan_data scan = scan_data_init(target);
 
 		/* Open main report structure */
-		if (!(engine_flags & DISABLE_REPORT_OPEN_CLOSE)) json_open();
+		json_open();
 
 		/* Scan directory */
 		if (isdir) recurse_directory(target);
@@ -321,8 +321,7 @@ int main(int argc, char **argv)
 		}
 
 		/* Close main report structure */
-		if (!(engine_flags & DISABLE_REPORT_OPEN_CLOSE))
-			report_close();
+		json_close();
 			
 		/* Free scan data */
 		scan_data_free(scan);
