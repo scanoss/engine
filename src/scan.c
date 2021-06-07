@@ -71,6 +71,7 @@ scan_data scan_data_init(char *target)
 	scan.match_type = none;
 	scan.preload = false;
 	*scan.snippet_ids = 0;
+	scan.identified = false;
 
 	/* Get wfp MD5 hash */
 	if (extension(target)) if (!strcmp(extension(target), "wfp")) calc_wfp_md5(&scan);
@@ -89,6 +90,7 @@ static void scan_data_reset(scan_data *scan)
 	scan->hash_count = 0;
 	scan->match_type = none;
 	*scan->snippet_ids = 0;
+	scan->identified = false;
 }
 
 void scan_data_free(scan_data scan)
@@ -416,9 +418,16 @@ bool ldb_scan(scan_data *scan)
 			if (assets_match(matches[i]))
 			{
 				scanlog("Asset matched\n");
-				if (matches) free(matches);
-				matches = NULL;
-				scan->match_type = none;
+				if (engine_flags & ENABLE_REPORT_IDENTIFIED)
+				{
+					scan->identified = true;
+				}
+				else
+				{
+					if (matches) free(matches);
+					matches = NULL;
+					scan->match_type = none;
+				}
 				break;
 			}
 		}

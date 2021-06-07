@@ -66,6 +66,7 @@ Alternatively, these value can be written in %s\n\
 |   64 | Disable quality (default: enabled)          |\n\
 |  128 | Disable criptography (defalt: enabled)      |\n\
 |  256 | Disable best match only (default: enabled)  |\n\
+|  512 | Report identified files (default: disabled) |\n\
 +------+---------------------------------------------+\n\
 Example: scanoss -F 12 DIRECTORY (scans DIRECTORY disabling license and dependency data)\n\
 \n\
