@@ -26,6 +26,7 @@
 #include "limits.h"
 #include "scanoss.h"
 #include "ldb.h"
+#include "decrypt.h"
 
 /* Set map hits to zero for the given match */
 void clear_hits(uint8_t *match)
@@ -47,6 +48,7 @@ static bool shortest_path_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 	int *shortest = (int *) ptr;
 	if (datalen)
 	{
+		decrypt_data(data, datalen, "file", key, subkey);
 		int depth = path_depth(data, datalen - MD5_LEN);
 		if (depth < 1) return false;
 

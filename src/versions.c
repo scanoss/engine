@@ -34,6 +34,7 @@
 #include "ignorelist.h"
 #include "winnowing.h"
 #include "ldb.h"
+#include "decrypt.h"
 
 void normalise_version(char *version, char *component)
 {
@@ -58,6 +59,8 @@ void clean_versions(match_data *match)
 static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	char *out = ptr;
+
+	decrypt_data(data, datalen, "url", key, subkey);
 
 	char *CSV = calloc(datalen + 1, 1);
 	memcpy(CSV, (char *) data, datalen);
@@ -134,4 +137,3 @@ void add_versions(scan_data *scan, match_data *matches, file_recordset *files, u
 		if (*version) update_version_range(matches, version);
 	}
 }
-

@@ -30,6 +30,7 @@
 #include "url.h"
 #include "file.h"
 #include "rank.h"
+#include "decrypt.h"
 
 bool first_file = true;
 const char *matchtypes[] = {"none", "url", "file", "snippet"};

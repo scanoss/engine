@@ -31,6 +31,7 @@
 #include "scanoss.h"
 #include "limits.h"
 #include "debug.h"
+#include "decrypt.h"
 
 bool is_file(char *path)
 {
@@ -132,6 +133,9 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+
+	/* Decrypt data */
+	decrypt_data(raw_data, datalen, "file", key, subkey);
 
 	/* Copy data to memory */
 	file_recordset *files = ptr;

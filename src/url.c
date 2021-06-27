@@ -25,10 +25,13 @@
 #include "limits.h"
 #include "util.h"
 #include "snippets.h"
+#include "decrypt.h"
 
 bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen && datalen >= MAX_PATH) return false;
+
+	decrypt_data(raw_data, datalen, "url", key, subkey);
 
 	uint8_t data[MAX_PATH] = "\0";
 	memcpy(data, raw_data, datalen);

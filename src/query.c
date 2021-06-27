@@ -25,6 +25,7 @@
 #include "limits.h"
 #include "ldb.h"
 #include "scanoss.h"
+#include "decrypt.h"
 
 /* Obtain the first file name for the given file MD5 hash */
 char *get_filename(char *md5)
@@ -44,6 +45,9 @@ char *get_filename(char *md5)
 	{
 		memmove(record, record + 4, recln);
 		record[recln] = 0;
+
+		/* Decrypt data */
+		decrypt_data(record, recln, "file", md5bin, md5bin + LDB_KEY_LN);
 	}
 
 	return (char *)record;
@@ -52,6 +56,8 @@ char *get_filename(char *md5)
 /* Handler function for get_url_record */
 bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
+	decrypt_data(data, datalen, "url", key, subkey);
+
 	uint8_t *record = (uint8_t *) ptr;
 
 	if (datalen) if (!ignored_asset_match(data + 4))
@@ -65,7 +71,6 @@ bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln,
 
 	return false;
 }
-
 
 /* Obtain the first available component record for the given MD5 hash */
 void get_url_record(uint8_t *md5, uint8_t *record)
@@ -92,8 +97,13 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	long *age = (long *) ptr;
 
+	decrypt_data(data, datalen, "purl", key, subkey);
+
 	/* Expect at least a date*/
 	if (datalen < 9) return false;
+
+	/* Ignore purl relation records */
+	if (!memcmp(data, "pkg:", 4)) return false;
 
 	/* Extract created date (1st CSV field) from popularity record */
 	char date[MAX_FIELD_LN] = "\0";
@@ -141,18 +151,18 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 /* Return the age of a component in seconds */
 int get_component_age(uint8_t *md5)
 {
-	/* Define popularity table */
-	struct ldb_table popularity;
-	strcpy(popularity.db, "oss");
-	strcpy(popularity.table, "popularity");
-	popularity.key_ln = 16;
-	popularity.rec_ln = 0;
-	popularity.ts_ln = 2;
-	popularity.tmp = false;
+	/* Define purl table */
+	struct ldb_table purl;
+	strcpy(purl.db, "oss");
+	strcpy(purl.table, "purl");
+	purl.key_ln = 16;
+	purl.rec_ln = 0;
+	purl.ts_ln = 2;
+	purl.tmp = false;
 
 	/* Fetch record */
 	long age = 0;
-	ldb_fetch_recordset(NULL, popularity, md5, false, handle_get_component_age, &age);
+	ldb_fetch_recordset(NULL, purl, md5, false, handle_get_component_age, &age);
 
 	return age;
 }

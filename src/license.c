@@ -30,6 +30,7 @@
 #include "parse.h"
 #include "osadl_metadata.h"
 #include "license_translation.h"
+#include "decrypt.h"
 
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
 
@@ -158,6 +159,8 @@ void print_osadl_license_data(char *license)
 
 bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
+	decrypt_data(data, datalen, "license", key, subkey);
+
 	char *CSV = calloc(datalen + 1, 1);
 	memcpy(CSV, (char *) data, datalen);
 
@@ -170,6 +173,7 @@ bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	match_data *match = ptr;
+	decrypt_data(data, datalen, "license", key, subkey);
 
 	char *CSV  = calloc(datalen + 1, 1);
 	memcpy(CSV, data, datalen);
