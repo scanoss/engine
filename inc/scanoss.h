@@ -148,6 +148,7 @@ typedef struct match_data
 	uint32_t crclist[CRC_LIST_LEN];
 	int vulnerabilities;
 	bool selected;
+	bool first_record;
 	bool snippet_to_component;
 	scan_data *scandata;
 } match_data;
