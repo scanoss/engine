@@ -144,6 +144,7 @@ typedef struct match_data
 	uint8_t file_md5[MD5_LEN];
 	uint8_t url_md5[MD5_LEN];
 	uint8_t pair_md5[MD5_LEN];
+	uint8_t purl_md5[MD5_LEN];
 	uint32_t crclist[CRC_LIST_LEN];
 	int vulnerabilities;
 	bool selected;
@@ -158,6 +159,7 @@ typedef struct component_name_rank
 	char component[MAX_FIELD_LN];
 	char purl[MAX_FIELD_LN];
 	uint8_t url_id[MD5_LEN];
+	uint8_t purl_md5[MD5_LEN];
 	char url_record[MAX_FILE_PATH];
 	char file[MAX_FILE_PATH];
 	long score;
@@ -172,6 +174,7 @@ typedef struct path_ranking
 	char component[MAX_FIELD_LN];
 	char vendor[MAX_FIELD_LN];
 	char purl[MAX_FIELD_LN];
+	uint8_t purl_md5[MD5_LEN];
 } path_ranking;
 
 long microseconds_start;

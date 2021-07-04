@@ -109,6 +109,7 @@ match_data match_init()
 	match.selected = false;
 	memset(match.url_md5, 0, MD5_LEN);
 	memset(match.file_md5, 0, MD5_LEN);
+	memset(match.purl_md5, 0, MD5_LEN);
 	return match;
 }
 /* Add all files in recordset to matches */
@@ -179,6 +180,8 @@ match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 	extract_csv(match.release_date, (char *) url_record, 4, sizeof(match.release_date));
 	extract_csv(match.license,      (char *) url_record, 5, sizeof(match.license));
 	extract_csv(match.purl,         (char *) url_record, 6, sizeof(match.purl));
+	MD5((uint8_t *)match.purl, strlen(match.purl), match.purl_md5);
+
 	extract_csv(match.url,          (char *) url_record, 7, sizeof(match.url));
 	strcpy(match.latest_version, match.version);
 
@@ -276,6 +279,7 @@ void add_match(int position, match_data match, match_data *matches, bool compone
 		strcpy(matches[n].release_date, match.release_date);
 		memcpy(matches[n].url_md5, match.url_md5, MD5_LEN);
 		memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
+		memcpy(matches[n].purl_md5, match.purl_md5, MD5_LEN);
 		matches[n].path_ln = match.path_ln;
 		matches[n].selected = match.selected;
 	}

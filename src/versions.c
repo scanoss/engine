@@ -129,7 +129,7 @@ void get_purl_version(char *version, char *purl, uint8_t *file_id)
 /* Add version range to first match */
 void add_versions(scan_data *scan, match_data *matches, file_recordset *files, uint32_t records)
 {
-	/* Recurse each record from the wfp table */
+	/* Recurse each record */
 	for (int n = 0; n < records; n++)
 	{
 		char version[MAX_ARGLN] = "\0";

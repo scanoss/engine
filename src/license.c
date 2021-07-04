@@ -41,8 +41,14 @@ void clean_license(char *license)
 	char byte[2] = "\0\0";
 	while (*c)
 	{
+		/* Only first word is kept */
+		if (*c == ' ')
+		{
+			*c = 0;
+			break;
+		}
 		*byte = *c;
-		if (!isalnum(*byte) && !strstr(" -+;:.", byte))
+		if (!isalnum(*byte) && !strstr("-+;:.", byte))
 			memmove(c, c + 1, strlen(c));
 		else c++;
 	}
