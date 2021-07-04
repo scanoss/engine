@@ -206,7 +206,9 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 	if (!dup && *license && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
 	{
-		if (iteration) printf(",\n"); else printf("\n");
+		if (!match->first_record) printf(",\n"); else printf("\n");
+		match->first_record = false;
+
 		printf("        {\n");
 		printf("          \"name\": \"%s\",\n", license);
 		oasdl_license_data(license);
@@ -277,6 +279,8 @@ void print_licenses(match_data match)
 	/* Look for component or file license */
 	else if (ldb_table_exists("oss", "license"))
 	{
+		match.first_record = true;
+
 		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_licenses_item, &match);
 		if (records) scanlog("File license returns hits\n");
 		if (!records)
