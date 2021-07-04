@@ -151,6 +151,8 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 /* Return the age of a component in seconds */
 int get_component_age(uint8_t *md5)
 {
+	if (!md5) return 0;
+
 	/* Define purl table */
 	struct ldb_table purl;
 	strcpy(purl.db, "oss");

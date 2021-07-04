@@ -90,6 +90,8 @@ void update_component_rank(\
 component_name_rank *component_rank,
 char *vendor,
 char *component,
+char *purl,
+uint8_t *purl_md5,
 char *path,
 uint8_t *url_id,
 char *url_record)
@@ -103,9 +105,16 @@ char *url_record)
 			strcpy(component_rank[i].component, component);
 			strcpy(component_rank[i].file, path);
 			strcpy(component_rank[i].url_record, url_record);
+			strcpy(component_rank[i].purl, purl);
+
+			if (purl_md5) memcpy(component_rank[i].purl_md5, purl_md5, MD5_LEN);
+			else memset(component_rank[i].purl_md5, 0, MD5_LEN);
+
 			if (url_id) memcpy(component_rank[i].url_id, url_id, MD5_LEN);
+			else memset(component_rank[i].url_id, 0, MD5_LEN);
+
 			component_rank[i].score++;
-			component_rank[i].age = component_age(vendor, component);
+			component_rank[i].age = get_component_age(purl_md5);
 			return;
 		}
 		bool vendor_ok = false;
@@ -155,17 +164,6 @@ void get_external_component_name_from_path(char *file_path, char *component)
 	}
 }
 
-/* Returns the component age for a vendor/component */
-long component_age(char *vendor, char *component)
-{
-	if (!*vendor || !*component) return 0;
-
-	uint8_t pair_md5[16] = "\0";
-	vendor_component_md5(vendor, component, pair_md5);
-	return get_component_age(pair_md5);
-}
-
-
 /* Write contents of component_rank to log file */
 void log_component_ranking(component_name_rank *component_rank)
 {
@@ -175,11 +173,10 @@ void log_component_ranking(component_name_rank *component_rank)
 	for (int i = 0; i < rank_items; i++)
 	{
 		if (!*component_rank[i].component) break;
-		scanlog("component_rank #%02d= %s/%s, score = %ld, age = %ld\n",\
+		scanlog("component_rank #%02d= %s, score = %ld, age = %ld\n",\
 				i,\
-				component_rank[i].vendor,\
-				component_rank[i].component,\
-				component_rank[i].score, component_age(component_rank[i].vendor,component_rank[i].component));
+				component_rank[i].purl,\
+				component_rank[i].score, get_component_age(component_rank[i].purl_md5));
 	}
 }
 
@@ -209,7 +206,7 @@ void external_component_hint_in_path(file_recordset *files, int records, char *h
 		if (*hint)
 		{
 			/* Add component to rank */
-			update_component_rank(component_rank, "", hint, "", NULL, "");
+			update_component_rank(component_rank, "", hint, "", NULL, "", NULL, "");
 			files[i].external = true;
 			found = true;
 		}
@@ -271,6 +268,8 @@ void collect_shortest_paths(\
 		{
 			*path_rank[free].vendor = 0;
 			*path_rank[free].component = 0;
+			*path_rank[free].purl = 0;
+			memset(path_rank[free].purl_md5, 0, MD5_LEN);
 			path_rank[free].score = files[i].path_ln;
 			path_rank[free].pathid = i;
 
@@ -343,10 +342,15 @@ bool select_paths_matching_component_names_in_rank(\
 			if (!skip)
 			{
 				*path_rank[i].component = 0;
-				/* Fetch vendor and component name */
+				*path_rank[i].vendor = 0;
+				*path_rank[i].purl = 0;
+
+				/* Fetch vendor, component name and purl */
 				get_url_record(files[path_rank[i].pathid].url_id, url_rec);
 				extract_csv(path_rank[i].vendor, (char *) url_rec, 1, sizeof(path_rank[0].vendor));
 				extract_csv(path_rank[i].component, (char *) url_rec, 2, sizeof(path_rank[0].component));
+				extract_csv(path_rank[i].purl, (char *) url_rec, 6, sizeof(path_rank[0].purl));
+				MD5((uint8_t *)path_rank[i].purl, strlen(path_rank[i].purl), path_rank[i].purl_md5);
 
 				/* If the path starts with the component name, add it to the rank */
 				if (stristart(path_rank[i].component, files[path_rank[i].pathid].path))
@@ -355,6 +359,8 @@ bool select_paths_matching_component_names_in_rank(\
 							component_rank,\
 							path_rank[i].vendor,\
 							path_rank[i].component,\
+							path_rank[i].purl,\
+							path_rank[i].purl_md5,\
 							files[path_rank[i].pathid].path,\
 							files[path_rank[i].pathid].url_id,\
 							(char *) url_rec);
@@ -381,8 +387,7 @@ int fill_component_age(component_name_rank *component_rank)
 	/* Get age info for selected components */
 	for (int i = 0; i < rank_items; i++)
 	{
-		component_rank[i].score = component_age(\
-				component_rank[i].vendor, component_rank[i].component);
+		component_rank[i].score = get_component_age(component_rank[i].purl_md5);
 
 		if (component_rank[i].score > oldest)
 		{
@@ -478,6 +483,8 @@ void init_path_ranking(path_ranking *path_rank)
 		path_rank[i].score = 0;
 		*path_rank[i].vendor = 0;
 		*path_rank[i].component = 0;
+		*path_rank[i].purl = 0;
+		memset(path_rank[i].purl_md5, 0, MD5_LEN);
 	}
 }
 
@@ -571,15 +578,19 @@ int seek_component_hint_in_path(\
 		{
 			/* Fetch vendor and component name */
 			get_url_record(files[i].url_id, url_rec);
-			char vendor[64] = "\0";
-			char component[64] = "\0";
-			extract_csv(vendor, (char *) url_rec, 1, 64);
-			extract_csv(component, (char *) url_rec, 2, 64);
+			char vendor[MAX_ARGLN + 1] = "\0";
+			char component[MAX_ARGLN + 1] = "\0";
+			char purl[MAX_ARGLN + 1] = "\0";
+			extract_csv(vendor, (char *) url_rec, 1, MAX_ARGLN);
+			extract_csv(component, (char *) url_rec, 2, MAX_ARGLN);
+			extract_csv(purl, (char *) url_rec, 2, MAX_ARGLN);
+			uint8_t purl_md5[MD5_LEN];
+			MD5((uint8_t *)purl, strlen(purl), purl_md5);
 
 			/* If the path starts with the component name, add it to the rank */
 			if (stristart(component, files[i].path))
 			{
-				update_component_rank(component_rank, vendor, component, files[i].path, files[i].url_id, (char *) url_rec);
+				update_component_rank(component_rank, vendor, component, purl, purl_md5, files[i].path, files[i].url_id, (char *) url_rec);
 				hits = true;
 			}
 		}
@@ -611,17 +622,21 @@ int seek_component_hint_in_path_start(\
 	/* Walk files, adding to rank those starting with its component name */
 	for (int i = 0; i < records; i++)
 	{
-		/* Fetch vendor and component name */
+		/* Fetch vendor, component and purl */
 		get_url_record(files[i].url_id, url_rec);
-		char vendor[64] = "\0";
-		char component[64] = "\0";
-		extract_csv(vendor, (char *) url_rec, 1, 64);
-		extract_csv(component, (char *) url_rec, 2, 64);
+		char vendor[MAX_ARGLN + 1] = "\0";
+		char component[MAX_ARGLN + 1] = "\0";
+		char purl[MAX_ARGLN + 1] = "\0";
+		extract_csv(vendor, (char *) url_rec, 1, MAX_ARGLN);
+		extract_csv(component, (char *) url_rec, 2, MAX_ARGLN);
+		extract_csv(purl, (char *) url_rec, 2, MAX_ARGLN);
+		uint8_t purl_md5[MD5_LEN];
+		MD5((uint8_t *)purl, strlen(purl), purl_md5);
 
 		/* If the path starts with the component name, add it to the rank */
 		if (stristart(component, files[i].path))
 		{
-			update_component_rank(component_rank, vendor, component, files[i].path, files[i].url_id, (char *) url_rec);
+			update_component_rank(component_rank, vendor, component, purl, purl_md5, files[i].path, files[i].url_id, (char *) url_rec);
 			hits = true;
 		}
 	}
@@ -654,7 +669,7 @@ bool select_best_match(match_data *matches)
 	{
 		if (stricmp(matches[i].component, component_hint))
 		{
-			int age = component_age(matches[i].vendor, matches[i].component);
+			int age = get_component_age(matches[i].purl_md5);
 			if (age > oldest)
 			{
 				oldest = age;
