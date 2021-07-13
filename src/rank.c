@@ -153,7 +153,7 @@ void get_external_component_name_from_path(char *file_path, char *component)
 	{
 		bool is_indicator = is_external_indicator(token);
 		token = strtok(NULL, s);
-		if (is_indicator)
+		if (token && is_indicator)
 		{
 			if (strlen(token) < MAX_FIELD_LN)
 			{
