@@ -68,12 +68,12 @@ extern uint64_t engine_flags;
 extern char SCANOSS_VERSION[7];
 
 typedef enum {none, url, file, snippet} matchtype;
-extern const char *matchtypes[];// = {"none", "url", "file", "snippet"};
-extern const char *license_sources[];// = {"component_declared", "file_spdx_tag", "file_header"};
-extern const char *copyright_sources[];// = {"component_declared", "file_header", "license_file"};
-extern const char *vulnerability_sources[];// = {"nvd", "github_advisories"};
-extern const char *quality_sources[];// = {"best_practices"};
-extern const char *dependency_sources[];// = {"component_declared"};
+extern const char *matchtypes[];
+extern const char *license_sources[];
+extern const char *copyright_sources[];
+extern const char *vulnerability_sources[];
+extern const char *quality_sources[];
+extern const char *dependency_sources[];
 
 typedef struct keywords
 {
