@@ -94,7 +94,7 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	vendor_component_md5(match.vendor, match.component, match.pair_md5);
 
 	printf("    {\n");
-	printf("      \"id\": \"%s\",\n", matchtypes[match.type]);
+	printf("      \"id\": \"%s\",\n", matchtypes[match.type == 1 ? 2 : match.type]);
 	printf("      \"status\": \"%s\",\n", scan->identified ? "identified" : "pending");
 	printf("      \"lines\": \"%s\",\n", scan->line_ranges);
 	printf("      \"oss_lines\": \"%s\",\n", scan->oss_ranges);
@@ -114,7 +114,7 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 
 	printf("      \"url\": \"%s\",\n", match.url);
 	printf("      \"release_date\": \"%s\",\n", match.release_date);
-	printf("      \"file\": \"%s\",\n", match.file);
+	printf("      \"file\": \"%s\",\n", match.type == 1 ? basename(match.url) : match.file);
 
 	char *url_id = md5_hex(match.url_md5);
 	printf("      \"url_hash\": \"%s\",\n", url_id);
