@@ -169,3 +169,18 @@ bool add_CRC(uint32_t *list, uint32_t crc)
 	}
 	return false;
 }
+
+/* Case insensitive string comparison */
+bool strn_icmp(char *a, char *b, int len)
+{
+    for (int i = 0; i < len; i++) if (tolower(a[i]) != tolower(b[i])) return false;
+    return true;
+}
+
+/* Check if a string starts with the given start string */
+bool starts_with(char *str, char *start)
+{
+    int len = strlen(start);
+    if (strn_icmp(str, start, len)) return true;
+    return false;
+}

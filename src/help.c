@@ -22,7 +22,7 @@
 #include "help.h"
 #include "scanoss.h"
 
-char SCANOSS_VERSION[7] = "4.2.3";
+char SCANOSS_VERSION[7] = "4.2.4";
 
 void help ()
 {
@@ -67,6 +67,7 @@ Alternatively, these value can be written in %s\n\
 |  128 | Disable criptography (defalt: enabled)      |\n\
 |  256 | Disable best match only (default: enabled)  |\n\
 |  512 | Report identified files (default: disabled) |\n\
+| 1024 | Enable download_url (default: disabled)     |\n\
 +------+---------------------------------------------+\n\
 Example: scanoss -F 12 DIRECTORY (scans DIRECTORY disabling license and dependency data)\n\
 \n\

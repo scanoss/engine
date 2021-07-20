@@ -101,6 +101,7 @@ match_data match_init()
 	*match.version = 0;
 	*match.latest_version = 0;
 	*match.url = 0;
+	*match.main_url = 0;
 	*match.file = 0;
 	*match.release_date = 0;
 	*match.license = 0;
