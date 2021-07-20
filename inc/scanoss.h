@@ -62,6 +62,7 @@
 #define DISABLE_CRIPTOGRAPHY 128
 #define DISABLE_BEST_MATCH 256
 #define ENABLE_REPORT_IDENTIFIED 512
+#define ENABLE_DOWNLOAD_URL 1024
 
 extern uint64_t engine_flags;
 
@@ -137,6 +138,7 @@ typedef struct match_data
 	char release_date[MAX_FIELD_LN];
 	char latest_version[MAX_FIELD_LN];
 	char purl[MAX_FIELD_LN];
+	char main_url[MAX_FIELD_LN];
 	char license[MAX_FIELD_LN];
 	char url[MAX_FILE_PATH];
 	char file[MAX_FILE_PATH];

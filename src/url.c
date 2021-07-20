@@ -26,6 +26,7 @@
 #include "util.h"
 #include "snippets.h"
 #include "decrypt.h"
+#include "ignorelist.h"
 
 bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
@@ -56,3 +57,35 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	return false;
 }
 
+/* Build a component URL from the provided PURL schema and actual URL */
+bool build_main_url(match_data *match, char *schema, char *url, bool fixed)
+{
+	if (starts_with(match->purl, schema))
+	{
+		strcpy(match->main_url, url);
+		if (!fixed) strcat(match->main_url, strstr(match->purl, "/"));
+		return true;
+	}
+	return false;
+}
+
+/* Calculates a main project URL from the PURL */
+void fill_main_url(match_data *match)
+{
+	/* URL translations */
+	if (build_main_url(match, "pkg:github/", "https://github.com", false)) return;
+	if (build_main_url(match, "pkg:npm/", "https://www.npmjs.com/package", false)) return;
+	if (build_main_url(match, "pkg:npm/", "https://www.npmjs.com/package", false)) return;
+	if (build_main_url(match, "pkg:maven/", "https://mvnrepository.com/artifact", false)) return;
+	if (build_main_url(match, "pkg:pypi/", "https://pypi.org/project", false)) return;
+	if (build_main_url(match, "pkg:nuget/", "https://www.nuget.org/packages", false)) return;
+	if (build_main_url(match, "pkg:pypi/", "https://pypi.org/project", false)) return;
+	if (build_main_url(match, "pkg:sourceforge/", "https://sourceforge.net/projects", false)) return;
+	if (build_main_url(match, "pkg:gem/", "https://rubygems.org/gems/allowable", false)) return;
+	if (build_main_url(match, "pkg:gitee/", "https://gitee.com", false)) return;
+	if (build_main_url(match, "pkg:gitlab/", "https://gitlab.com", false)) return;
+
+	/* Fixed, direct replacements */
+	if (build_main_url(match, "pkg:kernel/", "https://www.kernel.org", true)) return;
+	if (build_main_url(match, "pkg:angular/", "https://angular.io", true)) return;
+}

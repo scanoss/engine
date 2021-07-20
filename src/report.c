@@ -30,6 +30,7 @@
 #include "license.h"
 #include "copyright.h"
 #include "limits.h"
+#include "url.h"
 
 uint64_t engine_flags = 0;
 
@@ -93,6 +94,9 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	/* Calculate component/vendor md5 for aggregated data queries */
 	vendor_component_md5(match.vendor, match.component, match.pair_md5);
 
+	/* Calculate main URL */
+	fill_main_url(&match);
+
 	printf("    {\n");
 	printf("      \"id\": \"%s\",\n", matchtypes[match.type == 1 ? 2 : match.type]);
 	printf("      \"status\": \"%s\",\n", scan->identified ? "identified" : "pending");
@@ -112,7 +116,12 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	printf("      \"version\": \"%s\",\n", match.version);
 	printf("      \"latest\": \"%s\",\n", match.latest_version);
 
-	printf("      \"url\": \"%s\",\n", match.url);
+	printf("      \"url\": \"%s\",\n", *match.main_url ? match.main_url : match.url);
+
+	/* Print (optional download_url */
+	if (engine_flags & ENABLE_DOWNLOAD_URL)
+	printf("      \"download_url\": \"%s\",\n", match.url);
+
 	printf("      \"release_date\": \"%s\",\n", match.release_date);
 	printf("      \"file\": \"%s\",\n", match.type == 1 ? basename(match.url) : match.file);
 
