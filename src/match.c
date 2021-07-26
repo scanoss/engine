@@ -366,7 +366,7 @@ match_data *load_matches(scan_data *scan)
 
 		float percent = (hits * 100) / scan->total_lines;
 		if (hits) matched_percent = floor(percent);
-		if (matched_percent > 100) matched_percent = 100;
+		if (matched_percent > 99) matched_percent = 99;
 		if (matched_percent < 1) matched_percent = 1;
 
 		scanlog("compile_ranges returns %d hits\n", hits);
