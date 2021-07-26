@@ -125,7 +125,7 @@ typedef struct scan_data
 	uint8_t *match_ptr; // pointer to matching record in match_map
 	/* comma separated list of matching snippet ids */
 	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1];
-	char matched_percent[5];
+	char matched_percent[MAX_FIELD_LN];
 	bool identified;
 } scan_data;
 
