@@ -209,7 +209,7 @@ extern char *ignored_assets;
 
 /* Prototype declarations */
 int wfp_scan(scan_data *scan);
-bool ldb_scan(scan_data *scan);
+void ldb_scan(scan_data *scan);
 matchtype ldb_scan_snippets(scan_data *scan_ptr);
 bool key_find(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);
 void recurse_directory (char *path);
