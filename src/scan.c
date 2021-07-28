@@ -287,7 +287,7 @@ int wfp_scan(scan_data *scan)
 			/* Extract fields from file record */
 			strcpy((char *)rec, line + tagln + (MD5_LEN * 2) + 1);
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
-			extract_csv(scan->file_path, (char *)rec, 2, LDB_MAX_REC_LN);
+			strcpy(scan->file_path, field_n(2, (char *)rec));
 
 			read_data = true;
 		}

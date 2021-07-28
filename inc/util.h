@@ -52,4 +52,7 @@ bool add_CRC(uint32_t *list, uint32_t crc);
 
 /* Check if a string starts with the given start string */
 bool starts_with(char *str, char *start);
+
+/* Returns a pointer to field n in data */
+char *field_n(int n, char *data);
 #endif

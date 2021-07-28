@@ -30,6 +30,14 @@
 #include "ldb.h"
 #include "crc32c.h"
 
+/* Returns a pointer to field n in data */
+char *field_n(int n, char *data)
+{
+  int commas = 0;
+  while (*data) if (*data++ == ',') if (++commas == n-1) return data;
+  return NULL;
+}
+
 /* Case insensitive string start comparison,
 	returns true if a starts with b or viceversa */
 bool stristart(char *a, char *b)
