@@ -5,7 +5,6 @@
 
 scan_data scan_data_init();
 char *parse_sbom(char *filepath, bool load_vendor);
-uint8_t *biggest_snippet(scan_data *scan);
 int get_component_age(uint8_t *md5);
 bool component_hint_matches_path(file_recordset *files, int records, char *component_hint);
 void external_component_hint_in_path(file_recordset *files, int records, char *hint, component_name_rank *component_rank);

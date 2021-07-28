@@ -338,7 +338,7 @@ int wfp_scan(scan_data *scan)
 /* Scans a file and returns JSON matches via STDOUT
    scan structure can be already preloaded (.wfp scan)
    otherwise, it will be loaded here (scanning a physical file) */
-bool ldb_scan(scan_data *scan)
+void ldb_scan(scan_data *scan)
 {
 	bool skip = false;
 
@@ -402,7 +402,7 @@ bool ldb_scan(scan_data *scan)
 	/* Compile matches */
 	match_data *matches = compile_matches(scan);
 
-	if (scan->match_type != none)
+	if (matches && scan->match_type != none)
 	{
 		int total_matches = count_matches(matches);
 
@@ -446,5 +446,4 @@ bool ldb_scan(scan_data *scan)
 
 	if (matches) free(matches);
 	scan_data_reset(scan);
-	return true;
 }

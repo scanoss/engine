@@ -5,7 +5,6 @@
 
 scan_data scan_data_init();
 char *parse_sbom(char *filepath, bool load_vendor);
-uint8_t *biggest_snippet(scan_data *scan);
 int get_component_age(uint8_t *md5);
 void consider_file_record(\
 		uint8_t *component_id,\
