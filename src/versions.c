@@ -43,7 +43,8 @@ void normalise_version(char *version, char *component)
 		memmove(version, version + strlen(component), strlen(version + strlen(component)) + 1);
 
 	/* Remove unwanted leading characters from the version */
-	if (*version == 'v' || *version =='r' || !isalnum(*version)) memmove(version, version + 1, strlen(version) + 1);
+	if (((*version == 'v' || *version =='r') && isdigit(version[1]))\
+		|| !isalnum(*version)) memmove(version, version + 1, strlen(version) + 1);
 
 	/* Remove trailing ".orig" from version */
 	char *orig = strstr(version, ".orig");
