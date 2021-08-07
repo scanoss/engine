@@ -134,7 +134,7 @@ void add_versions(scan_data *scan, match_data *matches, file_recordset *files, u
 	for (int n = 0; n < records; n++)
 	{
 		char version[MAX_ARGLN] = "\0";
-		if (!files[n].external) get_purl_version(version, matches[0].purl, files[n].url_id);
+		if (!files[n].external) get_purl_version(version, matches[0].purl[0], files[n].url_id);
 		if (*version) update_version_range(matches, version);
 	}
 }
