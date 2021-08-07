@@ -60,10 +60,10 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 /* Build a component URL from the provided PURL schema and actual URL */
 bool build_main_url(match_data *match, char *schema, char *url, bool fixed)
 {
-	if (starts_with(match->purl, schema))
+	if (starts_with(match->purl[0], schema))
 	{
 		strcpy(match->main_url, url);
-		if (!fixed) strcat(match->main_url, strstr(match->purl, "/"));
+		if (!fixed) strcat(match->main_url, strstr(match->purl[0], "/"));
 		return true;
 	}
 	return false;
@@ -88,4 +88,85 @@ void fill_main_url(match_data *match)
 	/* Fixed, direct replacements */
 	if (build_main_url(match, "pkg:kernel/", "https://www.kernel.org", true)) return;
 	if (build_main_url(match, "pkg:angular/", "https://angular.io", true)) return;
+}
+
+bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+{
+	match_data *match = (match_data *) ptr;
+
+	decrypt_data(data, datalen, "purl", key, subkey);
+
+	/* Only use purl relation records */
+	if (memcmp(data, "pkg:", 4)) return false;
+
+	data[datalen] = 0;
+
+	/* Save purl record */
+	bool added = false;
+	for (int i = 0; i < MAX_PURLS; i++)
+	{
+		/* Add to end of list */
+		if (!*match->purl[i])
+		{
+			strcpy(match->purl[i], (char *)data);
+			MD5(data, strlen((char *)data), match->purl_md5[i]);
+			added = true;
+			break;
+		}
+		/* Already exists, exit */
+		if (!strcmp(match->purl[i], (char *)data)) 
+		{
+			return false;
+		}
+	}
+
+	/* List is full, end recordset loop */
+	if (!added) return true;
+
+	return false;
+}
+
+/* Fetch related purls */
+void fetch_related_purls(match_data *match)
+{
+	/* Define purl table */
+	struct ldb_table purl;
+	strcpy(purl.db, "oss");
+	strcpy(purl.table, "purl");
+	purl.key_ln = 16;
+	purl.rec_ln = 0;
+	purl.ts_ln = 2;
+	purl.tmp = false;
+
+	/* Fill purls */
+	for (int i = 0; i < MAX_PURLS; i++)
+		ldb_fetch_recordset(NULL, purl, match->purl_md5[i], false, handle_purl_record, match);
+
+	/* Put Github purl first */
+	if (memcmp(match->purl[0], "pkg:github", 10))
+	{
+		/* Walk purls */
+		for (int i = 1; i < MAX_PURLS; i++)
+		{
+			if (!*match->purl[i]) break;
+
+			/* Swap with first purl */
+			if (!memcmp(match->purl[i], "pkg:github", 10))
+			{
+				/* Save current to tmp */
+				char tmp_purl[MAX_FIELD_LN + 1];
+				char tmp_purl_md5[MD5_LEN];
+				strcpy(tmp_purl, match->purl[i]);
+				memcpy(tmp_purl_md5, match->purl_md5[i], MD5_LEN);
+
+				/* Replace current with first */
+				strcpy(match->purl[i], match->purl[0]);
+				memcpy(match->purl_md5[i], match->purl_md5[0], MD5_LEN);
+
+				/* Replace first with tmp */
+				strcpy(match->purl[0], tmp_purl);
+				memcpy(match->purl_md5[0], tmp_purl_md5, MD5_LEN);
+			}
+		}
+	}
 }

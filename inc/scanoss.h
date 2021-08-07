@@ -63,6 +63,7 @@
 #define DISABLE_BEST_MATCH 256
 #define ENABLE_REPORT_IDENTIFIED 512
 #define ENABLE_DOWNLOAD_URL 1024
+#define MAX_PURLS 10
 
 extern uint64_t engine_flags;
 
@@ -137,7 +138,6 @@ typedef struct match_data
 	char version[MAX_FIELD_LN];
 	char release_date[MAX_FIELD_LN];
 	char latest_version[MAX_FIELD_LN];
-	char purl[MAX_FIELD_LN];
 	char main_url[MAX_FIELD_LN];
 	char license[MAX_FIELD_LN];
 	char url[MAX_FILE_PATH];
@@ -145,8 +145,12 @@ typedef struct match_data
 	int  path_ln;
 	uint8_t file_md5[MD5_LEN];
 	uint8_t url_md5[MD5_LEN];
-	uint8_t pair_md5[MD5_LEN];
-	uint8_t purl_md5[MD5_LEN];
+	uint8_t pair_md5[MD5_LEN]; // DEPRECATED
+
+	/* PURL array */
+	char purl[MAX_PURLS][MAX_FIELD_LN + 1];
+	uint8_t purl_md5[MAX_PURLS][MD5_LEN];
+
 	uint32_t crclist[CRC_LIST_LEN];
 	int vulnerabilities;
 	bool selected;

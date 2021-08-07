@@ -83,6 +83,19 @@ void print_json_nomatch(scan_data *scan)
 	fflush(stdout);
 }
 
+void print_purl_array(match_data match)
+{
+	printf("      \"purl\": [");
+	for (int i = 0; i < MAX_PURLS; i++)
+	{
+		if (*match.purl[i]) {
+			printf("\n        \"%s\"", match.purl[i]);
+			if (i < (MAX_PURLS - 1)) if (*match.purl[i + 1]) printf(",");
+		} else break;
+	}
+	printf("\n      ],\n");
+}
+
 /* Return match details */
 void print_json_match(scan_data *scan, match_data match, int *match_counter)
 {
@@ -93,6 +106,9 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 
 	/* Calculate component/vendor md5 for aggregated data queries */
 	vendor_component_md5(match.vendor, match.component, match.pair_md5);
+
+	/* Fetch related purls */
+	fetch_related_purls(&match);
 
 	/* Calculate main URL */
 	fill_main_url(&match);
@@ -109,8 +125,9 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	}
 
 	printf("      \"matched\": \"%s\",\n", scan->matched_percent);
-	printf("      \"purl\": [\n        \"%s\"", match.purl);
-	printf("\n      ],\n");
+
+	print_purl_array(match);
+
 	printf("      \"vendor\": \"%s\",\n", match.vendor);
 	printf("      \"component\": \"%s\",\n", match.component);
 	printf("      \"version\": \"%s\",\n", match.version);

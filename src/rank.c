@@ -669,7 +669,7 @@ bool select_best_match(match_data *matches)
 	{
 		if (stricmp(matches[i].component, component_hint))
 		{
-			int age = get_component_age(matches[i].purl_md5);
+			int age = get_component_age(matches[i].purl_md5[0]);
 			if (age > oldest)
 			{
 				oldest = age;
