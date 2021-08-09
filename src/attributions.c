@@ -157,8 +157,8 @@ void print_pairs_attribution_notices(struct ldb_table oss_attributions, char *pa
 			MD5((uint8_t *)pair, strlen(pair), md5);
 			print_notices(oss_attributions, md5, pair);
 		}
-  }
 		pair = strtok(NULL, ",");
+  }
 }
 
 int attribution_notices(char *sbom)
