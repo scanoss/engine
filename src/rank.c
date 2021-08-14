@@ -26,6 +26,8 @@
 #include "query.h"
 #include "ignorelist.h"
 #include "limits.h"
+#include "url.h"
+#include "parse.h"
 
 /* Determine if a path is to be dismissed */
 bool dismiss_path(char *path)
@@ -549,8 +551,98 @@ int add_files_to_matches(\
 	return considered;
 }
 
+/* Reverse sort len_rank */
+int path_struct_rcmp(const void *a, const void *b) {
+    const len_rank *v1 = (const len_rank *) a;
+    const len_rank *v2 = (const len_rank *) b;
+    if (v1->len > v2->len) return -1;
+    if (v1->len < v2->len) return 1;
+	return 0;
+}
+
+/* Sort len_rank */
+int path_struct_cmp(const void *a, const void *b) {
+    const len_rank *v1 = (const len_rank *) a;
+    const len_rank *v2 = (const len_rank *) b;
+    if (v1->len > v2->len) return 1;
+    if (v1->len < v2->len) return -1;
+	return 0;
+}
+
+/* Look for shortest file paths and query component/purl information to determine
+   the most interesting match */
+int shortest_paths_check(file_recordset *files, int records, component_name_rank *component_rank)
+{
+	clear_component_rank(component_rank);
+	int selected = -1;
+
+	/* Define path length rank structure */
+	len_rank *path_rank = calloc(sizeof(len_rank), SHORTEST_PATHS_QTY);
+
+	/* Walk files, adding the shortest paths to the rank */
+	for (int i = 0; i < records; i++)
+	{
+		for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
+		{
+			if (!path_rank[r].len || (path_rank[r].len > files[i].path_ln))
+			{
+				path_rank[r].len = files[i].path_ln;
+				path_rank[r].id = i;
+
+				/* Reverse sort array */
+				qsort(path_rank, SHORTEST_PATHS_QTY, sizeof(len_rank), path_struct_rcmp);
+				break;
+			}
+		}
+	}
+
+	/* Sort path_rank array from shortest to largest path */
+	qsort(path_rank, SHORTEST_PATHS_QTY, sizeof(len_rank), path_struct_cmp);
+
+	/* Obtain oldest URL record */
+	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
+	uint8_t *old_rec = calloc(LDB_MAX_REC_LN, 1);
+	int path_id = 0;
+
+	for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
+	{
+		if (path_rank[r].len)
+		{
+			ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *) url_rec);
+			if (memcmp(url_rec, old_rec, LDB_MAX_REC_LN))
+			{
+				path_id = path_rank[r].id;
+				memcpy(old_rec, url_rec, LDB_MAX_REC_LN);
+			}
+		}
+	}
+	scanlog("shortest_paths_check selected %s\n", url_rec);
+
+	if (*url_rec)
+	{
+		/* Fetch vendor and component name */
+		char vendor[MAX_ARGLN + 1] = "\0";
+		char component[MAX_ARGLN + 1] = "\0";
+		char purl[MAX_ARGLN + 1] = "\0";
+		extract_csv(vendor, (char *) url_rec, 2, MAX_ARGLN);
+		extract_csv(component, (char *) url_rec, 3, MAX_ARGLN);
+		extract_csv(purl, (char *) url_rec, 7, MAX_ARGLN);
+		uint8_t purl_md5[MD5_LEN];
+		MD5((uint8_t *)purl, strlen(purl), purl_md5);
+
+		update_component_rank(component_rank, vendor, component, purl, purl_md5, files[path_id].path, files[path_id].url_id, skip_first_comma((char *) url_rec));
+
+		selected = 0;
+	}
+
+	free(url_rec);
+	free(old_rec);
+	free(path_rank);
+	return selected;
+}
+
 /* Analyse files, selecting those matching the provided hints
-	return the file id if matched, otherwise a negative value if no hits */
+   return the file id if matched, otherwise a negative value if no hits */
 int seek_component_hint_in_path(\
 		file_recordset *files,\
 		int records,\
@@ -565,8 +657,8 @@ int seek_component_hint_in_path(\
 	clear_component_rank(component_rank);
 
 	/* Walk files, adding to rank those paths which:
-		 - Start with the hint
-		 - Point to a component name matching the hint */
+	   - Start with the hint
+	   - Point to a component name matching the hint */
 	for (int i = 0; i < records; i++)
 	{
 		bool skip = true;

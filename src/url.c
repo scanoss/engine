@@ -24,6 +24,7 @@
 #include "debug.h"
 #include "limits.h"
 #include "util.h"
+#include "parse.h"
 #include "snippets.h"
 #include "decrypt.h"
 #include "ignorelist.h"
@@ -169,4 +170,59 @@ void fetch_related_purls(match_data *match)
 			}
 		}
 	}
+}
+
+/* Get the oldest release for a purl */
+bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+{
+	decrypt_data(data, datalen, "purl", key, subkey);
+	uint8_t *oldest = (uint8_t *) ptr;
+	data[datalen] = 0;
+
+	if (datalen)
+	{
+		/* Ignore pkg relation records */
+		if (memcmp(data, "pkg:", 4))
+		{
+			char release_date[MAX_ARGLN + 1] = "\0";
+			extract_csv(release_date, (char *) data, 1, MAX_ARGLN);
+			if (!*oldest || (strcmp((char *)oldest, release_date) > 0))
+				strcpy((char *)oldest, release_date);
+		}
+	}
+	return false;
+}
+
+/* Handler function for getting the oldest URL */
+bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+{
+	decrypt_data(data, datalen, "url", key, subkey);
+
+	uint8_t *oldest = (uint8_t *) ptr;
+
+	char url[LDB_MAX_REC_LN + 1] = "\0";
+	memcpy(url, data, datalen);
+	url[datalen] = 0;
+
+	/* Skip ignored records (-b SBOM.json) */
+	if (datalen) if (!ignored_asset_match((uint8_t *)url))
+	{
+
+		/* Extract purl */
+		char purl[MAX_ARGLN + 1] = "\0";
+		extract_csv(purl, (char *) url, 6, MAX_ARGLN);
+
+		/* Get purl md5 */
+		uint8_t purl_md5[MD5_LEN];
+		MD5((uint8_t *)purl, strlen(purl), purl_md5);
+
+		/* Query purl table to obtain first release date */
+		char release_date[MAX_ARGLN + 1] = "\0";
+		ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) release_date);
+
+		/* If it is older, then we copy to oldest */
+		if (!*oldest || *oldest == ',' || (*release_date && strcmp(release_date, (char *)oldest) < 0))
+			sprintf((char *)oldest, "%s,%s", release_date, url);
+	}
+	return false;
 }
