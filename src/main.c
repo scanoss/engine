@@ -153,6 +153,13 @@ int main(int argc, char **argv)
 	oss_wfp.ts_ln = 2;
 	oss_wfp.tmp = false;
 
+	strcpy(oss_purl.db, "oss");
+	strcpy(oss_purl.table, "purl");
+	oss_purl.key_ln = 16;
+	oss_purl.rec_ln = 0;
+	oss_purl.ts_ln = 2;
+	oss_purl.tmp = false;
+
 	/* Parse arguments */
 	int option;
 	bool invalid_argument = false;

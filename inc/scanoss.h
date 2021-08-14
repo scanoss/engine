@@ -64,6 +64,7 @@
 #define ENABLE_REPORT_IDENTIFIED 512
 #define ENABLE_DOWNLOAD_URL 1024
 #define MAX_PURLS 10
+#define SHORTEST_PATHS_QTY 50 // number of shortest path to evaluate
 
 extern uint64_t engine_flags;
 
@@ -105,6 +106,12 @@ typedef struct file_recordset
 	int path_ln;
 	bool external;
 } file_recordset;
+
+typedef struct len_rank
+{
+	int id;
+	int len;
+} len_rank;
 
 typedef struct scan_data
 {
@@ -204,6 +211,7 @@ char component_hint[MAX_FIELD_LN];
 struct ldb_table oss_url;
 struct ldb_table oss_file;
 struct ldb_table oss_wfp;
+struct ldb_table oss_purl;
 
 extern bool first_file;
 extern int max_vulnerabilities;

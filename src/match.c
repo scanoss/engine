@@ -145,6 +145,7 @@ int add_all_files_to_matches(file_recordset *files, int file_count, uint8_t *md5
 	return file_count;
 }
 
+/* Determine if the asset in the URL is among the ignored_assets (-b parameter) */
 bool ignored_asset_match(uint8_t *url_record)
 {
 	if (!ignored_assets) return false;
@@ -420,6 +421,9 @@ match_data *load_matches(scan_data *scan)
 
 				/* Try the contextual component_hint, if any */
 				int selected = seek_component_hint_in_path(files, records, component_hint, component_rank);
+
+				/* Query components for files with shortest path */
+				if (selected < 0) selected = shortest_paths_check(files, records, component_rank);
 
 				/* Get new component hint and try that instead */
 				if (selected < 0)
