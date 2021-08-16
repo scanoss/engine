@@ -59,7 +59,7 @@ void clean_versions(match_data *match)
 
 static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char *out = ptr;
+	release_version *release = ptr;
 
 	decrypt_data(data, datalen, "url", key, subkey);
 
@@ -68,73 +68,75 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
 	char *purl = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *version = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *component = calloc(MAX_JSON_VALUE_LEN, 1);
+	char *date = calloc(MAX_JSON_VALUE_LEN, 1);
 
 	extract_csv(component, CSV, 1, MAX_JSON_VALUE_LEN);
 	extract_csv(version, CSV, 3, MAX_JSON_VALUE_LEN);
+	extract_csv(date, CSV, 4, MAX_JSON_VALUE_LEN);
 	extract_csv(purl, CSV, 6, MAX_JSON_VALUE_LEN);
 	free(CSV);
 
 	bool found = false;
 
-	if (!strcmp(purl, out))
+	if (!strcmp(purl, release->version))
 	{
+		/* Copy release version, date and urlid */
 		normalise_version(version, component);
-		strcpy(out, version);
+		strcpy(release->version, version);
+		strcpy(release->date, date);
+		memcpy(release->url_id, key, LDB_KEY_LN);
+		memcpy(release->url_id + LDB_KEY_LN, subkey, subkey_ln);
 		found = true;
 	}
 
 	free(purl);
 	free(version);
 	free(component);
+	free(date);
 
 	return found;
 }
 
 /* Compare version and, if needed, update range (version-latest) */
-void update_version_range(match_data *match, char *version)
+void update_version_range(match_data *match, release_version *release)
 {
-	if (strcmp(version, match->version) < 0)
+	if (strcmp(release->version, match->version) < 0)
 	{
-		strcpy(match->version, version);
+		strcpy(match->version, release->version);
+		strcpy(match->release_date, release->date);
+		memcpy(match->url_md5, release->url_id, MD5_LEN);
 	}
 
-	if (strcmp(version, match->latest_version) > 0)
+	if (strcmp(release->version, match->latest_version) > 0)
 	{
-		strcpy(match->latest_version, version);
+		strcpy(match->latest_version, release->version);
 	}
 }
 
-void get_purl_version(char *version, char *purl, uint8_t *file_id)
+void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
 {
 	/* Pass purl in version */
-	strcpy(version, purl);
+	strcpy(release->version, purl);
 
-	/* Open sector */
-	struct ldb_table table;
-	strcpy(table.db, "oss");
-	strcpy(table.table, "url");
-	table.key_ln = 16;
-	table.rec_ln = 0;
-	table.ts_ln = 2;
-	table.tmp = false;
-
-	if (ldb_table_exists("oss", "url"))
-	{
-		ldb_fetch_recordset(NULL, table, file_id, false, get_purl_version_handler, version);
-	}
+	ldb_fetch_recordset(NULL, oss_url, file_id, false, get_purl_version_handler, release);
 
 	/* If no version returned, clear version */
-	if (!strcmp(version, purl)) *version = 0;
+	if (!strcmp(release->version, purl)) *release->version = 0;
 }
 
 /* Add version range to first match */
 void add_versions(scan_data *scan, match_data *matches, file_recordset *files, uint32_t records)
 {
+	release_version *release = calloc(sizeof(release_version), 1);
+
 	/* Recurse each record */
 	for (int n = 0; n < records; n++)
 	{
-		char version[MAX_ARGLN] = "\0";
-		if (!files[n].external) get_purl_version(version, matches[0].purl[0], files[n].url_id);
-		if (*version) update_version_range(matches, version);
+		*release->version = 0;
+		*release->date = 0;
+		if (!files[n].external) get_purl_version(release, matches[0].purl[0], files[n].url_id);
+		if (*release->version) update_version_range(matches, release);
 	}
+
+	free(release);
 }
