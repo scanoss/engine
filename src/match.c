@@ -140,7 +140,7 @@ int add_all_files_to_matches(file_recordset *files, int file_count, uint8_t *md5
 		memcpy(match.url_md5, files[i].url_id, MD5_LEN);
 
 		/* Add match to matches */
-		add_match(-1, match, matches, false);
+		add_match(-1, match, matches);
 	}
 	return file_count;
 }
@@ -220,7 +220,7 @@ int count_matches(match_data *matches)
 }
 
 /* Adds match to matches */
-void add_match(int position, match_data match, match_data *matches, bool component_match)
+void add_match(int position, match_data match, match_data *matches)
 {
 
 	/* Verify if metadata is complete */
@@ -229,7 +229,6 @@ void add_match(int position, match_data match, match_data *matches, bool compone
 		scanlog("Metadata is incomplete: %s,%s,%s,%s\n",match.purl[0], match.version, match.url, match.file);
 		return;
 	}
-
 	int n = count_matches(matches);
 
 	/* Attempt to place match among existing ones */
@@ -269,7 +268,11 @@ void add_match(int position, match_data match, match_data *matches, bool compone
 		{
 			for (n = 0; n < scan_limit; n++)
 			{
-				if (matches[n].path_ln > match.path_ln || !matches[n].path_ln) break;
+				if (match.type == url)
+				{
+					if (!*matches[n].purl[0]) break;
+				}
+				else if (matches[n].path_ln > match.path_ln || !matches[n].path_ln) break;
 			}
 		}
 
@@ -351,7 +354,7 @@ match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *
 	memcpy(match.file_md5, file_md5, MD5_LEN);
 
 	/* Add match to matches */
-	add_match(0, match, matches, false);
+	add_match(0, match, matches);
 }
 
 match_data *load_matches(scan_data *scan)
@@ -398,6 +401,7 @@ match_data *load_matches(scan_data *scan)
 	{
 		records = ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *) matches);
 		scanlog("URL recordset contains %u records\n", records);
+		select_best_url(matches);
 	}
 
 	if (!records)

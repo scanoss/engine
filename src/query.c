@@ -153,18 +153,9 @@ int get_component_age(uint8_t *md5)
 {
 	if (!md5) return 0;
 
-	/* Define purl table */
-	struct ldb_table purl;
-	strcpy(purl.db, "oss");
-	strcpy(purl.table, "purl");
-	purl.key_ln = 16;
-	purl.rec_ln = 0;
-	purl.ts_ln = 2;
-	purl.tmp = false;
-
 	/* Fetch record */
 	long age = 0;
-	ldb_fetch_recordset(NULL, purl, md5, false, handle_get_component_age, &age);
+	ldb_fetch_recordset(NULL, oss_purl, md5, false, handle_get_component_age, &age);
 
 	return age;
 }

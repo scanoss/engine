@@ -53,9 +53,47 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	memcpy(match.url_md5 + LDB_KEY_LN, subkey, subkey_ln);
 	memcpy(match.file_md5, match.url_md5, MD5_LEN);
 
-	add_match(-1, match, matches, true);
+	match.path_ln = strlen(match.url);
+	match.type = url;
 
+	add_match(-1, match, matches);
 	return false;
+}
+
+void clean_selected_matches(match_data *matches)
+{
+	for (int i = 0; i < scan_limit; i++)  matches[0].selected = false;
+}
+
+bool select_purl_match(char *schema, match_data *matches)
+{
+	clean_selected_matches(matches);
+
+	/* Select first match if no purl schema is provided */
+	if (!schema)
+	{
+		matches[0].selected = 0;
+		return true;
+	}
+
+	for (int i = 0; i < scan_limit && *matches[i].purl; i++)
+	{
+		if (!memcmp(matches[i].purl, schema, strlen(schema)))
+		{
+			matches[i].selected = true;
+			return true;
+		}
+	}
+	return false;
+}
+
+/* Select preferred URLs based on favorite purl schema */
+void select_best_url(match_data *matches)
+{
+	if (!select_purl_match("pkg:github",matches))
+		if (!select_purl_match("pkg:gitlab",matches))
+			if (!select_purl_match("pkg:maven",matches))
+				select_purl_match(NULL, matches);
 }
 
 /* Build a component URL from the provided PURL schema and actual URL */
@@ -130,46 +168,9 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 /* Fetch related purls */
 void fetch_related_purls(match_data *match)
 {
-	/* Define purl table */
-	struct ldb_table purl;
-	strcpy(purl.db, "oss");
-	strcpy(purl.table, "purl");
-	purl.key_ln = 16;
-	purl.rec_ln = 0;
-	purl.ts_ln = 2;
-	purl.tmp = false;
-
 	/* Fill purls */
 	for (int i = 0; i < MAX_PURLS; i++)
-		ldb_fetch_recordset(NULL, purl, match->purl_md5[i], false, handle_purl_record, match);
-
-	/* Put Github purl first */
-	if (memcmp(match->purl[0], "pkg:github", 10))
-	{
-		/* Walk purls */
-		for (int i = 1; i < MAX_PURLS; i++)
-		{
-			if (!*match->purl[i]) break;
-
-			/* Swap with first purl */
-			if (!memcmp(match->purl[i], "pkg:github", 10))
-			{
-				/* Save current to tmp */
-				char tmp_purl[MAX_FIELD_LN + 1];
-				char tmp_purl_md5[MD5_LEN];
-				strcpy(tmp_purl, match->purl[i]);
-				memcpy(tmp_purl_md5, match->purl_md5[i], MD5_LEN);
-
-				/* Replace current with first */
-				strcpy(match->purl[i], match->purl[0]);
-				memcpy(match->purl_md5[i], match->purl_md5[0], MD5_LEN);
-
-				/* Replace first with tmp */
-				strcpy(match->purl[0], tmp_purl);
-				memcpy(match->purl_md5[0], tmp_purl_md5, MD5_LEN);
-			}
-		}
-	}
+		ldb_fetch_recordset(NULL, oss_purl, match->purl_md5[i], false, handle_purl_record, match);
 }
 
 /* Get the oldest release for a purl */
