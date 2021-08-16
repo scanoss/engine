@@ -166,6 +166,13 @@ typedef struct match_data
 	scan_data *scandata;
 } match_data;
 
+typedef struct release_version
+{
+	char version[MAX_FIELD_LN];
+	char date[MAX_FIELD_LN];
+	uint8_t url_id[MAX_FIELD_LN];
+} release_version;
+
 /* Component ranking for evaluating /external/ paths */
 typedef struct component_name_rank
 {
