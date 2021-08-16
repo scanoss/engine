@@ -250,15 +250,6 @@ void print_licenses(match_data match)
 {
 	printf("[");
 
-	/* Open sector */
-	struct ldb_table table;
-	strcpy(table.db, "oss");
-	strcpy(table.table, "license");
-	table.key_ln = 16;
-	table.rec_ln = 0;
-	table.ts_ln = 2;
-	table.tmp = false;
-
 	/* Clean crc list (used to avoid duplicates) */
 	for (int i = 0; i < CRC_LIST_LEN; i++) match.crclist[i] = 0;
 
@@ -277,22 +268,25 @@ void print_licenses(match_data match)
 	}
 
 	/* Look for component or file license */
-	else if (ldb_table_exists("oss", "license"))
+	else
 	{
 		match.first_record = true;
 
-		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_licenses_item, &match);
+		records = ldb_fetch_recordset(NULL, oss_license, match.file_md5, false, print_licenses_item, &match);
 		if (records) scanlog("File license returns hits\n");
 		if (!records)
 		{
-			records = ldb_fetch_recordset(NULL, table, match.url_md5, false, print_licenses_item, &match);
+			records = ldb_fetch_recordset(NULL, oss_license, match.url_md5, false, print_licenses_item, &match);
 			if (records) scanlog("Component license returns hits\n");
 		}
 		if (!records)
 		{
-			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_licenses_item, &match);
+			records = ldb_fetch_recordset(NULL, oss_license, match.pair_md5, false, print_licenses_item, &match);
 			if (records) scanlog("Vendor/component license returns hits\n");
 		}
+		if (!records)
+			for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
+				records = ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match);
 	}
 
 	printf("\n      ],\n");

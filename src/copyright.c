@@ -110,30 +110,17 @@ void print_copyrights(match_data match)
 {
 	printf("[");
 
-	/* Open sector */
-	struct ldb_table table;
-	strcpy(table.db, "oss");
-	strcpy(table.table, "copyright");
-	table.key_ln = 16;
-	table.rec_ln = 0;
-	table.ts_ln = 2;
-	table.tmp = false;
-
 	/* Clean crc list (used to avoid duplicates) */
 	for (int i = 0; i < CRC_LIST_LEN; i++) match.crclist[i] = 0;
 
 	uint32_t records = 0;
 
-	if (ldb_table_exists("oss", "copyright"))
-	{
-		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_copyrights_item, &match);
-		if (!records)
-			records = ldb_fetch_recordset(NULL, table, match.url_md5, false, print_copyrights_item, &match);
-		if (!records)
-			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_copyrights_item, &match);
-	}
+	records = ldb_fetch_recordset(NULL, oss_copyright, match.file_md5, false, print_copyrights_item, &match);
+	if (!records)
+		records = ldb_fetch_recordset(NULL, oss_copyright, match.url_md5, false, print_copyrights_item, &match);
+	if (!records)
+		records = ldb_fetch_recordset(NULL, oss_copyright, match.pair_md5, false, print_copyrights_item, &match);
 
 	if (records) printf("\n      ");
 	printf("],\n");
 }
-

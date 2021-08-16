@@ -35,4 +35,5 @@ const char *license_normalization[] = {
 "LGPL-2.1-or-later,LGPL-2.1+",
 "LGPL-3.0-only,LGPL-3.0",
 "LGPL-3.0-or-later,LGPL-3.0+",
+"Apache-2.0,Apache",
 NULL};

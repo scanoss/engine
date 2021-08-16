@@ -75,23 +75,11 @@ void print_dependencies(match_data match)
 {
 	printf("[");
 
-	/* Open sector */
-	struct ldb_table table;
-	strcpy(table.db, "oss");
-	strcpy(table.table, "dependency");
-	table.key_ln = 16;
-	table.rec_ln = 0;
-	table.ts_ln = 2;
-	table.tmp = false;
-
 	uint32_t records = 0;
 
-	if (ldb_table_exists("oss", "dependency"))
-	{
-		records = ldb_fetch_recordset(NULL, table, match.url_md5, false, print_dependencies_item, NULL);
-		if (!records) 
-			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, print_dependencies_item, NULL);
-	}
+	records = ldb_fetch_recordset(NULL, oss_dependency, match.url_md5, false, print_dependencies_item, NULL);
+	if (!records) 
+		records = ldb_fetch_recordset(NULL, oss_dependency, match.pair_md5, false, print_dependencies_item, NULL);
 
 	if (records) printf("\n      ");
 	printf("],\n");

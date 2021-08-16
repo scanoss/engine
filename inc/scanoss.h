@@ -145,7 +145,7 @@ typedef struct match_data
 	char version[MAX_FIELD_LN];
 	char release_date[MAX_FIELD_LN];
 	char latest_version[MAX_FIELD_LN];
-	char main_url[MAX_FIELD_LN];
+	char main_url[MAX_FILE_PATH];
 	char license[MAX_FIELD_LN];
 	char url[MAX_FILE_PATH];
 	char file[MAX_FILE_PATH];
@@ -219,6 +219,11 @@ struct ldb_table oss_url;
 struct ldb_table oss_file;
 struct ldb_table oss_wfp;
 struct ldb_table oss_purl;
+struct ldb_table oss_copyright;
+struct ldb_table oss_quality;
+struct ldb_table oss_vulnerability;
+struct ldb_table oss_dependency;
+struct ldb_table oss_license;
 
 extern bool first_file;
 extern int max_vulnerabilities;
