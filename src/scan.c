@@ -238,7 +238,7 @@ void consider_file_record(\
 		return;
 	}
 
-	add_match(position, match, matches, false);
+	add_match(position, match, matches);
 	free(url);
 }
 
@@ -409,8 +409,7 @@ void ldb_scan(scan_data *scan)
 		/* Debug match info */
 		scanlog("%d matches compiled:\n", total_matches);
 		if (debug_on) for (int i = 0; i < total_matches; i++)
-			scanlog("%s/%s, %s\n", matches[i].vendor, matches[i].component, matches[i].file);
-		scanlog("\n", total_matches);
+			scanlog("%s, %s\n", matches[i].purl, matches[i].file);
 
 		/* Matched asset in SBOM.json? */
 		for (int i = 0; i < total_matches; i++)

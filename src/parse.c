@@ -175,16 +175,28 @@ char *parse_sbom(char *filepath, bool load_vendor)
 	return out;
 }
 
-/* Returns a pointer to the character following the first comma in "data" */
-char *skip_first_comma(char *data)
+/* Returns a pointer to the character following the first "character" in "data" */
+char *skip_first_char(char *data, char character)
 {
 	char *ptr = data;
 	while (*ptr)
 	{
-		if (*ptr == ',') return ++ptr;
+		if (*ptr == character) return ++ptr;
 		ptr++;
 	}
 	return data;
+}
+
+/* Returns a pointer to the character following the first comma in data */
+char *skip_first_comma(char *data)
+{
+	return skip_first_char(data, ',');
+}
+
+/* Returns a pointer to the character following the first slash in data */
+char *skip_first_slash(char *data)
+{
+	return skip_first_char(data, '/');
 }
 
 /* Extracts the "n"th value from the comma separated "in" string */

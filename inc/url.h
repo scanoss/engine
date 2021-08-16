@@ -14,4 +14,6 @@ void fetch_related_purls(match_data *match);
 /* Handler function for getting the oldest URL */
 bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr);
 
+void select_best_url(match_data *matches);
+
 #endif
