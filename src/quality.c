@@ -73,21 +73,9 @@ void print_quality(match_data match)
 {
 	printf("[");
 
-	/* Open sector */
-	struct ldb_table table;
-	strcpy(table.db, "oss");
-	strcpy(table.table, "quality");
-	table.key_ln = 16;
-	table.rec_ln = 0;
-	table.ts_ln = 2;
-	table.tmp = false;
-
 	uint32_t records = 0;
 
-	if (ldb_table_exists("oss", "quality"))
-	{
-		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, print_quality_item, NULL);
-	}
+	records = ldb_fetch_recordset(NULL, oss_quality, match.file_md5, false, print_quality_item, NULL);
 
 	if (records) printf("\n      ");
 	printf("],\n");

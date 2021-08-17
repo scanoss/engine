@@ -163,23 +163,14 @@ void print_pairs_attribution_notices(struct ldb_table oss_attributions, char *pa
 
 int attribution_notices(char *sbom)
 {
-	/* Open sector */
-	struct ldb_table table;
-	strcpy(table.db, "oss");
-	strcpy(table.table, "attribution");
-	table.key_ln = 16;
-	table.rec_ln = 0;
-	table.ts_ln = 2;
-	table.tmp = false;
-
 	/* Validate SBOM */
 	char *check_list = parse_sbom(sbom, true);
-	if (!validate_pairs(table, check_list)) exit(EXIT_FAILURE);
+	if (!validate_pairs(oss_attribution, check_list)) exit(EXIT_FAILURE);
 	free(check_list);
 
 	/* Print attribution notices */
 	char *pair_list = parse_sbom(sbom, true);
-	print_pairs_attribution_notices(table, pair_list);
+	print_pairs_attribution_notices(oss_attribution, pair_list);
 	free(pair_list);
 
 	return EXIT_SUCCESS;

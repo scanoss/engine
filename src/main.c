@@ -33,70 +33,90 @@
 #include "mz.h"
 #include "license.h"
 
-void initialize_ldb_tables()
+/* Initialize tables for the DB name indicated (defaults to oss) */
+void initialize_ldb_tables(char *name)
 {
-	strcpy(oss_url.db, "oss");
+	char oss_db_name[MAX_ARGLN];
+
+	if (name) strcpy(oss_db_name, name);
+	else strcpy(oss_db_name, DEFAULT_OSS_DB_NAME);
+
+	strcpy(oss_url.db, oss_db_name);
 	strcpy(oss_url.table, "url");
 	oss_url.key_ln = 16;
 	oss_url.rec_ln = 0;
 	oss_url.ts_ln = 2;
 	oss_url.tmp = false;
 
-	strcpy(oss_file.db, "oss");
+	strcpy(oss_file.db, oss_db_name);
 	strcpy(oss_file.table, "file");
 	oss_file.key_ln = 16;
 	oss_file.rec_ln = 0;
 	oss_file.ts_ln = 2;
 	oss_file.tmp = false;
 
-	strcpy(oss_wfp.db, "oss");
+	strcpy(oss_wfp.db, oss_db_name);
 	strcpy(oss_wfp.table, "wfp");
 	oss_wfp.key_ln = 4;
 	oss_wfp.rec_ln = 18;
 	oss_wfp.ts_ln = 2;
 	oss_wfp.tmp = false;
 
-	strcpy(oss_purl.db, "oss");
+	strcpy(oss_purl.db, oss_db_name);
 	strcpy(oss_purl.table, "purl");
 	oss_purl.key_ln = 16;
 	oss_purl.rec_ln = 0;
 	oss_purl.ts_ln = 2;
 	oss_purl.tmp = false;
 
-	strcpy(oss_copyright.db, "oss");
+	strcpy(oss_copyright.db, oss_db_name);
 	strcpy(oss_copyright.table, "copyright");
 	oss_copyright.key_ln = 16;
 	oss_copyright.rec_ln = 0;
 	oss_copyright.ts_ln = 2;
 	oss_copyright.tmp = false;
 
-	strcpy(oss_quality.db, "oss");
+	strcpy(oss_quality.db, oss_db_name);
 	strcpy(oss_quality.table, "quality");
 	oss_quality.key_ln = 16;
 	oss_quality.rec_ln = 0;
 	oss_quality.ts_ln = 2;
 	oss_quality.tmp = false;
 
-	strcpy(oss_vulnerability.db, "oss");
+	strcpy(oss_vulnerability.db, oss_db_name);
 	strcpy(oss_vulnerability.table, "vulnerability");
 	oss_vulnerability.key_ln = 16;
 	oss_vulnerability.rec_ln = 0;
 	oss_vulnerability.ts_ln = 2;
 	oss_vulnerability.tmp = false;
 
-	strcpy(oss_dependency.db, "oss");
+	strcpy(oss_dependency.db, oss_db_name);
 	strcpy(oss_dependency.table, "dependency");
 	oss_dependency.key_ln = 16;
 	oss_dependency.rec_ln = 0;
 	oss_dependency.ts_ln = 2;
 	oss_dependency.tmp = false;
 
-	strcpy(oss_license.db, "oss");
+	strcpy(oss_license.db, oss_db_name);
 	strcpy(oss_license.table, "license");
 	oss_license.key_ln = 16;
 	oss_license.rec_ln = 0;
 	oss_license.ts_ln = 2;
 	oss_license.tmp = false;
+
+	strcpy(oss_attribution.db, oss_db_name);
+	strcpy(oss_attribution.table, "attribution");
+	oss_attribution.key_ln = 16;
+	oss_attribution.rec_ln = 0;
+	oss_attribution.ts_ln = 2;
+	oss_attribution.tmp = false;
+
+	strcpy(oss_cryptography.db, oss_db_name);
+	strcpy(oss_cryptography.table, "cryptography");
+	oss_cryptography.key_ln = 16;
+	oss_cryptography.rec_ln = 0;
+	oss_cryptography.ts_ln = 2;
+	oss_cryptography.tmp = false;
 }
 
 void recurse_directory(char *name)
@@ -197,13 +217,13 @@ int main(int argc, char **argv)
 	*component_hint = 0;
 	*vendor_hint = 0;
 
-	initialize_ldb_tables();
+	initialize_ldb_tables(NULL);
 
 	/* Parse arguments */
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:i:wtvhedq")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:wtvhedq")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -245,6 +265,10 @@ int main(int argc, char **argv)
 			case 'l':
 				print_osadl_license_data(optarg);
 				exit(EXIT_SUCCESS);
+				break;
+
+			case 'n':
+				initialize_ldb_tables(optarg);
 				break;
 
 			case 'i':

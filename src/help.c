@@ -46,6 +46,7 @@ Configuration:\n\
 Options:\n\
 -t  Tests engine performance\n\
 -v  Display version and exit\n\
+-n  Specify DB name (default: oss)\n\
 -h  Display this help and exit\n\
 -d  Save debugging information to disk (/tmp)\n\
 -q  Produces no JSON output. Only debugging info via STDERR\n\

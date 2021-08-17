@@ -118,11 +118,11 @@ match_data match_init()
 	return match;
 }
 /* Add all files in recordset to matches */
-int add_all_files_to_matches(file_recordset *files, int file_count, uint8_t *md5, match_data *matches)
+int add_all_files_to_matches(file_recordset *files, int file_count, scan_data *scan, match_data *matches)
 {
 	scanlog("Adding %d file records to matches\n", file_count);
 
-	for (int i = 0; i < file_count; i++)
+	for (int i = 0; i < file_count && i < scan_limit; i++)
 	{
 		/* Create empty match item */
 		struct match_data match = match_init();
@@ -136,8 +136,9 @@ int add_all_files_to_matches(file_recordset *files, int file_count, uint8_t *md5
 		free(url_rec);
 
 		/* Add file MD5 */
-		memcpy(match.file_md5, md5, MD5_LEN);
+		memcpy(match.file_md5, scan->match_ptr, MD5_LEN);
 		memcpy(match.url_md5, files[i].url_id, MD5_LEN);
+		match.type = scan->match_type;
 
 		/* Add match to matches */
 		add_match(-1, match, matches);
@@ -230,6 +231,12 @@ void add_match(int position, match_data match, match_data *matches)
 		return;
 	}
 	int n = count_matches(matches);
+
+	if (n >= scan_limit)
+	{
+		scanlog("Match list is full\n");
+		return;
+	}
 
 	/* Attempt to place match among existing ones */
 	bool placed = false;
@@ -414,7 +421,7 @@ match_data *load_matches(scan_data *scan)
 		{
 			if (engine_flags & DISABLE_BEST_MATCH)
 			{
-				records = add_all_files_to_matches(files, records, scan->match_ptr, matches);
+				records = add_all_files_to_matches(files, records, scan, matches);
 			}
 			else
 			{
