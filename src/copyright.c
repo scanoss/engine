@@ -93,17 +93,7 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 
 void get_copyright(match_data match, char *copyright)
 {
-	/* Open sector */
-	struct ldb_table table;
-	strcpy(table.db, "oss");
-	strcpy(table.table, "copyright");
-	table.key_ln = 16;
-	table.rec_ln = 0;
-	table.ts_ln = 2;
-	table.tmp = false;
-
-	if (ldb_table_exists("oss", "copyright"))
-		ldb_fetch_recordset(NULL, table, match.file_md5, false, get_first_copyright, copyright);
+	ldb_fetch_recordset(NULL, oss_copyright, match.file_md5, false, get_first_copyright, copyright);
 }
 
 void print_copyrights(match_data match)

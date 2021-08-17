@@ -225,25 +225,13 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 void get_license(match_data match, char *license)
 {
-	/* Open sector */
-	struct ldb_table table;
-	strcpy(table.db, "oss");
-	strcpy(table.table, "license");
-	table.key_ln = 16;
-	table.rec_ln = 0;
-	table.ts_ln = 2;
-	table.tmp = false;
-
 	uint32_t records = 0;
 
-	if (ldb_table_exists("oss", "license"))
-	{
-		records = ldb_fetch_recordset(NULL, table, match.file_md5, false, get_first_license_item, license);
-		if (!records)
-			records = ldb_fetch_recordset(NULL, table, match.url_md5, false, get_first_license_item, license);
-		if (!records)
-			records = ldb_fetch_recordset(NULL, table, match.pair_md5, false, get_first_license_item, license);
-	}
+	records = ldb_fetch_recordset(NULL, oss_license, match.file_md5, false, get_first_license_item, license);
+	if (!records)
+		records = ldb_fetch_recordset(NULL, oss_license, match.url_md5, false, get_first_license_item, license);
+	if (!records)
+		records = ldb_fetch_recordset(NULL, oss_license, match.pair_md5, false, get_first_license_item, license);
 }
 
 void print_licenses(match_data match)

@@ -49,6 +49,7 @@
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
 #define API_URL "https://osskb.org/api"
+#define DEFAULT_OSS_DB_NAME "oss"
 
 /* Engine configuration flags */
 #define ENGINE_FLAGS_FILE "/var/lib/scanoss/etc/flags"
@@ -224,6 +225,8 @@ struct ldb_table oss_quality;
 struct ldb_table oss_vulnerability;
 struct ldb_table oss_dependency;
 struct ldb_table oss_license;
+struct ldb_table oss_attribution;
+struct ldb_table oss_cryptography;
 
 extern bool first_file;
 extern int max_vulnerabilities;
