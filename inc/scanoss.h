@@ -156,7 +156,7 @@ typedef struct match_data
 	uint8_t pair_md5[MD5_LEN]; // DEPRECATED
 
 	/* PURL array */
-	char purl[MAX_PURLS][MAX_FIELD_LN + 1];
+	char purl[MAX_PURLS][MAX_FILE_PATH + 1];
 	uint8_t purl_md5[MAX_PURLS][MD5_LEN];
 
 	uint32_t crclist[CRC_LIST_LEN];
@@ -179,7 +179,7 @@ typedef struct component_name_rank
 {
 	char vendor[MAX_FIELD_LN];
 	char component[MAX_FIELD_LN];
-	char purl[MAX_FIELD_LN];
+	char purl[MAX_FILE_PATH];
 	uint8_t url_id[MD5_LEN];
 	uint8_t purl_md5[MD5_LEN];
 	char url_record[MAX_FILE_PATH];
@@ -195,7 +195,7 @@ typedef struct path_ranking
 	long score; // Score will store path length or component age
 	char component[MAX_FIELD_LN];
 	char vendor[MAX_FIELD_LN];
-	char purl[MAX_FIELD_LN];
+	char purl[MAX_FILE_PATH];
 	uint8_t purl_md5[MD5_LEN];
 } path_ranking;
 
