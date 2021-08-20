@@ -316,27 +316,19 @@ void add_popular_snippet_to_matchmap(scan_data *scan, uint32_t line, uint32_t mi
 	for (long n = 0; n < scan->matchmap_size; n++)
 	{
 		/* Search for the range to expand */
-		for (uint32_t t = 0; t < MATCHMAP_RANGES; t++)
+		for (int t = 0; t < MATCHMAP_RANGES; t++)
 		{
+			/* Exit if no more ranges are recorded for this file */
+			if (!scan->matchmap[n].range[t].from) continue;
+
 			int gap = scan->matchmap[n].range[t].from - line;
 
-			/* New range */
-			if (!scan->matchmap[n].range[t].to)
-			{
-				/* Update from and to */
-				scan->matchmap[n].range[t].from = line;
-				scan->matchmap[n].range[t].to = line;
-				scan->matchmap[n].range[t].oss_line = line;
-				scan->matchmap[n].hits++;
-				break;
-			}
-
-			/* Increase range */
-			else if (gap < range_tolerance || gap <= min_tolerance)
+			/* Increase existing range */
+			if (gap < range_tolerance || gap <= min_tolerance)
 			{
 				scan->matchmap[n].range[t].from = line;
 				scan->matchmap[n].hits++;
-				break;
+				continue;
 			}
 		}
 	}
