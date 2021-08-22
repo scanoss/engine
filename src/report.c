@@ -31,6 +31,7 @@
 #include "copyright.h"
 #include "limits.h"
 #include "url.h"
+#include "parse.h"
 
 uint64_t engine_flags = 0;
 
@@ -96,6 +97,16 @@ void print_purl_array(match_data match)
 	printf("\n      ],\n");
 }
 
+/* Skip the first directory name for Github and Gitlab files */
+char *file_skip_release(char *purl, char *file)
+{
+	if (starts_with(purl, "pkg:github") || starts_with(purl, "pkg:gitlab"))
+	{
+		return skip_first_slash(file);
+	}
+	return file;
+}
+
 /* Return match details */
 void print_json_match(scan_data *scan, match_data match, int *match_counter)
 {
@@ -140,7 +151,7 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	printf("      \"download_url\": \"%s\",\n", match.url);
 
 	printf("      \"release_date\": \"%s\",\n", match.release_date);
-	printf("      \"file\": \"%s\",\n", match.type == 1 ? basename(match.url) : match.file);
+	printf("      \"file\": \"%s\",\n", match.type == 1 ? basename(match.url) : file_skip_release(match.purl[0], match.file));
 
 	char *url_id = md5_hex(match.url_md5);
 	printf("      \"url_hash\": \"%s\",\n", url_id);
