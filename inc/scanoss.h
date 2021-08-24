@@ -44,6 +44,7 @@
 #define CRC_LIST_LEN 256 // list of crc checksums to avoid metadata duplicates
 
 /* Log files */
+#define SCANOSS_VERSION "4.2.6"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
@@ -68,8 +69,6 @@
 #define SHORTEST_PATHS_QTY 50 // number of shortest path to evaluate
 
 extern uint64_t engine_flags;
-
-extern char SCANOSS_VERSION[7];
 
 typedef enum {none, url, file, snippet} matchtype;
 extern const char *matchtypes[];

@@ -50,8 +50,9 @@ static void json_process_object(json_value* value, int depth, char *out, bool lo
 	int length, x;
 	if (value == NULL) return;
 
-	char vendor[MAX_ARGLN]="\0";
-	char component[MAX_ARGLN]="\0";
+	char vendor[MAX_ARGLN] = "\0";
+	char component[MAX_ARGLN] = "\0";
+	char purl[MAX_PATH] = "\0";
 
 	length = value->u.object.length;
 	for (x = 0; x < length; x++)
@@ -59,9 +60,10 @@ static void json_process_object(json_value* value, int depth, char *out, bool lo
 		json_value *data = value->u.object.values[x].value;
 		char *name = value->u.object.values[x].name;
 
-		if (!strcmp(value->u.object.values[x].name,"Document") ||
-				(!strcmp(value->u.object.values[x].name,"components")) ||
-				(!strcmp(value->u.object.values[x].name,"packages")))
+		if (!strcmp(value->u.object.values[x].name, "Document") ||
+				(!strcmp(value->u.object.values[x].name, "components")) ||
+				(!strcmp(value->u.object.values[x].name, "purl")) ||
+				(!strcmp(value->u.object.values[x].name, "packages")))
 		{
 			json_process_value(value->u.object.values[x].value, depth+1, out, load_vendor);
 		}
@@ -78,10 +80,20 @@ static void json_process_object(json_value* value, int depth, char *out, bool lo
 			{
 				strcpy(component, data->u.string.ptr);
 			}
+
+			if (!strcmp(name, "purl"))
+			{
+				strcpy(purl, data->u.string.ptr);
+			}
 		}
 	}
 
-	if (!*component && !*vendor) return;
+	if (!*component && !*vendor && !*purl) return;
+
+	if (*purl)
+	{
+		sprintf(out + strlen(out), "%s,", purl);
+	}
 
 	if (!load_vendor)
 	{

@@ -269,12 +269,14 @@ void print_licenses(match_data match)
 		}
 		if (!records)
 		{
+			for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
+				records += ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match);
+		}
+		if (!records)
+		{
 			records = ldb_fetch_recordset(NULL, oss_license, match.pair_md5, false, print_licenses_item, &match);
 			if (records) scanlog("Vendor/component license returns hits\n");
 		}
-		if (!records)
-			for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
-				records = ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match);
 	}
 
 	printf("\n      ],\n");
