@@ -109,6 +109,9 @@ void print_copyrights(match_data match)
 	if (!records)
 		records = ldb_fetch_recordset(NULL, oss_copyright, match.url_md5, false, print_copyrights_item, &match);
 	if (!records)
+		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
+			records += ldb_fetch_recordset(NULL, oss_copyright, match.purl_md5[i], false, print_copyrights_item, &match);
+	if (!records)
 		records = ldb_fetch_recordset(NULL, oss_copyright, match.pair_md5, false, print_copyrights_item, &match);
 
 	if (records) printf("\n      ");
