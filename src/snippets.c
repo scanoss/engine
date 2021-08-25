@@ -327,7 +327,6 @@ void add_popular_snippet_to_matchmap(scan_data *scan, uint32_t line, uint32_t mi
 			if (gap < range_tolerance || gap <= min_tolerance)
 			{
 				scan->matchmap[n].range[t].from = line;
-				scan->matchmap[n].hits++;
 				continue;
 			}
 		}
