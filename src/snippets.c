@@ -210,8 +210,8 @@ uint32_t compile_ranges(scan_data *scan) {
 	*scan->oss_ranges = 0;
 	*scan->snippet_ids = 0;
 
-	if (uint16_read(scan->match_ptr + MD5_LEN) < 2) return 0;
-	int hits = 0;
+	uint16_t reported_hits = uint16_read(scan->match_ptr + MD5_LEN);
+	if (reported_hits < 2) return 0;
 
 	/* Lowest tolerance simply requires selecting the higher match count */
 	if (min_match_lines == 1)
@@ -221,7 +221,34 @@ uint32_t compile_ranges(scan_data *scan) {
 		return uint16_read(scan->match_ptr + MD5_LEN);
 	}
 
-	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++) {
+	/* Revise hits and decrease if needed */
+	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
+	{
+		long from     = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6);
+		long to       = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6 + 2);
+		long delta = to - from;
+
+		if (to < 1) break;
+
+		/* Ranges to be ignored (under min_match_lines) should decrease hits counter */
+		if (delta < min_match_lines)
+		{
+			/* Single-line range decreases by 1, otherwise decrease by 2 (from and to) */
+			reported_hits -= ((delta == 0) ? 1 : 2);
+		}
+		/* Exit if hits is below two */
+		if (reported_hits < 2)
+		{
+			scanlog("Discarded ranges brings hits count to %u\n", reported_hits);
+			return 0;
+		}
+	}
+
+	int hits = 0;
+
+	/* Count matched lines */
+	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
+	{
 
 		long from     = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6);
 		long to       = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6 + 2);
@@ -237,7 +264,8 @@ uint32_t compile_ranges(scan_data *scan) {
 		if (to < 1) break;
 
 		/* Add range as long as the minimum number of match lines is reached */
-		if ((to - from) >= min_match_lines) {
+		if ((to - from) >= min_match_lines)
+		{
 			add_snippet_ids(scan, from, to);
 
 			/* Add tolerance to end of last range */
