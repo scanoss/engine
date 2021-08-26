@@ -20,18 +20,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "scanoss.h"
-#include "scan.h"
 #include "attributions.h"
 #include "debug.h"
-#include "ignorelist.h"
-#include "limits.h"
 #include "debug.h"
-#include "report.h"
 #include "file.h"
 #include "help.h"
-#include "mz.h"
+#include "ignorelist.h"
 #include "license.h"
+#include "limits.h"
+#include "mz.h"
+#include "report.h"
+#include "scan.h"
+#include "scanoss.h"
+#include "util.h"
 
 /* Initialize tables for the DB name indicated (defaults to oss) */
 void initialize_ldb_tables(char *name)
@@ -346,8 +347,9 @@ int main(int argc, char **argv)
 		char *arg_target = argv[argc-1];
 		bool isfile = is_file(arg_target);
 		bool isdir = is_dir(arg_target);
+		bool ishash = !isdir && !isfile && valid_md5(arg_target);
 
-		if (!isfile && !isdir)
+		if (!isfile && !isdir && !ishash)
 		{
 			fprintf(stdout, "Cannot access target %s\n", arg_target);
 			exit(EXIT_FAILURE);
@@ -374,13 +376,16 @@ int main(int argc, char **argv)
 		/* Scan directory */
 		if (isdir) recurse_directory(target);
 
+		/* Scan hash */
+		else if (ishash) hash_scan(&scan);
+
 		/* Scan file */
 		else
 		{
+
 			bool wfp_extension = false;
 			if (extension(target)) if (!strcmp(extension(target), "wfp")) wfp_extension = true;
-
-			if (force_wfp) wfp_extension = true;
+				if (force_wfp) wfp_extension = true;
 
 			/* Scan wfp file */
 			if (wfp_extension) wfp_scan(&scan);
@@ -392,7 +397,7 @@ int main(int argc, char **argv)
 
 		/* Close main report structure */
 		json_close();
-			
+
 		/* Free scan data */
 		scan_data_free(scan);
 

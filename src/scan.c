@@ -242,6 +242,23 @@ void consider_file_record(\
 	free(url);
 }
 
+/* Scans a file hash only */
+int hash_scan(scan_data *scan)
+{
+	scan->preload = true;
+
+	/* Get file MD5 */
+	ldb_hex_to_bin(scan->file_path, MD5_LEN * 2, scan->md5);
+
+	/* Fake file length */
+	strcpy(scan->file_size, "999");
+
+	/* Scan the last file */
+	ldb_scan(scan);
+
+	return EXIT_SUCCESS;
+}
+
 /* Scans a wfp file with winnowing fingerprints */
 int wfp_scan(scan_data *scan)
 {
@@ -293,7 +310,7 @@ int wfp_scan(scan_data *scan)
 		}
 
 		/* Save hash/es to memory. Parse file information with format:
-		   linenr=wfp(6)[,wfp(6)]+ */
+			 linenr=wfp(6)[,wfp(6)]+ */
 
 		if (is_wfp && (scan->hash_count < MAX_HASHES_READ))
 		{
