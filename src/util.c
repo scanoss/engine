@@ -192,3 +192,18 @@ bool starts_with(char *str, char *start)
     if (strn_icmp(str, start, len)) return true;
     return false;
 }
+
+/* Returns true if str is a valid MD5 hash */
+bool valid_md5(char *str)
+{
+	if (strlen(str) != 32) return false;
+
+	char *p = str;
+	while (*p)
+	{
+		if (!isdigit(*p) && (*p < 'a' || *p >'f')) return false;
+		p++;
+	}
+
+	return true;
+}

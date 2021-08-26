@@ -55,4 +55,8 @@ bool starts_with(char *str, char *start);
 
 /* Returns a pointer to field n in data */
 char *field_n(int n, char *data);
+
+/* Returns true if str is a valid MD5 hash */
+bool valid_md5(char *str);
+
 #endif

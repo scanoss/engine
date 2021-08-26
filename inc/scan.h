@@ -12,5 +12,6 @@ void consider_file_record(\
 		match_data *matches,\
 		char *component_hint,\
 		uint8_t *match_md5);
+int hash_scan(scan_data *scan);
 
 #endif
