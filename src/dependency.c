@@ -19,10 +19,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "decrypt.h"
+#include "scanoss.h"
 #include "dependency.h"
 #include "limits.h"
 #include "parse.h"
@@ -74,6 +76,9 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 
 void print_dependencies(match_data match)
 {
+	if (!ldb_table_available(oss_dependency)) //skip dependencies if the table is not present
+		return;
+		
 	printf("[");
 
 	uint32_t records = 0;

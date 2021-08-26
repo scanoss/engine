@@ -176,5 +176,15 @@ void scan_benchmark()
 	printf ("Performance is %d fingerprints per second\n", (total_files * total_hashes * 1000) / elapsed_ms);
 
 }
+bool ldb_table_available(struct ldb_table table)
+{
+	/* Create table (directory) if it doesn't already exist */
+	char table_path[LDB_MAX_PATH] = "\0";
+	sprintf (table_path, "%s/%s/%s", ldb_root, table.db, table.table);
 
+	if (!ldb_dir_exists(table_path))
+		return false;
+
+	return true;
+}
 

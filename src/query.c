@@ -155,7 +155,9 @@ int get_component_age(uint8_t *md5)
 
 	/* Fetch record */
 	long age = 0;
-	ldb_fetch_recordset(NULL, oss_purl, md5, false, handle_get_component_age, &age);
+
+	if (ldb_table_available(oss_purl)) //skip purl if the table is not present
+		ldb_fetch_recordset(NULL, oss_purl, md5, false, handle_get_component_age, &age);
 
 	return age;
 }
