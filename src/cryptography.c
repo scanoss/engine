@@ -65,6 +65,9 @@ bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
 
 void print_cryptography(match_data match)
 {
+	if (!ldb_table_exists(oss_cryptography.db, oss_cryptography.table)) //skip crypto if the table is not present
+		return;
+	
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */

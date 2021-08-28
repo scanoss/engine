@@ -76,7 +76,7 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 
 void print_dependencies(match_data match)
 {
-	if (!ldb_table_available(oss_dependency)) //skip dependencies if the table is not present
+	if (!ldb_table_exists(oss_dependency.db, oss_dependency.table)) //skip dependencies if the table is not present
 		return;
 		
 	printf("[");

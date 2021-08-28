@@ -168,6 +168,8 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 /* Fetch related purls */
 void fetch_related_purls(match_data *match)
 {
+	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
+		return;
 	/* Fill purls */
 	for (int i = 0; i < MAX_PURLS; i++)
 		ldb_fetch_recordset(NULL, oss_purl, match->purl_md5[i], false, handle_purl_record, match);
@@ -219,7 +221,9 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 
 		/* Query purl table to obtain first release date */
 		char release_date[MAX_ARGLN + 1] = "\0";
-		ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) release_date);
+		
+		if (ldb_table_exists(oss_dependency.db, oss_dependency.table)) //skip purl if the table is not present
+			ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) release_date);
 
 		/* If it is older, then we copy to oldest */
 		if (!*oldest || *oldest == ',' || (*release_date && strcmp(release_date, (char *)oldest) < 0))
