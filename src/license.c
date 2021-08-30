@@ -229,7 +229,7 @@ void print_licenses(match_data match)
 {
 	if (!ldb_table_exists(oss_license.db, oss_license.table)) //skip purl if the table is not present
 		return;
-	
+	printf("      \"licenses\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */

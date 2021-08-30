@@ -103,7 +103,7 @@ void print_copyrights(match_data match)
 {
 	if (!ldb_table_exists(oss_copyright.db, oss_copyright.table)) //skip purl if the table is not present
 		return;
-
+	printf("      \"copyrights\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */
