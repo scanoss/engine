@@ -159,3 +159,12 @@ int get_component_age(uint8_t *md5)
 
 	return age;
 }
+
+/* Calculate the hash of purl@version */
+void purl_version_md5(uint8_t *out, char *purl, char *version)
+{
+	char purl_version[MAX_ARGLN];
+	sprintf(purl_version, "%s@%s", purl, version);
+	MD5((uint8_t *)purl_version, strlen(purl_version), out);
+}
+

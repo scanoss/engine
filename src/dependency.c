@@ -22,11 +22,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "decrypt.h"
 #include "dependency.h"
 #include "limits.h"
 #include "parse.h"
+#include "query.h"
 #include "util.h"
-#include "decrypt.h"
 
 const char *dependency_sources[] = {"component_declared"};
 
@@ -77,9 +78,30 @@ void print_dependencies(match_data match)
 
 	uint32_t records = 0;
 
+	/* Pull URL dependencies */
 	records = ldb_fetch_recordset(NULL, oss_dependency, match.url_md5, false, print_dependencies_item, NULL);
+
+	/* Purl vendor/component dependencies */
 	if (!records) 
 		records = ldb_fetch_recordset(NULL, oss_dependency, match.pair_md5, false, print_dependencies_item, NULL);
+
+	/* Pull purl@version dependencies */
+	if (!records)
+		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
+		{
+			uint8_t md5[MD5_LEN];
+			purl_version_md5(md5, match.purl[i], match.version);
+			records += ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, &match);
+		}
+
+	/* Pull purl@last_version dependencies */
+	if (!records)
+		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
+		{
+			uint8_t md5[MD5_LEN];
+			purl_version_md5(md5, match.purl[i], match.latest_version);
+			records += ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, &match);
+		}
 
 	if (records) printf("\n      ");
 	printf("],\n");
