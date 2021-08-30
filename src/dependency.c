@@ -78,7 +78,8 @@ void print_dependencies(match_data match)
 {
 	if (!ldb_table_exists(oss_dependency.db, oss_dependency.table)) //skip dependencies if the table is not present
 		return;
-		
+	
+	printf("      \"dependencies\": ");	
 	printf("[");
 
 	uint32_t records = 0;

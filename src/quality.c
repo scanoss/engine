@@ -74,6 +74,7 @@ void print_quality(match_data match)
 	if (!ldb_table_exists(oss_quality.db, oss_quality.table)) //skip purl if the table is not present
 		return;
 	
+	printf("      \"quality\": ");
 	printf("[");
 
 	uint32_t records = 0;
