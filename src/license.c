@@ -32,7 +32,15 @@
 #include "license_translation.h"
 #include "decrypt.h"
 
-const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header"};
+/* License sources
+	 0 = Declared in component
+	 1 = Declared in file with SPDX-License-Identifier
+	 2 = Detected in header
+	 3 = Declared in LICENSE file
+	 4 = Scancode detection
+	 */
+
+const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header", "license_file", "scancode"};
 
 /* Remove invalid characters from a license name */
 void clean_license(char *license)
