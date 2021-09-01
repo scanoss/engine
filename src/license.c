@@ -49,14 +49,8 @@ void clean_license(char *license)
 	char byte[2] = "\0\0";
 	while (*c)
 	{
-		/* Only first word is kept */
-		if (*c == ' ')
-		{
-			*c = 0;
-			break;
-		}
 		*byte = *c;
-		if (!isalnum(*byte) && !strstr("-+;:.", byte))
+		if (!isalnum(*byte) && !strstr("-+;:. ", byte))
 			memmove(c, c + 1, strlen(c));
 		else c++;
 	}
@@ -231,17 +225,6 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	return reported;
 }
 
-void get_license(match_data match, char *license)
-{
-	uint32_t records = 0;
-
-	records = ldb_fetch_recordset(NULL, oss_license, match.file_md5, false, get_first_license_item, license);
-	if (!records)
-		records = ldb_fetch_recordset(NULL, oss_license, match.url_md5, false, get_first_license_item, license);
-	if (!records)
-		records = ldb_fetch_recordset(NULL, oss_license, match.pair_md5, false, get_first_license_item, license);
-}
-
 void print_licenses(match_data match)
 {
 	printf("[");
@@ -279,11 +262,6 @@ void print_licenses(match_data match)
 		{
 			for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
 				records += ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match);
-		}
-		if (!records)
-		{
-			records = ldb_fetch_recordset(NULL, oss_license, match.pair_md5, false, print_licenses_item, &match);
-			if (records) scanlog("Vendor/component license returns hits\n");
 		}
 	}
 

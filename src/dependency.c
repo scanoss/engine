@@ -81,10 +81,6 @@ void print_dependencies(match_data match)
 	/* Pull URL dependencies */
 	records = ldb_fetch_recordset(NULL, oss_dependency, match.url_md5, false, print_dependencies_item, NULL);
 
-	/* Purl vendor/component dependencies */
-	if (!records) 
-		records = ldb_fetch_recordset(NULL, oss_dependency, match.pair_md5, false, print_dependencies_item, NULL);
-
 	/* Pull purl@version dependencies */
 	if (!records)
 		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
