@@ -26,7 +26,11 @@
 #include "debug.h"
 #include "scan.h"
 
+bool debug_on; //= false; //set debug mode from main.
+bool quiet;
+
 double progress_timer = 0;
+long microseconds_start;
 
 long microseconds_now()
 {

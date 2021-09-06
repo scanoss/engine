@@ -198,34 +198,34 @@ typedef struct path_ranking
 	uint8_t purl_md5[MD5_LEN];
 } path_ranking;
 
-long microseconds_start;
-unsigned char *linemap;
-unsigned char *map;
-int map_rec_len;
-extern bool match_extensions;// = false;
+extern long microseconds_start;
+//unsigned char *linemap;
+//unsigned char *map;
+extern int map_rec_len;
+extern bool match_extensions;
 
 /* File tracing -qi */
-uint8_t trace_id[MD5_LEN];
-bool trace_on;
+extern uint8_t trace_id[MD5_LEN];
+extern bool trace_on;
 
 /* Vendor and component hint hold the last component matched/guessed */
-char vendor_hint[MAX_FIELD_LN];
-char component_hint[MAX_FIELD_LN];
+extern char vendor_hint[MAX_FIELD_LN];
+extern char component_hint[MAX_FIELD_LN];
 
 #include "ldb.h"
 
 /* DB tables */
-struct ldb_table oss_url;
-struct ldb_table oss_file;
-struct ldb_table oss_wfp;
-struct ldb_table oss_purl;
-struct ldb_table oss_copyright;
-struct ldb_table oss_quality;
-struct ldb_table oss_vulnerability;
-struct ldb_table oss_dependency;
-struct ldb_table oss_license;
-struct ldb_table oss_attribution;
-struct ldb_table oss_cryptography;
+extern struct ldb_table oss_url;
+extern struct ldb_table oss_file;
+extern struct ldb_table oss_wfp;
+extern struct ldb_table oss_purl;
+extern struct ldb_table oss_copyright;
+extern struct ldb_table oss_quality;
+extern struct ldb_table oss_vulnerability;
+extern struct ldb_table oss_dependency;
+extern struct ldb_table oss_license;
+extern struct ldb_table oss_attribution;
+extern struct ldb_table oss_cryptography;
 
 extern bool first_file;
 extern int max_vulnerabilities;
