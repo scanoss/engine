@@ -110,7 +110,7 @@ void print_copyrights(match_data match)
 		records = ldb_fetch_recordset(NULL, oss_copyright, match.url_md5, false, print_copyrights_item, &match);
 	if (!records)
 		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
-			records += ldb_fetch_recordset(NULL, oss_copyright, match.purl_md5[i], false, print_copyrights_item, &match);
+			if (ldb_fetch_recordset(NULL, oss_copyright, match.purl_md5[i], false, print_copyrights_item, &match)) break;
 
 	if (records) printf("\n      ");
 	printf("],\n");
