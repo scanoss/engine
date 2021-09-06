@@ -261,7 +261,7 @@ void print_licenses(match_data match)
 		if (!records)
 		{
 			for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
-				records += ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match);
+					if (ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match)) break;
 		}
 	}
 
