@@ -36,6 +36,9 @@ bool first_file = true;
 const char *matchtypes[] = {"none", "url", "file", "snippet"};
 bool match_extensions = false;
 
+char vendor_hint[MAX_FIELD_LN];
+char component_hint[MAX_FIELD_LN];
+
 /* This script replaces \ with / */
 void flip_slashes(char *data)
 {
