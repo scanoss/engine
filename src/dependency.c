@@ -87,7 +87,8 @@ void print_dependencies(match_data match)
 		{
 			uint8_t md5[MD5_LEN];
 			purl_version_md5(md5, match.purl[i], match.version);
-			records += ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, &match);
+			records = ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, &match);
+			if (records) break;
 		}
 
 	/* Pull purl@last_version dependencies */
@@ -96,7 +97,8 @@ void print_dependencies(match_data match)
 		{
 			uint8_t md5[MD5_LEN];
 			purl_version_md5(md5, match.purl[i], match.latest_version);
-			records += ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, &match);
+			records = ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, &match);
+			if (records) break;
 		}
 
 	if (records) printf("\n      ");
