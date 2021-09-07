@@ -28,6 +28,7 @@
 #include "ldb.h"
 #include "decrypt.h"
 
+int map_rec_len;
 /* Set map hits to zero for the given match */
 void clear_hits(uint8_t *match)
 {
