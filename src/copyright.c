@@ -93,11 +93,17 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 
 void get_copyright(match_data match, char *copyright)
 {
+	if (!ldb_table_exists(oss_copyright.db, oss_copyright.table)) //skip purl if the table is not present
+		return;
+
 	ldb_fetch_recordset(NULL, oss_copyright, match.file_md5, false, get_first_copyright, copyright);
 }
 
 void print_copyrights(match_data match)
 {
+	if (!ldb_table_exists(oss_copyright.db, oss_copyright.table)) //skip purl if the table is not present
+		return;
+	printf("      \"copyrights\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */

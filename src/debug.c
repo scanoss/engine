@@ -26,7 +26,11 @@
 #include "debug.h"
 #include "scan.h"
 
+bool debug_on; //= false; //set debug mode from main.
+bool quiet;
+
 double progress_timer = 0;
+long microseconds_start;
 
 long microseconds_now()
 {
@@ -176,5 +180,4 @@ void scan_benchmark()
 	printf ("Performance is %d fingerprints per second\n", (total_files * total_hashes * 1000) / elapsed_ms);
 
 }
-
 

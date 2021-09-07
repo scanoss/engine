@@ -170,37 +170,31 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 
 	if (!(engine_flags & DISABLE_DEPENDENCIES))
 	{
-		printf("      \"dependencies\": ");
 		print_dependencies(match);
 	}
 
 	if (!(engine_flags & DISABLE_LICENSES))
 	{
-		printf("      \"licenses\": ");
 		print_licenses(match);
 	}
 
 	if (!(engine_flags & DISABLE_COPYRIGHTS))
 	{
-		printf("      \"copyrights\": ");
 		print_copyrights(match);
 	}
 
 	if (!(engine_flags & DISABLE_VULNERABILITIES))
 	{
-		printf("      \"vulnerabilities\": ");
 		print_vulnerabilities(match);
 	}
 
 	if (!(engine_flags & DISABLE_QUALITY))
 	{
-		printf("      \"quality\": ");
 		print_quality(match);
 	}
 
 	if (!(engine_flags & DISABLE_CRIPTOGRAPHY))
 	{
-		printf("      \"cryptography\": ");
 		print_cryptography(match);
 	}
 

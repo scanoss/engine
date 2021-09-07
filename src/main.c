@@ -34,6 +34,22 @@
 #include "scanoss.h"
 #include "util.h"
 
+struct ldb_table oss_url;
+struct ldb_table oss_file;
+struct ldb_table oss_wfp;
+struct ldb_table oss_purl;
+struct ldb_table oss_copyright;
+struct ldb_table oss_quality;
+struct ldb_table oss_vulnerability;
+struct ldb_table oss_dependency;
+struct ldb_table oss_license;
+struct ldb_table oss_attribution;
+struct ldb_table oss_cryptography;
+
+/* File tracing -qi */
+uint8_t trace_id[MD5_LEN];
+bool trace_on;
+
 /* Initialize tables for the DB name indicated (defaults to oss) */
 void initialize_ldb_tables(char *name)
 {

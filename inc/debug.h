@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include "scanoss.h"
 
-bool debug_on; //= false; //set debug mode from main.
-bool quiet;
+extern bool debug_on; //= false; //set debug mode from main.
+extern bool quiet;
 
 
 void scanlog(const char *fmt, ...);
