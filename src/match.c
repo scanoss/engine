@@ -156,12 +156,22 @@ bool ignored_asset_match(uint8_t *url_record)
 
 	bool found = false;
 
+	char *vendor = calloc(LDB_MAX_REC_LN, 1);
 	char *asset = calloc(LDB_MAX_REC_LN, 1);
+	char *purl = calloc(LDB_MAX_REC_LN, 1);
+
+	extract_csv(vendor, (char *) url_record, 1, LDB_MAX_REC_LN);
 	extract_csv(asset, (char *) url_record, 2, LDB_MAX_REC_LN);
+	extract_csv(purl, (char *) url_record, 6, LDB_MAX_REC_LN);
 	strcat(asset, ",");
 
+	if (strcasestr(ignored_assets, purl)) found = true;
+	if (strcasestr(ignored_assets, vendor)) found = true;
 	if (strcasestr(ignored_assets, asset)) found = true;
+
+	free(vendor);
 	free(asset);
+	free(purl);
 
 	if (found) scanlog("Component ignored: %s\n", url_record);
 

@@ -259,7 +259,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'b':
-				ignored_assets = parse_sbom(optarg, false);
+				ignored_assets = parse_sbom(optarg, true);
 				break;
 
 			case 'c':
