@@ -235,6 +235,7 @@ void consider_file_record(\
 	else
 	{
 		scanlog("Orphan file\n");
+		free(url);
 		return;
 	}
 
