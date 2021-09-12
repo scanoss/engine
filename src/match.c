@@ -81,12 +81,12 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		}
 
 		/* Print matches with version ranges first */
-		if (!selected) for (int i = 0; i < scan_limit && *matches[i].component; i++)
+		if (!selected || (engine_flags & DISABLE_BEST_MATCH)) for (int i = 0; i < scan_limit && *matches[i].component; i++)
 			if (!matches[i].selected) if (strcmp(matches[i].version, matches[i].latest_version))
 				print_json_match(scan, matches[i], &match_counter);
 
 		/* Print matches without version ranges */
-		if (!selected) for (int i = 0; i < scan_limit && *matches[i].component; i++)
+		if (!selected || (engine_flags & DISABLE_BEST_MATCH)) for (int i = 0; i < scan_limit && *matches[i].component; i++)
 			if (!matches[i].selected) if (!strcmp(matches[i].version, matches[i].latest_version))
 				print_json_match(scan, matches[i], &match_counter);
 	}
@@ -229,7 +229,7 @@ int count_matches(match_data *matches)
 		return 0;
 	}
 	int c = 0;
-	for (int i = 0; i < scan_limit && *matches[i].component; i++) c++;
+	for (int i = 0; i < scan_limit && matches[i].loaded; i++) c++;
 	return c;
 }
 
@@ -284,17 +284,9 @@ void add_match(int position, match_data match, match_data *matches)
 		if (position >= 0) n = position;
 
 		/* Search for a free match position */
-		else
-		{
-			for (n = 0; n < scan_limit; n++)
-			{
-				if (match.type == url)
-				{
-					if (!*matches[n].purl[0]) break;
-				}
-				else if (matches[n].path_ln > match.path_ln || !matches[n].path_ln) break;
-			}
-		}
+		else n = count_matches(matches);
+
+		if (n >= scan_limit) return;
 
 		/* Copy match information */
 		strcpy(matches[n].vendor, match.vendor);
@@ -311,49 +303,8 @@ void add_match(int position, match_data match, match_data *matches)
 		memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
 		matches[n].path_ln = match.path_ln;
 		matches[n].selected = match.selected;
+		matches[n].loaded = true;
 	}
-}
-
-match_data *compile_matches(scan_data *scan)
-{
-	scan->match_ptr = scan->md5;
-
-	/* Search for biggest snippet */
-	if (scan->match_type == snippet)
-	{
-		scan->match_ptr = biggest_snippet(scan);
-		if (!scan->match_ptr) return NULL;
-		scanlog("%ld matches in snippet map\n", scan->matchmap_size);
-	}
-
-	/* Return NULL if no matches */
-	if (!scan->match_ptr)
-	{
-		scan->match_type = none;
-		scanlog("No matching file id\n");
-		return NULL;
-	}
-	else
-	{
-		/* Log matching MD5 */
-		for (int i = 0; i < MD5_LEN; i++) scanlog("%02x", scan->match_ptr[i]);
-		scanlog(" selected\n");
-	}
-
-	/* Dump match map */
-	if (debug_on) map_dump(scan);
-
-	/* Gather and load match metadata */
-	match_data *matches = NULL;
-
-	scanlog("Starting match: %s\n",matchtypes[scan->match_type]);
-	if (scan->match_type != none) matches = load_matches(scan);
-
-	/* The latter could result in no matches */
-	if (!matches) scan->match_type = none;
-	scanlog("Final match: %s\n",matchtypes[scan->match_type]);
-
-	return matches;
 }
 
 /* Add file record to matches */
@@ -377,7 +328,7 @@ match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *
 	add_match(0, match, matches);
 }
 
-match_data *load_matches(scan_data *scan)
+void load_matches(scan_data *scan, match_data *matches)
 {
 	strcpy(scan->line_ranges, "all");
 	strcpy(scan->oss_ranges, "all");
@@ -398,20 +349,9 @@ match_data *load_matches(scan_data *scan)
 		if (matched_percent < 1) matched_percent = 1;
 
 		scanlog("compile_ranges returns %d hits\n", hits);
-		if (!hits) return NULL;
+		if (!hits) return;
 
 		sprintf(scan->matched_percent,"%u%%", matched_percent);
-	}
-
-	/* Init matches structure */
-	struct match_data *matches = calloc(sizeof(match_data), scan_limit);
-	for (int i = 0; i < scan_limit; i++)
-	{
-		matches[i].type = scan->match_type;
-		matches[i].selected = false;
-		matches[i].scandata = scan;
-		memset(matches[i].file_md5, 0, MD5_LEN);
-		memset(matches[i].url_md5, 0, MD5_LEN);
 	}
 
 	uint32_t records = 0;
@@ -531,10 +471,73 @@ match_data *load_matches(scan_data *scan)
 		free(files);
 	}
 
-	if (records) return matches;
-
-	if (matches) free(matches);
-
-	scanlog("Match type is 'none' after loading matches\n");
-	return NULL;
+	if (!records) scanlog("Match type is 'none' after loading matches\n");
 }
+
+match_data *compile_matches(scan_data *scan)
+{
+	/* Init matches structure */
+	struct match_data *matches = calloc(sizeof(match_data), scan_limit);
+	for (int i = 0; i < scan_limit; i++)
+	{
+		matches[i].type = scan->match_type;
+		matches[i].selected = false;
+		matches[i].loaded = false;
+		matches[i].scandata = scan;
+		memset(matches[i].file_md5, 0, MD5_LEN);
+		memset(matches[i].url_md5, 0, MD5_LEN);
+	}
+
+	scan->match_ptr = scan->md5;
+
+	do
+	{
+		/* Search for biggest snippet */
+		if (scan->match_type == snippet)
+		{
+			scanlog("%ld matches in snippet map\n", scan->matchmap_size);
+			scan->match_ptr = biggest_snippet(scan);
+		}
+
+		/* No match pointer */
+		if (!scan->match_ptr)
+		{
+			/* No previous matches loaded, exit */
+			if (!matches[0].loaded)
+			{
+				scan->match_type = none;
+				scanlog("No matching file id\n");
+				return NULL;
+			}
+
+			/* Otherwise break loop */
+			else break;
+		}
+
+		/* Log matching MD5 */
+		for (int i = 0; i < MD5_LEN; i++) scanlog("%02x", scan->match_ptr[i]);
+		scanlog(" selected\n");
+
+		/* Dump match map */
+		if (debug_on) map_dump(scan);
+
+		/* Gather and load match metadata */
+		scanlog("Starting match: %s\n",matchtypes[scan->match_type]);
+		if (scan->match_type != none) load_matches(scan, matches);
+
+		/* Set hits to zero for the selected record (to skip it in the next iteration) */
+		clear_hits(scan->match_ptr);
+
+		/* If matches are full, break loop */
+		if (matches[scan_limit - 1].loaded) break;
+
+		/* Loop only if DISABLE_BEST_MATCH and match type is snippet */
+	} while ((engine_flags & DISABLE_BEST_MATCH) && scan->match_type == snippet);
+
+	/* The latter could result in no matches */
+	if (!matches[0].loaded) scan->match_type = none;
+	scanlog("Final match: %s\n",matchtypes[scan->match_type]);
+
+	return matches;
+}
+

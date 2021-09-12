@@ -29,6 +29,7 @@
 #include "decrypt.h"
 
 int map_rec_len;
+
 /* Set map hits to zero for the given match */
 void clear_hits(uint8_t *match)
 {
@@ -119,7 +120,6 @@ uint8_t *biggest_snippet(scan_data *scan)
 
 		if (most_hits < min_match_hits)
 		{
-			scan->match_type = none;
 			scanlog("Not reaching min_match_hits\n");
 			return NULL;
 		}
