@@ -1,6 +1,6 @@
 #include "limits.h"
 
-int scan_limit = 10;
+int scan_limit = 25;
 
 int consecutive_score = 4000;
 int consecutive_hits = 4;
