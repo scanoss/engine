@@ -255,11 +255,11 @@ int main(int argc, char **argv)
 		switch (option)
 		{
 			case 's':
-				sbom = parse_sbom(optarg, false);
+				sbom = parse_sbom(optarg, false, true, false);
 				break;
 
 			case 'b':
-				ignored_assets = parse_sbom(optarg, true);
+				ignored_assets = parse_sbom(optarg, true, true, true);
 				break;
 
 			case 'c':

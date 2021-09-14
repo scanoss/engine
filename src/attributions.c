@@ -99,7 +99,7 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 	return false;
 }
 
-bool pair_notices_exist(struct ldb_table oss_attribution, uint8_t *key)
+bool purl_notices_exist(struct ldb_table oss_attribution, uint8_t *key)
 {
 	bool validated = true;
 	ldb_fetch_recordset(NULL, oss_attribution, key, false, attribution_handler, &validated);
@@ -113,37 +113,37 @@ bool print_notices(struct ldb_table oss_attribution, uint8_t *key, char *compone
 	return validated;
 }
 
-bool validate_pairs(struct ldb_table oss_attributions, char *pairs)
+bool check_purl_attributions(struct ldb_table oss_attributions, char *purls)
 {
 	bool valid = true;
 
-  /* Read comma separated tokens from pair_list */
-  char *pair = strtok(pairs, ",");
-  while (pair)
+  /* Read comma separated tokens from purl_list */
+  char *purl = strtok(purls, ",");
+  while (purl)
   {
 		uint8_t md5[16];
     
-		if (pair)
+		if (purl)
 		{
-			/* Get vendor/component pair */
-			MD5((uint8_t *)pair, strlen(pair), md5);
+			/* Get purl md5 */
+			MD5((uint8_t *)purl, strlen(purl), md5);
 			if (!ldb_key_exists(oss_attributions, md5))
 			{
-				printf("No attribution notices for %s\n", pair);
+				printf("No attribution notices for %s\n", purl);
 				valid = false;
 			}
-			else if (!pair_notices_exist(oss_attributions, md5))
+			else if (!purl_notices_exist(oss_attributions, md5))
 			{
-				printf("Missing notices for %s\n", pair);
+				printf("Missing notices for %s\n", purl);
 				valid = false;
 			}
 		}
-	  	pair = strtok(NULL, ",");
+		purl = strtok(NULL, ",");
   }
 	return valid;
 }
 
-void print_pairs_attribution_notices(struct ldb_table oss_attributions, char *pairs)
+void print_purl_attribution_notices(struct ldb_table oss_attributions, char *pairs)
 {
   /* Read comma separated tokens from pair_list */
   char *pair = strtok(pairs, ",");
@@ -164,14 +164,12 @@ void print_pairs_attribution_notices(struct ldb_table oss_attributions, char *pa
 int attribution_notices(char *sbom)
 {
 	/* Validate SBOM */
-	char *check_list = parse_sbom(sbom, true);
-	if (!validate_pairs(oss_attribution, check_list)) exit(EXIT_FAILURE);
-	free(check_list);
+	char *purl_list = parse_sbom(sbom, false, false, true);
+	if (!check_purl_attributions(oss_attribution, purl_list)) exit(EXIT_FAILURE);
 
 	/* Print attribution notices */
-	char *pair_list = parse_sbom(sbom, true);
-	print_pairs_attribution_notices(oss_attribution, pair_list);
-	free(pair_list);
+	print_purl_attribution_notices(oss_attribution, purl_list);
+	free(purl_list);
 
 	return EXIT_SUCCESS;
 }
