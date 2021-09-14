@@ -43,9 +43,9 @@ static bool is_vendor(char *str)
 	return false;
 }
 
-static void json_process_value(json_value* value, int depth, char *out, bool load_vendor);
+static void json_process_value(json_value* value, int depth, char *out, bool load_vendor, bool load_component, bool load_purl);
 
-static void json_process_object(json_value* value, int depth, char *out, bool load_vendor)
+static void json_process_object(json_value* value, int depth, char *out, bool load_vendor, bool load_component, bool load_purl)
 {
 	int length, x;
 	if (value == NULL) return;
@@ -65,23 +65,23 @@ static void json_process_object(json_value* value, int depth, char *out, bool lo
 				(!strcmp(value->u.object.values[x].name, "purl")) ||
 				(!strcmp(value->u.object.values[x].name, "packages")))
 		{
-			json_process_value(value->u.object.values[x].value, depth+1, out, load_vendor);
+			json_process_value(value->u.object.values[x].value, depth+1, out, load_vendor, load_component, load_purl);
 		}
 		if (data->type == json_string)
 		{
 			/* Copy vendor name */
-			if (is_vendor(name))
+			if (is_vendor(name) && load_vendor)
 			{
 				strcpy(vendor, data->u.string.ptr);
 			}
 
 			/* Copy component name */
-			if (is_component(name))
+			if (is_component(name) && load_component)
 			{
 				strcpy(component, data->u.string.ptr);
 			}
 
-			if (!strcmp(name, "purl"))
+			if (!strcmp(name, "purl") && load_purl)
 			{
 				strcpy(purl, data->u.string.ptr);
 			}
@@ -112,29 +112,29 @@ static void json_process_object(json_value* value, int depth, char *out, bool lo
 	}
 }
 
-static void json_process_array(json_value* value, int depth, char *out, bool load_vendor)
+static void json_process_array(json_value* value, int depth, char *out, bool load_vendor, bool load_component, bool load_purl)
 {
 	int length, x;
 	if (value == NULL) return;
 
 	length = value->u.array.length;
 	for (x = 0; x < length; x++) {
-		json_process_value(value->u.array.values[x], depth, out, load_vendor);
+		json_process_value(value->u.array.values[x], depth, out, load_vendor, load_component, load_purl);
 	}
 }
 
-static void json_process_value(json_value* value, int depth, char *out, bool load_vendor)
+static void json_process_value(json_value* value, int depth, char *out, bool load_vendor, bool load_component, bool load_purl)
 {
 	if (value == NULL) return;
 
 	switch (value->type)
 	{
 		case json_object:
-			json_process_object(value, depth+1, out, load_vendor);
+			json_process_object(value, depth+1, out, load_vendor, load_component, load_purl);
 			break;
 
 		case json_array:
-			json_process_array(value, depth+1, out, load_vendor);
+			json_process_array(value, depth+1, out, load_vendor, load_component, load_purl);
 			break;
 
 		default:
@@ -143,7 +143,7 @@ static void json_process_value(json_value* value, int depth, char *out, bool loa
 }
 
 /* Loads assets (SBOM.json) into memory */
-char *parse_sbom(char *filepath, bool load_vendor)
+char *parse_sbom(char *filepath, bool load_vendor, bool load_component, bool load_purl)
 {
 	json_char* json;
 	json_value* value;
@@ -174,7 +174,7 @@ char *parse_sbom(char *filepath, bool load_vendor)
 	}
 
 	char *out = calloc(file_size + 1, 1);
-	json_process_value(value, 0, out, load_vendor);
+	json_process_value(value, 0, out, load_vendor, load_component, load_purl);
 
 	json_value_free(value);
 	free(buffer);

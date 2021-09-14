@@ -4,6 +4,6 @@
 #include "scanoss.h"
 
 int attribution_notices(char *sbom);
-char *parse_sbom(char *filepath, bool load_vendor);
+char *parse_sbom(char *filepath, bool load_vendor, bool load_component, bool load_purl);
 
 #endif
