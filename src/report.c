@@ -68,6 +68,8 @@ void print_server_stats(scan_data *scan)
 	printf("        \"hostname\": \"%s\",\n", hostname);
 	printf("        \"version\": \"%s\",\n", SCANOSS_VERSION);
 	printf("        \"flags\": \"%ld\",\n", engine_flags);
+	if (ignored_assets)
+		printf("        \"ignored\": \"%s\",\n", ignored_assets);
 	printf("        \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
 	printf("      }\n");
 }

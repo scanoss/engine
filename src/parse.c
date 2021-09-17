@@ -105,11 +105,6 @@ static void json_process_object(json_value* value, int depth, char *out, bool lo
 	{
 		sprintf(out + strlen(out), "%s/%s,", vendor, component);
 	}
-	else
-	{
-		printf("Incomplete pair for %s/%s\n", vendor, component);
-		exit(EXIT_FAILURE);
-	}
 }
 
 static void json_process_array(json_value* value, int depth, char *out, bool load_vendor, bool load_component, bool load_purl)
@@ -181,6 +176,9 @@ char *parse_sbom(char *filepath, bool load_vendor, bool load_component, bool loa
 
 	/* Convert to lowercase */
 	for (int i = 0; i < strlen(out); i++) out[i] = tolower(out[i]);
+
+	/* Trim trailing comma */
+	if (out[strlen(out) - 1] == ',') out[strlen(out) - 1] = 0;
 
 	scanlog("SBOM contents: %s\n", out);
 
