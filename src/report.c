@@ -102,7 +102,7 @@ void print_purl_array(match_data match)
 /* Skip the first directory name for Github and Gitlab files */
 char *file_skip_release(char *purl, char *file)
 {
-	if (starts_with(purl, "pkg:github") || starts_with(purl, "pkg:gitlab"))
+	if (!(engine_flags & ENABLE_GITHUB_FULL_PATH) && (starts_with(purl, "pkg:github") || starts_with(purl, "pkg:gitlab")))
 	{
 		return skip_first_slash(file);
 	}
