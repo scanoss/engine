@@ -65,6 +65,7 @@
 #define DISABLE_BEST_MATCH 256
 #define ENABLE_REPORT_IDENTIFIED 512
 #define ENABLE_DOWNLOAD_URL 1024
+#define ENABLE_GITHUB_FULL_PATH 2048
 #define MAX_PURLS 10
 #define SHORTEST_PATHS_QTY 50 // number of shortest path to evaluate
 
