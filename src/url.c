@@ -138,31 +138,28 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 	/* Only use purl relation records */
 	if (memcmp(data, "pkg:", 4)) return false;
 
-	data[datalen] = 0;
-
 	/* Save purl record */
-	bool added = false;
+	char *purl = calloc(datalen + 1, 1);
+	memcpy(purl, data, datalen);
+	purl[datalen] = 0;
+
+	/* Copy purl record to match */
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
 		/* Add to end of list */
 		if (!*match->purl[i])
 		{
-			strcpy(match->purl[i], (char *)data);
-			MD5(data, strlen((char *)data), match->purl_md5[i]);
-			added = true;
+			scanlog("Related PURL: %s\n", purl);
+			strcpy(match->purl[i], purl);
+			MD5((uint8_t *)purl, strlen(purl), match->purl_md5[i]);
 			break;
 		}
 		/* Already exists, exit */
-		if (!strcmp(match->purl[i], (char *)data)) 
-		{
-			return false;
-		}
+		if (!strcmp(match->purl[i], purl)) break;
 	}
 
-	/* List is full, end recordset loop */
-	if (!added) return true;
-
-	return false;
+	free(purl);
+	return true;
 }
 
 /* Fetch related purls */
@@ -170,9 +167,14 @@ void fetch_related_purls(match_data *match)
 {
 	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
 		return;
+
 	/* Fill purls */
 	for (int i = 0; i < MAX_PURLS; i++)
+	{
+		if (!*match->purl[i]) break;
+		scanlog("Finding related PURLs for %s\n", match->purl[i]);
 		ldb_fetch_recordset(NULL, oss_purl, match->purl_md5[i], false, handle_purl_record, match);
+	}
 }
 
 /* Get the oldest release for a purl */
