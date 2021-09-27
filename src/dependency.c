@@ -54,8 +54,8 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	free(CSV);
 
 	int src = atoi(source);
-	printable_only(vendor);
-	printable_only(component);
+	string_clean(vendor);
+	string_clean(component);
 	string_clean(version);
 
 	if (*vendor && *component)
