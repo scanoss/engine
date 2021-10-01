@@ -43,9 +43,9 @@ static bool is_vendor(char *str)
 	return false;
 }
 
-static void json_process_value(json_value* value, int depth, char *out, bool load_vendor, bool load_component, bool load_purl);
+static void work_json_value(json_value* value, int depth, component_item *out);
 
-static void json_process_object(json_value* value, int depth, char *out, bool load_vendor, bool load_component, bool load_purl)
+static void work_json_object(json_value* value, int depth, component_item *out)
 {
 	int length, x;
 	if (value == NULL) return;
@@ -65,71 +65,55 @@ static void json_process_object(json_value* value, int depth, char *out, bool lo
 				(!strcmp(value->u.object.values[x].name, "purl")) ||
 				(!strcmp(value->u.object.values[x].name, "packages")))
 		{
-			json_process_value(value->u.object.values[x].value, depth+1, out, load_vendor, load_component, load_purl);
+			work_json_value(value->u.object.values[x].value, depth+1, out);
 		}
 		if (data->type == json_string)
 		{
-			/* Copy vendor name */
-			if (is_vendor(name) && load_vendor)
-			{
-				strcpy(vendor, data->u.string.ptr);
-			}
-
-			/* Copy component name */
-			if (is_component(name) && load_component)
-			{
-				strcpy(component, data->u.string.ptr);
-			}
-
-			if (!strcmp(name, "purl") && load_purl)
-			{
-				strcpy(purl, data->u.string.ptr);
-			}
+			if (is_vendor(name)) strcpy(vendor, data->u.string.ptr);
+			if (is_component(name)) strcpy(component, data->u.string.ptr);
+			if (!strcmp(name, "purl")) strcpy(purl, data->u.string.ptr);
 		}
 	}
 
 	if (!*component && !*vendor && !*purl) return;
 
-	if (*purl)
+	/* Load values into structure */
+	component_item *ignore = out;
+	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
 	{
-		sprintf(out + strlen(out), "%s,", purl);
-	}
-
-	if (!load_vendor)
-	{
-		sprintf(out + strlen(out), "%s,", component);
-		return;
-	}
-
-	if (*component && *vendor)
-	{
-		sprintf(out + strlen(out), "%s/%s,", vendor, component);
+		if (!*ignore[i].component && !*ignore[i].vendor && !*ignore[i].purl)
+		{
+			if (*vendor) strcpy(ignore[i].vendor, vendor);
+			if (*component) strcpy(ignore[i].component, component);
+			if (*purl) strcpy(ignore[i].purl, purl);
+			break;
+		}
 	}
 }
 
-static void json_process_array(json_value* value, int depth, char *out, bool load_vendor, bool load_component, bool load_purl)
+static void work_json_array(json_value* value, int depth, component_item *out)
 {
 	int length, x;
 	if (value == NULL) return;
 
 	length = value->u.array.length;
 	for (x = 0; x < length; x++) {
-		json_process_value(value->u.array.values[x], depth, out, load_vendor, load_component, load_purl);
+		work_json_value(value->u.array.values[x], depth, out);
 	}
 }
 
-static void json_process_value(json_value* value, int depth, char *out, bool load_vendor, bool load_component, bool load_purl)
+static void work_json_value(json_value* value, int depth, component_item *out)
 {
 	if (value == NULL) return;
 
 	switch (value->type)
 	{
 		case json_object:
-			json_process_object(value, depth+1, out, load_vendor, load_component, load_purl);
+			work_json_object(value, depth+1, out);
 			break;
 
 		case json_array:
-			json_process_array(value, depth+1, out, load_vendor, load_component, load_purl);
+			work_json_array(value, depth+1, out);
 			break;
 
 		default:
@@ -137,28 +121,27 @@ static void json_process_value(json_value* value, int depth, char *out, bool loa
 	}
 }
 
-/* Loads assets (SBOM.json) into memory */
-char *parse_sbom(char *filepath, bool load_vendor, bool load_component, bool load_purl)
+component_item *get_components(char *filepath)
 {
-	json_char* json;
-	json_value* value;
 
 	/* Read file into buffer */
 	FILE *file;
 	if((file = fopen(filepath, "rb"))==NULL)
-	{ 
+	{
 		printf("Error: %s cannot be loaded\n",filepath);
 		exit(EXIT_FAILURE);
 	}
-	
+
 	fseek(file, 0, SEEK_END);
 	long file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
 	char *buffer = malloc(file_size + 1);
-	if (!fread(buffer, 1, file_size, file)) printf("Warning: cannot parse SBOM %s\n", filepath);
+	if (!fread(buffer, 1, file_size, file)) fprintf(stderr, "Warning: cannot parse SBOM %s\n", filepath);
 	fclose(file);
 	buffer[file_size] = 0;
 
+	json_char* json;
+	json_value* value;
 
 	json = (json_char*)buffer;
 	value = json_parse(json,file_size);
@@ -168,19 +151,19 @@ char *parse_sbom(char *filepath, bool load_vendor, bool load_component, bool loa
 		exit(EXIT_FAILURE);
 	}
 
-	char *out = calloc(file_size + 1, 1);
-	json_process_value(value, 0, out, load_vendor, load_component, load_purl);
+	component_item *out = calloc(MAX_SBOM_ITEMS * sizeof(component_item), 1);
+	work_json_value(value, 0, out);
 
 	json_value_free(value);
 	free(buffer);
 
-	/* Convert to lowercase */
-	for (int i = 0; i < strlen(out); i++) out[i] = tolower(out[i]);
-
-	/* Trim trailing comma */
-	if (out[strlen(out) - 1] == ',') out[strlen(out) - 1] = 0;
-
-	scanlog("SBOM contents: %s\n", out);
+	scanlog("SBOM contents:\n");
+	component_item *ignore = out;
+	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
+	{
+		if (!*ignore[i].component && !*ignore[i].vendor && !*ignore[i].purl) break;
+		scanlog("#%d %s, %s, %s\n", i, ignore[i].component, ignore[i].vendor, ignore[i].purl);
+	}
 
 	return out;
 }

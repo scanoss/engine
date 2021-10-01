@@ -22,13 +22,13 @@
 
 #include "attributions.h"
 #include "debug.h"
-#include "debug.h"
 #include "file.h"
 #include "help.h"
 #include "ignorelist.h"
 #include "license.h"
 #include "limits.h"
 #include "mz.h"
+#include "parse.h"
 #include "report.h"
 #include "scan.h"
 #include "scanoss.h"
@@ -45,6 +45,8 @@ struct ldb_table oss_dependency;
 struct ldb_table oss_license;
 struct ldb_table oss_attribution;
 struct ldb_table oss_cryptography;
+component_item *ignore_components;
+component_item *declared_components;
 
 /* File tracing -qi */
 uint8_t trace_id[MD5_LEN];
@@ -255,11 +257,12 @@ int main(int argc, char **argv)
 		switch (option)
 		{
 			case 's':
-				sbom = parse_sbom(optarg, false, true, false);
+				if (declared_components) printf("Cannot combine -s and -a\n");
+				declared_components = get_components(optarg);
 				break;
 
 			case 'b':
-				ignored_assets = parse_sbom(optarg, true, true, true);
+				ignore_components = get_components(optarg);
 				break;
 
 			case 'c':
@@ -272,6 +275,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'a':
+				if (declared_components) printf("Cannot combine -s and -a\n");
 				exit(attribution_notices(optarg));
 				break;
 
@@ -420,7 +424,8 @@ int main(int argc, char **argv)
 		if (target) free (target);
 	}
 
-	if (sbom) free (sbom);
+	if (ignore_components) free(ignore_components);
+	if (declared_components) free(declared_components);
 	if (ignored_assets)  free (ignored_assets);
 
 	return EXIT_SUCCESS;

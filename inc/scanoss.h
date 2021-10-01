@@ -67,6 +67,7 @@
 #define ENABLE_DOWNLOAD_URL 1024
 #define ENABLE_GITHUB_FULL_PATH 2048
 #define MAX_PURLS 10
+#define MAX_SBOM_ITEMS 100
 #define SHORTEST_PATHS_QTY 50 // number of shortest path to evaluate
 
 extern uint64_t engine_flags;
@@ -137,6 +138,13 @@ typedef struct scan_data
 	char matched_percent[MAX_FIELD_LN];
 	bool identified;
 } scan_data;
+
+typedef struct component_item
+{
+	char vendor[MAX_FIELD_LN];
+	char component[MAX_FIELD_LN];
+	char purl[MAX_FIELD_LN];
+} component_item;
 
 typedef struct match_data
 {
@@ -232,8 +240,9 @@ extern struct ldb_table oss_cryptography;
 extern bool first_file;
 extern int max_vulnerabilities;
 
-extern char *sbom;
 extern char *ignored_assets;
+extern component_item *ignore_components;
+extern component_item *declared_components;
 
 /* Prototype declarations */
 int wfp_scan(scan_data *scan);
