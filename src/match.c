@@ -149,32 +149,60 @@ int add_all_files_to_matches(file_recordset *files, int file_count, scan_data *s
 	return file_count;
 }
 
-/* Determine if the asset in the URL is among the ignored_assets (-b parameter) */
+/* Return true if asset is found in ignore_components (-b parameter) */
 bool ignored_asset_match(uint8_t *url_record)
 {
-	if (!ignored_assets) return false;
+	if (!ignore_components) return false;
 
-	bool found = false;
-
+	/* Extract fields from URL record */
 	char *vendor = calloc(LDB_MAX_REC_LN, 1);
-	char *asset = calloc(LDB_MAX_REC_LN, 1);
+	char *component = calloc(LDB_MAX_REC_LN, 1);
 	char *purl = calloc(LDB_MAX_REC_LN, 1);
 
 	extract_csv(vendor, (char *) url_record, 1, LDB_MAX_REC_LN);
-	extract_csv(asset, (char *) url_record, 2, LDB_MAX_REC_LN);
+	extract_csv(component, (char *) url_record, 2, LDB_MAX_REC_LN);
 	extract_csv(purl, (char *) url_record, 6, LDB_MAX_REC_LN);
-	strcat(asset, ",");
 
-	if (strcasestr(ignored_assets, purl)) found = true;
-	if (strcasestr(ignored_assets, vendor)) found = true;
-	if (strcasestr(ignored_assets, asset)) found = true;
+	bool found = false;
+
+	/* Travel ignore_components */
+	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
+	{
+		char *dvendor = ignore_components[i].vendor;
+		char *dcomponent = ignore_components[i].component;
+		char *dpurl = ignore_components[i].purl;
+
+		/* Exit if reached the end */
+		if (!*dcomponent && !*dvendor && !*dpurl) break;
+
+		/* Compare purl */
+		if (*dpurl)
+		{
+			if (!strcmp((const char *) purl, (const char *) dpurl))
+			{
+				found = true;
+				break;
+			}
+		}
+
+		/* Compare vendor and component */
+		else
+		{
+			bool vendor_match = !*dvendor || !strcmp(vendor, dvendor);
+			bool component_match = !*dcomponent || !strcmp(component, dcomponent);
+			if (vendor_match && component_match)
+			{
+				found = true;
+				break;
+			}
+		}
+	}
 
 	free(vendor);
-	free(asset);
+	free(component);
 	free(purl);
 
 	if (found) scanlog("Component ignored: %s\n", url_record);
-
 	return found;
 }
 
@@ -309,7 +337,7 @@ void add_match(int position, match_data match, match_data *matches)
 
 /* Add file record to matches */
 void add_selected_file_to_matches(\
-match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *file_md5)
+		match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *file_md5)
 {
 	scanlog("Identified #%d: %s\n", rank_id, component_rank[rank_id].url_record);
 

@@ -20,23 +20,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "scan.h"
-#include "rank.h"
-#include "snippets.h"
-#include "match.h"
-#include "query.h"
-#include "file.h"
-#include "util.h"
-#include "parse.h"
 #include "debug.h"
-#include "psi.h"
-#include "limits.h"
+#include "file.h"
 #include "ignorelist.h"
-#include "winnowing.h"
 #include "ldb.h"
+#include "limits.h"
+#include "match.h"
+#include "parse.h"
+#include "psi.h"
+#include "query.h"
+#include "rank.h"
+#include "scan.h"
+#include "snippets.h"
+#include "util.h"
 #include "versions.h"
+#include "winnowing.h"
 
-char *sbom = NULL;
 char *ignored_assets = NULL;
 
 /* Calculate and write source wfp md5 in scan->source_md5 */
@@ -129,27 +128,41 @@ static matchtype ldb_scan_file(uint8_t *fid) {
 	return match_type;
 }
 
-bool assets_match(match_data match)
+/* Return true if asset is found in declared_components (-s parameter) */
+bool asset_declared(match_data match)
 {
-	if (!sbom) return false;
+	if (!declared_components) return false;
 
-	bool found = false;	
+	/* Travel declared_components */
+	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
+	{
+		char *vendor = declared_components[i].vendor;
+		char *component = declared_components[i].component;
+		char *purl = declared_components[i].purl;
 
-	char *asset = calloc(LDB_MAX_REC_LN, 1);
-	sprintf(asset, "%s,", match.component);
+		/* Exit if reached the end */
+		if (!*component && !*vendor && !*purl) break;
 
-	if (strstr(sbom, asset)) found = true;
-	free(asset);
+		/* Compare purl */
+		if (*purl)
+		{
+			if (!strcmp((const char *) match.purl, (const char *) purl)) return true;
+		}
 
-	return found;
+		/* Compare vendor and component */
+		else if (*vendor && *component)
+		{
+			if (!strcmp(vendor, match.vendor) && !strcmp(component, match.component)) return true;
+		}
+	}
+	return false;
 }
 
-
 /* Returns true if rec_ln is longer than everything else in "matches"
-	also, update position with the position of a longer path */
+	 also, update position with the position of a longer path */
 bool longer_path_in_set(match_data *matches, int total_matches, int rec_ln, int *position)
 {
-  if (scan_limit > total_matches) return false;
+	if (scan_limit > total_matches) return false;
 
 	/* Search for a longer path than rec_ln */
 	for (int i = 0; i < total_matches; i++)
@@ -432,7 +445,7 @@ void ldb_scan(scan_data *scan)
 		/* Matched asset in SBOM.json? */
 		for (int i = 0; i < total_matches; i++)
 		{
-			if (assets_match(matches[i]))
+			if (asset_declared(matches[i]))
 			{
 				scanlog("Asset matched\n");
 				if (engine_flags & ENABLE_REPORT_IDENTIFIED)

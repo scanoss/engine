@@ -22,11 +22,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "limits.h"
-#include "license.h"
-#include "debug.h"
-#include "util.h"
 #include "attributions.h"
+#include "debug.h"
+#include "license.h"
+#include "limits.h"
+#include "parse.h"
+#include "util.h"
 
 bool notices_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, \
 uint8_t *data, uint32_t datalen, int iteration, void *ptr)
@@ -55,7 +56,7 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 
 	/* Print attribution notice header */
 	char *component = (char *) ptr;
-	printf("[%s]\n", component);
+	printf("[%s]\n\n", component);
 
 	/* Print attribution notice */
 	mz_cat(&job, hexkey);
@@ -113,19 +114,25 @@ bool print_notices(struct ldb_table oss_attribution, uint8_t *key, char *compone
 	return validated;
 }
 
-bool check_purl_attributions(struct ldb_table oss_attributions, char *purls)
+/* Return true if purl attributions are in the KB */
+bool check_purl_attributions(struct ldb_table oss_attributions)
 {
 	bool valid = true;
+	if (!declared_components) return false;
 
-  /* Read comma separated tokens from purl_list */
-  char *purl = strtok(purls, ",");
-  while (purl)
-  {
-		uint8_t md5[16];
-    
-		if (purl)
+	/* Travel declared_components */
+	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
+	{
+		char *purl = declared_components[i].purl;
+
+		/* Exit if reached the end */
+		if (!*purl) break;
+
+		/* Compare purl */
+		if (*purl)
 		{
 			/* Get purl md5 */
+			uint8_t md5[16];
 			MD5((uint8_t *)purl, strlen(purl), md5);
 			if (!ldb_key_exists(oss_attributions, md5))
 			{
@@ -138,38 +145,35 @@ bool check_purl_attributions(struct ldb_table oss_attributions, char *purls)
 				valid = false;
 			}
 		}
-		purl = strtok(NULL, ",");
-  }
+	}
 	return valid;
 }
 
-void print_purl_attribution_notices(struct ldb_table oss_attributions, char *pairs)
+void print_purl_attribution_notices(struct ldb_table oss_attributions)
 {
-  /* Read comma separated tokens from pair_list */
-  char *pair = strtok(pairs, ",");
-  while (pair)
-  {
+	/* Travel declared_components */
+	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
+	{
+		/* Get purl */
+		char *purl = declared_components[i].purl;
+		if (!*purl) break;
+
+		/* Get purl md5 */
 		uint8_t md5[16];
-    
-		if (pair)
-		{
-			/* Get vendor/component pair */
-			MD5((uint8_t *)pair, strlen(pair), md5);
-			print_notices(oss_attributions, md5, pair);
-		}
-		pair = strtok(NULL, ",");
+		MD5((uint8_t *)purl, strlen(purl), md5);
+		print_notices(oss_attributions, md5, purl);
   }
 }
 
-int attribution_notices(char *sbom)
+int attribution_notices()
 {
 	/* Validate SBOM */
-	char *purl_list = parse_sbom(sbom, false, false, true);
-	if (!check_purl_attributions(oss_attribution, purl_list)) exit(EXIT_FAILURE);
+	declared_components = get_components(optarg);
+	if (!check_purl_attributions(oss_attribution)) exit(EXIT_FAILURE);
 
 	/* Print attribution notices */
-	print_purl_attribution_notices(oss_attribution, purl_list);
-	free(purl_list);
+	print_purl_attribution_notices(oss_attribution);
 
+	if (declared_components) free(declared_components);
 	return EXIT_SUCCESS;
 }
