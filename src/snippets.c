@@ -33,6 +33,7 @@ int map_rec_len;
 /* Set map hits to zero for the given match */
 void clear_hits(uint8_t *match)
 {
+	if (!match) return;
 	match[MD5_LEN] = 0;
 	match[MD5_LEN + 1] = 0;
 }

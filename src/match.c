@@ -554,7 +554,7 @@ match_data *compile_matches(scan_data *scan)
 		if (scan->match_type != none) load_matches(scan, matches);
 
 		/* Set hits to zero for the selected record (to skip it in the next iteration) */
-		clear_hits(scan->match_ptr);
+		if (scan->match_type == snippet) clear_hits(scan->match_ptr);
 
 		/* If matches are full, break loop */
 		if (matches[scan_limit - 1].loaded) break;

@@ -159,7 +159,7 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 	}
 
 	free(purl);
-	return true;
+	return false;
 }
 
 /* Fetch related purls */
@@ -172,8 +172,11 @@ void fetch_related_purls(match_data *match)
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
 		if (!*match->purl[i]) break;
-		scanlog("Finding related PURLs for %s\n", match->purl[i]);
-		ldb_fetch_recordset(NULL, oss_purl, match->purl_md5[i], false, handle_purl_record, match);
+		int purls = ldb_fetch_recordset(NULL, oss_purl, match->purl_md5[i], false, handle_purl_record, match);
+		if (purls)
+			scanlog("Finding related PURLs for %s returned %d matches\n", match->purl[i], purls);
+		else
+			scanlog("Finding related PURLs for %s returned no matches\n", match->purl[i]);
 	}
 }
 
