@@ -40,6 +40,7 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 
 	char *CSV = calloc(datalen + 1, 1);
 	memcpy(CSV, (char *) data, datalen);
+	scanlog("Dependency: %s\n", CSV);
 
 	char *source = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *vendor = calloc(MAX_JSON_VALUE_LEN, 1);
@@ -88,7 +89,10 @@ void print_dependencies(match_data match)
 
 	/* Pull URL dependencies */
 	records = ldb_fetch_recordset(NULL, oss_dependency, match.url_md5, false, print_dependencies_item, NULL);
-	if (records) scanlog("Dependency matches reported for url_hash\n");
+	if (records)
+		scanlog("Dependency matches (%d) reported for url_hash\n", records);
+	else
+		scanlog("No dependency matches reported for url_hash\n");
 
 	/* Pull purl@version dependencies */
 	if (!records)
@@ -96,9 +100,14 @@ void print_dependencies(match_data match)
 		{
 			uint8_t md5[MD5_LEN];
 			purl_version_md5(md5, match.purl[i], match.version);
+
 			records = ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, &match);
-			if (records) scanlog("Dependency matches reported for %s@%s\n", match.purl[i],match.version);
-			if (records) break;
+			if (records)
+			{
+				scanlog("Dependency matches (%d) reported for %s@%s\n", records, match.purl[i],match.version);
+				break;
+			}
+			else scanlog("No dependency matches reported for %s@%s\n", match.purl[i],match.version);
 		}
 
 	/* Pull purl@last_version dependencies */
@@ -107,9 +116,14 @@ void print_dependencies(match_data match)
 		{
 			uint8_t md5[MD5_LEN];
 			purl_version_md5(md5, match.purl[i], match.latest_version);
+
 			records = ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, &match);
-			if (records) scanlog("Dependency matches reported for %s@%s\n", match.purl[i],match.latest_version);
-			if (records) break;
+			if (records)
+			{
+				scanlog("Dependency matches (%d) reported for %s@%s\n", records, match.purl[i],match.latest_version);
+				break;
+			}
+			else scanlog("No dependency matches reported for %s@%s\n", match.purl[i],match.latest_version);
 		}
 
 	if (records) printf("\n      ");
