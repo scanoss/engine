@@ -307,21 +307,27 @@ bool select_match(match_data *matches, struct keywords *kwlist)
 		matches[selected].selected = true;
 	}
 
-	return true;
+	return (selected >= 0);
 }
 
 /* Perform keyword analysis among URL and file paths, find a common denominator and
 	 pick a URL/file containing such keyboard as the only match */
-void keyword_analysis(match_data *matches)
+bool keyword_analysis(match_data *matches)
 {
 	/* A single match does not need to be analyzed */	
-	if (count_matches(matches) <= 1) return;
+	if (count_matches(matches) <= 1)
+	{
+		matches[0].selected = true;
+		return true;
+	}
 
 	scanlog("Loading keywords\n");
 	struct keywords *kwlist = load_keywords(matches);
 
 	scanlog("Selecting match from keywords\n");
-	select_match(matches, kwlist);
+	bool selected = select_match(matches, kwlist);
 
 	free(kwlist);
+
+	return selected;
 }

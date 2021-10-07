@@ -3,7 +3,7 @@
 
 #include "scanoss.h"
 
-void keyword_analysis(match_data *matches);
+bool keyword_analysis(match_data *matches);
 
 
 #endif

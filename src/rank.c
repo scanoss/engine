@@ -771,7 +771,8 @@ bool select_best_match(match_data *matches)
 	if (oldest)
 	{
 		matches[oldest_id].selected = true;
-		scanlog("Selected match %s/%s with age = %ld\n",\
+		scanlog("Selected match #%d (%s/%s) with age = %ld\n",\
+				oldest_id,
 				matches[oldest_id].vendor,\
 				matches[oldest_id].component,\
 				oldest);

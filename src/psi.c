@@ -21,6 +21,7 @@
 #include "psi.h"
 #include "keywords.h"
 #include "limits.h"
+#include "url.h"
 
 /* Meta post scanning function */
 void post_scan(match_data *matches)
@@ -31,7 +32,10 @@ void post_scan(match_data *matches)
 		if (!select_best_match(matches))
 		{
 			/* Select best match from keyword analysis */
-			keyword_analysis(matches);
+			bool selected = keyword_analysis(matches);
+
+			/* Select preferred purl schema */
+			if (!selected) select_best_url(matches);
 		}
 	}
 }
