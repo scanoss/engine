@@ -258,12 +258,17 @@ int select_by_keyword_in_path(match_data *matches, char *keyword)
 
 bool select_match(match_data *matches, struct keywords *kwlist)
 {
+	scanlog("Running select_match starts()\n");
+	if (!*component_hint)
+	{
+		scanlog("Skipping select_match (no component_hint identified)\n");
+		return false;
+	}
+
 	int	best = best_keyword(kwlist);
 	int selected = -1;
 
 	char *best_component = component_hint;
-	if (!*best_component && kwlist[best].count < 2) return false;
-
 	if (!*best_component)
 	{
 			best_component = kwlist[best].word;
