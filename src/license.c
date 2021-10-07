@@ -203,7 +203,8 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	int src = atoi(source);
 
 	scanlog("Fetched license %s\n", license);
-	printable_only(license);
+	string_clean(license);
+
 	bool reported = false;
 
 	if (!dup && *license && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
