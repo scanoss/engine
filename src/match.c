@@ -389,7 +389,6 @@ void load_matches(scan_data *scan, match_data *matches)
 	{
 		records = ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *) matches);
 		scanlog("URL recordset contains %u records\n", records);
-		select_best_url(matches);
 	}
 
 	if (!records)
@@ -561,6 +560,7 @@ match_data *compile_matches(scan_data *scan)
 
 		/* Loop only if DISABLE_BEST_MATCH and match type is snippet */
 	} while ((engine_flags & DISABLE_BEST_MATCH) && scan->match_type == snippet);
+	for (int i = 0; i < scan_limit && *matches[i].component; i++) scanlog("Match #%d = %d\n", i, matches[i].selected);
 
 	/* The latter could result in no matches */
 	if (!matches[0].loaded) scan->match_type = none;

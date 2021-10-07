@@ -440,7 +440,7 @@ void ldb_scan(scan_data *scan)
 		/* Debug match info */
 		scanlog("%d matches compiled:\n", total_matches);
 		if (debug_on) for (int i = 0; i < total_matches; i++)
-			scanlog("%s, %s\n", matches[i].purl, matches[i].file);
+			scanlog("#%d %s, %s\n",i,  matches[i].purl, matches[i].file);
 
 		/* Matched asset in SBOM.json? */
 		for (int i = 0; i < total_matches; i++)
