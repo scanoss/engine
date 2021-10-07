@@ -83,13 +83,6 @@ void trim(char *str)
     str[i + 1] = 0;
 }
 
-/* Trim string at first non-printable char */
-void printable_only(char *text)
-{
-	for (int i = 0; i < strlen(text); i++)
-		if (text[i] < '"' || text[i] > 'z') text[i] = 0;
-}
-
 /* Returns the pair md5 of "component/vendor" */
 void vendor_component_md5(char *component, char *vendor, uint8_t *out)
 {

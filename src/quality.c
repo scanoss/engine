@@ -46,7 +46,7 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 
 	scanlog("Fetched quality %s\n", quality);
 
-	printable_only(quality);
+	string_clean(quality);
 
 	bool reported = false;
 
