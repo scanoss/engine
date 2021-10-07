@@ -752,21 +752,18 @@ int seek_component_hint_in_path_start(\
 /* Select match based on hint and age */
 bool select_best_match(match_data *matches)
 {
-	if (!*component_hint) return false;
+	scanlog("Running select_best_match()\n");
 	long oldest = 0;
 	int oldest_id = 0;
 
 	/* Search for matches in component with version ranges */
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
-		if (stricmp(matches[i].component, component_hint))
+		int age = get_component_age(matches[i].purl_md5[0]);
+		if (age > oldest)
 		{
-			int age = get_component_age(matches[i].purl_md5[0]);
-			if (age > oldest)
-			{
-				oldest = age;
-				oldest_id = i;
-			}
+			oldest = age;
+			oldest_id = i;
 		}
 	}
 
@@ -780,6 +777,7 @@ bool select_best_match(match_data *matches)
 				oldest);
 		return true;
 	}
+	else scanlog("Component age returns no matches\n");
 
 	return false;
 }
