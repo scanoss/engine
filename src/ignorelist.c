@@ -81,7 +81,7 @@ bool ignored_extension(char *name)
 bool unwanted_path(char *path)
 {
 	/* Path starts with a dot */
-	if (*path == '.' && path[1] != '/') return true;
+	if (*path == '.' && path[1] != '.' && path[1] != '/') return true;
 
 	/* Path contains slash+dot+alnum */
 	for (char *p = path; *p; p++)

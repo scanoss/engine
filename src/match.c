@@ -560,6 +560,7 @@ match_data *compile_matches(scan_data *scan)
 
 		/* Loop only if DISABLE_BEST_MATCH and match type is snippet */
 	} while ((engine_flags & DISABLE_BEST_MATCH) && scan->match_type == snippet);
+
 	for (int i = 0; i < scan_limit && *matches[i].component; i++) scanlog("Match #%d = %d\n", i, matches[i].selected);
 
 	/* The latter could result in no matches */
@@ -568,4 +569,3 @@ match_data *compile_matches(scan_data *scan)
 
 	return matches;
 }
-

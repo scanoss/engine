@@ -228,13 +228,21 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 void print_licenses(match_data match)
 {
-	if (!ldb_table_exists(oss_license.db, oss_license.table)) //skip purl if the table is not present
+	scanlog("Fetching license\n");
+
+	/* Validate if license table exists */
+	if (!ldb_table_exists(oss_license.db, oss_license.table))
+	{
+		scanlog("License table not present\n");
 		return;
+	}
+
+	/* Open licenses structure */
 	printf("      \"licenses\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */
-	for (int i = 0; i < CRC_LIST_LEN; i++) match.crclist[i] = 0;
+	clean_crclist(&match);
 
 	uint32_t records = 0;
 	clean_license(match.license);
@@ -248,27 +256,31 @@ void print_licenses(match_data match)
 		oasdl_license_data(match.license);
 		printf("          \"source\": \"%s\"\n", license_sources[0]);
 		printf("        }");
+		scanlog("License present in URL table\n");
+		match.first_record = false;
+
+		/* Add license to CRC list (to avoid duplicates) */
+		add_CRC(match.crclist, string_crc32c((char *)license_sources[0]) + string_crc32c(match.license));
 	}
 
 	/* Look for component or file license */
 	else
 	{
+		scanlog("License NOT present in URL table\n");
 		match.first_record = true;
 
 		records = ldb_fetch_recordset(NULL, oss_license, match.file_md5, false, print_licenses_item, &match);
-		if (records) scanlog("File license returns hits\n");
-		if (!records)
+		scanlog("License for file_id license returns %d hits\n", records);
+
+		records = ldb_fetch_recordset(NULL, oss_license, match.url_md5, false, print_licenses_item, &match);
+		scanlog("License for url_id license returns %d hits\n", records);
+
+		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
 		{
-			records = ldb_fetch_recordset(NULL, oss_license, match.url_md5, false, print_licenses_item, &match);
-			if (records) scanlog("Component license returns hits\n");
-		}
-		if (!records)
-		{
-			for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
-					if (ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match)) break;
+			records = ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match);
+			scanlog("License for %s license returns %d hits\n", match.purl[i], records);
 		}
 	}
 
 	printf("\n      ],\n");
 }
-
