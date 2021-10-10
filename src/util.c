@@ -200,3 +200,9 @@ bool valid_md5(char *str)
 
 	return true;
 }
+
+/* Erase match.crclist */
+void clean_crclist(match_data *match)
+{
+	for (int i = 0; i < CRC_LIST_LEN; i++) match->crclist[i] = 0;
+}

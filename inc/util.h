@@ -56,4 +56,7 @@ char *field_n(int n, char *data);
 /* Returns true if str is a valid MD5 hash */
 bool valid_md5(char *str);
 
+/* Wipe match.crclist */
+void clean_crclist(match_data *match);
+
 #endif
