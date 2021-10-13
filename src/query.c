@@ -60,12 +60,11 @@ bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln,
 
 	uint8_t *record = (uint8_t *) ptr;
 
-	if (datalen) if (!ignored_asset_match(data + 4))
+	if (datalen) if (!ignored_asset_match(data))
 	{
 		/* Not ignored, means copy record and exit */
-		uint32_write(record, datalen);
-		memcpy(record + 4, data, datalen);
-		record[datalen + 4 + 1] = 0;
+		memcpy(record, data, datalen);
+		record[datalen] = 0;
 		return true;
 	}
 
@@ -75,20 +74,10 @@ bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln,
 /* Obtain the first available component record for the given MD5 hash */
 void get_url_record(uint8_t *md5, uint8_t *record)
 {
-	/* Erase byte count */
-	uint32_write(record, 0);
+	*record = 0;
 
 	/* Fetch record */
 	ldb_fetch_recordset(NULL, oss_url, md5, false, ldb_get_first_url_not_ignored, (void *) record);
-
-	/* Erase record length prefix from record */
-	uint32_t recln = uint32_read(record);
-	if (recln) 
-	{
-		memmove(record, record+4, recln);
-		record[recln] = 0;
-	}
-
 }
 
 /* Extracts component age in seconds from created date (1st CSV field in data) */
