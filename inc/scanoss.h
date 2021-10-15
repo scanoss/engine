@@ -44,7 +44,7 @@
 #define CRC_LIST_LEN 256 // list of crc checksums to avoid metadata duplicates
 
 /* Log files */
-#define SCANOSS_VERSION "4.3.2"
+#define SCANOSS_VERSION "4.3.3"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
