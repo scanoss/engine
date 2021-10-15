@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "ldb.h"
+#include "decrypt.h"
 
 void mz_file_contents(char *key)
 {
@@ -51,7 +52,7 @@ void mz_file_contents(char *key)
 	job.md5[MD5_LEN] = 0;
 	job.key = NULL;
 
-	if (ldb_valid_table(dbtable)) mz_cat(&job, key);
+	cat_decrypted_mz(&job, key);
 
 	free(src);
 	free(zsrc);

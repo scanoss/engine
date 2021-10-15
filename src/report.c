@@ -164,7 +164,10 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 
 	/* Output file_url (same as url when match type = url) */
 	if (match.type != url)
-		printf("      \"file_url\": \"%s/file_contents/%s\",\n", API_URL, file_id);
+	{
+		char *custom_url = getenv("SCANOSS_API_URL");
+		printf("      \"file_url\": \"%s/file_contents/%s\",\n", custom_url ? custom_url : API_URL, file_id);
+	}
 	else
 		printf("      \"file_url\": \"%s\",\n", match.url);
 
