@@ -185,19 +185,19 @@ bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 {
 	decrypt_data(data, datalen, "purl", key, subkey);
 	uint8_t *oldest = (uint8_t *) ptr;
+	if (!datalen) return false;
+
 	data[datalen] = 0;
 
-	if (datalen)
+	/* Ignore pkg relation records */
+	if (memcmp(data, "pkg:", 4))
 	{
-		/* Ignore pkg relation records */
-		if (memcmp(data, "pkg:", 4))
-		{
-			char release_date[MAX_ARGLN + 1] = "\0";
-			extract_csv(release_date, (char *) data, 1, MAX_ARGLN);
-			if (!*oldest || (strcmp((char *)oldest, release_date) > 0))
-				strcpy((char *)oldest, release_date);
-		}
+		char release_date[MAX_ARGLN + 1] = "\0";
+		extract_csv(release_date, (char *) data, 1, MAX_ARGLN);
+		if (!*oldest || (strcmp((char *)oldest, release_date) > 0))
+			strcpy((char *)oldest, release_date);
 	}
+
 	return false;
 }
 
@@ -226,7 +226,7 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 
 		/* Query purl table to obtain first release date */
 		char release_date[MAX_ARGLN + 1] = "\0";
-		
+
 		if (ldb_table_exists(oss_dependency.db, oss_dependency.table)) //skip purl if the table is not present
 			ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) release_date);
 
