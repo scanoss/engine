@@ -39,6 +39,8 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	memcpy(data, raw_data, datalen);
 	data[datalen] = 0;
 
+	if (ignored_asset_match(data)) return false;
+
 	match_data *matches = (match_data*) ptr;
 	struct match_data match = match_init();
 
