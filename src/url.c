@@ -185,10 +185,10 @@ void fetch_related_purls(match_data *match)
 /* Get the oldest release for a purl */
 bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	decrypt_data(data, datalen, "purl", key, subkey);
-	uint8_t *oldest = (uint8_t *) ptr;
 	if (!datalen) return false;
 
+	decrypt_data(data, datalen, "purl", key, subkey);
+	uint8_t *oldest = (uint8_t *) ptr;
 	data[datalen] = 0;
 
 	/* Ignore pkg relation records */

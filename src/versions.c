@@ -61,6 +61,8 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
 {
 	release_version *release = ptr;
 
+	if (!datalen) return false;
+
 	decrypt_data(data, datalen, "url", key, subkey);
 
 	char *CSV = calloc(datalen + 1, 1);
