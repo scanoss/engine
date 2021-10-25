@@ -181,6 +181,8 @@ bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	match_data *match = ptr;
+
+	if (!datalen) return false;
 	decrypt_data(data, datalen, "license", key, subkey);
 
 	char *CSV  = calloc(datalen + 1, 1);

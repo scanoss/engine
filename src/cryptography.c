@@ -27,10 +27,14 @@
 #include "debug.h"
 #include "util.h"
 #include "parse.h"
+#include "decrypt.h"
 
 bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	match_data *match = ptr;
+
+	if (!datalen) return false;
+	decrypt_data(data, datalen, "cryptography", key, subkey);
 
 	char *CSV  = calloc(datalen + 1, 1);
 	memcpy(CSV, data, datalen);
