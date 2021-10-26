@@ -156,10 +156,12 @@ void print_osadl_license_data(char *license)
 		printf("    {\n");
 		printf("      \"obligations\": \"https://www.osadl.org/fileadmin/checklists/unreflicenses/%s.txt\",\n", license);
 		printf("      \"copyleft\": \"%s\",\n", is_copyleft(license) ? "yes": "no");
-		printf("      \"patent_hints\": \"%s\",\n", has_patent_hints(license) ? "yes": "no");
+		printf("      \"patent_hints\": \"%s\"", has_patent_hints(license) ? "yes": "no");
 		char *incompatible = incompatible_licenses(license);
 		if (incompatible)
-			printf("      \"incompatible_with\": \"%s\"\n", incompatible);
+			printf(",\n      \"incompatible_with\": \"%s\"\n", incompatible);
+		else
+			printf("\n");
 		printf("    }\n");
 	}
 	printf("  ]\n}\n");
