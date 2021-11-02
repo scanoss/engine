@@ -241,8 +241,9 @@ int main(int argc, char **argv)
 	/* Parse arguments */
 	int option;
 	bool invalid_argument = false;
+	bool stream_mode = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:wtvhedq")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:wtvhedqS")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -291,7 +292,6 @@ int main(int argc, char **argv)
 			case 'n':
 				initialize_ldb_tables(optarg);
 				break;
-
 			case 'i':
 				if (strlen(optarg) == (MD5_LEN * 2))
 				{
@@ -329,6 +329,9 @@ int main(int argc, char **argv)
 				quiet = true;
 				scanlog("Quiet mode enabled. Displaying only debugging info via STDERR.\n");
 				break;
+			case 'S':
+				stream_mode = true;
+				break;
 
 			case 'd':
 				debug_on = true;
@@ -360,11 +363,31 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	if (argc <= 1)
+	{
+		fprintf (stdout, "Missing parameters. Please use -h\n");
+		exit(EXIT_FAILURE);
+	}
+	else if (stream_mode)//stdin mode
+	{
+		fprintf(stderr,"STREAMING MODE: waiting fo WFP - CTRL d or EOF to exit\n");
+		/* Init scan structure */
+		scan_data scan = scan_data_init("streaming_mode");
+		scan.stdin_mode = true;
+		/* Open main report structure */
+		json_open();
+ 		wfp_scan(&scan);
+		/* Close main report structure */
+		json_close();
+
+		/* Free scan data */
+		scan_data_free(scan);
+	}
 	/* Perform scan */
-	else 
+	else
 	{
 		/* Validate target */
-		char *arg_target = argv[argc-1];
+		char *arg_target = argv[argc-1];;
 		bool isfile = is_file(arg_target);
 		bool isdir = is_dir(arg_target);
 		bool ishash = !isdir && !isfile && valid_md5(arg_target);
@@ -389,7 +412,7 @@ int main(int argc, char **argv)
 
 		/* Init scan structure */
 		scan_data scan = scan_data_init(target);
-
+		scan.stdin_mode = false;
 		/* Open main report structure */
 		json_open();
 

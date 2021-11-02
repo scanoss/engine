@@ -281,14 +281,18 @@ int wfp_scan(scan_data *scan)
 	ssize_t lineln;
 	uint8_t *rec = calloc(LDB_MAX_REC_LN, 1);
 	scan->preload = true;
-
-	/* Open WFP file */
-	FILE *fp = fopen(scan->file_path, "r");
-	if (fp == NULL)
+	FILE *fp = stdin;
+	if (!scan->stdin_mode)
 	{
-		fprintf(stdout, "E017 Cannot open target");
-		return EXIT_FAILURE;
+		/* Open WFP file */
+		fp = fopen(scan->file_path, "r");
+		if (fp == NULL)
+		{
+			fprintf(stdout, "E017 Cannot open target");
+			return EXIT_FAILURE;
+		}
 	}
+	
 	bool read_data = false;
 
 	/* Read line by line */
@@ -300,6 +304,8 @@ int wfp_scan(scan_data *scan)
 		bool is_file = (memcmp(line, "file=", 5) == 0);
 		bool is_wfp = (!is_file && !is_component);
 
+		if (strstr(line,"###EXIT###"))
+			break;
 		/* Scan previous file */
 		if ((is_component || is_file) && read_data) ldb_scan(scan);
 

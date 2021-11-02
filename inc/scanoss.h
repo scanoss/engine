@@ -137,6 +137,7 @@ typedef struct scan_data
 	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1];
 	char matched_percent[MAX_FIELD_LN];
 	bool identified;
+	bool stdin_mode;
 } scan_data;
 
 typedef struct component_item

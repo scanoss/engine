@@ -31,6 +31,8 @@ Results are printed in STDOUT in JSON format\n\
 \n\
 Syntax: scanoss [parameters] [TARGET]\n\
 \n\
+Streaming mode: scanoss -S\n\
+\n\
 Configuration:\n\
 -w         Treats TARGET as a .wfp file regardless of the actual file extension\n\
 -e         Expect matching extensions to equal the file extension being scanned (default: off)\n\
