@@ -406,6 +406,9 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
 		/* Search for the right range */
 		uint8_t *lastwfp = scan->matchmap[found].lastwfp;
 
+		/* Skip if we are hitting the same wfp again for this file) */
+		if (!memcmp(wfp, lastwfp, 4)) continue;
+
 		for (uint32_t t = 0; t < MATCHMAP_RANGES; t++)
 		{
 			from = scan->matchmap[found].range[t].from;
@@ -426,12 +429,7 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
 			/* Another hit in the same line, no need to expand range */
 			else if (from == line)
 			{
-				/* Update hits count (if we are not hitting the same wfp again) */
-				if (memcmp(wfp,lastwfp,4))
-				{
-					scan->matchmap[found].hits++;
-					memcpy(lastwfp,wfp,4);
-				}
+				scan->matchmap[found].hits++;
 				break;
 			}
 
@@ -445,6 +443,9 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
 				break;
 			}
 		}
+
+		/* Update last wfp */
+		memcpy(lastwfp, wfp, 4);
 
 		if (found == scan->matchmap_size) scan->matchmap_size++;
 	}
