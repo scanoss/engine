@@ -1,0 +1,256 @@
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <zlib.h>
+#include "scanoss.h"
+
+/* Definitions */
+#define MAX_ARG_LEN 1024
+#define MAX_PATH_LEN 4096
+#define MD5_LEN 16
+
+/* MZ  */
+#define MZ_CACHE_SIZE 16384
+#define MZ_MD5 14
+#define MZ_SIZE 4
+#define MZ_MAX_FILE (4 * 1048576)
+
+
+/* Adds n to each byte of seed */
+void seed_sum(uint8_t *seed, int n)
+{
+  for (int i = 0; i < 10; seed[i++] += n) {}
+}
+
+/* Applies XOR on the given msg with the given seed */
+void xorthis(uint8_t *seed, uint8_t *msg)
+{
+  for (uint8_t *b = msg; *b; b++)
+  {
+    if (*b < 32)
+    {
+      *b = 0;
+      break;
+    }
+    {
+      /* Each seed byte is multipled by 11, why not? */
+      int s = *(seed + ((b - msg) % 10)) * 11;
+      if (*b >= 43 && *b <= 58)
+        *b = (43 + ((*b - 43) ^ (((b - msg + 1) * s) % 16)));
+      if (*b >= 59 && *b <= 122)
+        *b = (59 + ((*b - 59) ^ (((b - msg + 1) * s) % 64)));
+    }
+  }
+}
+
+/* Dekode enkoded string in-situ */
+void dekodethis(uint8_t *seed, uint8_t *msg)
+{
+  /* Apply parity to seed */
+  uint8_t p = *msg;
+  seed_sum(seed, p);
+
+  /* XOR */
+  xorthis(seed, msg + 1);
+
+  /* Shift left one byte overwriting parity */
+  memmove(msg, msg + 1, strlen((char *) (msg + 1)) + 1);
+}
+
+/* Decrypt data */
+void decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey)
+{
+	if (!strcmp(table, "file"))
+	{
+		if (size < 36) return;
+
+		uint8_t *msg = calloc(LDB_MAX_REC_LN, 1);
+		uint8_t seed[10];
+
+		memcpy(seed, data + 6, 10);
+		memcpy(msg, data + 16, size - 16);
+
+		dekodethis(seed, msg);
+		memcpy(data + 16, msg, size - 16);
+
+		free(msg);
+	}
+
+	else
+	{
+		if (!size) return;
+
+		uint8_t *msg = calloc(LDB_MAX_REC_LN, 1);
+		uint8_t seed[10];
+
+		memcpy(seed, subkey + 2, 10);
+		memcpy(msg, data, size);
+
+		dekodethis(seed, msg);
+		memcpy(data, msg, size);
+
+		free(msg);
+	}
+}
+
+/* Converts hex to bin */
+void ldb_hex_to_bin(char *hex, int len, uint8_t *out)
+{
+	uint32_t ptr = 0;
+	char pair[] = "\0\0\0";
+	for (uint32_t i = 0; i < len; i += 2)
+	{
+		pair[0] = hex[i];
+		pair[1] = hex[i + 1];
+		out[ptr++] = strtol(pair, NULL, 16);
+	}
+}
+
+/* Read file and return pointer to file contents */
+uint8_t *file_read(char *filename, uint64_t *size)
+{
+  FILE *f = fopen(filename, "r");
+  if (!f)
+  {
+    printf("\nCannot open %s for writing\n", filename);
+    exit(EXIT_FAILURE);
+  }
+
+  fseeko64(f, 0, SEEK_END);
+  *size = ftello64(f);
+  fseeko64(f, 0, SEEK_SET);
+
+  uint8_t *tmp = calloc(*size, 1);
+  if (1 != fread(tmp, *size, 1, f)) *tmp = 0;
+
+  fclose(f);
+
+  return tmp;
+}
+
+/* Walks to an mz file, calling mz_parse_handler with each iteration */
+void mz_parse(struct mz_job *job, bool (*mz_parse_handler) ())
+{
+  /* Recurse mz contents */
+  uint64_t ptr = 0;
+  while (ptr < job->mz_ln)
+  {
+    /* Position pointers */
+    job->id = job->mz + ptr;
+    uint8_t *file_ln = job->id + MZ_MD5;
+    job->zdata = file_ln + MZ_SIZE;
+
+    /* Get compressed data size */
+    uint32_t tmpln;
+    memcpy((uint8_t*)&tmpln, file_ln, MZ_SIZE);
+    job->zdata_ln = tmpln;
+
+    /* Get total mz record length */
+    job->ln = MZ_MD5 + MZ_SIZE + job->zdata_ln;
+
+    /* Pass job to handler */
+    if (!mz_parse_handler(job)) return;
+
+    /* Increment pointer */
+    ptr += job->ln;
+    if (ptr > job->mz_ln)
+    {
+      printf("%s integrity failed\n", job->path);
+      exit(EXIT_FAILURE);
+    }
+  }
+}
+
+void mz_deflate(struct mz_job *job)
+{
+	/* Decompress data */
+	job->data_ln = MZ_MAX_FILE;
+	uncompress((uint8_t *)job->data, &job->data_ln, job->zdata, job->zdata_ln);
+	job->data_ln--;
+}
+
+/* Applies XOR on the given msg with the given seed */
+void xorthislen(uint8_t *seed, uint8_t *msg, uint32_t len)
+{
+  for (uint32_t i = 0; i < len; i++)
+  { 
+    uint8_t *b = msg + i;
+    /* Each seed byte is multipled by 13, why not? */
+    int s = *(seed + ((b - msg) % 10)) * 13;
+    if (*b >= 43 && *b <= 58) 
+      *b = (43 + ((*b - 43) ^ (((b - msg + 1) * s) % 16)));
+    if (*b >= 59 && *b <= 122)
+      *b = (59 + ((*b - 59) ^ (((b - msg + 1) * s) % 64)));
+  }
+}
+
+bool mz_cat_handler(struct mz_job *job)
+{
+	xorthislen(job->id, job->id + 18, job->ln - 18);
+	if (!memcmp(job->id, job->key + 2, MZ_MD5))
+	{
+		/* Decompress */
+		mz_deflate(job);
+
+		job->data[job->data_ln] = 0;
+		printf("%s", job->data);
+
+		return false;
+	}
+	return true;
+}
+
+void mz_cat(struct mz_job *job, char *key)
+{
+	/* Calculate mz file path */
+	char mz_path[MAX_PATH_LEN] = "\0";
+	char mz_file_id[5] = "\0\0\0\0\0";
+	memcpy(mz_file_id, key, 4);
+
+	sprintf(mz_path, "%s/%s.mz", job->path, mz_file_id);
+
+	/* Save path and key on job */
+	job->key = calloc(MD5_LEN, 1);
+	ldb_hex_to_bin(key, MD5_LEN * 2, job->key);
+
+	/* Read source mz file into memory */
+	job->mz = file_read(mz_path, &job->mz_ln);
+
+	/* Search and display "key" file contents */
+	mz_parse(job, mz_cat_handler);
+
+	free(job->key);
+	free(job->mz);
+}
+
+bool validate_md5(char *txt)
+{
+    /* Check length */
+    if (strlen(txt) != 32) return false;
+
+    /* Check digits (and convert to lowercase) */
+    for (int i = 0; i < 32; i++)
+    {
+        txt[i] = tolower(txt[i]);
+        if (txt[i] > 'f') return false;
+        if (txt[i] < '0') return false;
+        if (txt[i] > '9' && txt[i] < 'a') return false;
+    }
+    return true;
+}
+
+/* Decrypt mz data */
+void cat_decrypted_mz(struct mz_job *job, char *key)
+{
+	char *src = calloc(MAX_FILE_SIZE + 1, 1);
+	uint8_t *zsrc = calloc((MAX_FILE_SIZE + 1) * 2, 1);
+
+	if (ldb_valid_table("oss/sources"))
+		if (validate_md5(key)) mz_cat(job, key);
+
+	free(src);
+	free(zsrc);
+}

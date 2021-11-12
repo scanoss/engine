@@ -569,80 +569,164 @@ int path_struct_cmp(const void *a, const void *b) {
 	return 0;
 }
 
-/* Look for shortest file paths and query component/purl information to determine
-   the most interesting match */
-int shortest_paths_check(file_recordset *files, int records, component_name_rank *component_rank)
+/* Load path rank and return pointer */
+len_rank *load_path_rank(file_recordset *files, int records)
 {
-	clear_component_rank(component_rank);
-	int selected = -1;
-
 	/* Define path length rank structure */
-	len_rank *path_rank = calloc(sizeof(len_rank), SHORTEST_PATHS_QTY);
+	len_rank *rank = calloc(sizeof(len_rank), SHORTEST_PATHS_QTY);
 
 	/* Walk files, adding the shortest paths to the rank */
 	for (int i = 0; i < records; i++)
 	{
 		for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
 		{
-			if (!path_rank[r].len || (path_rank[r].len > files[i].path_ln))
+			if (!rank[r].len || (rank[r].len > files[i].path_ln))
 			{
-				path_rank[r].len = files[i].path_ln;
-				path_rank[r].id = i;
+				rank[r].len = files[i].path_ln;
+				rank[r].id = i;
 
 				/* Reverse sort array */
-				qsort(path_rank, SHORTEST_PATHS_QTY, sizeof(len_rank), path_struct_rcmp);
+				qsort(rank, SHORTEST_PATHS_QTY, sizeof(len_rank), path_struct_rcmp);
 				break;
 			}
 		}
 	}
+	return rank;
+}
+
+/* Dump rank contents into log */
+void dump_path_rank(len_rank *path_rank, file_recordset *files)
+{
+	scanlog(">> Shortest Path Rank BEGINS\n");
+	for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
+	{
+		if (path_rank[r].len)
+			scanlog("#%03d %d dirs: %s\n", r, path_rank[r].len, files[path_rank[r].id].path);
+	}
+	scanlog(">> Shortest Path Rank ENDS\n");
+}
+
+/* Select the best record based on oldest date of first release
+	querying the pURL table */
+uint8_t *select_best_top_date(int dup_dates, uint8_t *top_recs, uint8_t *top_md5s)
+{
+	if (!dup_dates) return top_recs;
+
+	char release_date[MAX_ARGLN + 1] = "\0";
+	char oldest[MAX_ARGLN + 1] = "9999";
+	uint8_t *oldest_ptr = top_recs;
+
+	/* Walk dup_dates and save pointer to top_recs with oldest first release date */
+	for (int i = 0; i <= dup_dates; i++)
+	{
+
+		uint8_t *rec = top_recs + (i * LDB_MAX_REC_LN);
+		uint8_t *md5 = top_md5s + (i * MD5_LEN);
+		if (!*rec) continue;
+
+		purl_release_date(rec, release_date);
+		if (strcmp(release_date, oldest) < 1)
+		{
+			oldest_ptr = rec;
+			strcpy(oldest, release_date);
+			memcpy(top_md5s, md5, MD5_LEN);
+		}
+	}
+
+	return oldest_ptr;
+}
+
+/* Look for shortest file paths and query component/purl information to determine
+	 the most interesting match */
+int shortest_paths_check(file_recordset *files, int records, component_name_rank *component_rank)
+{
+	/* Wipe component_rank */
+	clear_component_rank(component_rank);
+	int selected = -1;
+
+	/* Load path rank */
+	len_rank *path_rank = load_path_rank(files, records);
 
 	/* Sort path_rank array from shortest to largest path */
 	qsort(path_rank, SHORTEST_PATHS_QTY, sizeof(len_rank), path_struct_cmp);
 
+	/* Dump rank contents into log */
+	dump_path_rank(path_rank, files);
+
 	/* Obtain oldest URL record */
+	const int TOP_BEST_DATES = 100;
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
 	uint8_t *old_rec = calloc(LDB_MAX_REC_LN, 1);
+	uint8_t *top_recs = calloc(LDB_MAX_REC_LN * TOP_BEST_DATES, 1);
+	uint8_t *top_md5s = calloc(LDB_MAX_REC_LN * MD5_LEN, 1);
 	int path_id = 0;
+	int dup_dates = 0;
+	char date[MAX_ARGLN + 1] = "\0";
+	char oldest[MAX_ARGLN + 1] = "9999";
 
 	for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
 	{
 		if (path_rank[r].len)
 		{
+			strcpy((char *) url_rec, "9999");
 			ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *) url_rec);
-			if (memcmp(url_rec, old_rec, LDB_MAX_REC_LN))
+
+			/* Extract date from url_rec */
+			*date = 0;
+			extract_csv(date, (char *) url_rec , 4, MAX_ARGLN);
+			if (!*date) continue;
+
+			if (strcmp((char *) date, (char *) oldest) < 0)
 			{
+				dup_dates = 0;
 				path_id = path_rank[r].id;
-				memcpy(old_rec, url_rec, LDB_MAX_REC_LN);
+				strcpy((char *) old_rec, (char *) url_rec);
+				strcpy((char *) top_recs, (char *) url_rec);
+				memcpy(top_md5s, files[path_rank[r].id].url_id, MD5_LEN);
+				strcpy(oldest, date);
+			}
+
+			else if (!strcmp(date, oldest))
+			{
+				if (++dup_dates >= TOP_BEST_DATES) dup_dates = TOP_BEST_DATES - 1;
+				strcpy((char *) top_recs + LDB_MAX_REC_LN * dup_dates, (char *) url_rec);
+				memcpy(top_md5s + MD5_LEN * dup_dates, files[path_rank[r].id].url_id, MD5_LEN);
 			}
 		}
 	}
-	scanlog("shortest_paths_check selected %s\n", url_rec);
 
-	if (*url_rec)
+	char release_date[MAX_ARGLN + 1] = "\0";
+	extract_csv(release_date, (char *) url_rec, 4, MAX_ARGLN);
+
+	if (*release_date)
 	{
+		uint8_t *best_rec = select_best_top_date(dup_dates, top_recs, top_md5s);
+
 		/* Fetch vendor and component name */
 		char vendor[MAX_ARGLN + 1] = "\0";
 		char component[MAX_ARGLN + 1] = "\0";
 		char purl[MAX_ARGLN + 1] = "\0";
-		extract_csv(vendor, (char *) url_rec, 2, MAX_ARGLN);
-		extract_csv(component, (char *) url_rec, 3, MAX_ARGLN);
-		extract_csv(purl, (char *) url_rec, 7, MAX_ARGLN);
+		extract_csv(vendor, (char *) best_rec, 2, MAX_ARGLN);
+		extract_csv(component, (char *) best_rec, 3, MAX_ARGLN);
+		extract_csv(purl, (char *) best_rec, 7, MAX_ARGLN);
 		uint8_t purl_md5[MD5_LEN];
 		MD5((uint8_t *)purl, strlen(purl), purl_md5);
 
-		update_component_rank(component_rank, vendor, component, purl, purl_md5, files[path_id].path, files[path_id].url_id, skip_first_comma((char *) url_rec));
-
+		/* Insert winning record and select first and only item */
+		update_component_rank(component_rank, vendor, component, purl, purl_md5, files[path_id].path, top_md5s, (char *) best_rec);
 		selected = 0;
 	}
 
 	free(url_rec);
 	free(old_rec);
+	free(top_recs);
+	free(top_md5s);
 	free(path_rank);
 	return selected;
 }
 
 /* Analyse files, selecting those matching the provided hints
-   return the file id if matched, otherwise a negative value if no hits */
+	 return the file id if matched, otherwise a negative value if no hits */
 int seek_component_hint_in_path(\
 		file_recordset *files,\
 		int records,\
@@ -657,8 +741,8 @@ int seek_component_hint_in_path(\
 	clear_component_rank(component_rank);
 
 	/* Walk files, adding to rank those paths which:
-	   - Start with the hint
-	   - Point to a component name matching the hint */
+		 - Start with the hint
+		 - Point to a component name matching the hint */
 	for (int i = 0; i < records; i++)
 	{
 		bool skip = true;

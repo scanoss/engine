@@ -339,8 +339,6 @@ void add_match(int position, match_data match, match_data *matches)
 void add_selected_file_to_matches(\
 		match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *file_md5)
 {
-	scanlog("Identified #%d: %s\n", rank_id, component_rank[rank_id].url_record);
-
 	/* Create empty match item */
 	struct match_data match = match_init();
 
