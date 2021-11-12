@@ -125,6 +125,15 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 	fclose(in);
 }
 
+/* Return the number of directories in path */
+int dir_count(char *path)
+{
+	int count = 1;
+	char *p = path;
+	while (*p) if (*(p++) == '/') count++;
+	return count;
+}
+
 bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 
@@ -140,10 +149,10 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	/* Copy data to memory */
 	file_recordset *files = ptr;
 	int path_ln = datalen - MD5_LEN;
-	files[iteration].path_ln = path_ln;
 	memcpy(files[iteration].url_id, raw_data, MD5_LEN);
 	memcpy(files[iteration].path, raw_data + MD5_LEN, path_ln);
 	files[iteration].path[path_ln] = 0;
+	files[iteration].path_ln = dir_count(files[iteration].path);
 
 	scanlog("#%d File %s\n", iteration, files[iteration].path);
 	return false;

@@ -68,7 +68,7 @@
 #define ENABLE_GITHUB_FULL_PATH 2048
 #define MAX_PURLS 10
 #define MAX_SBOM_ITEMS 100
-#define SHORTEST_PATHS_QTY 50 // number of shortest path to evaluate
+#define SHORTEST_PATHS_QTY 2000 // number of shortest path to evaluate
 
 extern uint64_t engine_flags;
 

@@ -203,12 +203,28 @@ bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 	return false;
 }
 
+/* Get first purl release date from url_rec */
+void purl_release_date(char *url, char *date)
+{
+		*date = 0;
+		char purl[MAX_ARGLN + 1] = "\0";
+		extract_csv(purl, (char *) url , 6, MAX_ARGLN);
+
+		uint8_t purl_md5[MD5_LEN];
+		MD5((uint8_t *)purl, strlen(purl), purl_md5);
+
+		ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) date);
+}
+
 /* Handler function for getting the oldest URL */
 bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	decrypt_data(data, datalen, "url", key, subkey);
+	if (!datalen) return false;
 
-	uint8_t *oldest = (uint8_t *) ptr;
+	/* Get oldest */
+	char oldest[MAX_ARGLN + 1] = "\0";
+	extract_csv(oldest, (char *) ptr, 4, MAX_ARGLN);
 
 	char url[LDB_MAX_REC_LN + 1] = "\0";
 	memcpy(url, data, datalen);
@@ -218,23 +234,13 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 	if (datalen) if (!ignored_asset_match((uint8_t *)url))
 	{
 
-		/* Extract purl */
-		char purl[MAX_ARGLN + 1] = "\0";
-		extract_csv(purl, (char *) url, 6, MAX_ARGLN);
-
-		/* Get purl md5 */
-		uint8_t purl_md5[MD5_LEN];
-		MD5((uint8_t *)purl, strlen(purl), purl_md5);
-
-		/* Query purl table to obtain first release date */
+		/* Extract date */
 		char release_date[MAX_ARGLN + 1] = "\0";
-
-		if (ldb_table_exists(oss_dependency.db, oss_dependency.table)) //skip purl if the table is not present
-			ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) release_date);
+		purl_release_date(url, release_date);
 
 		/* If it is older, then we copy to oldest */
-		if (!*oldest || *oldest == ',' || (*release_date && strcmp(release_date, (char *)oldest) < 0))
-			sprintf((char *)oldest, "%s,%s", release_date, url);
+		if (!*oldest || (*release_date && strcmp(release_date, oldest) < 0))
+			memcpy((uint8_t *) ptr, url, datalen + 1);
 	}
 	return false;
 }
