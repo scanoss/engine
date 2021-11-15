@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file license.c
+  * @date 27 Nov 2020 
+  * @brief Contains the functions used for request the KB for licenses and generate the json output
+ 
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/license.c
+  */
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -32,17 +42,18 @@
 #include "license_translation.h"
 #include "decrypt.h"
 
-/* License sources
+/** @brief  License sources
 	 0 = Declared in component
 	 1 = Declared in file with SPDX-License-Identifier
 	 2 = Detected in header
 	 3 = Declared in LICENSE file
-	 4 = Scancode detection
-	 */
-
+	 4 = Scancode detection */
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header", "license_file", "scancode"};
 
-/* Remove invalid characters from a license name */
+/**
+ * @brief Remove invalid characters from a license name
+ * @param license license string
+ */
 void clean_license(char *license)
 {
 	char *c = license;
@@ -56,7 +67,10 @@ void clean_license(char *license)
 	}
 }
 
-/* Replace license with its correct SPDX identifier, if found */
+/**
+ * @brief Replace license with its correct SPDX identifier, if found
+ * @param license license string
+ */
 void normalize_license(char *license)
 {
 	for (int i = 0; license_normalization[i]; i++)
@@ -83,7 +97,11 @@ void normalize_license(char *license)
 	}
 }
 
-/* Return true if license is in the osadl license list */
+/**
+ * @brief Return true if license is in the osadl license list
+ * @param license license string
+ * @return true if it is in osadl license list
+ */
 bool is_osadl_license(char *license)
 {
 	int i = 0;
@@ -94,7 +112,11 @@ bool is_osadl_license(char *license)
 	return false;
 }
 
-/* Return true if license is copyleft */
+/**
+ * @brief Return true if license is copyleft
+ * @param license license string
+ * @return true if it is copyleft
+ */
 bool is_copyleft(char *license)
 {
 	int i = 0;
@@ -105,7 +127,11 @@ bool is_copyleft(char *license)
 	return false;
 }
 
-/* Return true if patent hints are found in the license */
+/**
+ * @brief Return true if patent hints are found in the license
+ * @param license license string
+ * @return true if it  has patent hints
+ */
 bool has_patent_hints(char *license)
 {
 	int i = 0;
@@ -116,7 +142,11 @@ bool has_patent_hints(char *license)
 	return false;
 }
 
-/* Return pointer to incompatible license list (or NULL) */
+/**
+ * @brief Return pointer to incompatible license list (or NULL)
+ * @param license license string
+ * @return pointer to incompatible license list
+ */
 char *incompatible_licenses(char *license)
 {
 	int i = 0;
@@ -133,7 +163,10 @@ char *incompatible_licenses(char *license)
 	return NULL;
 }
 
-/* Output OSADL license metadata */
+/**
+ * @brief Output OSADL license metadata
+ * @param license license string
+ */
 void oasdl_license_data(char *license)
 {
 	if (is_osadl_license(license))
@@ -147,7 +180,10 @@ void oasdl_license_data(char *license)
 	}
 }
 
-/* Print OSADL license metadata */
+/**
+ * @brief Print OSADL license metadata
+ * @param license license string
+ */
 void print_osadl_license_data(char *license)
 {
 	printf("{\n  \"%s\": [\n", license);
@@ -167,6 +203,17 @@ void print_osadl_license_data(char *license)
 	printf("  ]\n}\n");
 }
 
+/**
+ * @brief get first license function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	decrypt_data(data, datalen, "license", key, subkey);
@@ -180,6 +227,17 @@ bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 	return true;
 }
 
+/**
+ * @brief print license item in stdout. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return
+ */
 bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	match_data *match = ptr;
@@ -227,6 +285,10 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	return false;
 }
 
+/**
+ * @brief Print license for a match
+ * @param match input match
+ */
 void print_licenses(match_data match)
 {
 	scanlog("Fetching license\n");

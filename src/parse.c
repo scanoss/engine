@@ -20,6 +20,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file parse.c
+  * @date 12 Jul 2020 
+  * @brief Contains the functions used for parsing and json process.
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/parse.c
+  */
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -29,6 +38,11 @@
 #include "json.h"
 #include "debug.h"
 
+/**
+ * @brief Check if a string is a component
+ * @param str input string
+ * @return true if it is a component
+ */
 static bool is_component(char *str)
 {
 	if (!strcmp(str, "name")) return true;
@@ -36,6 +50,11 @@ static bool is_component(char *str)
 	return false;
 }
 
+/**
+ * @brief Check if a string is a vendor
+ * @param str input string
+ * @return true if it is a vendor
+ */
 static bool is_vendor(char *str)
 {
 	if (!strcmp(str, "publisher")) return true;
@@ -43,8 +62,20 @@ static bool is_vendor(char *str)
 	return false;
 }
 
+/**
+ * @brief Work over a json value
+ * @param value pointer to json structure
+ * @param depth depth into the strcuture
+ * @param out[out] processed component
+ */
 static void work_json_value(json_value* value, int depth, component_item *out);
 
+/**
+ * @brief Work over a json object
+ * @param value pointer to json structure
+ * @param depth depth into the strcuture
+ * @param out[out] processed component
+ */
 static void work_json_object(json_value* value, int depth, component_item *out)
 {
 	int length, x;
@@ -91,6 +122,12 @@ static void work_json_object(json_value* value, int depth, component_item *out)
 	}
 }
 
+/**
+ * @brief Work over a json array
+ * @param value pointer to json structure
+ * @param depth depth into the strcuture
+ * @param out[out] processed component
+ */
 static void work_json_array(json_value* value, int depth, component_item *out)
 {
 	int length, x;
@@ -102,6 +139,12 @@ static void work_json_array(json_value* value, int depth, component_item *out)
 	}
 }
 
+/**
+ * @brief Work over a json value
+ * @param value pointer to json structure
+ * @param depth depth into the strcuture
+ * @param out[out] processed component
+ */
 static void work_json_value(json_value* value, int depth, component_item *out)
 {
 	if (value == NULL) return;
@@ -121,6 +164,11 @@ static void work_json_value(json_value* value, int depth, component_item *out)
 	}
 }
 
+/**
+ * @brief Loads assets (SBOM.json) into memory
+ * @param filepath json  file path
+ * @return list of component items
+ */
 component_item *get_components(char *filepath)
 {
 
@@ -168,7 +216,12 @@ component_item *get_components(char *filepath)
 	return out;
 }
 
-/* Returns a pointer to the character following the first "character" in "data" */
+/**
+ * @brief Returns a pointer to the character following the first "character" in "data"
+ * @param data input buffer
+ * @param character key character
+ * @return pointer to the next char to key in the input buffer
+ */
 char *skip_first_char(char *data, char character)
 {
 	char *ptr = data;
@@ -180,19 +233,33 @@ char *skip_first_char(char *data, char character)
 	return data;
 }
 
-/* Returns a pointer to the character following the first comma in data */
+/**
+ * @brief Returns a pointer to the character following the first comma in data
+ * @param data input data buffer
+ * @return pointer to the next char to a comma in the input buffer
+ */
 char *skip_first_comma(char *data)
 {
 	return skip_first_char(data, ',');
 }
 
-/* Returns a pointer to the character following the first slash in data */
+/**
+ * @brief Returns a pointer to the character following the first slash in data
+ * @param data input data buffer
+ * @return  pointer to the next char to a / in the input buffer
+ */
 char *skip_first_slash(char *data)
 {
 	return skip_first_char(data, '/');
 }
 
-/* Extracts the "n"th value from the comma separated "in" string */
+/**
+ * @brief Extracts the "n"th value from the comma separated "in" string
+ * @param out[out] parsed string
+ * @param in input buffer
+ * @param n col number
+ * @param limit string limit
+ */
 void extract_csv(char *out, char *in, int n, long limit)
 {
 	*out = 0;
@@ -219,7 +286,11 @@ void extract_csv(char *out, char *in, int n, long limit)
 	out[out_ptr] = 0;
 }
 
-/* Returns a pointer to the path after the domain name in the provided url */
+/**
+ * @brief Returns a pointer to the path after the domain name in the provided url
+ * @param url input url
+ * @return pointer to the char after the domain
+ */
 char *skip_domain(char *url)
 {
 	char *out = url;
@@ -230,7 +301,10 @@ char *skip_domain(char *url)
 	return NULL;
 }
 
-/* Converts word to lowercase */
+/**
+ * @brief Converts word to lowercase
+ * @param word word to be converted
+ */
 void lowercase(char *word)
 {
 	for (char *w = word ; *w; w++) *w = tolower(*w);

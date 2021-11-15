@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file match.c
+  * @date 12 Jul 2020 
+  * @brief Contains the functions used for fullyfill the matches list during the scanning
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/match.c
+  */
+
 #include "match.h"
 #include "query.h"
 #include "report.h"
@@ -32,21 +42,28 @@
 #include "rank.h"
 #include "decrypt.h"
 
-bool first_file = true;
-const char *matchtypes[] = {"none", "url", "file", "snippet"};
-bool match_extensions = false;
+bool first_file = true; /** global first file flag */
+const char *matchtypes[] = {"none", "url", "file", "snippet"}; /** describe the availables kinds of match */
+bool match_extensions = false; /** global match extension flag */
 
 char vendor_hint[MAX_FIELD_LN];
 char component_hint[MAX_FIELD_LN];
 
-/* This script replaces \ with / */
+/**
+ * @brief This script replaces \ with /
+ * @param data input/output buffer
+ */
 void flip_slashes(char *data)
 {
 	int len = strlen(data);
 	for (int i = 0; i < len ; i++) if (data[i] == '\\') data[i] = '/';
 }
 
-/* Output matches in JSON format via STDOUT */
+/**
+ * @brief Output matches in JSON format via STDOUT
+ * @param matches pointer to matches list
+ * @param scan_ptr scan_data pointer, common scan information.
+ */
 void output_matches_json(match_data *matches, scan_data *scan_ptr)
 {
 	scan_data *scan = scan_ptr;
@@ -96,6 +113,10 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	json_close_file();
 }
 
+/**
+ * @brief Initialize the match structure
+ * @return match_data initialized structure
+ */
 match_data match_init()
 {
 	match_data match;
@@ -121,7 +142,15 @@ match_data match_init()
 	}
 	return match;
 }
-/* Add all files in recordset to matches */
+
+/**
+ * @brief Add all files in recordset to matches
+ * @param files recorset pointer
+ * @param file_count number of files in the recordset
+ * @param scan scan common information
+ * @param matches matches list
+ * @return added files count
+ */
 int add_all_files_to_matches(file_recordset *files, int file_count, scan_data *scan, match_data *matches)
 {
 	scanlog("Adding %d file records to matches\n", file_count);
@@ -150,7 +179,10 @@ int add_all_files_to_matches(file_recordset *files, int file_count, scan_data *s
 	return file_count;
 }
 
-/* Return true if asset is found in ignore_components (-b parameter) */
+/**
+ * @brief Return true if asset is found in ignore_components (-b parameter) 
+ * @param url_record pointer to url record
+ */
 bool ignored_asset_match(uint8_t *url_record)
 {
 	if (!ignore_components) return false;
@@ -207,6 +239,13 @@ bool ignored_asset_match(uint8_t *url_record)
 	return found;
 }
 
+/**
+ * @brief Fill the match structure
+ * @param url_key md5 of the match url
+ * @param file_path file path
+ * @param url_record pointer to url record
+ * @return match_data fullfilled structure
+ */
 match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 {
 	match_data match;
@@ -250,6 +289,11 @@ match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 	return match;
 }
 
+/**
+ * @brief Count matches into a matches list
+ * @param matches matches list
+ * @return count of matches
+ */
 int count_matches(match_data *matches)
 {
 	if (!matches)
@@ -262,7 +306,12 @@ int count_matches(match_data *matches)
 	return c;
 }
 
-/* Adds match to matches */
+/**
+ * @brief Adds match to matches list
+ * @param position position to add the new match
+ * @param match new match
+ * @param matches matches list
+ */
 void add_match(int position, match_data match, match_data *matches)
 {
 
@@ -336,7 +385,12 @@ void add_match(int position, match_data match, match_data *matches)
 	}
 }
 
-/* Add file record to matches */
+/**
+ * @brief Add file record to matches
+ * @param matches matches list
+ * @param component_rank component ranking
+ * @param file_md5 md5 hash of file
+ */
 void add_selected_file_to_matches(\
 		match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *file_md5)
 {
@@ -355,6 +409,11 @@ void add_selected_file_to_matches(\
 	add_match(0, match, matches);
 }
 
+/**
+ * @brief load matches into the scan
+ * @param scan scan data
+ * @param matches matches list
+ */
 void load_matches(scan_data *scan, match_data *matches)
 {
 	strcpy(scan->line_ranges, "all");
@@ -502,6 +561,11 @@ void load_matches(scan_data *scan, match_data *matches)
 	if (!records) scanlog("Match type is 'none' after loading matches\n");
 }
 
+/**
+ * @brief Compile matches if DISABLE_BEST_MATCH is one
+ * @param scan scan data
+ * @return matches list
+ */
 match_data *compile_matches(scan_data *scan)
 {
 	/* Init matches structure */

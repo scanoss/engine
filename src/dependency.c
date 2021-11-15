@@ -20,6 +20,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file dependency.c
+  * @date 27 Nov 2020 
+  * @brief Contains the functions used for dependency analizys.
+ 
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/dependency.c
+  */
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -34,6 +43,17 @@
 
 const char *dependency_sources[] = {"component_declared"};
 
+/**
+ * @brief print dependencies item data function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	decrypt_data(data, datalen, "dependency", key, subkey);
@@ -77,6 +97,10 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	return false;
 }
 
+/**
+ * @brief Print dependencies in stdout of a given match
+ * @param match input match
+ */
 void print_dependencies(match_data match)
 {
 	if (!ldb_table_exists(oss_dependency.db, oss_dependency.table)) //skip dependencies if the table is not present

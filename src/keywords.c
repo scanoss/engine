@@ -19,13 +19,27 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file keywords.c
+  * @date 1 Jun 2021 
+  * @brief Contains the functions used for keywords processing
+ 
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/keywords.c
+  */
+
 #include "keywords.h"
 #include "ignorelist.h"
 #include "limits.h"
 #include "debug.h"
 #include "parse.h"
 
-/* Add a keyword to the keyword list structure array */
+/**
+ * @brief Add a keyword to the keyword list structure array
+ * @param kwlist pointer to keyword list structure
+ * @param word keyword to add
+ * @param word_len keyword len
+ */
 void add_keyword(struct keywords *kwlist, char *word, int word_len)
 {
 
@@ -60,14 +74,21 @@ void add_keyword(struct keywords *kwlist, char *word, int word_len)
 	}
 }
 
-/* Dump keyword list to STDOUT */
+/**
+ * @brief Dump keyword list to STDOUT
+ * @param kwlist pointer to key word list
+ */
 void list_keywords(struct keywords *kwlist)
 {
 	for (int i = 0; i < MATCH_ANALYZE_KEYWORD_LIMIT && *kwlist[i].word; i++)
 		printf("%s (%d)\n", kwlist[i].word, kwlist[i].count);
 }
 
-/* Return the index of the mostly repeated keyword */
+/**
+ * @brief Return the index of the mostly repeated keyword
+ * @param kwlist pointer to keyword list
+ * @return index of the selected word
+ */
 int best_keyword(struct keywords *kwlist)
 {
 	int best = 0;
@@ -83,7 +104,12 @@ int best_keyword(struct keywords *kwlist)
 	return out;
 }
 
-/* Checks if the word is found in the path */
+/**
+ * @brief Checks if the word is found in the path
+ * @param word word to search
+ * @param path path where do the search
+ * @return true is the word has been found
+ */
 bool found_keyword(char *word, char *path)
 {
 
@@ -109,7 +135,11 @@ bool found_keyword(char *word, char *path)
 	return false;
 }
 
-/* Breaks a basepath into keywords and adds them to the list */
+/**
+ * @brief Breaks a basepath into keywords and adds them to the list 
+ * @param kwlist pointer to keywords structure
+ * @param path patht o analyze
+ */
 void add_keywords(struct keywords *kwlist, char *path)
 {
 	const int min_word = 4;
@@ -133,7 +163,11 @@ void add_keywords(struct keywords *kwlist, char *path)
 	}
 }
 
-/* Recurse matches and analyze paths, selecting the most relevant keyword */
+/**
+ * @brief Recurse matches and analyze paths, selecting the most relevant keyword
+ * @param matches list of matches to analyze
+ * @return keywords list.
+ */
 struct keywords *load_keywords(match_data *matches)
 {
 	struct keywords *kwlist = calloc(sizeof(keywords), MATCH_ANALYZE_KEYWORD_LIMIT);
@@ -146,8 +180,12 @@ struct keywords *load_keywords(match_data *matches)
 	return kwlist;
 }
 
-/* Returns true if both version and latest_version are present and are smaller
-   than 16 bytes (rules out commit IDs and hashes in version) */
+/**
+ * @brief Returns true if both version and latest_version are present and are smaller
+ * than 16 bytes (rules out commit IDs and hashes in version)
+ * @param match match to analyze
+ * @return true if lastest_version is similar to version
+ */
 bool good_version_range(match_data match)
 {
 	/* Both versions must be present */
@@ -163,6 +201,12 @@ bool good_version_range(match_data match)
 	return false;
 }
 
+/**
+ * @brief word case insensitive comparation
+ * @param word1 first word
+ * @param word2 second word
+ * @return true if they are equals
+ */
 bool wordicmp(char *word1, char *word2)
 {
 	char *w1 = word1;
@@ -174,6 +218,12 @@ bool wordicmp(char *word1, char *word2)
 	return true;
 }
 
+/**
+ * @brief str insensitive str
+ * @param haystack haystack
+ * @param needle needle
+ * @return true is the needle is found into the haystack
+ */
 bool stristr(char *haystack, char *needle)
 {
 	char *h = haystack;
@@ -181,6 +231,12 @@ bool stristr(char *haystack, char *needle)
 	return false;
 }
 
+/**
+ * @brief Search for a component inside a mathes list
+ * @param matches matches list
+ * @param component component to search for
+ * @return index if it was found or -1 if is not present.
+ */
 int select_exact_component_by_keyword(match_data *matches, char *component)
 {
 	/* Search for matches in component with version ranges */
@@ -209,6 +265,12 @@ int select_exact_component_by_keyword(match_data *matches, char *component)
 	return -1;
 }
 
+/**
+ * @brief Search for a keyword inside a matches list
+ * @param matches matches list where do the search
+ * @param keyword keyword 
+ * @return index if it was found or -1 if is not present.
+ */
 int select_by_keyword_in_path(match_data *matches, char *keyword)
 {
 
@@ -256,6 +318,12 @@ int select_by_keyword_in_path(match_data *matches, char *keyword)
 	return -1;
 }
 
+/**
+ * @brief select the best match from a matches list
+ * @param matches matches list
+ * @param kwlist keywords list
+ * @return true if there is a match
+ */
 bool select_match(match_data *matches, struct keywords *kwlist)
 {
 	scanlog("Running select_match starts()\n");
@@ -310,8 +378,12 @@ bool select_match(match_data *matches, struct keywords *kwlist)
 	return (selected >= 0);
 }
 
-/* Perform keyword analysis among URL and file paths, find a common denominator and
-	 pick a URL/file containing such keyboard as the only match */
+/**
+ * @brief Perform keyword analysis among URL and file paths, find a common denominator and
+	 pick a URL/file containing such keyboard as the only match
+ * @param matches matches list
+ * @return true if a match was selected
+ */
 bool keyword_analysis(match_data *matches)
 {
 	/* A single match does not need to be analyzed */	
