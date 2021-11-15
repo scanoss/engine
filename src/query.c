@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file query.c
+  * @date 12 Jul 2020 
+  * @brief //TODO
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/quality.c
+  */
+
 #include "query.h"
 #include "util.h"
 #include "time.h"
@@ -27,7 +37,11 @@
 #include "scanoss.h"
 #include "decrypt.h"
 
-/* Obtain the first file name for the given file MD5 hash */
+/**
+ * @brief Obtain the first file name for the given file MD5 hash
+ * @param md5 //TODO
+ * @return //TODO
+ */
 char *get_filename(char *md5)
 {
 	/* Convert md5 to bin */
@@ -53,7 +67,17 @@ char *get_filename(char *md5)
 	return (char *)record;
 }
 
-/* Handler function for get_url_record */
+/**
+ * @brief Handler function for get_url_record
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	decrypt_data(data, datalen, "url", key, subkey);
@@ -71,7 +95,11 @@ bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln,
 	return false;
 }
 
-/* Obtain the first available component record for the given MD5 hash */
+/**
+ * @brief Obtain the first available component record for the given MD5 hash
+ * @param md5 //TODO
+ * @param record //TODO
+ */
 void get_url_record(uint8_t *md5, uint8_t *record)
 {
 	*record = 0;
@@ -80,7 +108,17 @@ void get_url_record(uint8_t *md5, uint8_t *record)
 	ldb_fetch_recordset(NULL, oss_url, md5, false, ldb_get_first_url_not_ignored, (void *) record);
 }
 
-/* Extracts component age in seconds from created date (1st CSV field in data) */
+/**
+ * @brief Extracts component age in seconds from created date (1st CSV field in data)
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool handle_get_component_age(uint8_t *key, uint8_t *subkey, int subkey_ln, \
 uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
@@ -137,7 +175,11 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 	return false;
 }
 
-/* Return the age of a component in seconds */
+/**
+ * @brief Return the age of a component in seconds
+ * @param md5 //TODO
+ * @return //TODO
+ */
 int get_component_age(uint8_t *md5)
 {
 	if (!md5) return 0;

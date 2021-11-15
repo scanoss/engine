@@ -20,6 +20,15 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+/**
+  @file snippets.c
+  @date 30 Dec 2020
+  @brief //TODO
+ 
+  Long description // TODO
+  @see https://github.com/scanoss/engine/blob/master/src/scan.c
+ */
+
 #include "ignorelist.h"
 #include "util.h"
 #include "debug.h"
@@ -31,7 +40,10 @@
 
 int map_rec_len;
 
-/* Set map hits to zero for the given match */
+/**
+ * @brief Set map hits to zero for the given match
+ * @param match //TODO
+ */
 void clear_hits(uint8_t *match)
 {
 	if (!match) return;
@@ -39,6 +51,12 @@ void clear_hits(uint8_t *match)
 	match[MD5_LEN + 1] = 0;
 }
 
+/**
+ * @brief //TODO
+ * @param path //TODO
+ * @param len //TODO
+ * @return //TODO
+ */
 int path_depth(uint8_t *path, int len)
 {
 	int depth = 0;
@@ -46,7 +64,17 @@ int path_depth(uint8_t *path, int len)
 	return depth;
 }
 
-/* Recordset handler function to find shortest path */
+/**
+ * @brief Recordset handler function to find shortest path
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 static bool shortest_path_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	int *shortest = (int *) ptr;
@@ -64,7 +92,11 @@ static bool shortest_path_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 	return false;
 }
 
-/* Returns the length of the shortest path among files matching md5 */
+/**
+ * @brief Returns the length of the shortest path among files matching md5
+ * @param md5 //TODO
+ * @return //TODO
+ */
 int get_shortest_path(uint8_t *md5)
 {
 	/* Direct component match has a top priority */
@@ -79,9 +111,15 @@ int get_shortest_path(uint8_t *md5)
 	return out;
 }
 
-/* If the extension of the matched file does not match the extension of the scanned file
-	and the matched file is not among known source code extensions, the match will be discarded */
-
+/**
+ * @brief If the extension of the matched file does not match the extension of the scanned file
+ *	and the matched file is not among known source code extensions, the match will be discarded
+ * 
+ * @param scan 
+ * @param md5 
+ * @return true 
+ * @return false 
+ */
 bool snippet_extension_discard(scan_data *scan, uint8_t *md5)
 {
 	bool discard = false;
@@ -164,7 +202,17 @@ uint8_t *biggest_snippet(scan_data *scan)
 	return out;
 }
 
-/* Handler function to collect all file ids */
+/**
+ * @brief Handler function to collect all file ids
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *) ptr;
@@ -185,6 +233,12 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	return false;
 }
 
+/**
+ * @brief //TODO
+ * @param src //TODO
+ * @param srcln //TODO
+ * @return //TODO
+ */
 bool skip_snippets(char *src, uint64_t srcln)
 {
 	if (srcln > SKIP_SNIPPETS_IF_FILE_BIGGER)
@@ -205,6 +259,12 @@ bool skip_snippets(char *src, uint64_t srcln)
 	return false;
 }
 
+/**
+ * @brief //TODO
+ * @param scan //TODO
+ * @param from //TODO
+ * @param to //TODO
+ */
 void add_snippet_ids(scan_data *scan, long from, long to)
 {
 	int maxlen = MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES;
@@ -234,7 +294,13 @@ void add_snippet_ids(scan_data *scan, long from, long to)
 	if (found) strcat(scan->snippet_ids, ",");
 }
 
-/* Assemble line ranges from ranges into scan->line_ranges and oss_ranges */
+/**
+ * @brief Assemble line ranges from ranges into scan->line_ranges and oss_ranges
+ * 
+ * @param ranges //TODO
+ * @param scan //TODO
+ * @return int //TODO
+ */
 int ranges_assemble(matchmap_range *ranges, scan_data *scan)
 {
 	int out = 0;
@@ -262,7 +328,11 @@ int ranges_assemble(matchmap_range *ranges, scan_data *scan)
 	return out;
 }
 
-/* Join overlapping ranges */
+/**
+ * @brief Join overlapping ranges
+ * 
+ * @param ranges //TODO
+ */
 void ranges_join_overlapping(matchmap_range *ranges)
 {
 	/* Walk ranges MATCHMAP_RANGES times */
@@ -279,7 +349,11 @@ void ranges_join_overlapping(matchmap_range *ranges)
 	}
 }
 
-/* Remove empty ranges, shifting remaining ranges */
+/**
+ * @brief Remove empty ranges, shifting remaining ranges 
+ * 
+ * @param ranges //TODO
+ */
 void ranges_remove_empty(matchmap_range *ranges)
 {
 	/* Walk ranges MATCHMAP_RANGES times */
@@ -298,7 +372,12 @@ void ranges_remove_empty(matchmap_range *ranges)
 	}
 }
 
-/* Add SNIPPET_LINE_TOLERANCE to ranges */
+/**
+ * @brief Add SNIPPET_LINE_TOLERANCE to ranges
+ * 
+ * @param ranges //TODO
+ * @param scan //TODO
+ */
 void ranges_add_tolerance(matchmap_range *ranges, scan_data *scan)
 {
 	/* Walk ranges */
@@ -325,7 +404,12 @@ void ranges_add_tolerance(matchmap_range *ranges, scan_data *scan)
 	}
 }
 
-/* Compiles list of line ranges, returning total number of hits (lines matched) */
+/**
+ * @brief Compiles list of line ranges, returning total number of hits (lines matched)
+ * 
+ * @param scan //TODO
+ * @return uint32_t //TODO
+ */
 uint32_t compile_ranges(scan_data *scan) {
 
 	*scan->line_ranges = 0;
@@ -426,6 +510,10 @@ uint32_t compile_ranges(scan_data *scan) {
 	return hits;
 }
 
+/**
+ * @brief //TODO
+ * @param scan //TODO
+ */
 static void adjust_tolerance(scan_data *scan)
 {
 	bool skip = false;
@@ -453,7 +541,11 @@ static void adjust_tolerance(scan_data *scan)
 	scanlog("Tolerance: range=%d, lines=%d, wfpcount=%u\n", range_tolerance, min_match_lines, wfpcount);
 }
 
-/* Get inverted wfp from int32 */
+/**
+ * @brief Get inverted wfp from int32
+ * @param wfpint32 //TODO
+ * @param out //TODO
+ */
 void wfp_invert(uint32_t wfpint32, uint8_t *out)
 {
 	uint8_t *ptr = (uint8_t*)&wfpint32;
@@ -463,7 +555,12 @@ void wfp_invert(uint32_t wfpint32, uint8_t *out)
 	out[3]=ptr[0];
 }
 
-/* Add line hit to all files */
+/**
+ * @brief Add line hit to all files
+ * @param scan //TODO
+ * @param line //TODO
+ * @param min_tolerance //TODO
+ */
 void add_popular_snippet_to_matchmap(scan_data *scan, uint32_t line, uint32_t min_tolerance)
 {
 	/* Travel the match map */
@@ -487,6 +584,15 @@ void add_popular_snippet_to_matchmap(scan_data *scan, uint32_t line, uint32_t mi
 	}
 }
 
+/**
+ * @brief //TODO
+ * @param scan //TODO
+ * @param md5s //TODO
+ * @param md5s_ln //TODO
+ * @param wfp //TODO
+ * @param line //TODO
+ * @param min_tolerance //TODO
+ */
 void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uint8_t *wfp, uint32_t line, uint32_t min_tolerance)
 {
 	uint32_t from = 0;
@@ -575,10 +681,14 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
 	}
 }
 
-/*	Query all wfp and add resulting file ids to the matchmap
+/**
+ * @brief Query all wfp and add resulting file ids to the matchmap
 		Scan is done from last to first line, because headers and
 		first lines are statistically more common than the end of
-		the file */
+		the file
+ * @param scan //TODO
+ * @return //TODO
+ */
 matchtype ldb_scan_snippets(scan_data *scan) {
 
 	if (!scan->hash_count) return none;

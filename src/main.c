@@ -20,6 +20,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file main.c
+  * @date 12 Jul 2020 
+  * @brief //TODO
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/main.c
+  */
+ 
 #include "attributions.h"
 #include "debug.h"
 #include "file.h"
@@ -138,6 +147,10 @@ void initialize_ldb_tables(char *name)
 	oss_cryptography.tmp = false;
 }
 
+/**
+ * @brief //TODO
+ * @param name //TODO
+ */
 void recurse_directory(char *name)
 {
 	DIR *dir;
@@ -180,6 +193,11 @@ void recurse_directory(char *name)
 	if (read) closedir(dir);
 }
 
+/**
+ * @brief //TODO
+ * @param txt //TODO
+ * @return //TODO
+ */
 bool validate_alpha(char *txt)
 {
 	/* Check digits (and convert to lowercase) */
@@ -191,7 +209,10 @@ bool validate_alpha(char *txt)
 	return true;
 }
 
-/* Read flags from /etc/scanoss_flags.cfg */
+/**
+ * @brief Read flags from /etc/scanoss_flags.cfg
+ * @return //TODO
+ */
 uint64_t read_flags()
 {
 	FILE *file = fopen(ENGINE_FLAGS_FILE, "rb");
@@ -211,6 +232,12 @@ uint64_t read_flags()
 	return 0;
 }
 
+/**
+ * @brief //TODO
+ * @param argc //TODO
+ * @param argv //TODO
+ * @return //TODO
+ */
 int main(int argc, char **argv)
 {
 	//global var initialization - it must be improved

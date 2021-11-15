@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file attributions.c
+  * @date 21 Feb 2021 
+  * @brief //TODO
+ 
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/attributions.c
+  */
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -29,6 +39,18 @@
 #include "parse.h"
 #include "util.h"
 
+
+/**
+ * @brief //TODO 
+ * @param key //TODO  
+ * @param subkey //TODO 
+ * @param subkey_ln //TODO  
+ * @param data //TODO 
+ * @param datalen //TODO  
+ * @param iteration //TODO 
+ * @param ptr //TODO 
+ * @return //TODO  
+ */
 bool notices_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, \
 uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
@@ -68,6 +90,17 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 	return false;
 }
 
+/**
+ * @brief //TODO
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool attribution_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, \
 uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
@@ -100,6 +133,12 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 	return false;
 }
 
+/**
+ * @brief //TODO
+ * @param oss_attribution //TODO
+ * @param key //TODO
+ * @return //TODO
+ */
 bool purl_notices_exist(struct ldb_table oss_attribution, uint8_t *key)
 {
 	bool validated = true;
@@ -107,6 +146,13 @@ bool purl_notices_exist(struct ldb_table oss_attribution, uint8_t *key)
 	return validated;
 }
 
+/**
+ * @brief //TODO
+ * @param oss_attribution //TODO
+ * @param key //TODO
+ * @param component //TODO
+ * @return //TODO
+ */
 bool print_notices(struct ldb_table oss_attribution, uint8_t *key, char *component)
 {
 	bool validated = true;
@@ -114,7 +160,11 @@ bool print_notices(struct ldb_table oss_attribution, uint8_t *key, char *compone
 	return validated;
 }
 
-/* Return true if purl attributions are in the KB */
+/**
+ * @brief Return true if purl attributions are in the KB
+ * @param oss_attribution //TODO
+ * @return //TODO
+ */
 bool check_purl_attributions(struct ldb_table oss_attributions)
 {
 	bool valid = true;
@@ -149,6 +199,10 @@ bool check_purl_attributions(struct ldb_table oss_attributions)
 	return valid;
 }
 
+/**
+ * @brief //TODO
+ * @param oss_attribution //TODO
+ */
 void print_purl_attribution_notices(struct ldb_table oss_attributions)
 {
 	/* Travel declared_components */
@@ -165,6 +219,10 @@ void print_purl_attribution_notices(struct ldb_table oss_attributions)
   }
 }
 
+/**
+ * @brief //TODO
+ * @return //TODO
+ */
 int attribution_notices()
 {
 	/* Validate SBOM */

@@ -20,6 +20,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file file.c
+  * @date 12 Jul 2020 
+  * @brief //TODO
+ 
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/file.c
+  */
 
 #include <sys/stat.h>
 #include <openssl/md5.h>
@@ -35,6 +43,11 @@
 #include "ignorelist.h"
 #include "parse.h"
 
+/**
+ * @brief //TODO
+ * @param path //TODO
+ * @return //TODO
+ */
 bool is_file(char *path)
 {
 	struct stat pstat;
@@ -44,6 +57,11 @@ bool is_file(char *path)
 	return false;
 }
 
+/**
+ * @brief //TODO
+ * @param path //TODO
+ * @return //TODO
+ */
 bool is_dir(char *path)
 {
 	struct stat pstat;
@@ -53,6 +71,11 @@ bool is_dir(char *path)
 	return false;
 }
 
+/**
+ * @brief //TODO
+ * @param path //TODO
+ * @return //TODO
+ */
 uint64_t get_file_size(char *path)
 {
 	uint64_t length = 0;
@@ -66,6 +89,12 @@ uint64_t get_file_size(char *path)
 	return length;
 }
 
+/**
+ * @brief //TODO
+ * @param[out] out //TODO
+ * @param path //TODO
+ * @param maxlen //TODO
+ */
 void read_file(char *out, char *path, uint64_t maxlen)
 {
 
@@ -98,7 +127,11 @@ void read_file(char *out, char *path, uint64_t maxlen)
 	}
 }
 
-/* Calculate the MD5 for filepath contents */
+/**
+ * @brief Calculate the MD5 for filepath contents
+ * @param filepath //TODO
+ * @param md5_result //TODO
+ */
 void get_file_md5(char *filepath, uint8_t *md5_result)
 {
 
@@ -127,7 +160,17 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 	fclose(in);
 }
 
-/* Return the number of directories in path */
+/**
+ * @brief Return the number of directories in path
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param raw_data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 int dir_count(char *path)
 {
 	int count = 1;
@@ -136,6 +179,17 @@ int dir_count(char *path)
 	return count;
 }
 
+/**
+ * @brief //TODO
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param raw_data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 

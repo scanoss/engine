@@ -19,6 +19,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file rank.c
+  * @date 31 Jan 2021
+  * @brief //TODO
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/rank.c
+  */
 #include "stdbool.h"
 #include "rank.h"
 #include "util.h"
@@ -29,7 +38,11 @@
 #include "url.h"
 #include "parse.h"
 
-/* Determine if a path is to be dismissed */
+/**
+ * @brief Determine if a path is to be dismissed
+ * @param path //TODO
+ * @return //TODO
+ */
 bool dismiss_path(char *path)
 {
 	char *skip_paths[] = {
@@ -57,7 +70,11 @@ bool dismiss_path(char *path)
 	return false;
 }
 
-/* Determine if a keyword is indication of an external component */
+/**
+ * @brief Determine if a keyword is indication of an external component
+ * @param str //TODO
+ * @return //TODO
+ */
 bool is_external_indicator(char *str)
 {
 
@@ -87,7 +104,15 @@ bool is_external_indicator(char *str)
 	return false;
 }
 
-/* Add component to component_rank */
+/**
+ * @brief Add component to component_rank
+ * @param component_rank //TODO
+ * @param vendor //TODO
+ * @param component //TODO
+ * @param path
+ * @param url_id //TODO
+ * @param url_record //TODO
+ */
 void update_component_rank(\
 component_name_rank *component_rank,
 char *vendor,
@@ -133,7 +158,11 @@ char *url_record)
 	}
 }
 
-/* Attempt to guess a component name from the file path */
+/**
+ * @brief Attempt to guess a component name from the file path
+ * @param file_path //TODO
+ * @param component //TODO
+ */
 void get_external_component_name_from_path(char *file_path, char *component)
 {
 	if (!file_path) return;
@@ -166,7 +195,10 @@ void get_external_component_name_from_path(char *file_path, char *component)
 	}
 }
 
-/* Write contents of component_rank to log file */
+/**
+ * @brief Write contents of component_rank to log file
+ * @param component_rank //TODO
+ */
 void log_component_ranking(component_name_rank *component_rank)
 {
 	if (!debug_on) return;
@@ -182,7 +214,11 @@ void log_component_ranking(component_name_rank *component_rank)
 	}
 }
 
-/* Log path ranking values */
+/**
+ * @brief Log path ranking values
+ * @param path_rank //TODO
+ * @param files //TODO
+ */
 void log_path_ranking(path_ranking *path_rank, file_recordset *files)
 {
 	if (!debug_on) return;
@@ -195,7 +231,13 @@ void log_path_ranking(path_ranking *path_rank, file_recordset *files)
 	}
 }
 
-/* Look for hints of /external/ component names in collected file paths */
+/**
+ * @brief Look for hints of /external/ component names in collected file paths
+ * @param files //TODO
+ * @param records //TODO
+ * @param hint //TODO
+ * @param component_rank //TODO
+ */
 void external_component_hint_in_path(file_recordset *files, int records, char *hint, component_name_rank *component_rank)
 {
 	bool found = false;
@@ -219,6 +261,13 @@ void external_component_hint_in_path(file_recordset *files, int records, char *h
 	scanlog("external_component_hint_in_path returned: %s\n", found ? hint : "no hints");
 }
 
+/**
+ * @brief //TODO
+ * @param path_rank //TODO
+ * @param files //TODO
+ * @param file_id //TODO
+ * @return //TODO
+ */
 bool path_exists_in_path_rank(path_ranking *path_rank, file_recordset *files, int file_id)
 {
 	/* Make sure the path does not already exist in the rank (duplicated) */
@@ -235,7 +284,12 @@ bool path_exists_in_path_rank(path_ranking *path_rank, file_recordset *files, in
 	return false;
 }
 
-/* Collect the the shortest paths into rank */
+/**
+ * @brief Collect the the shortest paths into rank
+ * @param files //TODO
+ * @param records //TODO
+ * @param path_rank //TODO
+ */
 void collect_shortest_paths(\
 		file_recordset *files,\
 		int records, path_ranking *path_rank)
@@ -302,6 +356,15 @@ void collect_shortest_paths(\
 	log_path_ranking(path_rank, files);
 }
 
+/**
+ * @brief //TODO
+ * @param files //TODO
+ * @param records //TODO
+ * @param path_rank //TODO
+ * @param hint1 //TODO
+ * @param hint2 //TODO
+ * @return //TODO
+ */
 bool select_paths_matching_component_names_in_rank(\
 		file_recordset *files,\
 		int records,\
@@ -378,7 +441,11 @@ bool select_paths_matching_component_names_in_rank(\
 	return found;
 }
 
-/* Update component score with component age, return file id for the oldest */
+/**
+ * @brief Update component score with component age, return file id for the oldest
+ * @param component_rank //TODO
+ * @return //TODO
+ */
 int fill_component_age(component_name_rank *component_rank)
 {
 	long oldest = 0;
@@ -401,7 +468,11 @@ int fill_component_age(component_name_rank *component_rank)
 	return oldest_id;
 }
 
-/* Return id of the item in rank with the highest score */
+/**
+ * @brief Return id of the item in rank with the highest score
+ * @param component_rank //TODO
+ * @return //TODO
+ */
 int highest_score(component_name_rank *component_rank)
 {
 	long best = 0;
@@ -423,7 +494,11 @@ int highest_score(component_name_rank *component_rank)
 	return best_id;
 }
 
-/* Select the vendor that appears the most in the ranking */
+/**
+ * @brief Select the vendor that appears the most in the ranking
+ * @param component_rank //TODO
+ * @return //TODO
+ */
 int rank_by_occurrences(component_name_rank *component_rank)
 {
 	/* Increment rank by number of occurences */
@@ -439,7 +514,10 @@ int rank_by_occurrences(component_name_rank *component_rank)
 	return highest_score(component_rank);
 }
 
-/* Erase values in component_rank */
+/**
+ * @brief Erase values in component_rank
+ * @param component_rank //TODO
+ */
 void clear_component_rank(component_name_rank *component_rank)
 {
 	for (int i = 0; i < rank_items; i++)
@@ -452,7 +530,11 @@ void clear_component_rank(component_name_rank *component_rank)
 	}
 }
 
-/* Select the component with the higher rank and update component_hint */
+/**
+ * @brief Select the component with the higher rank and update component_hint
+ * @param component_rank //TODO
+ * @param component_hint //TODO
+ */
 void select_best_component_from_rank(\
 		component_name_rank *component_rank,\
 		char *component_hint)
@@ -468,7 +550,10 @@ void select_best_component_from_rank(\
 	}
 }
 
-/* Initialize component ranking */
+/**
+ * @brief Initialize component ranking
+ * @param component_rank //TODO
+ */
 void init_component_ranking(component_name_rank *component_rank)
 {
 	for (int i = 0; i < rank_items; i++)
@@ -477,7 +562,18 @@ void init_component_ranking(component_name_rank *component_rank)
 	}
 }
 
-/* Search for a matching component hint among files with shortest paths */
+/**
+ * @brief Search for a matching component hint among files with shortest paths
+ * 
+ * @param files 
+ * @param records 
+ * @param hint1 
+ * @param hint2 
+ * @param component_rank 
+ * @param path_rank 
+ * @return true 
+ * @return false 
+ */
 bool component_hint_from_shortest_paths(\
 		file_recordset *files,\
 		int records,\
@@ -507,7 +603,16 @@ bool component_hint_from_shortest_paths(\
 	return hint_found;
 }
 
-/* Add relevant files into matches structure */
+/**
+ * @brief Add relevant files into matches structure
+ * @param files //TODO
+ * @param records //TODO
+ * @param component_hint //TODO
+ * @param file_md5 //TODO
+ * @param matches //TODO
+ * @param add_all //TODO
+ * @return //TODO
+ */
 int add_files_to_matches(\
 		file_recordset *files,\
 		int records,\
@@ -538,7 +643,12 @@ int add_files_to_matches(\
 	return considered;
 }
 
-/* Reverse sort len_rank */
+/**
+ * @brief Reverse sort len_rank
+ * @param a //TODO
+ * @param b //TODO
+ * @return //TODO
+ */
 int path_struct_rcmp(const void *a, const void *b) {
     const len_rank *v1 = (const len_rank *) a;
     const len_rank *v2 = (const len_rank *) b;
@@ -547,7 +657,12 @@ int path_struct_rcmp(const void *a, const void *b) {
 	return 0;
 }
 
-/* Sort len_rank */
+/**
+ * @brief Sort len_rank
+ * @param a //TODO
+ * @param b //TODO
+ * @return //TODO
+ */
 int path_struct_cmp(const void *a, const void *b) {
     const len_rank *v1 = (const len_rank *) a;
     const len_rank *v2 = (const len_rank *) b;
@@ -556,7 +671,12 @@ int path_struct_cmp(const void *a, const void *b) {
 	return 0;
 }
 
-/* Load path rank and return pointer */
+/**
+ * @brief Load path rank and return pointer
+ * @param files //TODO
+ * @param records //TODO
+ * @return //TODO
+ */
 len_rank *load_path_rank(file_recordset *files, int records)
 {
 	/* Define path length rank structure */
@@ -581,7 +701,12 @@ len_rank *load_path_rank(file_recordset *files, int records)
 	return rank;
 }
 
-/* Dump rank contents into log */
+/**
+ * @brief Dump rank contents into log
+ * @param path_rank //TODO
+ * @param files //TODO
+ * @return //TODO
+ */
 void dump_path_rank(len_rank *path_rank, file_recordset *files)
 {
 	scanlog(">> Shortest Path Rank BEGINS\n");
@@ -593,8 +718,14 @@ void dump_path_rank(len_rank *path_rank, file_recordset *files)
 	scanlog(">> Shortest Path Rank ENDS\n");
 }
 
-/* Select the best record based on oldest date of first release
-	querying the pURL table */
+/**
+ * @brief Select the best record based on oldest date of first release
+	querying the pURL table
+ * @param dup_dates //TODO
+ * @param top_recs //TODO
+ * @param top_md5s //TODO
+ * @return //TODO
+ */
 uint8_t *select_best_top_date(int dup_dates, uint8_t *top_recs, uint8_t *top_md5s)
 {
 	if (!dup_dates) return top_recs;
@@ -623,8 +754,14 @@ uint8_t *select_best_top_date(int dup_dates, uint8_t *top_recs, uint8_t *top_md5
 	return oldest_ptr;
 }
 
-/* Look for shortest file paths and query component/purl information to determine
-	 the most interesting match */
+/**
+ * @brief Look for shortest file paths and query component/purl information to determine
+	 the most interesting match
+ * @param files //TODO
+ * @param records //TODO
+ * @param component_rank //TODO
+ * @return //TODO
+ */
 int shortest_paths_check(file_recordset *files, int records, component_name_rank *component_rank)
 {
 	/* Wipe component_rank */
@@ -714,8 +851,15 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 	return selected;
 }
 
-/* Analyse files, selecting those matching the provided hints
-	 return the file id if matched, otherwise a negative value if no hits */
+/**
+ * @brief Analyse files, selecting those matching the provided hints
+	 return the file id if matched, otherwise a negative value if no hits
+ * @param files //TODO
+ * @param records //TODO
+ * @param hint //TODO
+ * @param component_rank //TODO
+ * @return //TODO
+ */
 int seek_component_hint_in_path(\
 		file_recordset *files,\
 		int records,\
@@ -774,7 +918,13 @@ int seek_component_hint_in_path(\
 	return -1;
 }
 
-/* Analyse files, selecting those with a component name matching the beginning of the path */
+/**
+ * @brief Analyse files, selecting those with a component name matching the beginning of the path
+ * @param files //TODO
+ * @param records //TODO
+ * @param component_rank //TODO
+ * @return //TODO
+ */
 int seek_component_hint_in_path_start(\
 		file_recordset *files,\
 		int records,\
@@ -822,7 +972,11 @@ int seek_component_hint_in_path_start(\
 	return selected;
 }
 
-/* Select match based on hint and age */
+/**
+ * @brief Select match based on hint and age
+ * @param matches //TODO
+ * @return //TODO
+ */
 bool select_best_match(match_data *matches)
 {
 	scanlog("Running select_best_match()\n");

@@ -18,12 +18,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file psi.c
+  * @date 12 Jul 2020 
+  * @brief //TODO
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/psi.c
+  */
+
 #include "psi.h"
 #include "keywords.h"
 #include "limits.h"
 #include "url.h"
 
-/* Meta post scanning function */
+/**
+ * @brief Meta post scanning function 
+ * @param matches //TODO
+ */
 void post_scan(match_data *matches)
 {
 	if (!(engine_flags & DISABLE_BEST_MATCH))

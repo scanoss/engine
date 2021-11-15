@@ -19,9 +19,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file help.c
+  * @date 12 Jul 2020 
+  * @brief //TODO
+ 
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/help.c
+  */
+
 #include "help.h"
 #include "scanoss.h"
 
+/**
+ * @brief //TODO
+ */
 void help ()
 {
 	printf ("ScanOSS Engine v%s\n", SCANOSS_VERSION);

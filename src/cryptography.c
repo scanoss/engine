@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file cryptography.c
+  * @date 28 Feb 2021 
+  * @brief //TODO
+ 
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/cryptography.c
+  */
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -29,6 +39,17 @@
 #include "parse.h"
 #include "decrypt.h"
 
+/**
+ * @brief //TODO 
+ * @param key //TODO  
+ * @param subkey //TODO 
+ * @param subkey_ln //TODO  
+ * @param data //TODO 
+ * @param datalen //TODO  
+ * @param iteration //TODO 
+ * @param ptr //TODO 
+ * @return //TODO  
+ */
 bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	match_data *match = ptr;
@@ -67,6 +88,10 @@ bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
 	return false;
 }
 
+/**
+ * @brief //TODO 
+ * @param match //TODO  
+ */
 void print_cryptography(match_data match)
 {
 	if (!ldb_table_exists(oss_cryptography.db, oss_cryptography.table)) //skip crypto if the table is not present

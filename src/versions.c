@@ -20,6 +20,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  @file versions.c
+  @date 31 May 2021
+  @brief //TODO
+ 
+  Long description // TODO
+  @see https://github.com/scanoss/engine/blob/master/src/versions.c
+ */
+
 #include "scan.h"
 #include "rank.h"
 #include "snippets.h"
@@ -36,6 +45,11 @@
 #include "ldb.h"
 #include "decrypt.h"
 
+/**
+ * @brief //TODO
+ * @param version //TODO
+ * @param component //TODO
+ */
 void normalise_version(char *version, char *component)
 {
 	/* Remove leading component name from version */
@@ -51,12 +65,27 @@ void normalise_version(char *version, char *component)
 	if (orig) *orig = 0;
 }
 
+/**
+ * @brief //TODO
+ * @param match //TODO
+ */
 void clean_versions(match_data *match)
 {
 	normalise_version(match->version, match->component);
 	normalise_version(match->latest_version, match->component);
 }
 
+/**
+ * @brief //TODO
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	release_version *release = ptr;
@@ -99,7 +128,11 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
 	return found;
 }
 
-/* Compare version and, if needed, update range (version-latest) */
+/**
+ * @brief Compare version and, if needed, update range (version-latest)
+ * @param match //TODO
+ * @param release //TODO
+ */
 void update_version_range(match_data *match, release_version *release)
 {
 	if (!*release->date) return;
@@ -120,6 +153,12 @@ void update_version_range(match_data *match, release_version *release)
 	}
 }
 
+/**
+ * @brief //TODO
+ * @param release //TODO
+ * @param purl //TODO
+ * @param file_id //TODO
+ */
 void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
 {
 	/* Pass purl in version */
@@ -131,7 +170,13 @@ void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
 	if (!strcmp(release->version, purl)) *release->version = 0;
 }
 
-/* Add version range to first match */
+/**
+ * @brief Add version range to first match
+ * @param scan //TODO
+ * @param matches //TODO
+ * @param files //TODO
+ * @param records //TODO
+ */
 void add_versions(scan_data *scan, match_data *matches, file_recordset *files, uint32_t records)
 {
 	release_version *release = calloc(sizeof(release_version), 1);

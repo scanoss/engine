@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file match.c
+  * @date 12 Jul 2020 
+  * @brief //TODO
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/match.c
+  */
+
 #include "match.h"
 #include "query.h"
 #include "report.h"
@@ -32,21 +42,28 @@
 #include "rank.h"
 #include "decrypt.h"
 
-bool first_file = true;
-const char *matchtypes[] = {"none", "url", "file", "snippet"};
-bool match_extensions = false;
+bool first_file = true; /** //TODO */
+const char *matchtypes[] = {"none", "url", "file", "snippet"}; /** //TODO */
+bool match_extensions = false; /** //TODO */
 
 char vendor_hint[MAX_FIELD_LN];
 char component_hint[MAX_FIELD_LN];
 
-/* This script replaces \ with / */
+/**
+ * @brief This script replaces \ with /
+ * @param data //TODO
+ */
 void flip_slashes(char *data)
 {
 	int len = strlen(data);
 	for (int i = 0; i < len ; i++) if (data[i] == '\\') data[i] = '/';
 }
 
-/* Output matches in JSON format via STDOUT */
+/**
+ * @brief Output matches in JSON format via STDOUT
+ * @param matches //TODO
+ * @param scan_ptr //TODO
+ */
 void output_matches_json(match_data *matches, scan_data *scan_ptr)
 {
 	scan_data *scan = scan_ptr;
@@ -96,6 +113,10 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	json_close_file();
 }
 
+/**
+ * @brief //TODO
+ * @return //TODO
+ */
 match_data match_init()
 {
 	match_data match;
@@ -121,7 +142,15 @@ match_data match_init()
 	}
 	return match;
 }
-/* Add all files in recordset to matches */
+
+/**
+ * @brief Add all files in recordset to matches
+ * @param files
+ * @param file_count
+ * @param scan
+ * @param matches
+ * @return //TODO
+ */
 int add_all_files_to_matches(file_recordset *files, int file_count, scan_data *scan, match_data *matches)
 {
 	scanlog("Adding %d file records to matches\n", file_count);
@@ -150,7 +179,11 @@ int add_all_files_to_matches(file_recordset *files, int file_count, scan_data *s
 	return file_count;
 }
 
-/* Return true if asset is found in ignore_components (-b parameter) */
+/**
+ * @brief Return true if asset is found in ignore_components (-b parameter) 
+ * @param url_record //TODO
+ * @return //TODO
+ */
 bool ignored_asset_match(uint8_t *url_record)
 {
 	if (!ignore_components) return false;
@@ -207,6 +240,13 @@ bool ignored_asset_match(uint8_t *url_record)
 	return found;
 }
 
+/**
+ * @brief //TODO
+ * @param url_key //TODO
+ * @param file_path //TODO
+ * @param url_record //TODO
+ * @return //TODO
+ */
 match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 {
 	match_data match;
@@ -250,6 +290,11 @@ match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 	return match;
 }
 
+/**
+ * @brief //TODO
+ * @param matches //TODO
+ * @return //TODO
+ */
 int count_matches(match_data *matches)
 {
 	if (!matches)
@@ -262,7 +307,13 @@ int count_matches(match_data *matches)
 	return c;
 }
 
-/* Adds match to matches */
+/**
+ * @brief Adds match to matches
+ * @param position //TODO
+ * @param match //TODO
+ * @param matches //TODO
+ * @return //TODO
+ */
 void add_match(int position, match_data match, match_data *matches)
 {
 
@@ -336,7 +387,11 @@ void add_match(int position, match_data match, match_data *matches)
 	}
 }
 
-/* Add file record to matches */
+/**
+ * @brief Add file record to matches
+ * @param scan //TODO
+ * @return //TODO
+ */
 void add_selected_file_to_matches(\
 		match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *file_md5)
 {
@@ -355,6 +410,12 @@ void add_selected_file_to_matches(\
 	add_match(0, match, matches);
 }
 
+/**
+ * @brief //TODO
+ * @param scan //TODO
+ * @param matches //TODO
+ * @return //TODO
+ */
 void load_matches(scan_data *scan, match_data *matches)
 {
 	strcpy(scan->line_ranges, "all");

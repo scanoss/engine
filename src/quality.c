@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file quality.c
+  * @date 27 Nov 2020 
+  * @brief //TODO
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/quality.c
+  */
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -28,8 +38,20 @@
 #include "util.h"
 #include "parse.h"
 
+/** @brief */
 const char *quality_sources[] = {"best_practices"};
 
+/**
+ * @brief //TODO 
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	char *CSV  = calloc(datalen + 1, 1);
@@ -69,6 +91,10 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 	return reported;
 }
 
+/**
+ * @brief //TODO
+ * @param match //TODO
+ */
 void print_quality(match_data match)
 {
 	if (!ldb_table_exists(oss_quality.db, oss_quality.table)) //skip purl if the table is not present

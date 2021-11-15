@@ -20,6 +20,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file copyright.c
+  * @date 27 Nov 2020 
+  * @brief //TODO
+ 
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/copyright.c
+  */
+
 #include "copyright.h"
 #include "limits.h"
 #include "parse.h"
@@ -28,6 +37,17 @@
 
 const char *copyright_sources[] = {"component_declared", "file_header", "license_file", "scancode"};
 
+/**
+ * @brief //TODO
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param[out] data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 static bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	decrypt_data(data, datalen, "copyright", key, subkey);
@@ -37,6 +57,11 @@ static bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, ui
 	return true;
 }
 
+/**
+ * @brief //TODO
+ * @param[out] out //TODO
+ * @param copyright //TODO
+ */
 static void clean_copyright(char *out, char *copyright)
 {
 	int i;
@@ -53,6 +78,12 @@ static void clean_copyright(char *out, char *copyright)
 	out[i] = 0;
 }
 
+/**
+ * @brief //TODO
+ * @param key //TODO
+ * @param subkey //TODO
+ * @return //TODO
+ */
 static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	match_data *match = ptr;
@@ -91,6 +122,11 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 	return false;
 }
 
+/**
+ * @brief //TODO
+ * @param match //TODO
+ * @param copyright //TODO
+ */
 void get_copyright(match_data match, char *copyright)
 {
 	if (!ldb_table_exists(oss_copyright.db, oss_copyright.table)) //skip purl if the table is not present
@@ -99,6 +135,10 @@ void get_copyright(match_data match, char *copyright)
 	ldb_fetch_recordset(NULL, oss_copyright, match.file_md5, false, get_first_copyright, copyright);
 }
 
+/**
+ * @brief //TODO
+ * @param match //TODO
+ */
 void print_copyrights(match_data match)
 {
 	if (!ldb_table_exists(oss_copyright.db, oss_copyright.table)) //skip purl if the table is not present

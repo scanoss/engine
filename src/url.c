@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  @file url.c
+  @date 31 May 2021
+  @brief //TODO
+ 
+  Long description // TODO
+  @see https://github.com/scanoss/engine/blob/master/src/scan.c
+ */
+
 #include "match.h"
 #include "report.h"
 #include "debug.h"
@@ -29,6 +39,17 @@
 #include "decrypt.h"
 #include "ignorelist.h"
 
+/**
+ * @brief //TODO
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param raw_data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen && datalen >= MAX_PATH) return false;

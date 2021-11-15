@@ -44,6 +44,11 @@ const struct _json_value json_value_none;
 
 typedef unsigned int json_uchar;
 
+/**
+ * @brief //TODO
+ * @param c //TODO
+ * @return //TODO
+ */
 static unsigned char hex_value (json_char c)
 {
    if (isdigit(c))
@@ -75,16 +80,33 @@ typedef struct
 
 } json_state;
 
+/**
+ * @brief //TODO
+ * @param size //TODO
+ * @param zero //TODO
+ * @param user_data //TODO
+ */
 static void * default_alloc (size_t size, int zero, void * user_data)
 {
    return zero ? calloc (1, size) : malloc (size);
 }
 
+/**
+ * @brief //TODO
+ * @param ptr //TODO
+ * @param user_data //TODO
+ */
 static void default_free (void * ptr, void * user_data)
 {
    free (ptr);
 }
 
+/**
+ * @brief //TODO
+ * @param state //TODO
+ * @param size //TODO
+ * @param zero //TODO
+ */
 static void * json_alloc (json_state * state, unsigned long size, int zero)
 {
    if ((state->ulong_max - state->used_memory) < size)
@@ -99,6 +121,15 @@ static void * json_alloc (json_state * state, unsigned long size, int zero)
    return state->settings.mem_alloc (size, zero, state->settings.user_data);
 }
 
+/**
+ * @brief //TODO
+ * @param state //TODO
+ * @param top //TODO
+ * @param root //TODO
+ * @param alloc //TODO
+ * @param type //TODO
+ * @return //TODO
+ */
 static int new_value (json_state * state,
                       json_value ** top, json_value ** root, json_value ** alloc,
                       json_type type)
@@ -212,6 +243,14 @@ static const long
    flag_line_comment     = 1 << 13,
    flag_block_comment    = 1 << 14;
 
+/**
+ * @brief //TODO
+ * @param settings //TODO
+ * @param json //TODO
+ * @param length //TODO
+ * @param error_buf //TODO
+ * @return //TODO
+ */
 json_value * json_parse_ex (json_settings * settings,
                             const json_char * json,
                             size_t length,
@@ -940,12 +979,23 @@ e_failed:
    return 0;
 }
 
+/**
+ * @brief //TODO
+ * @param json //TODO
+ * @param length //TODO
+ * @return //TODO
+ */
 json_value * json_parse (const json_char * json, size_t length)
 {
    json_settings settings = { 0 };
    return json_parse_ex (&settings, json, length, 0);
 }
 
+/**
+ * @brief //TODO
+ * @param settings //TODO
+ * @param value //TODO
+ */
 void json_value_free_ex (json_settings * settings, json_value * value)
 {
    json_value * cur_value;
@@ -996,6 +1046,10 @@ void json_value_free_ex (json_settings * settings, json_value * value)
    }
 }
 
+/**
+ * @brief //TODO
+ * @param value //TODO
+ */
 void json_value_free (json_value * value)
 {
    json_settings settings = { 0 };

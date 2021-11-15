@@ -20,6 +20,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file parse.c
+  * @date 12 Jul 2020 
+  * @brief //TODO
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/parse.c
+  */
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -29,6 +38,11 @@
 #include "json.h"
 #include "debug.h"
 
+/**
+ * @brief //TODO
+ * @param str //TODO
+ * @return //TODO
+ */
 static bool is_component(char *str)
 {
 	if (!strcmp(str, "name")) return true;
@@ -36,6 +50,11 @@ static bool is_component(char *str)
 	return false;
 }
 
+/**
+ * @brief //TODO
+ * @param str //TODO
+ * @return //TODO
+ */
 static bool is_vendor(char *str)
 {
 	if (!strcmp(str, "publisher")) return true;
@@ -43,8 +62,20 @@ static bool is_vendor(char *str)
 	return false;
 }
 
+/**
+ * @brief //TODO
+ * @param value //TODO
+ * @param depth //TODO
+ * @param out //TODO
+ */
 static void work_json_value(json_value* value, int depth, component_item *out);
 
+/**
+ * @brief //TODO
+ * @param value //TODO
+ * @param depth //TODO
+ * @param out //TODO
+ */
 static void work_json_object(json_value* value, int depth, component_item *out)
 {
 	int length, x;
@@ -91,6 +122,12 @@ static void work_json_object(json_value* value, int depth, component_item *out)
 	}
 }
 
+/**
+ * @brief //TODO
+ * @param value //TODO
+ * @param depth //TODO
+ * @param out //TODO
+ */
 static void work_json_array(json_value* value, int depth, component_item *out)
 {
 	int length, x;
@@ -102,6 +139,13 @@ static void work_json_array(json_value* value, int depth, component_item *out)
 	}
 }
 
+/**
+ * @brief //TODO
+ * @param value //TODO
+ * @param depth //TODO
+ * @param out //TODO
+ * @return //TODO
+ */
 static void work_json_value(json_value* value, int depth, component_item *out)
 {
 	if (value == NULL) return;
@@ -121,6 +165,11 @@ static void work_json_value(json_value* value, int depth, component_item *out)
 	}
 }
 
+/**
+ * @brief Loads assets (SBOM.json) into memory
+ * @param filepath //TODO
+ * @return //TODO
+ */
 component_item *get_components(char *filepath)
 {
 
@@ -168,7 +217,12 @@ component_item *get_components(char *filepath)
 	return out;
 }
 
-/* Returns a pointer to the character following the first "character" in "data" */
+/**
+ * @brief Returns a pointer to the character following the first "character" in "data"
+ * @param data //TODO
+ * @param character //TODO
+ * @return //TODO
+ */
 char *skip_first_char(char *data, char character)
 {
 	char *ptr = data;
@@ -180,19 +234,34 @@ char *skip_first_char(char *data, char character)
 	return data;
 }
 
-/* Returns a pointer to the character following the first comma in data */
+/**
+ * @brief Returns a pointer to the character following the first comma in data
+ * @param data //TODO
+ * @return //TODO
+ */
 char *skip_first_comma(char *data)
 {
 	return skip_first_char(data, ',');
 }
 
-/* Returns a pointer to the character following the first slash in data */
+/**
+ * @brief Returns a pointer to the character following the first slash in data
+ * @param data //TODO
+ * @return //TODO
+ */
 char *skip_first_slash(char *data)
 {
 	return skip_first_char(data, '/');
 }
 
-/* Extracts the "n"th value from the comma separated "in" string */
+/**
+ * @brief Extracts the "n"th value from the comma separated "in" string
+ * @param out //TODO
+ * @param in //TODO
+ * @param n //TODO
+ * @param limit //TODO
+ * @return //TODO
+ */
 void extract_csv(char *out, char *in, int n, long limit)
 {
 	*out = 0;
@@ -219,7 +288,11 @@ void extract_csv(char *out, char *in, int n, long limit)
 	out[out_ptr] = 0;
 }
 
-/* Returns a pointer to the path after the domain name in the provided url */
+/**
+ * @brief Returns a pointer to the path after the domain name in the provided url
+ * @param url //TODO
+ * @return //TODO
+ */
 char *skip_domain(char *url)
 {
 	char *out = url;
@@ -230,7 +303,10 @@ char *skip_domain(char *url)
 	return NULL;
 }
 
-/* Converts word to lowercase */
+/**
+ * @brief Converts word to lowercase
+ * @param word //TODO
+ */
 void lowercase(char *word)
 {
 	for (char *w = word ; *w; w++) *w = tolower(*w);
