@@ -205,6 +205,97 @@ void add_snippet_ids(scan_data *scan, long from, long to)
 	if (found) strcat(scan->snippet_ids, ",");
 }
 
+/* Assemble line ranges from ranges into scan->line_ranges and oss_ranges */
+int ranges_assemble(matchmap_range *ranges, scan_data *scan)
+{
+	int out = 0;
+
+	/* Walk ranges */
+	for (int i = MATCHMAP_RANGES - 1; i >= 0; i--)
+	{
+		int to = ranges[i].to;
+		int from = ranges[i].from;
+		int oss = ranges[i].oss_line;
+		if (from && to && oss)
+		{
+			/* Add commas unless it is the first range */
+			if (*scan->line_ranges) strcat(scan->line_ranges, ",");
+			if (*scan->oss_ranges) strcat(scan->oss_ranges, ",");
+
+			/* Add from-to values */
+			sprintf (scan->line_ranges + strlen(scan->line_ranges), "%d-%d", from, to);
+			sprintf (scan->oss_ranges + strlen(scan->oss_ranges), "%d-%d", oss, to - from + oss);
+
+			/* Increment hits */
+			out += (to - from);
+		}
+	}
+	return out;
+}
+
+/* Join overlapping ranges */
+void ranges_join_overlapping(matchmap_range *ranges)
+{
+	/* Walk ranges MATCHMAP_RANGES times */
+	for (int a = 0; a < MATCHMAP_RANGES; a++)
+	for (int i = 0; i < MATCHMAP_RANGES - 1; i++)
+	{
+		/* Join range */
+		if (ranges[i].from && ranges[i + 1].to >= ranges[i].from)
+		{
+			ranges[i].from = ranges[i + 1].from;
+			ranges[i + 1].from = 0;
+			ranges[i + 1].to = 0;
+		}
+	}
+}
+
+/* Remove empty ranges, shifting remaining ranges */
+void ranges_remove_empty(matchmap_range *ranges)
+{
+	/* Walk ranges MATCHMAP_RANGES times */
+	for (int a = 0; a < MATCHMAP_RANGES; a++)
+	for (int i = 0; i < MATCHMAP_RANGES - 1; i++)
+	{
+		if (!ranges[i].from && ranges[i+1].from)
+		{
+			ranges[i].from = ranges[i + 1].from;
+			ranges[i + 1].from = 0;
+			ranges[i].to = ranges[i + 1].to;
+			ranges[i + 1].to = 0;
+			ranges[i].oss_line = ranges[i + 1].oss_line;
+			ranges[i + 1].oss_line = 0;
+		}
+	}
+}
+
+/* Add SNIPPET_LINE_TOLERANCE to ranges */
+void ranges_add_tolerance(matchmap_range *ranges, scan_data *scan)
+{
+	/* Walk ranges */
+	for (int i = 0; i < MATCHMAP_RANGES; i++)
+	{
+		int to = ranges[i].to;
+		int from = ranges[i].from;
+		int oss = ranges[i].oss_line;
+		if (from && to && oss)
+		{
+			from -= SNIPPET_LINE_TOLERANCE;
+			oss -= SNIPPET_LINE_TOLERANCE;
+			to += SNIPPET_LINE_TOLERANCE;
+
+			/* Check bounds */
+			if (from < 1) from = 1;
+			if (oss < 1) oss = 1;
+			if (to > scan->total_lines) to = scan->total_lines;
+
+			ranges[i].to = to;
+			ranges[i].from = from;
+			ranges[i].oss_line = oss;
+		}
+	}
+}
+
 /* Compiles list of line ranges, returning total number of hits (lines matched) */
 uint32_t compile_ranges(scan_data *scan) {
 
@@ -233,11 +324,12 @@ uint32_t compile_ranges(scan_data *scan) {
 		if (to < 1) break;
 
 		/* Ranges to be ignored (under min_match_lines) should decrease hits counter */
-		if (delta < min_match_lines)
+		if ((delta) < min_match_lines)
 		{
 			/* Single-line range decreases by 1, otherwise decrease by 2 (from and to) */
 			reported_hits -= ((delta == 0) ? 1 : 2);
 		}
+
 		/* Exit if hits is below two */
 		if (reported_hits < 2)
 		{
@@ -247,6 +339,7 @@ uint32_t compile_ranges(scan_data *scan) {
 	}
 
 	int hits = 0;
+	matchmap_range *ranges = calloc(sizeof(matchmap_range), MATCHMAP_RANGES);
 
 	/* Count matched lines */
 	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
@@ -284,20 +377,22 @@ uint32_t compile_ranges(scan_data *scan) {
 				if (from < 1) from = 1;
 			}
 
-			sprintf (scan->line_ranges + strlen(scan->line_ranges), "%ld-%ld,", from, to);
-			sprintf (scan->oss_ranges + strlen(scan->oss_ranges), "%ld-%ld,", oss_from, to - from + oss_from);
-			hits += (to - from);
+			ranges[i].from = from;
+			ranges[i].to= to;
+			ranges[i].oss_line = oss_from;
 		}
 	}
 
+	/* Add tolerances and assemble line ranges */
+	ranges_add_tolerance(ranges, scan);
+	ranges_remove_empty(ranges);
+	ranges_join_overlapping(ranges);
+	hits = ranges_assemble(ranges, scan);
+	free(ranges);
+
 	/* Remove last comma */
-	if (strlen(scan->snippet_ids) > 0) scan->snippet_ids[strlen(scan->snippet_ids) - 1] = 0;
-
-	if (strlen(scan->line_ranges) > 0) scan->line_ranges[strlen(scan->line_ranges) - 1] = 0;
-	else strcpy(scan->line_ranges, "all");
-
-	if (strlen(scan->oss_ranges) > 0) scan->oss_ranges[strlen(scan->oss_ranges) - 1] = 0;
-	else strcpy(scan->oss_ranges, "all");
+	if (!scan->line_ranges) strcpy(scan->line_ranges, "all");
+	if (!scan->oss_ranges)  strcpy(scan->oss_ranges, "all");
 
 	return hits;
 }
@@ -314,13 +409,13 @@ static void adjust_tolerance(scan_data *scan)
 	else
 	{
 		/* Range tolerance is the maximum amount of non-matched lines accepted
-		   within a matched range. This goes from 21 in small files to 9 in large files */
+			 within a matched range. This goes from 21 in small files to 9 in large files */
 
 		range_tolerance = 21 - floor(wfpcount / 21);
 		if (range_tolerance < 9) range_tolerance = 9;
 
 		/* Min matched lines is the number of matched lines in total under which the result
-		   is ignored. This goes from 3 in small files to 10 in large files */
+			 is ignored. This goes from 3 in small files to 10 in large files */
 
 		min_match_lines = 3 + floor(wfpcount / 5);
 		if (min_match_lines > 10) min_match_lines = 10;

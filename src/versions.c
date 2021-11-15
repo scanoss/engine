@@ -102,15 +102,20 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
 /* Compare version and, if needed, update range (version-latest) */
 void update_version_range(match_data *match, release_version *release)
 {
-	if (strcmp(release->version, match->version) < 0)
+	if (!*release->date) return;
+
+	if (strcmp(release->date, match->release_date) < 0)
 	{
+		scanlog("update_version_range() %s < %s, %s <- %s\n", release->date, match->release_date, match->version, release->version);
 		strcpy(match->version, release->version);
 		strcpy(match->release_date, release->date);
 		memcpy(match->url_md5, release->url_id, MD5_LEN);
 	}
 
-	if (strcmp(release->version, match->latest_version) > 0)
+	if (strcmp(release->date, match->latest_release_date) > 0)
 	{
+		scanlog("update_version_range() %s > %s, %s <- %s\n", release->date, match->release_date, match->version, release->version);
+		strcpy(match->latest_release_date, release->date);
 		strcpy(match->latest_version, release->version);
 	}
 }

@@ -107,6 +107,7 @@ match_data match_init()
 	*match.main_url = 0;
 	*match.file = 0;
 	*match.release_date = 0;
+	*match.latest_release_date = 0;
 	*match.license = 0;
 	match.vulnerabilities = 0;
 	match.path_ln = 0;
@@ -490,6 +491,7 @@ void load_matches(scan_data *scan, match_data *matches)
 				free(component_rank);
 			}
 		}
+
 		/* Add version ranges to selected match */
 		add_versions(scan, matches, files, records);
 

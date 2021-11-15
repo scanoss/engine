@@ -625,7 +625,7 @@ uint8_t *select_best_top_date(int dup_dates, uint8_t *top_recs, uint8_t *top_md5
 		if (!*rec) continue;
 
 		purl_release_date(rec, release_date);
-		if (strcmp(release_date, oldest) < 1)
+		if (*release_date) if (strcmp(release_date, oldest) < 1)
 		{
 			oldest_ptr = rec;
 			strcpy(oldest, release_date);
@@ -701,6 +701,7 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 	if (*release_date)
 	{
 		uint8_t *best_rec = select_best_top_date(dup_dates, top_recs, top_md5s);
+		scanlog("shortest_paths_check() best_rec = %s\n", best_rec);
 
 		/* Fetch vendor and component name */
 		char vendor[MAX_ARGLN + 1] = "\0";

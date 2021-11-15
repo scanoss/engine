@@ -38,13 +38,14 @@
 #define MATCHMAP_RANGES 10
 #define MAX_FILE_PATH 1024
 #define FETCH_MAX_FILES 20000
-#define MAX_FIELD_LN 64
+#define MAX_FIELD_LN 1024
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
 #define MAX_SNIPPET_IDS_RETURNED 10000
 #define CRC_LIST_LEN 256 // list of crc checksums to avoid metadata duplicates
+#define SNIPPET_LINE_TOLERANCE 10
 
 /* Log files */
-#define SCANOSS_VERSION "4.3.4"
+#define SCANOSS_VERSION "4.3.5"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
@@ -153,6 +154,7 @@ typedef struct match_data
 	char component[MAX_FIELD_LN];
 	char version[MAX_FIELD_LN];
 	char release_date[MAX_FIELD_LN];
+	char latest_release_date[MAX_FIELD_LN];
 	char latest_version[MAX_FIELD_LN];
 	char main_url[MAX_FILE_PATH];
 	char license[MAX_FIELD_LN];

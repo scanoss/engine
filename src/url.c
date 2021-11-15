@@ -131,6 +131,18 @@ void fill_main_url(match_data *match)
 	if (build_main_url(match, "pkg:angular/", "https://angular.io", true)) return;
 }
 
+bool purl_type_matches(char *purl1, char *purl2)
+{
+	if (!*purl1 || !*purl2) return false;
+	int len = strlen(purl1);
+	for (int i = 0; i < len; i++)
+	{
+		if (purl1[i] != purl2[i]) return false;
+		if (purl1[i] == '/') break;
+	}
+	return true;
+}
+
 bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	match_data *match = (match_data *) ptr;
@@ -148,6 +160,9 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 	/* Copy purl record to match */
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
+		/* Skip purl with existing type */
+		if (purl_type_matches(match->purl[i], purl)) break;
+
 		/* Add to end of list */
 		if (!*match->purl[i])
 		{
@@ -237,10 +252,14 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		/* Extract date */
 		char release_date[MAX_ARGLN + 1] = "\0";
 		purl_release_date(url, release_date);
+		scanlog("get_oldest_url() %s, %s\n", release_date, url);
 
 		/* If it is older, then we copy to oldest */
 		if (!*oldest || (*release_date && strcmp(release_date, oldest) < 0))
+		{
+			scanlog("get_oldest_url() %s < %s\n", release_date, oldest);
 			memcpy((uint8_t *) ptr, url, datalen + 1);
+		}
 	}
 	return false;
 }
