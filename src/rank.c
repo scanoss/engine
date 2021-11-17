@@ -477,19 +477,6 @@ void init_component_ranking(component_name_rank *component_rank)
 	}
 }
 
-/* Initialize path ranking */
-void init_path_ranking(path_ranking *path_rank)
-{
-	for (int i = 0; i < rank_items; i++)
-	{
-		path_rank[i].score = 0;
-		*path_rank[i].vendor = 0;
-		*path_rank[i].component = 0;
-		*path_rank[i].purl = 0;
-		memset(path_rank[i].purl_md5, 0, MD5_LEN);
-	}
-}
-
 /* Search for a matching component hint among files with shortest paths */
 bool component_hint_from_shortest_paths(\
 		file_recordset *files,\

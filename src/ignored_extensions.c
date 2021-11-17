@@ -27,20 +27,24 @@ char *IGNORED_EXTENSIONS[] = {
 
 	/* File extensions */
 	".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9", ".ac", ".adoc", ".am",
-	".asciidoc", ".bmp", ".build", ".cfg", ".chm", ".class", ".cmake", ".cnf",
-	".conf", ".config", ".contributors", ".copying", ".crt", ".csproj", ".css",
-	".csv", ".cvsignore", ".dat", ".data", ".doc", ".ds_store", ".dtd", ".dts",
-	".dtsi", ".dump", ".eot", ".eps", ".geojson", ".gdoc", ".gif", ".gitignore",
-	".glif", ".gmo", ".gradle", ".guess", ".hex", ".htm", ".html", ".ico", ".in",
-	".inc", ".info", ".ini", ".ipynb", ".jpeg", ".jpg", ".json", ".jsonld",
-	".log", ".m4", ".map", ".markdown", ".md", ".md5", ".meta", ".mk", ".mxml",
-	".o", ".otf", ".out", ".pbtxt", ".pdf", ".pem", ".phtml", ".plist", ".png",
-	".po", ".ppt", ".prefs", ".properties", ".pyc", ".qdoc", ".result", ".rgb",
-	".rst", ".rtf", ".scss", ".sha", ".sha1", ".sha2", ".sha256", ".sln",
+	".asc", ".asciidoc", ".bmp", ".build", ".cfg", ".chm", ".class", ".cmake",
+	".cnf", ".conf", ".config", ".contributors", ".copying", ".crt", ".csproj",
+	".css", ".csv", ".cvsignore", ".dat", ".data", ".db", ".doc", ".ds_store",
+	".dtd", ".dts", ".dtsi", ".dump", ".eot", ".eps", ".geojson", ".gdoc", ".gif",
+	".gitignore", ".glif", ".gmo", ".gradle", ".guess", ".hex", ".htm", ".html",
+	".ico", ".in", ".inc", ".info", ".ini", ".ipynb", ".jpeg", ".jpg", ".json",
+	".jsonld", ".log", ".m4", ".map", ".markdown", ".md", ".md5", ".meta", ".mk",
+	".mxml", ".o", ".otf", ".out", ".pbtxt", ".pdf", ".pem", ".phtml", ".plist",
+	".png", ".po", ".ppt", ".prefs", ".properties", ".pyc", ".qdoc", ".result",
+	".rgb",".rst", ".rtf", ".scss", ".sha", ".sha1", ".sha2", ".sha256", ".sln",
 	".spec", ".sql", ".sub", ".svg", ".svn-base", ".tab", ".template", ".test",
 	".tex", ".tiff", ".toml", ".ttf", ".txt", ".utf-8", ".vim", ".wav", ".whl",
 	".woff", ".xht", ".xhtml", ".xls", ".xml", ".xpm", ".xsd", ".xul", ".yaml",
-	".yml",
+	".yml", ".LAS",".adk",".asc",".cif",".cli",".cosmo",".deploy",
+	".dfm",".dmm",".fa",".fasta",".fcb",".flm",".fna",".gbr",".gen",".gro",
+	".hgtags",".hh",".ihex",".kp",".mpx",".pdb",".poly",".prn",".ps",".ref",
+	".resx",".smp",".stg",".tfa",".tsv",".vcf",".vhd",".xy",".xyz",
+
 
 	/* File endings */
 	"-DOC", "CHANGELOG", "CONFIG", "COPYING", "COPYING.LIB", "LICENSE",
@@ -50,3 +54,6 @@ char *IGNORED_EXTENSIONS[] = {
 	/* End with null */
 	NULL
 };
+
+/* Extensions that will skip snippet mining */
+char *SKIP_MZ_EXTENSIONS[] = {".min.js", ".MF", ".base64", ".s", NULL};

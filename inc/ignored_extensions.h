@@ -21,3 +21,4 @@
  */
 
 extern char *IGNORED_EXTENSIONS[];
+extern char *SKIP_MZ_EXTENSIONS[];

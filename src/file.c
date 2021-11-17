@@ -32,6 +32,8 @@
 #include "limits.h"
 #include "debug.h"
 #include "decrypt.h"
+#include "ignorelist.h"
+#include "parse.h"
 
 bool is_file(char *path)
 {
@@ -158,5 +160,30 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	return false;
 }
 
+/* Get the first file record and copy extension to ptr */
+bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+{
+	if (!datalen) return false;
 
+	decrypt_data(data, datalen, "file", key, subkey);
+	data[datalen] = 0;
 
+	if (!*data) return false;
+
+	char *ext = extension((char *)data);
+	if (!ext) return false;
+	if (!*ext) return false;
+
+	strcpy((char *) ptr, ext);
+	return true;
+}
+
+char *get_file_extension(uint8_t *md5)
+{
+	char *out = malloc(MAX_ARGLN + 1);
+	*out = 0;
+
+	ldb_fetch_recordset(NULL, oss_file, md5, false, get_first_file, out);
+
+	return out;
+}

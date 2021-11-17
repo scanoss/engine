@@ -443,8 +443,7 @@ void load_matches(scan_data *scan, match_data *matches)
 				else
 				{
 					/* Init path ranking */
-					path_ranking path_rank[rank_items];
-					init_path_ranking(path_rank);
+					path_ranking *path_rank = calloc(sizeof(path_ranking), rank_items);
 
 					/* Attempt matching start of short paths with their respective components names */
 					bool hint_found = component_hint_from_shortest_paths(\
@@ -461,6 +460,8 @@ void load_matches(scan_data *scan, match_data *matches)
 							component_rank,\
 							path_rank\
 							);
+
+					free(path_rank);
 
 					/* Select the best component hint from the collected rank */
 					if (hint_found) select_best_component_from_rank(component_rank, component_hint);

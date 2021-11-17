@@ -21,6 +21,7 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 #include "ignorelist.h"
@@ -73,6 +74,26 @@ bool ignored_extension(char *name)
 	int i=0;
 	while (IGNORED_EXTENSIONS[i])
 		if (ends_with(IGNORED_EXTENSIONS[i++], name)) return true;
+
+	return false;
+}
+
+/* Returns true when the file "name" ends with a SKIP_MZ_EXTENSIONS[] string */
+bool skip_mz_extension(char *name)
+{
+	int i=0;
+	while (SKIP_MZ_EXTENSIONS[i])
+		if (ends_with(SKIP_MZ_EXTENSIONS[i++], name)) return true;
+
+	return false;
+}
+
+/* Returns true when "ext" is among KNOWN_SRC_EXTENSIONS[] */
+bool known_src_extension(char *ext)
+{
+	int i=0;
+	while (KNOWN_SRC_EXTENSIONS[i])
+		if (!stricmp(KNOWN_SRC_EXTENSIONS[i++], ext)) return true;
 
 	return false;
 }
@@ -158,3 +179,86 @@ char *IGNORE_KEYWORDS[] =
 	"regex", "resources", "snippet", "src", "stable", "standard", "tools",
 	"vendor", "web", "webapp", "workspace", NULL
 };
+
+/* List of known source code extensions */
+char *KNOWN_SRC_EXTENSIONS[] =
+{
+"4ge", "4gl", "4pk", "4th", "89x", "8xk", "a", "a2w", "a2x", "a3c", "a3x", "a51", "a5r", "a66", "a86", "a8s", "aah", "aar", "abap", "abc", "abl", "abs", "acgi", "acm", "action", "actionscript", "actproj", "actx", "acu", "ad2", "ada", "aem", "aep", "afb", "agc", "agi", "ago", "ahk", "ahtml", "aia", "aidl", "aiml", "airi", "ajm", "akp", "aks", "akt", "alan", "alg", "alx", "aml", "amos", "amw", "an", "androidproj", "ane", "anjuta", "apb", "apg", "aplt", "app", "appcache", "applescript", "applet", "appxmanifest", "appxsym", "appxupload", "aps", "apt", "arb", "armx", "arnoldc", "aro", "arq", "arscript", "art", "arxml", "ary", "as", "as3", "asax", "asbx", "asc", "ascx", "asf", "ash", "asi", "asic", "asm", "asmx", "asp", "asproj", "aspx", "asr", "ass", "asta", "astx", "asz", "atmn", "atmx", "atomsvc", "atp", "ats", "au3", "autoplay", "autosave", "avc", "ave", "avs", "avsi", "awd", "awk", "axb", "axd", "axe", "axs", "b", "b24", "b2d", "ba_", "bal", "bas", "bash", "bat", "bax", "bb", "bbc", "bbf", "bcc", "bcf", "bcp", "bdh", "bdsproj", "bdt", "beam", "bet", "beta", "bgm", "bhs", "bin_", "bml", "bmo", "bms", "borland", "bp", "bpo", "bpr", "bps", "brml", "brs", "brx", "bs2", "bsc", "bsh", "bsm", "bsml", "bsv", "bte", "btproj", "btq", "bufferedimage", "build", "builder", "buildpath", "bur", "bxb", "bxl", "bxml", "bxp", "bzs", "c", "c__", "c--", "c#", "c++", "c3p", "c86", "cal", "cap", "capfile", "cas", "cb", "cba", "cbl", "cbp", "cbs", "cc", "ccbjs", "ccp", "ccproj", "ccs", "ccxml", "cd", "cel", "cfi", "cfm", "cfml", "cfo", "cfs", "cg", "cgi", "cgvp", "cgx", "chd", "chef", "chh", "ck", "ckm", "cl", "cla", "class", "classdiagram", "classpath", "clips", "clj", "cljs", "clm", "clojure", "clp", "cls", "clw", "cmake", "cml", "cms", "cnt", "cob", "cobol", "cod", "coffee", "cola", "com_", "command", "common", "con", "configure", "confluence", "cord", "cos", "coverage", "coveragexml", "cp", "cpb", "cphd", "cplist", "cpp", "cpr", "cpy", "cpz", "cr", "cr2", "creole", "cs", "csb", "csc", "csdproj", "csh", "cshrc", "csi", "csm", "csml", "cson", "csp", "cspkg", "csproj", "csx", "ctl", "ctp", "cu", "cuh", "cx", "cxe", "cxl", "cxs", "cxx", "cya", "d", "d2j", "d4", "daemonscript", "datasource", "dba", "dbg", "dbmdl", "dbml", "dbo", "dbp", "dbpro", "dbproj", "dcf", "dcproj", "dcr", "dd", "ddp", "deb", "defi", "dep", "depend", "derp", "dev", "devpak", NULL
+};
+
+/* Add line length to the squareness ranking */
+void increment_line_rank(int line_len, void *ptr)
+{
+	if (line_len <= 2) return;
+
+	/* Walk rank and increment counter for line_len) */
+	ranking *rank = ptr;
+	for (int i = 0; i < 100; i++)
+	{
+		if (rank[i].length == 0 || rank[i].length == line_len)
+		{
+			rank[i].length = line_len;
+			rank[i].counter++;
+			break;
+		}
+	}
+}
+
+/* Select first item in the squareness ranking */
+int select_first_in_ranking(void *ptr)
+{
+	int occurrences = 0;
+
+	/* Select longer line from ranking */
+	ranking *rank = ptr;
+	for (int i = 0; i < 100; i++)
+	{
+		if (rank[i].counter > occurrences)
+		{
+			occurrences = rank[i].counter;
+		}
+	}
+
+	return occurrences;
+}
+
+/* Determine if a file is over the desired squareness */
+bool too_much_squareness(char *data)
+{
+	/* Declare/init variables */
+	char *data_ptr = data;
+	int line_len = 0;
+	int line_counter = 1;
+	bool unwanted = false;
+	ranking *rank = calloc(100, sizeof(ranking));
+
+	/* Walk data byte by byte */
+	while (*data_ptr)
+	{
+		line_len++;
+
+		if (*data_ptr == '\n')
+		{
+			increment_line_rank(line_len, rank);
+			line_counter++;
+			line_len = 0;
+		}
+		data_ptr++;
+	}
+
+	if (line_counter > 2)
+	{
+		/* Select first in ranking */
+		int occurrences = select_first_in_ranking(rank);
+
+		/* Print ID if conditions are matched */
+		if (((100 * occurrences) / line_counter) > MAX_SQUARENESS && \
+				line_counter > SQUARENESS_MIN_LINES)
+		{
+			unwanted = true;
+		}
+	}
+
+	free(rank);
+	return unwanted;
+}

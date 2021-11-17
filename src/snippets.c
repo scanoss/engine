@@ -27,6 +27,7 @@
 #include "scanoss.h"
 #include "ldb.h"
 #include "decrypt.h"
+#include "file.h"
 
 int map_rec_len;
 
@@ -77,6 +78,29 @@ int get_shortest_path(uint8_t *md5)
 
 	return out;
 }
+
+/* If the extension of the matched file does not match the extension of the scanned file
+	and the matched file is not among known source code extensions, the match will be discarded */
+
+bool snippet_extension_discard(scan_data *scan, uint8_t *md5)
+{
+	bool discard = false;
+
+	char *ext1 = extension(scan->file_path);
+	char *ext2 = get_file_extension(md5);
+
+	if (!*ext1) return false;
+	if (!*ext2) return false;
+
+	if (strcmp(ext1, ext2))
+		if (!known_src_extension(ext2)) discard = true;
+
+	if (discard) scanlog("Discarding matched extension %s for %s\n", ext2, scan->file_path);
+
+	free(ext2);
+	return discard;
+}
+
 
 /* If we have snippet matches, select the one with more hits (and shortest file path) */
 uint8_t *biggest_snippet(scan_data *scan)
@@ -130,6 +154,8 @@ uint8_t *biggest_snippet(scan_data *scan)
 		/* Erase match from map if MD5 is orphan (no files/components found) */
 		if (shortest_path == MAX_PATH) clear_hits(out); else break;
 	}
+
+	if (snippet_extension_discard(scan, out)) return NULL;
 
 	scan->match_ptr = out;
 	return out;

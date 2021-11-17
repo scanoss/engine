@@ -24,7 +24,6 @@ int seek_component_hint_in_path_start(\
     file_recordset *files,\
     int records,\
     component_name_rank *component_rank);
-void init_path_ranking(path_ranking *path_rank);
 bool select_best_match(match_data *matches);
 int fill_component_age(component_name_rank *component_rank);
 long component_age(char *vendor, char *component);
