@@ -89,6 +89,9 @@ bool snippet_extension_discard(scan_data *scan, uint8_t *md5)
 	char *ext1 = extension(scan->file_path);
 	char *ext2 = get_file_extension(md5);
 
+	if (!ext1) return false;
+	if (!ext2) return false;
+
 	if (!*ext1) return false;
 	if (!*ext2) return false;
 
