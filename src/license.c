@@ -266,25 +266,26 @@ void print_licenses(match_data match)
 		/* Add license to CRC list (to avoid duplicates) */
 		add_CRC(match.crclist, string_crc32c((char *)license_sources[0]) + string_crc32c(match.license));
 	}
-
-	/* Look for component or file license */
 	else
 	{
-		scanlog("License NOT present in URL table\n");
 		match.first_record = true;
-
-		records = ldb_fetch_recordset(NULL, oss_license, match.file_md5, false, print_licenses_item, &match);
-		scanlog("License for file_id license returns %d hits\n", records);
-
-		records = ldb_fetch_recordset(NULL, oss_license, match.url_md5, false, print_licenses_item, &match);
-		scanlog("License for url_id license returns %d hits\n", records);
-
-		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
-		{
-			records = ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match);
-			scanlog("License for %s license returns %d hits\n", match.purl[i], records);
-		}
 	}
 
+	/* Look for component or file license */
+
+	scanlog("License NOT present in URL table\n");
+
+	records = ldb_fetch_recordset(NULL, oss_license, match.file_md5, false, print_licenses_item, &match);
+	scanlog("License for file_id license returns %d hits\n", records);
+
+	records = ldb_fetch_recordset(NULL, oss_license, match.url_md5, false, print_licenses_item, &match);
+	scanlog("License for url_id license returns %d hits\n", records);
+
+	for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
+	{
+		records = ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match);
+		scanlog("License for %s license returns %d hits\n", match.purl[i], records);
+	}
+	
 	printf("\n      ],\n");
 }
