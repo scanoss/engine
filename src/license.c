@@ -264,7 +264,7 @@ void print_licenses(match_data match)
 		match.first_record = false;
 
 		/* Add license to CRC list (to avoid duplicates) */
-		add_CRC(match.crclist, string_crc32c((char *)license_sources[0]) + string_crc32c(match.license));
+		add_CRC(match.crclist, string_crc32c((char *)"0") + string_crc32c(match.license));
 	}
 	else
 	{
