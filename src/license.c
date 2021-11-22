@@ -200,11 +200,11 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	clean_license(license);
 	normalize_license(license);
 
-	/* Calculate CRC to avoid duplicates */
-	uint32_t CRC = string_crc32c(source) + string_crc32c(license);
-	bool dup = add_CRC(match->crclist, CRC);
-
 	int src = atoi(source);
+
+	/* Calculate CRC to avoid duplicates */
+	uint32_t CRC = src + string_crc32c(license);
+	bool dup = add_CRC(match->crclist, CRC);
 
 	scanlog("Fetched license %s\n", license);
 	string_clean(license);
@@ -264,7 +264,7 @@ void print_licenses(match_data match)
 		match.first_record = false;
 
 		/* Add license to CRC list (to avoid duplicates) */
-		add_CRC(match.crclist, string_crc32c((char *)"0") + string_crc32c(match.license));
+		add_CRC(match.crclist, string_crc32c(match.license));
 	}
 	else
 	{
