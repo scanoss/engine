@@ -26,20 +26,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/md5.h>
-//#include "external/crc32c/crc32c.c"
 #include "crc32c.h"
 #include "winnowing.h"
 
 
 uint8_t GRAM  = 30;   /** @brief Winnowing gram size in bytes */
 uint8_t WINDOW = 64;  /** @brief Winnowing window size in bytes */
-uint32_t MAX_UINT32 = 4294967295; /** @brief //TODO */
+uint32_t MAX_UINT32 = 4294967295; /** @brief MAX integer value */
 
 /**
  * @brief Convert case to lowercase, and return zero if it isn't a letter or number
    Do it fast and independent from the locale configuration (avoid string.h)
- * @param byte //TODO
- * @return //TODO
+ * @param byte Inputcharacter (or byte)
+ * @return Normalized char
  */
 static uint8_t normalize (uint8_t byte)
 {
@@ -53,7 +52,7 @@ static uint8_t normalize (uint8_t byte)
 
 /**
  * @brief Left shift one window
- * @param window //TODO
+ * @param window Pointer to the window's buffer
  */
 static void shift_window(uint32_t *window)
 {
@@ -66,7 +65,7 @@ static void shift_window(uint32_t *window)
 
 /**
  * @brief Left shift one gram
- * @param gram //TODO
+ * @param gram Pointer to the gram's buffer
  */
 static void shift_gram(uint8_t *gram)
 {
@@ -79,8 +78,8 @@ static void shift_gram(uint8_t *gram)
 
 /**
  * @brief Select smaller hash for the given window
- * @param window //TODO
- * @return //TODO
+ * @param window window's buffer
+ * @return smaller hash
  */
 static uint32_t smaller_hash(uint32_t *window)
 {
@@ -95,13 +94,13 @@ static uint32_t smaller_hash(uint32_t *window)
 /**
  * @brief Add the given "hash" to the "hashes" array and the corresponding "line" to the "lines" array
    updating the hash counter and returning the last added hash
- * @param hash //TODO
- * @param line //TODO
- * @param hashes //TODO
- * @param lines //TODO
- * @param last //TODO
- * @param counter //TODO
- * @return //TODO
+ * @param hash input hash
+ * @param line input line
+ * @param hashes pointer to hashes array
+ * @param lines pointer to lines array
+ * @param last last hash value
+ * @param counter hash counter
+ * @return actual last hash
  */
 static uint32_t add_hash(uint32_t hash, uint32_t line, uint32_t *hashes, uint32_t *lines, uint32_t last, uint32_t *counter)
 {
@@ -127,11 +126,11 @@ static uint32_t add_hash(uint32_t hash, uint32_t line, uint32_t *hashes, uint32_
  * @brief Performs winning on the given FILE, limited to "limit" hashes. The provided array
    "hashes" is filled with hashes and "lines" is filled with the respective line numbers.
    The function returns the number of hashes found
- * @param src //TODO
- * @param hashes //TODO
- * @param lines //TODO
- * @param limit //TODO
- * @return //TODO
+ * @param src input buffer to be processed
+ * @param hashes pointer to hashes array (output)
+ * @param lines pointer to lines array (output)
+ * @param limit limit number of iterations
+ * @return total hash number
  */
 uint32_t winnowing (char *src, uint32_t *hashes, uint32_t *lines, uint32_t limit)
 {

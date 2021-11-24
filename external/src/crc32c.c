@@ -27,9 +27,8 @@
 /**
   @file crc32c.c
   @date 14 Dec 2020
-  @brief //TODO
- 
-  Use hardware CRC instruction on Intel SSE 4.2 processors.  This computes a
+  @brief  Use hardware CRC instruction on Intel SSE 4.2 processors.  
+   This computes a
    CRC-32C, *not* the CRC-32 used by Ethernet and zip, gzip, etc.  A software
    version is provided as a fall-back, as well as for speed comparisons.
   @see https://github.com/scanoss/engine/blob/master/external/src/crc32c.c
@@ -86,10 +85,10 @@ static void crc32c_init_sw(void)
  * @brief Table-driven software version as a fall-back.  This is about 15 times slower
    than using the hardware instructions.  This assumes little-endian integers,
    as is the case on Intel processors that the assembler code here is for.
- * @param crci //TODO
- * @param buf //TODO
- * @param len //TODO
- * @return //TODO
+ * @param crci Acummulated valued
+ * @param buf Data buffer
+ * @param len Data buffer lenght
+ * @return CRC32    
  */
 static uint32_t crc32c_sw(uint32_t crci, const void *buf, size_t len)
 {
@@ -127,9 +126,9 @@ static uint32_t crc32c_sw(uint32_t crci, const void *buf, size_t len)
    GF(2).  Each element is a bit in an unsigned integer.  mat must have at
    least as many entries as the power of two for most significant one bit in
    vec.
- * @param mat //TODO
- * @param vec //TODO
- * @return //TODO
+ * @param mat Input matrix
+ * @param vec Input vector
+ * @return result
  */
 static inline uint32_t gf2_matrix_times(uint32_t *mat, uint32_t vec)
 {
@@ -148,8 +147,8 @@ static inline uint32_t gf2_matrix_times(uint32_t *mat, uint32_t vec)
 /**
  * @brief Multiply a matrix by itself over GF(2).  Both mat and square must have 32
    rows.
- * @param square //TODO
- * @param mat //TODO
+ * @param square Output pointer
+ * @param mat Input matrix
  */
 static inline void gf2_matrix_square(uint32_t *square, uint32_t *mat)
 {

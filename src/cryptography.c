@@ -40,7 +40,7 @@
 #include "decrypt.h"
 
 /**
- * @brief //TODO 
+ * @brief print crypto item LDB function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO  
  * @param subkey //TODO 
  * @param subkey_ln //TODO  
@@ -89,8 +89,8 @@ bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
 }
 
 /**
- * @brief //TODO 
- * @param match //TODO  
+ * @brief print the cryptography section for a match
+ * @param match to be processed
  */
 void print_cryptography(match_data match)
 {

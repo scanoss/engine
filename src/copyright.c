@@ -23,7 +23,7 @@
 /**
   * @file copyright.c
   * @date 27 Nov 2020 
-  * @brief //TODO
+  * @brief Contains the code and functionalities related witht the copyright processing 
  
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/copyright.c
@@ -38,14 +38,14 @@
 const char *copyright_sources[] = {"component_declared", "file_header", "license_file", "scancode"};
 
 /**
- * @brief //TODO
+ * @brief get fisrt copyright LDB function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
  * @param[out] data //TODO
  * @param datalen //TODO
  * @param iteration //TODO
- * @param ptr //TODO
+ * @param ptr output pointer, returns the fisrt copyright obtained from the database
  * @return //TODO
  */
 static bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
@@ -58,9 +58,9 @@ static bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, ui
 }
 
 /**
- * @brief //TODO
- * @param[out] out //TODO
- * @param copyright //TODO
+ * @brief //Remove undesired characteres from a copyright
+ * @param[out] out ouput buffer pointer
+ * @param copyright input buffer pointer
  */
 static void clean_copyright(char *out, char *copyright)
 {
@@ -79,7 +79,7 @@ static void clean_copyright(char *out, char *copyright)
 }
 
 /**
- * @brief //TODO
+ * @brief Print a copyright item throught stdout.
  * @param key //TODO
  * @param subkey //TODO
  * @return //TODO
@@ -123,9 +123,9 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 }
 
 /**
- * @brief //TODO
- * @param match //TODO
- * @param copyright //TODO
+ * @brief Query the copyright of a match to oss_copyright table using LDB.
+ * @param match input match.
+ * @param copyright output char buffer.
  */
 void get_copyright(match_data match, char *copyright)
 {
@@ -136,7 +136,7 @@ void get_copyright(match_data match, char *copyright)
 }
 
 /**
- * @brief //TODO
+ * @brief Print the copyrights items for a match throught stdout
  * @param match //TODO
  */
 void print_copyrights(match_data match)

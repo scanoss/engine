@@ -41,9 +41,9 @@
 
 
 /**
- * @brief //TODO 
- * @param key //TODO  
- * @param subkey //TODO 
+ * @brief Notices LDB function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+ * @param key ldb key looking for
+ * @param subkey ldb sub-key
  * @param subkey_ln //TODO  
  * @param data //TODO 
  * @param datalen //TODO  
@@ -91,7 +91,7 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 }
 
 /**
- * @brief //TODO
+ * @brief atribution LDB function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -99,7 +99,7 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
  * @param datalen //TODO
  * @param iteration //TODO
  * @param ptr //TODO
- * @return //TODO
+ * @return return true or false if the atribution exist or not.
  */
 bool attribution_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, \
 uint8_t *data, uint32_t datalen, int iteration, void *ptr)
@@ -134,10 +134,10 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 }
 
 /**
- * @brief //TODO
- * @param oss_attribution //TODO
- * @param key //TODO
- * @return //TODO
+ * @brief Query to oss_atribution table with LDB to ask for the noticies for a given purl.
+ * @param oss_attribution LDB attribution table.
+ * @param key purl's md5 key.
+ * @return true if the notices exist, false otherwise.
  */
 bool purl_notices_exist(struct ldb_table oss_attribution, uint8_t *key)
 {
@@ -147,11 +147,11 @@ bool purl_notices_exist(struct ldb_table oss_attribution, uint8_t *key)
 }
 
 /**
- * @brief //TODO
- * @param oss_attribution //TODO
- * @param key //TODO
- * @param component //TODO
- * @return //TODO
+ * @brief Query to oss_attribution table and print the results in stdout.
+ * @param oss_attribution LDB attribution table.
+ * @param key purl's md5 key
+ * @param component purl
+ * @return always true.
  */
 bool print_notices(struct ldb_table oss_attribution, uint8_t *key, char *component)
 {
@@ -161,9 +161,9 @@ bool print_notices(struct ldb_table oss_attribution, uint8_t *key, char *compone
 }
 
 /**
- * @brief Return true if purl attributions are in the KB
- * @param oss_attribution //TODO
- * @return //TODO
+ * @brief Return true if purl attributions are in the KB.
+ * @param oss_attribution LDB attributions table.
+ * @return Return true if purl attributions are in the KB.
  */
 bool check_purl_attributions(struct ldb_table oss_attributions)
 {
@@ -200,8 +200,8 @@ bool check_purl_attributions(struct ldb_table oss_attributions)
 }
 
 /**
- * @brief //TODO
- * @param oss_attribution //TODO
+ * @brief Print the attribution notices for a given purl in stdout
+ * @param oss_attribution LDB attributions table.
  */
 void print_purl_attribution_notices(struct ldb_table oss_attributions)
 {
@@ -220,7 +220,7 @@ void print_purl_attribution_notices(struct ldb_table oss_attributions)
 }
 
 /**
- * @brief //TODO
+ * @brief //Validate the declared SBOM and print the attribution noticies in stdout
  * @return //TODO
  */
 int attribution_notices()
