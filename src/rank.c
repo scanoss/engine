@@ -683,7 +683,7 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 	}
 
 	char release_date[MAX_ARGLN + 1] = "\0";
-	extract_csv(release_date, (char *) url_rec, 4, MAX_ARGLN);
+	extract_csv(release_date, (char *) top_recs, 4, MAX_ARGLN);
 
 	if (*release_date)
 	{
@@ -704,6 +704,7 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 		update_component_rank(component_rank, vendor, component, purl, purl_md5, files[path_id].path, top_md5s, (char *) best_rec);
 		selected = 0;
 	}
+	else scanlog("shortest_paths_check() best_rec not selected\n");
 
 	free(url_rec);
 	free(old_rec);

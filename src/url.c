@@ -252,12 +252,11 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		/* Extract date */
 		char release_date[MAX_ARGLN + 1] = "\0";
 		purl_release_date(url, release_date);
-		scanlog("get_oldest_url() %s, %s\n", release_date, url);
 
 		/* If it is older, then we copy to oldest */
-		if (!*oldest || (*release_date && strcmp(release_date, oldest) < 0))
+		if (!*oldest || (*release_date && (strcmp(release_date, oldest) < 0)))
 		{
-			scanlog("get_oldest_url() %s < %s\n", release_date, oldest);
+			scanlog("get_oldest_url() %s, %s\n", release_date, url);
 			memcpy((uint8_t *) ptr, url, datalen + 1);
 		}
 	}
