@@ -160,19 +160,33 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	return false;
 }
 
+/* Returns a pointer to the file extension of "path" */
+char *file_extension(char *path)
+{
+	char *dot   = strrchr(path, '.');
+	char *slash = strrchr(path, '/');
+	if (!slash) slash = path;
+
+	if (!dot) return NULL;
+	if (dot > slash) return dot + 1;
+	return NULL;
+}
+
 /* Get the first file record and copy extension to ptr */
 bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen) return false;
+        uint8_t file_data[MAX_PATH + 1] = "\0";
 
 	decrypt_data(data, datalen, "file", key, subkey);
-	data[datalen] = 0;
+	memcpy(file_data, data, datalen);
+	file_data[datalen] = 0;
 
-	if (!*data) return false;
+	if (!*file_data) return false;
 
-	char *ext = extension((char *)data);
-	if (!ext) return false;
-	if (!*ext) return false;
+	*(char *)ptr = 0;
+	char *ext = file_extension((char *)file_data + MD5_LEN);
+	if (!ext) return true;
 
 	strcpy((char *) ptr, ext);
 	return true;
@@ -184,6 +198,5 @@ char *get_file_extension(uint8_t *md5)
 	*out = 0;
 
 	ldb_fetch_recordset(NULL, oss_file, md5, false, get_first_file, out);
-
 	return out;
 }
