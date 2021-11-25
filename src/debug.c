@@ -43,8 +43,8 @@ double progress_timer = 0;
 long microseconds_start;
 
 /**
- * @brief //TODO 
- * @return //TODO  
+ * @brief //Calculate the time of execution
+ * @return //time in ms  
  */
 long microseconds_now()
 {
@@ -53,8 +53,8 @@ long microseconds_now()
 }
 
 /**
- * @brief //TODO 
- * @param fmt //TODO  
+ * @brief Print the logs in stderr
+ * @param fmt string to be printed  
  * @param ... //TODO
  */
 void scanlog(const char *fmt, ...)
@@ -92,11 +92,11 @@ void scanlog(const char *fmt, ...)
 }
 
 /**
- * @brief //TODO 
- * @param prompt //TODO  
- * @param count //TODO 
- * @param max //TODO  
- * @param percent //TODO 
+ * @brief Calculate  the progress % of the operation 
+ * @param prompt messege to shows  
+ * @param count actual value 
+ * @param max final value  
+ * @param percent print in percent
  */
 void progress(char *prompt, size_t count, size_t max, bool percent)
 {
@@ -115,11 +115,8 @@ void progress(char *prompt, size_t count, size_t max, bool percent)
 }
 
 /**
- * @brief //TODO 
- * @param prompt //TODO  
- * @param count //TODO 
- * @param max //TODO  
- * @param percent //TODO 
+ * @brief Register if a query is taking to much time 
+ * @param scan Processing scan
  */
 void slow_query_log(scan_data *scan)
 {
@@ -137,7 +134,7 @@ void slow_query_log(scan_data *scan)
 
 /**
  * @brief Output matchmap to a file (MAP_DUMP)
- * @param scan //TODO  
+ * @param scan processing scan  
  */
 void map_dump(scan_data *scan)
 {
@@ -176,7 +173,7 @@ void map_dump(scan_data *scan)
 }
 
 /**
- * @brief // TODO 
+ * @brief Test function to evaluete the performance of a scan
  */
 void scan_benchmark()
 {

@@ -11,7 +11,7 @@
   */
 
 /**
- * @brief Decrypt data
+ * @brief Decrypt data function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param data //TODO  
  * @param size //TODO
  * @param table //TODO
@@ -23,7 +23,11 @@ void decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8
 	/* Add here your decryption routines if needed */
 }
 
-/* Decrypt mz data */
+/**
+ * @brief Decrypt mz data
+ * @param mz_job Job to decompress
+ * @param key Decryption key
+*/  
 void cat_decrypted_mz(struct mz_job *job, char *key)
 {
 	if (ldb_valid_table("oss/sources")) mz_cat(job, key);

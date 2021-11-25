@@ -44,7 +44,7 @@
 const char *dependency_sources[] = {"component_declared"};
 
 /**
- * @brief //TODO
+ * @brief print dependencies item data function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -98,8 +98,8 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 }
 
 /**
- * @brief //TODO
- * @param match //TODO
+ * @brief Print dependencies in stdout of a given match
+ * @param match input match
  */
 void print_dependencies(match_data match)
 {
