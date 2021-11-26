@@ -52,7 +52,7 @@ const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_he
 
 /**
  * @brief Remove invalid characters from a license name
- * @param license //TODO
+ * @param license license string
  */
 void clean_license(char *license)
 {
@@ -69,7 +69,7 @@ void clean_license(char *license)
 
 /**
  * @brief Replace license with its correct SPDX identifier, if found
- * @param license //TODO
+ * @param license license string
  */
 void normalize_license(char *license)
 {
@@ -99,8 +99,8 @@ void normalize_license(char *license)
 
 /**
  * @brief Return true if license is in the osadl license list
- * @param license //TODO
- * @return //TODO
+ * @param license license string
+ * @return true if it is in osadl license list
  */
 bool is_osadl_license(char *license)
 {
@@ -114,8 +114,8 @@ bool is_osadl_license(char *license)
 
 /**
  * @brief Return true if license is copyleft
- * @param license //TODO
- * @return //TODO
+ * @param license license string
+ * @return true if it is copyleft
  */
 bool is_copyleft(char *license)
 {
@@ -129,8 +129,8 @@ bool is_copyleft(char *license)
 
 /**
  * @brief Return true if patent hints are found in the license
- * @param license //TODO
- * @return //TODO
+ * @param license license string
+ * @return true if it  has patent hints
  */
 bool has_patent_hints(char *license)
 {
@@ -144,8 +144,8 @@ bool has_patent_hints(char *license)
 
 /**
  * @brief Return pointer to incompatible license list (or NULL)
- * @param license //TODO
- * @return //TODO
+ * @param license license string
+ * @return pointer to incompatible license list
  */
 char *incompatible_licenses(char *license)
 {
@@ -165,7 +165,7 @@ char *incompatible_licenses(char *license)
 
 /**
  * @brief Output OSADL license metadata
- * @param license //TODO
+ * @param license license string
  */
 void oasdl_license_data(char *license)
 {
@@ -182,7 +182,7 @@ void oasdl_license_data(char *license)
 
 /**
  * @brief Print OSADL license metadata
- * @param license //TODO
+ * @param license license string
  */
 void print_osadl_license_data(char *license)
 {
@@ -204,7 +204,7 @@ void print_osadl_license_data(char *license)
 }
 
 /**
- * @brief //TODO
+ * @brief get first license function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -228,7 +228,7 @@ bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 }
 
 /**
- * @brief //TODO
+ * @brief print license item in stdout. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -288,8 +288,8 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 }
 
 /**
- * @brief //TODO
- * @param match //TODO
+ * @brief Print license for a match
+ * @param match input match
  */
 void print_licenses(match_data match)
 {

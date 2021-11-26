@@ -36,9 +36,9 @@
 
 /**
  * @brief Add a keyword to the keyword list structure array
- * @param kwlist //TODO
- * @param word //TODO
- * @param word_len //TODO
+ * @param kwlist pointer to keyword list structure
+ * @param word keyword to add
+ * @param word_len keyword len
  */
 void add_keyword(struct keywords *kwlist, char *word, int word_len)
 {
@@ -76,7 +76,7 @@ void add_keyword(struct keywords *kwlist, char *word, int word_len)
 
 /**
  * @brief Dump keyword list to STDOUT
- * @param kwlist //TODO
+ * @param kwlist pointer to key word list
  */
 void list_keywords(struct keywords *kwlist)
 {
@@ -86,8 +86,8 @@ void list_keywords(struct keywords *kwlist)
 
 /**
  * @brief Return the index of the mostly repeated keyword
- * @param kwlist //TODO
- * @return //TODO
+ * @param kwlist pointer to keyword list
+ * @return index of the selected word
  */
 int best_keyword(struct keywords *kwlist)
 {
@@ -106,9 +106,9 @@ int best_keyword(struct keywords *kwlist)
 
 /**
  * @brief Checks if the word is found in the path
- * @param word //TODO
- * @param path //TODO
- * @return //TODO
+ * @param word word to search
+ * @param path path where do the search
+ * @return true is the word has been found
  */
 bool found_keyword(char *word, char *path)
 {
@@ -137,9 +137,8 @@ bool found_keyword(char *word, char *path)
 
 /**
  * @brief Breaks a basepath into keywords and adds them to the list 
- * @param kwlist //TODO
- * @param path //TODO
- * @return //TODO
+ * @param kwlist pointer to keywords structure
+ * @param path patht o analyze
  */
 void add_keywords(struct keywords *kwlist, char *path)
 {
@@ -166,8 +165,8 @@ void add_keywords(struct keywords *kwlist, char *path)
 
 /**
  * @brief Recurse matches and analyze paths, selecting the most relevant keyword
- * @param matches //TODO
- * @return //TODO
+ * @param matches list of matches to analyze
+ * @return keywords list.
  */
 struct keywords *load_keywords(match_data *matches)
 {
@@ -184,8 +183,8 @@ struct keywords *load_keywords(match_data *matches)
 /**
  * @brief Returns true if both version and latest_version are present and are smaller
  * than 16 bytes (rules out commit IDs and hashes in version)
- * @param match //TODO
- * @return //TODO
+ * @param match match to analyze
+ * @return true if lastest_version is similar to version
  */
 bool good_version_range(match_data match)
 {
@@ -203,10 +202,10 @@ bool good_version_range(match_data match)
 }
 
 /**
- * @brief //TODO
- * @param word1 //TODO
- * @param word2 //TODO
- * @return //TODO
+ * @brief word case insensitive comparation
+ * @param word1 first word
+ * @param word2 second word
+ * @return true if they are equals
  */
 bool wordicmp(char *word1, char *word2)
 {
@@ -220,10 +219,10 @@ bool wordicmp(char *word1, char *word2)
 }
 
 /**
- * @brief //TODO
- * @param haystack //TODO
- * @param needle //TODO
- * @return //TODO
+ * @brief str insensitive str
+ * @param haystack haystack
+ * @param needle needle
+ * @return true is the needle is found into the haystack
  */
 bool stristr(char *haystack, char *needle)
 {
@@ -233,10 +232,10 @@ bool stristr(char *haystack, char *needle)
 }
 
 /**
- * @brief //TODO
- * @param matches //TODO
- * @param component //TODO
- * @return //TODO
+ * @brief Search for a component inside a mathes list
+ * @param matches matches list
+ * @param component component to search for
+ * @return index if it was found or -1 if is not present.
  */
 int select_exact_component_by_keyword(match_data *matches, char *component)
 {
@@ -267,10 +266,10 @@ int select_exact_component_by_keyword(match_data *matches, char *component)
 }
 
 /**
- * @brief //TODO
- * @param matches //TODO
- * @param keyword //TODO
- * @return //TODO
+ * @brief Search for a keyword inside a matches list
+ * @param matches matches list where do the search
+ * @param keyword keyword 
+ * @return index if it was found or -1 if is not present.
  */
 int select_by_keyword_in_path(match_data *matches, char *keyword)
 {
@@ -320,10 +319,10 @@ int select_by_keyword_in_path(match_data *matches, char *keyword)
 }
 
 /**
- * @brief //TODO
- * @param matches //TODO
- * @param kwlist //TODO
- * @return //TODO
+ * @brief select the best match from a matches list
+ * @param matches matches list
+ * @param kwlist keywords list
+ * @return true if there is a match
  */
 bool select_match(match_data *matches, struct keywords *kwlist)
 {
@@ -382,9 +381,8 @@ bool select_match(match_data *matches, struct keywords *kwlist)
 /**
  * @brief Perform keyword analysis among URL and file paths, find a common denominator and
 	 pick a URL/file containing such keyboard as the only match
- * @param matches //TODO
- * @param component //TODO
- * @return //TODO
+ * @param matches matches list
+ * @return true if a match was selected
  */
 bool keyword_analysis(match_data *matches)
 {

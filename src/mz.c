@@ -37,8 +37,8 @@
 #include "decrypt.h"
 
 /**
- * @brief //TODO
- * @param key //TODO
+ * @brief uncompress the file contents of a given md5 key
+ * @param key md5 key
  */
 void mz_file_contents(char *key)
 {

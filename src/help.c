@@ -33,7 +33,7 @@
 #include "scanoss.h"
 
 /**
- * @brief //TODO
+ * @brief Print the help
  */
 void help ()
 {

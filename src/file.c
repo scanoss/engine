@@ -44,9 +44,9 @@
 #include "parse.h"
 
 /**
- * @brief //TODO
- * @param path //TODO
- * @return //TODO
+ * @brief Check is a given path is a file or not.
+ * @param path string path
+ * @return true is it is a file, false otherwise.
  */
 bool is_file(char *path)
 {
@@ -58,9 +58,9 @@ bool is_file(char *path)
 }
 
 /**
- * @brief //TODO
- * @param path //TODO
- * @return //TODO
+ * @brief Check f a given path is a dir or not
+ * @param path string path
+ * @return true is it is a dir, false otherwise.
  */
 bool is_dir(char *path)
 {
@@ -72,9 +72,9 @@ bool is_dir(char *path)
 }
 
 /**
- * @brief //TODO
- * @param path //TODO
- * @return //TODO
+ * @brief get size of a given file
+ * @param path string path
+ * @return file size
  */
 uint64_t get_file_size(char *path)
 {
@@ -90,10 +90,10 @@ uint64_t get_file_size(char *path)
 }
 
 /**
- * @brief //TODO
- * @param[out] out //TODO
- * @param path //TODO
- * @param maxlen //TODO
+ * @brief read a file and put it into a buffer.
+ * @param[out] out output buffer.
+ * @param path file path.
+ * @param maxlen max length to read.
  */
 void read_file(char *out, char *path, uint64_t maxlen)
 {
@@ -128,9 +128,9 @@ void read_file(char *out, char *path, uint64_t maxlen)
 }
 
 /**
- * @brief Calculate the MD5 for filepath contents
- * @param filepath //TODO
- * @param md5_result //TODO
+ * @brief Calculate the MD5 for filepath contents.
+ * @param filepath file path.
+ * @param md5_result calculated md5.
  */
 void get_file_md5(char *filepath, uint8_t *md5_result)
 {
@@ -162,13 +162,6 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 
 /**
  * @brief Return the number of directories in path
- * @param key //TODO
- * @param subkey //TODO
- * @param subkey_ln //TODO
- * @param raw_data //TODO
- * @param datalen //TODO
- * @param iteration //TODO
- * @param ptr //TODO
  * @return //TODO
  */
 int dir_count(char *path)
@@ -180,7 +173,7 @@ int dir_count(char *path)
 }
 
 /**
- * @brief //TODO
+ * @brief Collect all files function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -226,6 +219,18 @@ char *file_extension(char *path)
 	return NULL;
 }
 
+
+/**
+ * @brief get first file function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param raw_data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 /* Get the first file record and copy extension to ptr */
 bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
@@ -245,7 +250,11 @@ bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 	strcpy((char *) ptr, ext);
 	return true;
 }
-
+/**
+ * @brief Get the extension of a given file into a ldb table.
+ * @param md5 input mdz
+ * @return string with the extension
+ */
 char *get_file_extension(uint8_t *md5)
 {
 	char *out = malloc(MAX_ARGLN + 1);

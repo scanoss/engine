@@ -39,9 +39,9 @@
 #include "debug.h"
 
 /**
- * @brief //TODO
- * @param str //TODO
- * @return //TODO
+ * @brief Check if a string is a component
+ * @param str input string
+ * @return true if it is a component
  */
 static bool is_component(char *str)
 {
@@ -51,9 +51,9 @@ static bool is_component(char *str)
 }
 
 /**
- * @brief //TODO
- * @param str //TODO
- * @return //TODO
+ * @brief Check if a string is a vendor
+ * @param str input string
+ * @return true if it is a vendor
  */
 static bool is_vendor(char *str)
 {
@@ -63,18 +63,18 @@ static bool is_vendor(char *str)
 }
 
 /**
- * @brief //TODO
- * @param value //TODO
- * @param depth //TODO
- * @param out //TODO
+ * @brief Work over a json value
+ * @param value pointer to json structure
+ * @param depth depth into the strcuture
+ * @param out[out] processed component
  */
 static void work_json_value(json_value* value, int depth, component_item *out);
 
 /**
- * @brief //TODO
- * @param value //TODO
- * @param depth //TODO
- * @param out //TODO
+ * @brief Work over a json object
+ * @param value pointer to json structure
+ * @param depth depth into the strcuture
+ * @param out[out] processed component
  */
 static void work_json_object(json_value* value, int depth, component_item *out)
 {
@@ -123,10 +123,10 @@ static void work_json_object(json_value* value, int depth, component_item *out)
 }
 
 /**
- * @brief //TODO
- * @param value //TODO
- * @param depth //TODO
- * @param out //TODO
+ * @brief Work over a json array
+ * @param value pointer to json structure
+ * @param depth depth into the strcuture
+ * @param out[out] processed component
  */
 static void work_json_array(json_value* value, int depth, component_item *out)
 {
@@ -140,11 +140,10 @@ static void work_json_array(json_value* value, int depth, component_item *out)
 }
 
 /**
- * @brief //TODO
- * @param value //TODO
- * @param depth //TODO
- * @param out //TODO
- * @return //TODO
+ * @brief Work over a json value
+ * @param value pointer to json structure
+ * @param depth depth into the strcuture
+ * @param out[out] processed component
  */
 static void work_json_value(json_value* value, int depth, component_item *out)
 {
@@ -167,8 +166,8 @@ static void work_json_value(json_value* value, int depth, component_item *out)
 
 /**
  * @brief Loads assets (SBOM.json) into memory
- * @param filepath //TODO
- * @return //TODO
+ * @param filepath json  file path
+ * @return list of component items
  */
 component_item *get_components(char *filepath)
 {
@@ -219,9 +218,9 @@ component_item *get_components(char *filepath)
 
 /**
  * @brief Returns a pointer to the character following the first "character" in "data"
- * @param data //TODO
- * @param character //TODO
- * @return //TODO
+ * @param data input buffer
+ * @param character key character
+ * @return pointer to the next char to key in the input buffer
  */
 char *skip_first_char(char *data, char character)
 {
@@ -236,8 +235,8 @@ char *skip_first_char(char *data, char character)
 
 /**
  * @brief Returns a pointer to the character following the first comma in data
- * @param data //TODO
- * @return //TODO
+ * @param data input data buffer
+ * @return pointer to the next char to a comma in the input buffer
  */
 char *skip_first_comma(char *data)
 {
@@ -246,8 +245,8 @@ char *skip_first_comma(char *data)
 
 /**
  * @brief Returns a pointer to the character following the first slash in data
- * @param data //TODO
- * @return //TODO
+ * @param data input data buffer
+ * @return  pointer to the next char to a / in the input buffer
  */
 char *skip_first_slash(char *data)
 {
@@ -256,11 +255,10 @@ char *skip_first_slash(char *data)
 
 /**
  * @brief Extracts the "n"th value from the comma separated "in" string
- * @param out //TODO
- * @param in //TODO
- * @param n //TODO
- * @param limit //TODO
- * @return //TODO
+ * @param out[out] parsed string
+ * @param in input buffer
+ * @param n col number
+ * @param limit string limit
  */
 void extract_csv(char *out, char *in, int n, long limit)
 {
@@ -290,8 +288,8 @@ void extract_csv(char *out, char *in, int n, long limit)
 
 /**
  * @brief Returns a pointer to the path after the domain name in the provided url
- * @param url //TODO
- * @return //TODO
+ * @param url input url
+ * @return pointer to the char after the domain
  */
 char *skip_domain(char *url)
 {
@@ -305,7 +303,7 @@ char *skip_domain(char *url)
 
 /**
  * @brief Converts word to lowercase
- * @param word //TODO
+ * @param word word to be converted
  */
 void lowercase(char *word)
 {
