@@ -40,8 +40,8 @@
 
 /**
  * @brief Determine if a path is to be dismissed
- * @param path //TODO
- * @return //TODO
+ * @param path input path
+ * @return true if the path was dismissed
  */
 bool dismiss_path(char *path)
 {
@@ -72,8 +72,8 @@ bool dismiss_path(char *path)
 
 /**
  * @brief Determine if a keyword is indication of an external component
- * @param str //TODO
- * @return //TODO
+ * @param str input component string
+ * @return true if it is and external component
  */
 bool is_external_indicator(char *str)
 {
@@ -106,12 +106,14 @@ bool is_external_indicator(char *str)
 
 /**
  * @brief Add component to component_rank
- * @param component_rank //TODO
- * @param vendor //TODO
- * @param component //TODO
- * @param path
- * @param url_id //TODO
- * @param url_record //TODO
+ * @param component_rank component rank structure
+ * @param vendor component vendor
+ * @param component component name
+ * @param purl component purl
+ * @param purl_md5 md5 hash of the component purl
+ * @param path component path
+ * @param url_id md5 of the url
+ * @param url_record url record
  */
 void update_component_rank(\
 component_name_rank *component_rank,
@@ -160,8 +162,8 @@ char *url_record)
 
 /**
  * @brief Attempt to guess a component name from the file path
- * @param file_path //TODO
- * @param component //TODO
+ * @param file_path file path
+ * @param component[out] found component
  */
 void get_external_component_name_from_path(char *file_path, char *component)
 {
@@ -197,7 +199,7 @@ void get_external_component_name_from_path(char *file_path, char *component)
 
 /**
  * @brief Write contents of component_rank to log file
- * @param component_rank //TODO
+ * @param component_rank pointer to component rank list
  */
 void log_component_ranking(component_name_rank *component_rank)
 {
@@ -216,8 +218,8 @@ void log_component_ranking(component_name_rank *component_rank)
 
 /**
  * @brief Log path ranking values
- * @param path_rank //TODO
- * @param files //TODO
+ * @param path_rank pointer to path ranking list
+ * @param files pointer to file_recordset list
  */
 void log_path_ranking(path_ranking *path_rank, file_recordset *files)
 {
@@ -233,10 +235,10 @@ void log_path_ranking(path_ranking *path_rank, file_recordset *files)
 
 /**
  * @brief Look for hints of /external/ component names in collected file paths
- * @param files //TODO
- * @param records //TODO
- * @param hint //TODO
- * @param component_rank //TODO
+ * @param files pointer to file recordset list
+ * @param records number of records
+ * @param hint listo of hints to find
+ * @param component_rank component name rank list
  */
 void external_component_hint_in_path(file_recordset *files, int records, char *hint, component_name_rank *component_rank)
 {
@@ -262,11 +264,11 @@ void external_component_hint_in_path(file_recordset *files, int records, char *h
 }
 
 /**
- * @brief //TODO
- * @param path_rank //TODO
- * @param files //TODO
- * @param file_id //TODO
- * @return //TODO
+ * @brief Check if a path exist in a path rank. 
+ * @param path_rank pointer to path rank list
+ * @param files pointer to file recordset list
+ * @param file_id file id
+ * @return return true if exist
  */
 bool path_exists_in_path_rank(path_ranking *path_rank, file_recordset *files, int file_id)
 {
@@ -286,9 +288,9 @@ bool path_exists_in_path_rank(path_ranking *path_rank, file_recordset *files, in
 
 /**
  * @brief Collect the the shortest paths into rank
- * @param files //TODO
- * @param records //TODO
- * @param path_rank //TODO
+ * @param files pointer to files recordset list
+ * @param records number of records
+ * @param path_rank[out] path ranking list
  */
 void collect_shortest_paths(\
 		file_recordset *files,\
@@ -357,13 +359,13 @@ void collect_shortest_paths(\
 }
 
 /**
- * @brief //TODO
- * @param files //TODO
- * @param records //TODO
- * @param path_rank //TODO
- * @param hint1 //TODO
- * @param hint2 //TODO
- * @return //TODO
+ * @brief Select the path matcihin with 
+ * @param files pointer to file recordset list
+ * @param records number of records
+ * @param path_rank[out] pointer to path rank list
+ * @param hint1 hint 1
+ * @param hint2 hint 2
+ * @return true if there is a match
  */
 bool select_paths_matching_component_names_in_rank(\
 		file_recordset *files,\
@@ -443,8 +445,8 @@ bool select_paths_matching_component_names_in_rank(\
 
 /**
  * @brief Update component score with component age, return file id for the oldest
- * @param component_rank //TODO
- * @return //TODO
+ * @param component_rank[out] pointer to component rank list
+ * @return id of the matched file
  */
 int fill_component_age(component_name_rank *component_rank)
 {
@@ -470,8 +472,8 @@ int fill_component_age(component_name_rank *component_rank)
 
 /**
  * @brief Return id of the item in rank with the highest score
- * @param component_rank //TODO
- * @return //TODO
+ * @param component_rank pointer to component rank list
+ * @return id of the item
  */
 int highest_score(component_name_rank *component_rank)
 {
@@ -496,8 +498,8 @@ int highest_score(component_name_rank *component_rank)
 
 /**
  * @brief Select the vendor that appears the most in the ranking
- * @param component_rank //TODO
- * @return //TODO
+ * @param component_rank pointer to component rank list
+ * @return positon in rank with the high score vendor
  */
 int rank_by_occurrences(component_name_rank *component_rank)
 {
@@ -516,7 +518,7 @@ int rank_by_occurrences(component_name_rank *component_rank)
 
 /**
  * @brief Erase values in component_rank
- * @param component_rank //TODO
+ * @param component_rank pointer to component rank list
  */
 void clear_component_rank(component_name_rank *component_rank)
 {
@@ -532,8 +534,8 @@ void clear_component_rank(component_name_rank *component_rank)
 
 /**
  * @brief Select the component with the higher rank and update component_hint
- * @param component_rank //TODO
- * @param component_hint //TODO
+ * @param component_rank component rank list
+ * @param component_hint component hint string
  */
 void select_best_component_from_rank(\
 		component_name_rank *component_rank,\
@@ -552,7 +554,7 @@ void select_best_component_from_rank(\
 
 /**
  * @brief Initialize component ranking
- * @param component_rank //TODO
+ * @param component_rank pointer to component rank list
  */
 void init_component_ranking(component_name_rank *component_rank)
 {
@@ -605,13 +607,13 @@ bool component_hint_from_shortest_paths(\
 
 /**
  * @brief Add relevant files into matches structure
- * @param files //TODO
- * @param records //TODO
- * @param component_hint //TODO
- * @param file_md5 //TODO
- * @param matches //TODO
- * @param add_all //TODO
- * @return //TODO
+ * @param files pointer to file recordset list to be added
+ * @param records number of records
+ * @param component_hint component hint string
+ * @param file_md5 file md5 hash
+ * @param matches pointer to matches list
+ * @param add_all true for add all files
+ * @return number of files added
  */
 int add_files_to_matches(\
 		file_recordset *files,\
@@ -645,9 +647,9 @@ int add_files_to_matches(\
 
 /**
  * @brief Reverse sort len_rank
- * @param a //TODO
- * @param b //TODO
- * @return //TODO
+ * @param a len_rank a
+ * @param b /len_rank b
+ * @return -1 if a is longer than b, 1 if b is longer than a
  */
 int path_struct_rcmp(const void *a, const void *b) {
     const len_rank *v1 = (const len_rank *) a;
@@ -659,9 +661,9 @@ int path_struct_rcmp(const void *a, const void *b) {
 
 /**
  * @brief Sort len_rank
- * @param a //TODO
- * @param b //TODO
- * @return //TODO
+ * @param a len_rank a
+ * @param b len_rank b
+ * @return 1 if a is longer than b, -1 if b is longer than a
  */
 int path_struct_cmp(const void *a, const void *b) {
     const len_rank *v1 = (const len_rank *) a;
@@ -673,9 +675,9 @@ int path_struct_cmp(const void *a, const void *b) {
 
 /**
  * @brief Load path rank and return pointer
- * @param files //TODO
- * @param records //TODO
- * @return //TODO
+ * @param files pointer to file recordset list
+ * @param records records number
+ * @return pointer to len_rank structure
  */
 len_rank *load_path_rank(file_recordset *files, int records)
 {
@@ -703,9 +705,8 @@ len_rank *load_path_rank(file_recordset *files, int records)
 
 /**
  * @brief Dump rank contents into log
- * @param path_rank //TODO
- * @param files //TODO
- * @return //TODO
+ * @param path_rank pointer to path rank list
+ * @param files pinter to file recordset list
  */
 void dump_path_rank(len_rank *path_rank, file_recordset *files)
 {
@@ -721,10 +722,10 @@ void dump_path_rank(len_rank *path_rank, file_recordset *files)
 /**
  * @brief Select the best record based on oldest date of first release
 	querying the pURL table
- * @param dup_dates //TODO
- * @param top_recs //TODO
- * @param top_md5s //TODO
- * @return //TODO
+ * @param dup_dates dup_dates in seconds
+ * @param top_recs top records list
+ * @param top_md5s top records md5
+ * @return pointer to the oldest record
  */
 uint8_t *select_best_top_date(int dup_dates, uint8_t *top_recs, uint8_t *top_md5s)
 {
@@ -757,10 +758,10 @@ uint8_t *select_best_top_date(int dup_dates, uint8_t *top_recs, uint8_t *top_md5
 /**
  * @brief Look for shortest file paths and query component/purl information to determine
 	 the most interesting match
- * @param files //TODO
- * @param records //TODO
- * @param component_rank //TODO
- * @return //TODO
+ * @param files pointer to files recordset list
+ * @param records records numbers
+ * @param component_rank pointer to component rank list
+ * @return index of the selected item
  */
 int shortest_paths_check(file_recordset *files, int records, component_name_rank *component_rank)
 {
@@ -854,11 +855,11 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 /**
  * @brief Analyse files, selecting those matching the provided hints
 	 return the file id if matched, otherwise a negative value if no hits
- * @param files //TODO
- * @param records //TODO
- * @param hint //TODO
- * @param component_rank //TODO
- * @return //TODO
+ * @param files pointer to file recordset list
+ * @param records records number
+ * @param hint hint string
+ * @param component_rank pointer to component_name_rank
+ * @return file id if matched, -1 otherwise
  */
 int seek_component_hint_in_path(\
 		file_recordset *files,\
@@ -920,10 +921,10 @@ int seek_component_hint_in_path(\
 
 /**
  * @brief Analyse files, selecting those with a component name matching the beginning of the path
- * @param files //TODO
- * @param records //TODO
- * @param component_rank //TODO
- * @return //TODO
+ * @param files pointer to file recorset list
+ * @param records records number
+ * @param component_rank pinter to component rank list
+ * @return index of the selected item
  */
 int seek_component_hint_in_path_start(\
 		file_recordset *files,\
@@ -974,8 +975,8 @@ int seek_component_hint_in_path_start(\
 
 /**
  * @brief Select match based on hint and age
- * @param matches //TODO
- * @return //TODO
+ * @param matches pointer to matches list
+ * @return true is there is a match.
  */
 bool select_best_match(match_data *matches)
 {

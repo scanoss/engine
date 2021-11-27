@@ -42,9 +42,9 @@
 
 /**
  * @brief Returns a pointer to field n in data
- * @param n //TODO
- * @param data //TODO
- * @return //TODO
+ * @param n field number
+ * @param data data buffer
+ * @return pointer to field
  */
 char *field_n(int n, char *data)
 {
@@ -56,9 +56,9 @@ char *field_n(int n, char *data)
 /**
  * @brief Case insensitive string start comparison,
 	returns true if a starts with b or viceversa
- * @param a //TODO
- * @param b //TODO
- * @return //TODO
+ * @param a string a
+ * @param b string b
+ * @return true if start the same
  */
 bool stristart(char *a, char *b)
 {
@@ -69,7 +69,7 @@ bool stristart(char *a, char *b)
 
 /**
  * @brief Reverse an uint32 number
- * @param data //TODO
+ * @param data pointer to daa buffer to be inverted
  */
 void uint32_reverse(uint8_t *data)
 {
@@ -83,9 +83,9 @@ void uint32_reverse(uint8_t *data)
 
 /**
  * @brief Compares two MD5 checksums
- * @param md51 //TODO
- * @param md52 //TODO
- * @return //TODO
+ * @param md51 md5 1
+ * @param md52 md5 2
+ * @return true for equal
  */
 bool md5cmp(uint8_t *md51, uint8_t *md52)
 {
@@ -97,7 +97,7 @@ bool md5cmp(uint8_t *md51, uint8_t *md52)
 
 /**
  * @brief Trim str
- * @param str //TODO
+ * @param str string to trim
  */
 void trim(char *str)
 {
@@ -116,9 +116,9 @@ void trim(char *str)
 
 /**
  * @brief Returns the pair md5 of "component/vendor"
- * @param component //TODO
- * @param vendor //TODO
- * @param out //TODO
+ * @param component component string
+ * @param vendor vendor sting
+ * @param out[out] pointer ot md5
  */
 void vendor_component_md5(char *component, char *vendor, uint8_t *out)
 {
@@ -138,8 +138,8 @@ void vendor_component_md5(char *component, char *vendor, uint8_t *out)
 
 /**
  * @brief  Removes chr from str
- * @param str //TODO
- * @param chr //TODO
+ * @param str input string
+ * @param chr char to be removed
  */
 void remove_char(char *str, char chr)
 {
@@ -153,7 +153,7 @@ void remove_char(char *str, char chr)
 
 /**
  * @brief Cleans str from unprintable characters or quotes
- * @param str //TODO
+ * @param str string to be processed
  */
 void string_clean(char *str)
 {
@@ -167,7 +167,7 @@ void string_clean(char *str)
 
 /**
  * @brief Returns the current date stamp
- * @return
+ * @return pointer to date string
  */
 char *datestamp()
 {
@@ -192,8 +192,8 @@ void print_datestamp()
 
 /**
  * @brief Returns a string with a hex representation of md5
- * @param md5 //TODO
- * @return //TODO
+ * @param md5 input md5
+ * @return pointer to string
  */
 char *md5_hex(uint8_t *md5)
 {
@@ -204,7 +204,8 @@ char *md5_hex(uint8_t *md5)
 
 /**
  * @brief Returns the CRC32C for a string
- * @param str //TODO
+ * @param str input string
+ * @return crc32
  */
 uint32_t string_crc32c(char *str)
 {
@@ -213,9 +214,9 @@ uint32_t string_crc32c(char *str)
 
 /**
  * @brief Check if a crc is found in the list (add it if not)
- * @param list //TODO
- * @param crc //TODO
- * @return //TODO
+ * @param list pointer to list
+ * @param crc input crc
+ * @return true if the crc was found in the list
  */
 bool add_CRC(uint32_t *list, uint32_t crc)
 {

@@ -61,7 +61,8 @@ void json_close()
 }
 
 /**
- * @brief //TODO
+ * @brief open JSON  section for a file
+ * @param filename file name string
  */
 void json_open_file(char *filename)
 {    
@@ -69,7 +70,7 @@ void json_open_file(char *filename)
 }
 
 /**
- * @brief //TODO
+ * @brief Close file section
  */
 void json_close_file()
 {
@@ -78,7 +79,7 @@ void json_close_file()
 
 /**
  * @brief Add server statistics to JSON
- * @param data //TODO
+ * @param scan scan data pointer
  */
 void print_server_stats(scan_data *scan)
 {
@@ -97,7 +98,7 @@ void print_server_stats(scan_data *scan)
 
 /**
  * @brief Return a match=none result
- * @param scan //TODO
+ * @param scan scan data pointer
  */
 void print_json_nomatch(scan_data *scan)
 {
@@ -111,8 +112,8 @@ void print_json_nomatch(scan_data *scan)
 }
 
 /**
- * @brief //TODO
- * @param match //TODO
+ * @brief Print purl array for a match
+ * @param match match item
  */
 void print_purl_array(match_data match)
 {
@@ -129,9 +130,9 @@ void print_purl_array(match_data match)
 
 /**
  * @brief Skip the first directory name for Github and Gitlab files
- * @param purl //TODO
- * @param file //TODO
- * @return /TODO
+ * @param purl purl string
+ * @param file file string
+ * @return modified file string
  */
 char *file_skip_release(char *purl, char *file)
 {
@@ -144,9 +145,9 @@ char *file_skip_release(char *purl, char *file)
 
 /**
  * @brief Return match details
- * @param scan //TODO
- * @param match //TODO
- * @param match_counter //TODO
+ * @param scan scan data
+ * @param match match item
+ * @param match_counter[out] pointer to match counter
  */
 void print_json_match(scan_data *scan, match_data match, int *match_counter)
 {

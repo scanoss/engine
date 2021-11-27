@@ -42,7 +42,7 @@ int map_rec_len;
 
 /**
  * @brief Set map hits to zero for the given match
- * @param match //TODO
+ * @param match pointer to match
  */
 void clear_hits(uint8_t *match)
 {
@@ -52,10 +52,10 @@ void clear_hits(uint8_t *match)
 }
 
 /**
- * @brief //TODO
- * @param path //TODO
- * @param len //TODO
- * @return //TODO
+ * @brief Return the path depth
+ * @param path path string
+ * @param len path string len
+ * @return path len, ie number of '/'
  */
 int path_depth(uint8_t *path, int len)
 {
@@ -65,7 +65,8 @@ int path_depth(uint8_t *path, int len)
 }
 
 /**
- * @brief Recordset handler function to find shortest path
+ * @brief Recordset handler function to find shortest path. 
+ * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -94,8 +95,8 @@ static bool shortest_path_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 
 /**
  * @brief Returns the length of the shortest path among files matching md5
- * @param md5 //TODO
- * @return //TODO
+ * @param md5 MD5 pointer
+ * @return lenght of shortest path
  */
 int get_shortest_path(uint8_t *md5)
 {
@@ -115,8 +116,8 @@ int get_shortest_path(uint8_t *md5)
  * @brief If the extension of the matched file does not match the extension of the scanned file
  *	and the matched file is not among known source code extensions, the match will be discarded
  * 
- * @param scan 
- * @param md5 
+ * @param scan scan data pointer
+ * @param md5 match md5
  * @return true 
  * @return false 
  */
@@ -142,8 +143,11 @@ bool snippet_extension_discard(scan_data *scan, uint8_t *md5)
 	return discard;
 }
 
-
-/* If we have snippet matches, select the one with more hits (and shortest file path) */
+/**
+ * @brief If we have snippet matches, select the one with more hits (and shortest file path)
+ * @param scan scan data pointer
+ * @return pointer to selected match
+ */
 uint8_t *biggest_snippet(scan_data *scan)
 {
 	uint8_t *out = NULL;
@@ -203,7 +207,8 @@ uint8_t *biggest_snippet(scan_data *scan)
 }
 
 /**
- * @brief Handler function to collect all file ids
+ * @brief Handler function to collect all file ids.
+ * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -234,10 +239,10 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 }
 
 /**
- * @brief //TODO
- * @param src //TODO
- * @param srcln //TODO
- * @return //TODO
+ * @brief Skip unwanted snippets
+ * @param src snippet
+ * @param srcln snippet len
+ * @return true if the snippet was ignored
  */
 bool skip_snippets(char *src, uint64_t srcln)
 {
@@ -260,10 +265,10 @@ bool skip_snippets(char *src, uint64_t srcln)
 }
 
 /**
- * @brief //TODO
- * @param scan //TODO
- * @param from //TODO
- * @param to //TODO
+ * @brief Add snippets id to a scan
+ * @param scan scan data pointer
+ * @param from snippet start
+ * @param to snippet end
  */
 void add_snippet_ids(scan_data *scan, long from, long to)
 {
@@ -296,10 +301,9 @@ void add_snippet_ids(scan_data *scan, long from, long to)
 
 /**
  * @brief Assemble line ranges from ranges into scan->line_ranges and oss_ranges
- * 
- * @param ranges //TODO
- * @param scan //TODO
- * @return int //TODO
+ * @param ranges input ranges list
+ * @param scan[out] pointer to scan data
+ * @return hits
  */
 int ranges_assemble(matchmap_range *ranges, scan_data *scan)
 {
@@ -329,9 +333,8 @@ int ranges_assemble(matchmap_range *ranges, scan_data *scan)
 }
 
 /**
- * @brief Join overlapping ranges
- * 
- * @param ranges //TODO
+ * @brief Join overlapping ranges 
+ * @param ranges ranges list to process
  */
 void ranges_join_overlapping(matchmap_range *ranges)
 {
@@ -352,7 +355,7 @@ void ranges_join_overlapping(matchmap_range *ranges)
 /**
  * @brief Remove empty ranges, shifting remaining ranges 
  * 
- * @param ranges //TODO
+ * @param ranges ranges list to process
  */
 void ranges_remove_empty(matchmap_range *ranges)
 {
@@ -375,8 +378,8 @@ void ranges_remove_empty(matchmap_range *ranges)
 /**
  * @brief Add SNIPPET_LINE_TOLERANCE to ranges
  * 
- * @param ranges //TODO
- * @param scan //TODO
+ * @param ranges ranges list to process
+ * @param scan scan data pointer
  */
 void ranges_add_tolerance(matchmap_range *ranges, scan_data *scan)
 {
@@ -407,8 +410,8 @@ void ranges_add_tolerance(matchmap_range *ranges, scan_data *scan)
 /**
  * @brief Compiles list of line ranges, returning total number of hits (lines matched)
  * 
- * @param scan //TODO
- * @return uint32_t //TODO
+ * @param scan point to scan data to process
+ * @return uint32_t snippet hits
  */
 uint32_t compile_ranges(scan_data *scan) {
 
@@ -511,8 +514,8 @@ uint32_t compile_ranges(scan_data *scan) {
 }
 
 /**
- * @brief //TODO
- * @param scan //TODO
+ * @brief Ajust snippet match tolerance
+ * @param scan pointer to scan data struct
  */
 static void adjust_tolerance(scan_data *scan)
 {
@@ -543,8 +546,8 @@ static void adjust_tolerance(scan_data *scan)
 
 /**
  * @brief Get inverted wfp from int32
- * @param wfpint32 //TODO
- * @param out //TODO
+ * @param wfpint32 int32 wfp
+ * @param out[out] array with the bytes of the inverted wfp
  */
 void wfp_invert(uint32_t wfpint32, uint8_t *out)
 {
@@ -557,9 +560,9 @@ void wfp_invert(uint32_t wfpint32, uint8_t *out)
 
 /**
  * @brief Add line hit to all files
- * @param scan //TODO
- * @param line //TODO
- * @param min_tolerance //TODO
+ * @param scan pointer to scan data
+ * @param line line number
+ * @param min_tolerance min tolerance
  */
 void add_popular_snippet_to_matchmap(scan_data *scan, uint32_t line, uint32_t min_tolerance)
 {
@@ -585,13 +588,13 @@ void add_popular_snippet_to_matchmap(scan_data *scan, uint32_t line, uint32_t mi
 }
 
 /**
- * @brief //TODO
- * @param scan //TODO
- * @param md5s //TODO
- * @param md5s_ln //TODO
- * @param wfp //TODO
- * @param line //TODO
- * @param min_tolerance //TODO
+ * @brief Add matchmap to scan structure
+ * @param scan pointer to scan dats structure
+ * @param md5s md5 list
+ * @param md5s_ln md5 list lenght
+ * @param wfp pointer t wfp
+ * @param line line number
+ * @param min_tolerance min tolerance
  */
 void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uint8_t *wfp, uint32_t line, uint32_t min_tolerance)
 {
@@ -686,8 +689,8 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
 		Scan is done from last to first line, because headers and
 		first lines are statistically more common than the end of
 		the file
- * @param scan //TODO
- * @return //TODO
+ * @param scan pointer to scan data to be processed
+ * @return match type
  */
 matchtype ldb_scan_snippets(scan_data *scan) {
 
