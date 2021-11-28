@@ -46,9 +46,9 @@
 #include "decrypt.h"
 
 /**
- * @brief //TODO
- * @param version //TODO
- * @param component //TODO
+ * @brief Normalize component version
+ * @param version version string to be processed
+ * @param component component string
  */
 void normalise_version(char *version, char *component)
 {
@@ -66,8 +66,8 @@ void normalise_version(char *version, char *component)
 }
 
 /**
- * @brief //TODO
- * @param match //TODO
+ * @brief Normalize versions for a match
+ * @param match match to be processed
  */
 void clean_versions(match_data *match)
 {
@@ -76,7 +76,8 @@ void clean_versions(match_data *match)
 }
 
 /**
- * @brief //TODO
+ * @brief get purl version handler.
+ * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -130,8 +131,8 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
 
 /**
  * @brief Compare version and, if needed, update range (version-latest)
- * @param match //TODO
- * @param release //TODO
+ * @param match pointer to match to br processed
+ * @param release pointer to release version structure
  */
 void update_version_range(match_data *match, release_version *release)
 {
@@ -154,10 +155,10 @@ void update_version_range(match_data *match, release_version *release)
 }
 
 /**
- * @brief //TODO
- * @param release //TODO
- * @param purl //TODO
- * @param file_id //TODO
+ * @brief Get ṕurl version
+ * @param release[out] will be completed with the purl version
+ * @param purl purl string
+ * @param file_id file md5
  */
 void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
 {
@@ -172,10 +173,10 @@ void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
 
 /**
  * @brief Add version range to first match
- * @param scan //TODO
- * @param matches //TODO
- * @param files //TODO
- * @param records //TODO
+ * @param scan scan data pointer
+ * @param matches pointer to matches list
+ * @param files pointer to files recordset list
+ * @param records records number
  */
 void add_versions(scan_data *scan, match_data *matches, file_recordset *files, uint32_t records)
 {
