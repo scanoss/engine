@@ -204,13 +204,15 @@ bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 
 	decrypt_data(data, datalen, "purl", key, subkey);
 	uint8_t *oldest = (uint8_t *) ptr;
-	data[datalen] = 0;
 
+	char purl[LDB_MAX_REC_LN + 1] = "\0";
+	memcpy(purl, data, datalen);
+	purl[datalen] = 0;
 	/* Ignore pkg relation records */
-	if (memcmp(data, "pkg:", 4))
+	if (memcmp(purl, "pkg:", 4))
 	{
 		char release_date[MAX_ARGLN + 1] = "\0";
-		extract_csv(release_date, (char *) data, 1, MAX_ARGLN);
+		extract_csv(release_date, purl, 1, MAX_ARGLN);
 		if (!*oldest || (strcmp((char *)oldest, release_date) > 0))
 			strcpy((char *)oldest, release_date);
 	}
