@@ -221,13 +221,12 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 		oasdl_license_data(license);
 		printf("          \"source\": \"%s\"\n", license_sources[atoi(source)]);
 		printf("        }");
-		reported = true;
 	}
 
 	free(source);
 	free(license);
 
-	return reported;
+	return false;
 }
 
 void print_licenses(match_data match)
