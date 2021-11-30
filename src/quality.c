@@ -42,7 +42,7 @@
 const char *quality_sources[] = {"best_practices"};
 
 /**
- * @brief //TODO 
+ * @brief Print the quality item in STDOUT. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details. 
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -92,8 +92,8 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 }
 
 /**
- * @brief //TODO
- * @param match //TODO
+ * @brief Query LDB for the quality item from a match
+ * @param match input match
  */
 void print_quality(match_data match)
 {

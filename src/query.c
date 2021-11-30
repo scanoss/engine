@@ -39,8 +39,8 @@
 
 /**
  * @brief Obtain the first file name for the given file MD5 hash
- * @param md5 //TODO
- * @return //TODO
+ * @param md5 MD5 hash
+ * @return string witht he file name
  */
 char *get_filename(char *md5)
 {
@@ -68,7 +68,7 @@ char *get_filename(char *md5)
 }
 
 /**
- * @brief Handler function for get_url_record
+ * @brief Handler function for get_url_record. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -97,8 +97,8 @@ bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln,
 
 /**
  * @brief Obtain the first available component record for the given MD5 hash
- * @param md5 //TODO
- * @param record //TODO
+ * @param md5 MD5 hash
+ * @param record[out] Output pointer to record
  */
 void get_url_record(uint8_t *md5, uint8_t *record)
 {
@@ -109,7 +109,8 @@ void get_url_record(uint8_t *md5, uint8_t *record)
 }
 
 /**
- * @brief Extracts component age in seconds from created date (1st CSV field in data)
+ * @brief Extracts component age in seconds from created date (1st CSV field in data). 
+ * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO
@@ -177,8 +178,8 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 
 /**
  * @brief Return the age of a component in seconds
- * @param md5 //TODO
- * @return //TODO
+ * @param md5 Component md5
+ * @return age in seconds
  */
 int get_component_age(uint8_t *md5)
 {
@@ -192,8 +193,13 @@ int get_component_age(uint8_t *md5)
 
 	return age;
 }
+/**
+ * @brief Calculate the hash of purl@version
+ * @param out[out] pointer to md5 hash
+ * @param purl component purl string
+ * @param version component version string
+ */
 
-/* Calculate the hash of purl@version */
 void purl_version_md5(uint8_t *out, char *purl, char *version)
 {
 	char purl_version[MAX_ARGLN];
