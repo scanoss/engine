@@ -23,7 +23,7 @@
 /**
   * @file dependency.c
   * @date 27 Nov 2020 
-  * @brief //TODO
+  * @brief Contains the functions used for dependency analizys.
  
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/dependency.c

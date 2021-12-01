@@ -23,7 +23,7 @@
 /**
   * @file ignorelist.c
   * @date 1 Jun 2021 
-  * @brief //TODO
+  * @brief Contains the functions used for process the ignore extensions and paths list
  
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/ignorelist.c

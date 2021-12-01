@@ -23,7 +23,7 @@
 /**
   * @file cryptography.c
   * @date 28 Feb 2021 
-  * @brief //TODO
+  * @brief Contains the functions used for generate cryptography information for a match.
  
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/cryptography.c

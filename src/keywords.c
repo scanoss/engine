@@ -22,7 +22,7 @@
 /**
   * @file keywords.c
   * @date 1 Jun 2021 
-  * @brief //TODO
+  * @brief Contains the functions used for keywords processing
  
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/keywords.c

@@ -23,7 +23,7 @@
 /**
   * @file help.c
   * @date 12 Jul 2020 
-  * @brief //TODO
+  * @brief Contains the help.
  
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/help.c

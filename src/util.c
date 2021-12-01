@@ -23,7 +23,7 @@
 /**
   @file util.c
   @date 12 Jul 2020
-  @brief //TODO
+  @brief Contains mixed funtions with general utilities
  
   Long description // TODO
   @see https://github.com/scanoss/engine/blob/master/src/util.c
@@ -71,7 +71,7 @@ bool stristart(char *a, char *b)
  * @brief Reverse an uint32 number
  * @param data pointer to daa buffer to be inverted
  */
-void uint32_reverse(uint8_t *data)
+void uint32_reverse(uint8_t *data)TODO
 {
 	uint8_t tmp = data[0];
 	data[0] = data[3];

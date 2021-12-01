@@ -23,7 +23,7 @@
 /**
   * @file main.c
   * @date 12 Jul 2020 
-  * @brief //TODO
+  * @brief Starts the program execution
   
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/main.c

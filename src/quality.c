@@ -23,7 +23,7 @@
 /**
   * @file quality.c
   * @date 27 Nov 2020 
-  * @brief //TODO
+  * @brief Contains the functions used to print the quality section
   
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/quality.c

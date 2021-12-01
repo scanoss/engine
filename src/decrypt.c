@@ -4,7 +4,7 @@
 /**
   * @file decrypt.c
   * @date 27 Jun 2021 
-  * @brief //TODO
+  * @brief Contains the functions used for the LDB decryptation (if it is encrypted).
  
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/decrypt.c

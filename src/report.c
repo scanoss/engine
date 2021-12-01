@@ -23,7 +23,7 @@
 /**
   * @file report.c
   * @date 10 Ago 2020
-  * @brief //TODO
+  * @brief Contains the functions used to print the json output.
   
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/report.c

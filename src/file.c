@@ -23,7 +23,7 @@
 /**
   * @file file.c
   * @date 12 Jul 2020 
-  * @brief //TODO
+  * @brief Contains the functions used for processing the file table from the KB.
  
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/file.c

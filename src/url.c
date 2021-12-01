@@ -23,7 +23,7 @@
 /**
   @file url.c
   @date 31 May 2021
-  @brief //TODO
+  @brief Contains the functions used for quering the URL table.
  
   Long description // TODO
   @see https://github.com/scanoss/engine/blob/master/src/scan.c

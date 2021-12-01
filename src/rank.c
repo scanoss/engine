@@ -23,7 +23,7 @@
 /**
   * @file rank.c
   * @date 31 Jan 2021
-  * @brief //TODO
+  * @brief Contains the functions used to generate the matches ranking
   
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/rank.c

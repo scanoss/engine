@@ -22,7 +22,7 @@
 /**
   * @file mz.c
   * @date 7 Feb 2021 
-  * @brief //TODO
+  * @brief Contains the functions used for uncompress file contents using mz lib.
   
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/mz.c

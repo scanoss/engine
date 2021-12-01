@@ -23,7 +23,7 @@
 /**
   * @file match.c
   * @date 12 Jul 2020 
-  * @brief //TODO
+  * @brief Contains the functions used for fullyfill the matches list during the scanning
   
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/match.c
@@ -42,9 +42,9 @@
 #include "rank.h"
 #include "decrypt.h"
 
-bool first_file = true; /** //TODO */
-const char *matchtypes[] = {"none", "url", "file", "snippet"}; /** //TODO */
-bool match_extensions = false; /** //TODO */
+bool first_file = true; /** global first file flag */
+const char *matchtypes[] = {"none", "url", "file", "snippet"}; /** describe the availables kinds of match */
+bool match_extensions = false; /** global match extension flag */
 
 char vendor_hint[MAX_FIELD_LN];
 char component_hint[MAX_FIELD_LN];

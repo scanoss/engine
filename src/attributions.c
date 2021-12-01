@@ -23,7 +23,7 @@
 /**
   * @file attributions.c
   * @date 21 Feb 2021 
-  * @brief //TODO
+  * @brief Contains the functions used for generate the attributions output
  
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/attributions.c

@@ -23,7 +23,7 @@
 /**
   * @file license.c
   * @date 27 Nov 2020 
-  * @brief //TODO
+  * @brief Contains the functions used for request the KB for licenses and generate the json output
  
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/license.c

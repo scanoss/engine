@@ -23,7 +23,7 @@
 /**
   @file versions.c
   @date 31 May 2021
-  @brief //TODO
+  @brief Contains the functions used for component's version processing
  
   Long description // TODO
   @see https://github.com/scanoss/engine/blob/master/src/versions.c

@@ -23,7 +23,7 @@
 /**
   @file snippets.c
   @date 30 Dec 2020
-  @brief //TODO
+  @brief Contains the functions used for  snippets processing
  
   Long description // TODO
   @see https://github.com/scanoss/engine/blob/master/src/scan.c
