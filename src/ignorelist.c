@@ -177,7 +177,7 @@ bool headicmp(char *a, char *b)
 /**
  * @brief Returns true when src starts with any of the unwanted IGNORED_HEADER strings
  * @param path //TODO
- * @return //TODO
+ * @return true if src starts with a unwanted header. False otherwise.
  */
 bool unwanted_header(char *src)
 {

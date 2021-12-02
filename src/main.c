@@ -148,8 +148,8 @@ void initialize_ldb_tables(char *name)
 }
 
 /**
- * @brief //TODO
- * @param name //TODO
+ * @brief  Read a direactory recursively
+ * @param name path of the directory to be read
  */
 void recurse_directory(char *name)
 {
@@ -194,9 +194,9 @@ void recurse_directory(char *name)
 }
 
 /**
- * @brief //TODO
- * @param txt //TODO
- * @return //TODO
+ * @brief  check if string has an alphanumeric character
+ * @param txt string to be analized 
+ * @return true if string has an alphanumeric characters. false otherwise
  */
 bool validate_alpha(char *txt)
 {
