@@ -7,7 +7,7 @@ DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "SCANOSS Engine"
 PROJECT_NUMBER         = 4.3.4
 PROJECT_BRIEF          = "SCANOSS Open Source Inventory Engine"
-PROJECT_LOGO           =
+PROJECT_LOGO           = doc/scanoss-logo.png
 OUTPUT_DIRECTORY       = doc
 CREATE_SUBDIRS         = NO
 ALLOW_UNICODE_NAMES    = NO
@@ -211,7 +211,7 @@ HTML_FILE_EXTENSION    = .html
 HTML_HEADER            =
 HTML_FOOTER            =
 HTML_STYLESHEET        =
-HTML_EXTRA_STYLESHEET  =
+HTML_EXTRA_STYLESHEET  = doc/style.css
 HTML_EXTRA_FILES       =
 HTML_COLORSTYLE_HUE    = 220
 HTML_COLORSTYLE_SAT    = 100
@@ -268,7 +268,7 @@ EXTRA_SEARCH_MAPPINGS  =
 #---------------------------------------------------------------------------
 # Configuration options related to the LaTeX output
 #---------------------------------------------------------------------------
-GENERATE_LATEX         = YES
+GENERATE_LATEX         = NO
 LATEX_OUTPUT           = latex
 LATEX_CMD_NAME         =
 MAKEINDEX_CMD_NAME     = makeindex
