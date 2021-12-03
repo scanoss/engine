@@ -4,9 +4,9 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = "SCANOSS Engine"
-PROJECT_NUMBER         = 4.3.4
-PROJECT_BRIEF          = "SCANOSS Open Source Inventory Engine"
+PROJECT_NAME           = "Engine"
+PROJECT_NUMBER         = 4.3.7
+PROJECT_BRIEF          = "Open Source Inventory"
 PROJECT_LOGO           = doc/scanoss-logo.png
 OUTPUT_DIRECTORY       = doc
 CREATE_SUBDIRS         = NO
