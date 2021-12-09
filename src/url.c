@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  @file url.c
+  @date 31 May 2021
+  @brief Contains the functions used for quering the URL table.
+ 
+  Long description // TODO
+  @see https://github.com/scanoss/engine/blob/master/src/scan.c
+ */
+
 #include "match.h"
 #include "report.h"
 #include "debug.h"
@@ -29,6 +39,18 @@
 #include "decrypt.h"
 #include "ignorelist.h"
 
+/**
+ * @brief Handle url query in th KB. 
+ * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param raw_data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen && datalen >= MAX_PATH) return false;
@@ -61,12 +83,20 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	add_match(-1, match, matches);
 	return false;
 }
-
+/**
+ * @brief Clean selected matches field in matches list 
+ * @param key //TODO
+**/
 void clean_selected_matches(match_data *matches)
 {
 	for (int i = 0; i < scan_limit; i++)  matches[0].selected = false;
 }
 
+/**
+ * @brief Select the purl for a match followin ta schema
+ * @param schema propused schema
+ * @param matches pointer to matches list
+**/
 bool select_purl_match(char *schema, match_data *matches)
 {
 	clean_selected_matches(matches);
@@ -88,8 +118,11 @@ bool select_purl_match(char *schema, match_data *matches)
 	}
 	return false;
 }
+/**
+ * @brief Select preferred URLs based on favorite purl schema
+ * @param matches pointer to matches list
+**/
 
-/* Select preferred URLs based on favorite purl schema */
 void select_best_url(match_data *matches)
 {
 	if (!select_purl_match("pkg:github",matches))
@@ -97,8 +130,14 @@ void select_best_url(match_data *matches)
 			if (!select_purl_match("pkg:maven",matches))
 				select_purl_match(NULL, matches);
 }
-
-/* Build a component URL from the provided PURL schema and actual URL */
+/**
+ * @brief Build a component URL from the provided PURL schema and actual URL
+ * @param match pointer to a match
+ * @param schema PURL schema
+ * @param url input url
+ * @param fixed none
+ * @return true if succed
+**/
 bool build_main_url(match_data *match, char *schema, char *url, bool fixed)
 {
 	if (starts_with(match->purl[0], schema))
@@ -110,7 +149,11 @@ bool build_main_url(match_data *match, char *schema, char *url, bool fixed)
 	return false;
 }
 
-/* Calculates a main project URL from the PURL */
+/**
+ * @brief Calculates a main project URL from the PURL
+ * @param match pointer to a match struct
+**/
+
 void fill_main_url(match_data *match)
 {
 	/* URL translations */
@@ -130,6 +173,12 @@ void fill_main_url(match_data *match)
 	if (build_main_url(match, "pkg:kernel/", "https://www.kernel.org", true)) return;
 	if (build_main_url(match, "pkg:angular/", "https://angular.io", true)) return;
 }
+/**
+ * @brief Compare two purls
+ * @param purl1 First purl
+ * @param purl2 Second purl
+ * @return true if the are equals
+**/
 
 bool purl_type_matches(char *purl1, char *purl2)
 {
@@ -142,6 +191,10 @@ bool purl_type_matches(char *purl1, char *purl2)
 	}
 	return true;
 }
+/**
+ * @brief Purl record handle.
+ * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+**/
 
 bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
@@ -178,6 +231,10 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 	free(purl);
 	return false;
 }
+/**
+ * @brief Fetch related purls for a match
+ * @param match pointer to the match
+**/
 
 /* Fetch related purls */
 void fetch_related_purls(match_data *match)
@@ -197,7 +254,11 @@ void fetch_related_purls(match_data *match)
 	}
 }
 
-/* Get the oldest release for a purl */
+/**
+ * @brief Get the oldest release for a purl handler.
+ * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+**/
+
 bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen) return false;
@@ -220,7 +281,12 @@ bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 	return false;
 }
 
-/* Get first purl release date from url_rec */
+/**
+ * @brief Get first purl release date from url_rec
+ * @param url url string
+ * @param data[out] date
+**/
+
 void purl_release_date(char *url, char *date)
 {
 		*date = 0;
@@ -233,7 +299,11 @@ void purl_release_date(char *url, char *date)
 		ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) date);
 }
 
-/* Handler function for getting the oldest URL */
+
+/**
+ * @brief Handler function for getting the oldest URL.
+ * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+**/
 bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	decrypt_data(data, datalen, "url", key, subkey);

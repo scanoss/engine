@@ -24,9 +24,15 @@
   madler@alumni.caltech.edu
  */
 
-/* Use hardware CRC instruction on Intel SSE 4.2 processors.  This computes a
+/**
+  @file crc32c.c
+  @date 14 Dec 2020
+  @brief  Use hardware CRC instruction on Intel SSE 4.2 processors.  
+   This computes a
    CRC-32C, *not* the CRC-32 used by Ethernet and zip, gzip, etc.  A software
-   version is provided as a fall-back, as well as for speed comparisons. */
+   version is provided as a fall-back, as well as for speed comparisons.
+  @see https://github.com/scanoss/engine/blob/master/external/src/crc32c.c
+ */
 
 /* Version history:
    1.0  10 Feb 2013  First version
@@ -47,7 +53,9 @@
 static pthread_once_t crc32c_once_sw = PTHREAD_ONCE_INIT;
 static uint32_t crc32c_table[8][256];
 
-/* Construct table for software CRC-32C calculation. */
+/**
+ * @brief Construct table for software CRC-32C calculation.
+ */
 static void crc32c_init_sw(void)
 {
     uint32_t n, crc, k;
@@ -73,9 +81,15 @@ static void crc32c_init_sw(void)
     }
 }
 
-/* Table-driven software version as a fall-back.  This is about 15 times slower
+/**
+ * @brief Table-driven software version as a fall-back.  This is about 15 times slower
    than using the hardware instructions.  This assumes little-endian integers,
-   as is the case on Intel processors that the assembler code here is for. */
+   as is the case on Intel processors that the assembler code here is for.
+ * @param crci Acummulated valued
+ * @param buf Data buffer
+ * @param len Data buffer lenght
+ * @return CRC32    
+ */
 static uint32_t crc32c_sw(uint32_t crci, const void *buf, size_t len)
 {
     const unsigned char *next = buf;
@@ -107,10 +121,15 @@ static uint32_t crc32c_sw(uint32_t crci, const void *buf, size_t len)
     return (uint32_t)crc ^ 0xffffffff;
 }
 
-/* Multiply a matrix times a vector over the Galois field of two elements,
+/**
+ * @brief Multiply a matrix times a vector over the Galois field of two elements,
    GF(2).  Each element is a bit in an unsigned integer.  mat must have at
    least as many entries as the power of two for most significant one bit in
-   vec. */
+   vec.
+ * @param mat Input matrix
+ * @param vec Input vector
+ * @return result
+ */
 static inline uint32_t gf2_matrix_times(uint32_t *mat, uint32_t vec)
 {
     uint32_t sum;
@@ -125,8 +144,12 @@ static inline uint32_t gf2_matrix_times(uint32_t *mat, uint32_t vec)
     return sum;
 }
 
-/* Multiply a matrix by itself over GF(2).  Both mat and square must have 32
-   rows. */
+/**
+ * @brief Multiply a matrix by itself over GF(2).  Both mat and square must have 32
+   rows.
+ * @param square Output pointer
+ * @param mat Input matrix
+ */
 static inline void gf2_matrix_square(uint32_t *square, uint32_t *mat)
 {
     int n;
@@ -135,11 +158,15 @@ static inline void gf2_matrix_square(uint32_t *square, uint32_t *mat)
         square[n] = gf2_matrix_times(mat, mat[n]);
 }
 
-/* Construct an operator to apply len zeros to a crc.  len must be a power of
+/**
+ * @brief Construct an operator to apply len zeros to a crc.  len must be a power of
    two.  If len is not a power of two, then the result is the same as for the
    largest power of two less than len.  The result for len == 0 is the same as
    for len == 1.  A version of this routine could be easily written for any
-   len, but that is not needed for this application. */
+   len, but that is not needed for this application.
+ * @param even //TODO
+ * @param len //TODO
+ */
 static void crc32c_zeros_op(uint32_t *even, size_t len)
 {
     int n;
@@ -177,8 +204,12 @@ static void crc32c_zeros_op(uint32_t *even, size_t len)
         even[n] = odd[n];
 }
 
-/* Take a length and build four lookup tables for applying the zeros operator
-   for that length, byte-by-byte on the operand. */
+/**
+ * @brief Take a length and build four lookup tables for applying the zeros operator
+   for that length, byte-by-byte on the operand.
+ * @param zeros //TODO
+ * @param len //TODO
+ */
 static void crc32c_zeros(uint32_t zeros[][256], size_t len)
 {
     uint32_t n;
@@ -193,7 +224,12 @@ static void crc32c_zeros(uint32_t zeros[][256], size_t len)
     }
 }
 
-/* Apply the zeros operator table to crc. */
+/**
+ * @brief Apply the zeros operator table to crc.
+ * @param zeros //TODO
+ * @param crc //TODO
+ * @return //TODO
+ */
 static inline uint32_t crc32c_shift(uint32_t zeros[][256], uint32_t crc)
 {
     return zeros[0][crc & 0xff] ^ zeros[1][(crc >> 8) & 0xff] ^
@@ -215,14 +251,22 @@ static pthread_once_t crc32c_once_hw = PTHREAD_ONCE_INIT;
 static uint32_t crc32c_long[4][256];
 static uint32_t crc32c_short[4][256];
 
-/* Initialize tables for shifting crcs. */
+/**
+ * @brief Initialize tables for shifting crcs.
+ */
 static void crc32c_init_hw(void)
 {
     crc32c_zeros(crc32c_long, LONG);
     crc32c_zeros(crc32c_short, SHORT);
 }
 
-/* Compute CRC-32C using the Intel hardware instruction. */
+/**
+ * @brief Compute CRC-32C using the Intel hardware instruction.
+ * @param crc //TODO
+ * @param buf //TODO
+ * @param len //TODO
+ * @return //TODO
+ */
 static uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len)
 {
     const unsigned char *next = buf;
@@ -327,8 +371,14 @@ static uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len)
         (have) = (ecx >> 20) & 1; \
     } while (0)
 
-/* Compute a CRC-32C.  If the crc32 instruction is available, use the hardware
-   version.  Otherwise, use the software version. */
+/**
+ * @brief Compute a CRC-32C.  If the crc32 instruction is available, use the hardware
+   version.  Otherwise, use the software version.
+ * @param crc //TODO
+ * @param buf //TODO
+ * @param len //TODO
+ * @return //TODO
+ */
 uint32_t crc32c(uint32_t crc, const void *buf, size_t len)
 {
     int sse42;
@@ -341,6 +391,12 @@ uint32_t crc32c(uint32_t crc, const void *buf, size_t len)
 #define SIZE (262144*3)
 #define CHUNK SIZE
 
+/**
+ * @brief //TODO
+ * @param data //TODO
+ * @param len //TODO
+ * @return //TODO
+ */
 uint32_t calc_crc32c (char *data, ssize_t len) {
 
     uint32_t crc = 0;

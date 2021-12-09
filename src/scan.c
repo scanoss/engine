@@ -36,9 +36,20 @@
 #include "versions.h"
 #include "winnowing.h"
 
+/**
+  @file scan.c
+  @date 12 Jul 2020
+  @brief Scan-related subroutines.
+ 
+  Long description // TODO
+  @see https://github.com/scanoss/engine/blob/master/src/scan.c
+ */
+
 char *ignored_assets = NULL;
 
-/* Calculate and write source wfp md5 in scan->source_md5 */
+/** @brief Calculate and write source wfp md5 in scan->source_md5 
+    @param scan Scan data
+	*/
 static void calc_wfp_md5(scan_data *scan)
 {
 	uint8_t tmp_md5[16];
@@ -48,7 +59,10 @@ static void calc_wfp_md5(scan_data *scan)
 	free(tmp_md5_hex);
 }
 
-/* Init scan structure */
+/** @brief Init scan structure 
+    @param target File to scan
+    @return Scan data
+    */
 scan_data scan_data_init(char *target)
 {
 	scan_data scan;
@@ -78,6 +92,9 @@ scan_data scan_data_init(char *target)
 	return scan;
 }
 
+/** @brief Resets scan data 
+    @param scan Scan data
+	*/
 static void scan_data_reset(scan_data *scan)
 {
 	*scan->file_path = 0;
@@ -92,6 +109,9 @@ static void scan_data_reset(scan_data *scan)
 	scan->identified = false;
 }
 
+/** @brief Frees scan data memory
+    @param scan Scan data
+	*/
 void scan_data_free(scan_data scan)
 {
 	free(scan.md5);
@@ -102,7 +122,10 @@ void scan_data_free(scan_data scan)
 	free(scan.matchmap);
 }
 
-/* Returns true if md5 is the md5sum for NULL */
+/** @brief Returns true if md5 is the md5sum for NULL
+    @param md5 File ID (md5)
+    @result Empty file result
+	  */
 static bool zero_bytes (uint8_t *md5)
 {
 	uint8_t empty[] = "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e";
@@ -113,7 +136,10 @@ static bool zero_bytes (uint8_t *md5)
 	return true;
 }
 
-/* Performs component and file comparison */
+/** @brief Performs component and file comparison 
+    @param fid File ID (md5)
+    @return Match type
+	  */
 static matchtype ldb_scan_file(uint8_t *fid) {
 			
 	scanlog("Checking entire file\n");
@@ -128,7 +154,10 @@ static matchtype ldb_scan_file(uint8_t *fid) {
 	return match_type;
 }
 
-/* Return true if asset is found in declared_components (-s parameter) */
+/** @brief Return true if asset is found in declared_components (-s parameter)
+    @param match Match data
+    @return Asset declaration result
+    */
 bool asset_declared(match_data match)
 {
 	if (!declared_components) return false;
@@ -158,8 +187,14 @@ bool asset_declared(match_data match)
 	return false;
 }
 
-/* Returns true if rec_ln is longer than everything else in "matches"
-	 also, update position with the position of a longer path */
+/** @brief Returns true if rec_ln is longer than everything else in "matches"
+	 also, update position with the position of a longer path 
+	  @param matches Match data
+	  @param total_matches Total number of matches
+	  @param rec_ln Path length
+	  @param position Position to be updated?
+    @return Scan result (SUCCESS/FAILURE)
+	*/
 bool longer_path_in_set(match_data *matches, int total_matches, int rec_ln, int *position)
 {
 	if (scan_limit > total_matches) return false;
@@ -177,7 +212,11 @@ bool longer_path_in_set(match_data *matches, int total_matches, int rec_ln, int 
 	return true;
 }
 
-/* Determine if a file is to be skipped based on extension or path content */
+/** @brief Determine if a file is to be skipped based on extension or path content
+    @param path File path
+	  @param matches Match data
+    @return Skip result
+    */
 bool skip_file_path(char *path, match_data *matches)
 {
 	bool unwanted = false;
@@ -207,7 +246,13 @@ bool skip_file_path(char *path, match_data *matches)
 	return unwanted;
 }
 
-/* Evaluate file and decide whether or not to add it to *matches */
+/** @brief Evaluate file and decide whether or not to add it to *matches 
+    @param url_id File ID
+    @param path File path
+    @param matches Match data
+    @param component_hint Component hint?
+    @param match_md5 Match md5
+	  */
 void consider_file_record(\
 		uint8_t *url_id,\
 		char *path,\
@@ -222,7 +267,7 @@ void consider_file_record(\
 
 	int total_matches = count_matches(matches);
 
-	/* If we have a full set, and this path is longer than others, skip it*/
+	/* If we have a full set, and this path is longer than others, skip it */
 	int position = -1;
 	if (longer_path_in_set(matches, total_matches, strlen(path), &position)) return;
 
@@ -256,7 +301,10 @@ void consider_file_record(\
 	free(url);
 }
 
-/* Scans a file hash only */
+/** @brief Scans a file hash only
+    @param scan Scan data
+    @return Scan result (SUCCESS/FAILURE)
+	*/
 int hash_scan(scan_data *scan)
 {
 	scan->preload = true;
@@ -273,7 +321,10 @@ int hash_scan(scan_data *scan)
 	return EXIT_SUCCESS;
 }
 
-/* Scans a wfp file with winnowing fingerprints */
+/** @brief Scans a wfp file with winnowing fingerprints 
+    @param scan Scan data
+    @return Scan result (SUCCESS/FAILURE)
+	*/
 int wfp_scan(scan_data *scan)
 {
 	char * line = NULL;
@@ -366,9 +417,11 @@ int wfp_scan(scan_data *scan)
 	return EXIT_SUCCESS;
 }
 
-/* Scans a file and returns JSON matches via STDOUT
+/** @brief Scans a file and returns JSON matches via STDOUT
    scan structure can be already preloaded (.wfp scan)
-   otherwise, it will be loaded here (scanning a physical file) */
+   otherwise, it will be loaded here (scanning a physical file) 
+   @param scan //TODO
+   */
 void ldb_scan(scan_data *scan)
 {
 	bool skip = false;

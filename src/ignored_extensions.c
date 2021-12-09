@@ -20,9 +20,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file ignored_extensions.c
+  * @date 1 Jun 2020 
+  * @brief Define the extensions to be excluded from the analysis.
+ 
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/ignored_extensions.c
+  */
+
 #include <stddef.h>
 
-/* File extensions to be skipped */
+/** @brief File extensions to be skipped */
 char *IGNORED_EXTENSIONS[] = {
 
 	/* File extensions */

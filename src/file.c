@@ -20,6 +20,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file file.c
+  * @date 12 Jul 2020 
+  * @brief Contains the functions used for processing the file table from the KB.
+ 
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/file.c
+  */
 
 #include <sys/stat.h>
 #include <openssl/md5.h>
@@ -35,6 +43,11 @@
 #include "ignorelist.h"
 #include "parse.h"
 
+/**
+ * @brief Check is a given path is a file or not.
+ * @param path string path
+ * @return true is it is a file, false otherwise.
+ */
 bool is_file(char *path)
 {
 	struct stat pstat;
@@ -44,6 +57,11 @@ bool is_file(char *path)
 	return false;
 }
 
+/**
+ * @brief Check f a given path is a dir or not
+ * @param path string path
+ * @return true is it is a dir, false otherwise.
+ */
 bool is_dir(char *path)
 {
 	struct stat pstat;
@@ -53,6 +71,11 @@ bool is_dir(char *path)
 	return false;
 }
 
+/**
+ * @brief get size of a given file
+ * @param path string path
+ * @return file size
+ */
 uint64_t get_file_size(char *path)
 {
 	uint64_t length = 0;
@@ -66,6 +89,12 @@ uint64_t get_file_size(char *path)
 	return length;
 }
 
+/**
+ * @brief read a file and put it into a buffer.
+ * @param[out] out output buffer.
+ * @param path file path.
+ * @param maxlen max length to read.
+ */
 void read_file(char *out, char *path, uint64_t maxlen)
 {
 
@@ -98,7 +127,11 @@ void read_file(char *out, char *path, uint64_t maxlen)
 	}
 }
 
-/* Calculate the MD5 for filepath contents */
+/**
+ * @brief Calculate the MD5 for filepath contents.
+ * @param filepath file path.
+ * @param md5_result calculated md5.
+ */
 void get_file_md5(char *filepath, uint8_t *md5_result)
 {
 
@@ -127,7 +160,10 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 	fclose(in);
 }
 
-/* Return the number of directories in path */
+/**
+ * @brief Return the number of directories in path
+ * @return //TODO
+ */
 int dir_count(char *path)
 {
 	int count = 1;
@@ -136,6 +172,17 @@ int dir_count(char *path)
 	return count;
 }
 
+/**
+ * @brief Collect all files function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param raw_data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 
@@ -172,7 +219,18 @@ char *file_extension(char *path)
 	return NULL;
 }
 
-/* Get the first file record and copy extension to ptr */
+
+/**
+ * @brief Get the first file record and copy extension to ptr. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param raw_data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
 bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen) return false;
@@ -191,7 +249,11 @@ bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 	strcpy((char *) ptr, ext);
 	return true;
 }
-
+/**
+ * @brief Get the extension of a given file into a ldb table.
+ * @param md5 input mdz
+ * @return string with the extension
+ */
 char *get_file_extension(uint8_t *md5)
 {
 	char *out = malloc(MAX_ARGLN + 1);

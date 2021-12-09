@@ -19,6 +19,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  * @file debug.c
+  * @date 12 Jul 2020 
+  * @brief Contains the functions used for debug
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/debug.c
+  */
+
 #include <stdio.h>
 #include <sys/time.h>
 #include "scanoss.h"
@@ -32,12 +41,21 @@ bool quiet;
 double progress_timer = 0;
 long microseconds_start;
 
+/**
+ * @brief //Calculate the time of execution
+ * @return //time in ms  
+ */
 long microseconds_now()
 {
 	struct timeval now; gettimeofday(&now, NULL);
 	return (now.tv_sec*(int)1e6+now.tv_usec);
 }
 
+/**
+ * @brief Print the logs in stderr
+ * @param fmt string to be printed  
+ * @param ... //TODO
+ */
 void scanlog(const char *fmt, ...)
 {
 	if (!debug_on) return;
@@ -72,6 +90,13 @@ void scanlog(const char *fmt, ...)
 	va_end(args);
 }
 
+/**
+ * @brief Calculate  the progress % of the operation 
+ * @param prompt messege to shows  
+ * @param count actual value 
+ * @param max final value  
+ * @param percent print in percent
+ */
 void progress(char *prompt, size_t count, size_t max, bool percent)
 {
 	struct timeval t;
@@ -88,6 +113,10 @@ void progress(char *prompt, size_t count, size_t max, bool percent)
 	fflush(stdout);
 }
 
+/**
+ * @brief Register if a query is taking to much time 
+ * @param scan Processing scan
+ */
 void slow_query_log(scan_data *scan)
 {
 	long elapsed = microseconds_now() - scan->timer;
@@ -102,7 +131,10 @@ void slow_query_log(scan_data *scan)
 	}
 }
 
-/* Output matchmap to a file (MAP_DUMP) */
+/**
+ * @brief Output matchmap to a file (MAP_DUMP)
+ * @param scan processing scan  
+ */
 void map_dump(scan_data *scan)
 {
 	FILE *map = fopen(MAP_DUMP, "w");
@@ -139,6 +171,9 @@ void map_dump(scan_data *scan)
 	fclose(map);
 }
 
+/**
+ * @brief Test function to evaluete the performance of a scan
+ */
 void scan_benchmark()
 {
 	uint32_t total_hashes = 100; // Number of hashes per pseudo file

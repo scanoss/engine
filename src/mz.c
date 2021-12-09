@@ -19,6 +19,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file mz.c
+  * @date 7 Feb 2021 
+  * @brief Contains the functions used for uncompress file contents using mz lib.
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/mz.c
+  */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -27,6 +36,10 @@
 #include "ldb.h"
 #include "decrypt.h"
 
+/**
+ * @brief uncompress the file contents of a given md5 key
+ * @param key md5 key
+ */
 void mz_file_contents(char *key)
 {
 

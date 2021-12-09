@@ -45,7 +45,7 @@
 #define SNIPPET_LINE_TOLERANCE 10
 
 /* Log files */
-#define SCANOSS_VERSION "4.3.6"
+#define SCANOSS_VERSION "4.3.7"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"

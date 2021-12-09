@@ -20,6 +20,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+  * @file report.c
+  * @date 10 Ago 2020
+  * @brief Contains the functions used to print the json output.
+  
+  * //TODO Long description
+  * @see https://github.com/scanoss/engine/blob/master/src/report.c
+  */
+
 #include "debug.h"
 #include "report.h"
 #include "quality.h"
@@ -35,30 +44,43 @@
 
 uint64_t engine_flags = 0;
 
-
-/* Open JSON report */
+/**
+ * @brief Open JSON report
+ */
 void json_open()
 {
 	if (!quiet) printf("{\n");
 }
 
-/* Close main report */
+/**
+ * @brief Close main report
+ */
 void json_close()
 {
 	if (!quiet) printf("}\n");
 }
 
+/**
+ * @brief open JSON  section for a file
+ * @param filename file name string
+ */
 void json_open_file(char *filename)
 {    
 	if (!quiet) printf("  \"%s\": [\n", filename);
 }
 
+/**
+ * @brief Close file section
+ */
 void json_close_file()
 {
 	if (!quiet) printf("  ]\n");
 }
 
-/* Add server statistics to JSON */
+/**
+ * @brief Add server statistics to JSON
+ * @param scan scan data pointer
+ */
 void print_server_stats(scan_data *scan)
 {
 	char hostname[MAX_ARGLN + 1];
@@ -74,7 +96,10 @@ void print_server_stats(scan_data *scan)
 	printf("      }\n");
 }
 
-/* Return a match=none result */
+/**
+ * @brief Return a match=none result
+ * @param scan scan data pointer
+ */
 void print_json_nomatch(scan_data *scan)
 {
 	if (quiet) return;
@@ -86,6 +111,10 @@ void print_json_nomatch(scan_data *scan)
 	fflush(stdout);
 }
 
+/**
+ * @brief Print purl array for a match
+ * @param match match item
+ */
 void print_purl_array(match_data match)
 {
 	printf("      \"purl\": [");
@@ -99,7 +128,12 @@ void print_purl_array(match_data match)
 	printf("\n      ],\n");
 }
 
-/* Skip the first directory name for Github and Gitlab files */
+/**
+ * @brief Skip the first directory name for Github and Gitlab files
+ * @param purl purl string
+ * @param file file string
+ * @return modified file string
+ */
 char *file_skip_release(char *purl, char *file)
 {
 	if (!(engine_flags & ENABLE_GITHUB_FULL_PATH) && (starts_with(purl, "pkg:github") || starts_with(purl, "pkg:gitlab")))
@@ -109,7 +143,12 @@ char *file_skip_release(char *purl, char *file)
 	return file;
 }
 
-/* Return match details */
+/**
+ * @brief Return match details
+ * @param scan scan data
+ * @param match match item
+ * @param match_counter[out] pointer to match counter
+ */
 void print_json_match(scan_data *scan, match_data match, int *match_counter)
 {
 	if (quiet) return;

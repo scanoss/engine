@@ -19,6 +19,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/**
+  @file util.c
+  @date 12 Jul 2020
+  @brief Contains mixed funtions with general utilities
+ 
+  Long description // TODO
+  @see https://github.com/scanoss/engine/blob/master/src/util.c
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
@@ -30,7 +40,12 @@
 #include "ldb.h"
 #include "crc32c.h"
 
-/* Returns a pointer to field n in data */
+/**
+ * @brief Returns a pointer to field n in data
+ * @param n field number
+ * @param data data buffer
+ * @return pointer to field
+ */
 char *field_n(int n, char *data)
 {
   int commas = 0;
@@ -38,8 +53,13 @@ char *field_n(int n, char *data)
   return NULL;
 }
 
-/* Case insensitive string start comparison,
-	returns true if a starts with b or viceversa */
+/**
+ * @brief Case insensitive string start comparison,
+	returns true if a starts with b or viceversa
+ * @param a string a
+ * @param b string b
+ * @return true if start the same
+ */
 bool stristart(char *a, char *b)
 {
 	if (!*a || !*b) return false;
@@ -47,7 +67,10 @@ bool stristart(char *a, char *b)
 	return true;
 }
 
-/* Reverse an uint32 number  */
+/**
+ * @brief Reverse an uint32 number
+ * @param data pointer to daa buffer to be inverted
+ */
 void uint32_reverse(uint8_t *data)
 {
 	uint8_t tmp = data[0];
@@ -58,7 +81,12 @@ void uint32_reverse(uint8_t *data)
 	data[2] = tmp;
 }
 
-/* Compares two MD5 checksums */
+/**
+ * @brief Compares two MD5 checksums
+ * @param md51 md5 1
+ * @param md52 md5 2
+ * @return true for equal
+ */
 bool md5cmp(uint8_t *md51, uint8_t *md52)
 {
 	for (int i = 0; i < 16; i++)
@@ -67,7 +95,10 @@ bool md5cmp(uint8_t *md51, uint8_t *md52)
 	return true;
 }
 
-/* Trim str */
+/**
+ * @brief Trim str
+ * @param str string to trim
+ */
 void trim(char *str)
 {
     int i = 0;
@@ -83,7 +114,12 @@ void trim(char *str)
     str[i + 1] = 0;
 }
 
-/* Returns the pair md5 of "component/vendor" */
+/**
+ * @brief Returns the pair md5 of "component/vendor"
+ * @param component component string
+ * @param vendor vendor sting
+ * @param out[out] pointer ot md5
+ */
 void vendor_component_md5(char *component, char *vendor, uint8_t *out)
 {
 	char pair[1024] = "\0";
@@ -100,7 +136,11 @@ void vendor_component_md5(char *component, char *vendor, uint8_t *out)
 	scanlog("vendor/component: %s = %s\n", pair, hex);
 }
 
-/* Removes chr from str */
+/**
+ * @brief  Removes chr from str
+ * @param str input string
+ * @param chr char to be removed
+ */
 void remove_char(char *str, char chr)
 {
 	char *s = str;
@@ -111,7 +151,10 @@ void remove_char(char *str, char chr)
 	}
 }
 
-/* Cleans str from unprintable characters or quotes */
+/**
+ * @brief Cleans str from unprintable characters or quotes
+ * @param str string to be processed
+ */
 void string_clean(char *str)
 {
   char *s = str;
@@ -122,7 +165,10 @@ void string_clean(char *str)
   }
 }
 
-/* Returns the current date stamp */
+/**
+ * @brief Returns the current date stamp
+ * @return pointer to date string
+ */
 char *datestamp()
 {
 	time_t timestamp;
@@ -134,7 +180,9 @@ char *datestamp()
 	return stamp;
 }
 
-/* Prints a "created" JSON element with the current datestamp */
+/**
+ * @brief Prints a "created" JSON element with the current datestamp
+ */
 void print_datestamp()
 {
 	char *stamp = datestamp();
@@ -142,7 +190,11 @@ void print_datestamp()
 	free(stamp);
 }
 
-/* Returns a string with a hex representation of md5 */
+/**
+ * @brief Returns a string with a hex representation of md5
+ * @param md5 input md5
+ * @return pointer to string
+ */
 char *md5_hex(uint8_t *md5)
 {
 	char *out =  calloc(2 * MD5_LEN + 1, 1);
@@ -150,13 +202,22 @@ char *md5_hex(uint8_t *md5)
 	return out;
 }
 
-/* Returns the CRC32C for a string */
+/**
+ * @brief Returns the CRC32C for a string
+ * @param str input string
+ * @return crc32
+ */
 uint32_t string_crc32c(char *str)
 {
 	return calc_crc32c (str, strlen(str));
 }
 
-/* Check if a crc is found in the list (add it if not) */
+/**
+ * @brief Check if a crc is found in the list (add it if not)
+ * @param list pointer to list
+ * @param crc input crc
+ * @return true if the crc was found in the list
+ */
 bool add_CRC(uint32_t *list, uint32_t crc)
 {
 	for (int i = 0; i < CRC_LIST_LEN; i++)
