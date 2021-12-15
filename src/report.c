@@ -199,7 +199,9 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	free(url_id);
 
 	char *file_id = md5_hex(match.file_md5);
+
 	printf("      \"file_hash\": \"%s\",\n", file_id);
+	printf("      \"source_hash\": \"%s\",\n", scan->source_md5);
 
 	/* Output file_url (same as url when match type = url) */
 	if (match.type != url)

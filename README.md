@@ -1,8 +1,8 @@
-# SCANOSS Open Source Inventory Engine
+# SCANOSS Open Source Engine
 
-THE FIRST OPEN SOURCE INVENTORY ENGINE BUILT FOR DEVELOPERS
+THE FIRST OPEN SOURCE ENGINE BUILT FOR DEVELOPERS
 
-SCANOSS is an open, configurable OSS inventory engine that was built specifically for developers, empowering them to confidently produce compliant code from the moment they begin writing, while delivering greater license and usage visibility for the broader DevOps team and supply chain partners.
+SCANOSS is an open, configurable OSS engine that was built specifically for developers, empowering them to confidently produce compliant code from the moment they begin writing, while delivering greater license and usage visibility for the broader DevOps team and supply chain partners.
 
 With its open architecture that is easy to integrate into existing processes and toolchains, SCANOSS transforms software bill of materials (SBOM) creation from ‘write now, audit later’ to an always-on analysis of live code.
 
@@ -14,7 +14,7 @@ The knowledge database is incrementally built using the SCANOSS mining tool (min
 
 # Installation
 
-The SCANOSS Inventory Engine a command-line tool used for comparing a file or directory against the SCANOSS Knowledgebase. The source code can be downloaded and compiled as follows:
+The SCANOSS Engine is a command-line tool used for comparing a file or directory against the SCANOSS Knowledgebase. The source code can be downloaded and compiled as follows:
 
 ```
 wget -O engine.zip https://github.com/scanoss/engine/archive/master.zip
@@ -31,7 +31,7 @@ If you want to try scanoss without install it, the execute this command in bash:
 export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH
 ```
 
-The last command should show the installed version of the SCANOSS Inventory Engine.
+The last command should show the installed version of the SCANOSS Engine.
 
 # Usage
 
@@ -90,7 +90,7 @@ If a component hint is not provided, the engine will try to attempt detection of
 
 # License
 
-The Scanoss Open Source Inventory Engine is released under the GPL 2.0 license. Please check the LICENSE file for more information.
+The Scanoss Open Source Engine is released under the GPL 2.0 license. Please check the LICENSE file for more information.
 
 Copyright (C) 2018-2020 SCANOSS.COM
 

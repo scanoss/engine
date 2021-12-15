@@ -453,6 +453,10 @@ void ldb_scan(scan_data *scan)
 	if (!skip)
 	{
 		/* Scan full file */
+		char *tmp_md5_hex = md5_hex(scan->md5);
+		strcpy(scan->source_md5, tmp_md5_hex);
+		free(tmp_md5_hex);
+	
 		scan->match_type = ldb_scan_file(scan->md5);
 
 		/* If no match, scan snippets */
