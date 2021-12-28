@@ -115,7 +115,7 @@ void print_server_stats(scan_data *scan)
 	printf("      \"server\": {\n");
 	printf("        \"hostname\": \"%s\",\n", hostname);
 	printf("        \"version\": \"%s\",\n", SCANOSS_VERSION);
-	printf("        \"KB version\": %s,\n", kb_version);
+	printf("        \"kb_version\": %s,\n", kb_version);
 	
 	printf("        \"flags\": \"%ld\",\n", engine_flags);
 	if (ignored_assets)
