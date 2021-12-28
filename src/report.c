@@ -28,7 +28,7 @@
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/report.c
   */
-
+#include <stdio.h>
 #include "debug.h"
 #include "report.h"
 #include "quality.h"
@@ -41,6 +41,7 @@
 #include "limits.h"
 #include "url.h"
 #include "parse.h"
+#include "file.h"
 
 uint64_t engine_flags = 0;
 
@@ -77,6 +78,29 @@ void json_close_file()
 	if (!quiet) printf("  ]\n");
 }
 
+char * get_kb_version(void)
+{
+	char * kb_version_path = NULL;
+	asprintf(&kb_version_path,"/var/lib/ldb/%s/version.json",oss_url.db);
+	
+	char * resp = NULL;
+
+	if (ldb_file_exists(kb_version_path))
+	{
+		uint64_t len = 0;
+		char * kb_version = (char*) file_read(kb_version_path, &len);
+		if (len > 0)
+		{
+			kb_version[len-1] = 0;
+			resp = kb_version;
+		}
+	}
+
+	if (!resp)
+		asprintf(&resp,"\"N/A\"");
+	return resp;
+}
+
 /**
  * @brief Add server statistics to JSON
  * @param scan scan data pointer
@@ -84,16 +108,22 @@ void json_close_file()
 void print_server_stats(scan_data *scan)
 {
 	char hostname[MAX_ARGLN + 1];
+	char * kb_version = get_kb_version();
+	
 	gethostname(hostname, MAX_ARGLN + 1);
 	double elapsed = (microseconds_now() - scan->timer);
 	printf("      \"server\": {\n");
 	printf("        \"hostname\": \"%s\",\n", hostname);
 	printf("        \"version\": \"%s\",\n", SCANOSS_VERSION);
+	printf("        \"KB version\": %s,\n", kb_version);
+	
 	printf("        \"flags\": \"%ld\",\n", engine_flags);
 	if (ignored_assets)
 		printf("        \"ignored\": \"%s\",\n", ignored_assets);
 	printf("        \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
 	printf("      }\n");
+
+	free(kb_version);
 }
 
 /**

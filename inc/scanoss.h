@@ -1,8 +1,6 @@
 #ifndef __SCANOSS_H
     #define __SCANOSS_H
     
-#define _GNU_SOURCE
-
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <dirent.h>
