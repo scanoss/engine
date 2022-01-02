@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "scanoss.h"
+#include "debug.h"
 
 /**
   * @file decrypt.c
@@ -30,5 +31,8 @@ void decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8
 */  
 void cat_decrypted_mz(struct mz_job *job, char *key)
 {
-	if (ldb_valid_table("oss/sources")) mz_cat(job, key);
+  scanlog("Decrypt and MZ cat");
+  if (ldb_valid_table("oss/sources")) mz_cat(job, key);
+  else
+    scanlog("cannot open table sourcess");
 }

@@ -328,11 +328,10 @@ void print_licenses(match_data match)
 	else
 	{
 		match.first_record = true;
+		scanlog("License NOT present in URL table\n");
 	}
 
 	/* Look for component or file license */
-
-	scanlog("License NOT present in URL table\n");
 
 	records = ldb_fetch_recordset(NULL, oss_license, match.file_md5, false, print_licenses_item, &match);
 	scanlog("License for file_id license returns %d hits\n", records);
