@@ -96,7 +96,7 @@ void print_cryptography(match_data match)
 {
 	if (!ldb_table_exists(oss_cryptography.db, oss_cryptography.table)) //skip crypto if the table is not present
 		return;
-	printf("      \"cryptography\": ");
+	printf(",\n      \"cryptography\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */
@@ -107,6 +107,6 @@ void print_cryptography(match_data match)
 	records = ldb_fetch_recordset(NULL, oss_cryptography, match.file_md5, false, print_crypto_item, &match);
 
 	if (records) printf("\n      ");
-	printf("],\n");
+	printf("]");
 }
 

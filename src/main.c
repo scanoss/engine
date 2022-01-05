@@ -145,6 +145,8 @@ void initialize_ldb_tables(char *name)
 	oss_cryptography.rec_ln = 0;
 	oss_cryptography.ts_ln = 2;
 	oss_cryptography.tmp = false;
+
+	kb_version_get();
 }
 
 /**
@@ -307,7 +309,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'F':
-				engine_flags = atol(optarg);
+				engine_flags |= atol(optarg);
 				break;
 
 			case 'l':

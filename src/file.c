@@ -95,7 +95,7 @@ uint64_t get_file_size(char *path)
  * @param path file path.
  * @param maxlen max length to read.
  */
-void read_file(char *out, char *path, uint64_t maxlen)
+int read_file(char *out, char *path, uint64_t maxlen)
 {
 
 	char *src;
@@ -104,7 +104,7 @@ void read_file(char *out, char *path, uint64_t maxlen)
 
 	if (!is_file(path))
 	{
-		return;
+		return 0;
 	}
 
 	FILE *file = fopen(path, "rb");
@@ -125,6 +125,8 @@ void read_file(char *out, char *path, uint64_t maxlen)
 		memcpy(out, src, length);
 		free(src);
 	}
+
+	return length;
 }
 
 /**
