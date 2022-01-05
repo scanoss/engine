@@ -74,7 +74,11 @@ void scanlog(const char *fmt, ...)
 	}
 
 	FILE *log = fopen(SCAN_LOG, "a");
-
+	if (!log)
+	{
+		printf("Warning: Cannot access the log file\n");
+		return;
+	}
 	/* Add entry to log */
 	if (*fmt) vfprintf(log, fmt, args);
 
@@ -126,7 +130,13 @@ void slow_query_log(scan_data *scan)
 		char data[1024] = "\0";
 		sprintf(data, "%lu, %.6fs, %s\n", (unsigned long)time(NULL), (double) elapsed / 1000000, scan->file_path);
 		FILE *log = fopen(SLOW_QUERY_LOG, "a");
-		if (!fprintf(log, data)) printf("Warning: Cannot log slow query\n");
+		if (!log)
+		{
+			 printf("Warning: Cannot log slow query\n");
+			 return;
+		}
+		
+		fprintf(log, data);
 		fclose(log);
 	}
 }
