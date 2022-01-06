@@ -289,14 +289,17 @@ bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 
 void purl_release_date(char *url, char *date)
 {
-		*date = 0;
-		char purl[MAX_ARGLN + 1] = "\0";
-		extract_csv(purl, (char *) url , 6, MAX_ARGLN);
+	*date = 0;
 
-		uint8_t purl_md5[MD5_LEN];
-		MD5((uint8_t *)purl, strlen(purl), purl_md5);
+	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
+		return; 
+	char purl[MAX_ARGLN + 1] = "\0";
+	extract_csv(purl, (char *) url , 6, MAX_ARGLN);
 
-		ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) date);
+	uint8_t purl_md5[MD5_LEN];
+	MD5((uint8_t *)purl, strlen(purl), purl_md5);
+
+	ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) date);
 }
 
 

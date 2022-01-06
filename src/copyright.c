@@ -143,7 +143,7 @@ void print_copyrights(match_data match)
 {
 	if (!ldb_table_exists(oss_copyright.db, oss_copyright.table)) //skip purl if the table is not present
 		return;
-	printf("      \"copyrights\": ");
+	printf(",\n      \"copyrights\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */
@@ -159,5 +159,5 @@ void print_copyrights(match_data match)
 			if (ldb_fetch_recordset(NULL, oss_copyright, match.purl_md5[i], false, print_copyrights_item, &match)) break;
 
 	if (records) printf("\n      ");
-	printf("],\n");
+	printf("]");
 }

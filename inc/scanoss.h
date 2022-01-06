@@ -1,8 +1,6 @@
 #ifndef __SCANOSS_H
     #define __SCANOSS_H
     
-#define _GNU_SOURCE
-
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <dirent.h>
@@ -45,7 +43,7 @@
 #define SNIPPET_LINE_TOLERANCE 10
 
 /* Log files */
-#define SCANOSS_VERSION "4.3.8"
+#define SCANOSS_VERSION "4.3.9"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
@@ -67,6 +65,7 @@
 #define ENABLE_REPORT_IDENTIFIED 512
 #define ENABLE_DOWNLOAD_URL 1024
 #define ENABLE_GITHUB_FULL_PATH 2048
+#define DISABLE_SERVER_INFO 4096
 #define MAX_PURLS 10
 #define MAX_SBOM_ITEMS 100
 #define SHORTEST_PATHS_QTY 2000 // number of shortest path to evaluate

@@ -100,7 +100,7 @@ void print_quality(match_data match)
 	if (!ldb_table_exists(oss_quality.db, oss_quality.table)) //skip purl if the table is not present
 		return;
 	
-	printf("      \"quality\": ");
+	printf(",\n      \"quality\": ");
 	printf("[");
 
 	uint32_t records = 0;
@@ -108,6 +108,6 @@ void print_quality(match_data match)
 	records = ldb_fetch_recordset(NULL, oss_quality, match.file_md5, false, print_quality_item, NULL);
 
 	if (records) printf("\n      ");
-	printf("],\n");
+	printf("]");
 }
 

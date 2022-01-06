@@ -28,7 +28,7 @@
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/report.c
   */
-
+#include <stdio.h>
 #include "debug.h"
 #include "report.h"
 #include "quality.h"
@@ -41,8 +41,10 @@
 #include "limits.h"
 #include "url.h"
 #include "parse.h"
+#include "file.h"
 
 uint64_t engine_flags = 0;
+char  kb_version[MAX_INPUT];
 
 /**
  * @brief Open JSON report
@@ -77,6 +79,31 @@ void json_close_file()
 	if (!quiet) printf("  ]\n");
 }
 
+void kb_version_get(void)
+{
+	char * kb_version_path = NULL;
+	asprintf(&kb_version_path,"/var/lib/ldb/%s/version.json",oss_url.db);
+	
+	if (ldb_file_exists(kb_version_path))
+	{
+		uint64_t len = read_file(kb_version, kb_version_path, sizeof(kb_version));
+		free(kb_version_path);
+		if (len > 0)
+		{
+			char * end = strrchr(kb_version, '}');
+			char * start = strchr(kb_version,'{');
+			if (start && end)
+			{
+				*(end+1)=0;
+				return;
+			}
+		}
+	}
+	
+	free(kb_version_path);
+	sprintf(kb_version,"\"N/A\"");
+}
+
 /**
  * @brief Add server statistics to JSON
  * @param scan scan data pointer
@@ -84,16 +111,20 @@ void json_close_file()
 void print_server_stats(scan_data *scan)
 {
 	char hostname[MAX_ARGLN + 1];
+	
 	gethostname(hostname, MAX_ARGLN + 1);
 	double elapsed = (microseconds_now() - scan->timer);
-	printf("      \"server\": {\n");
+	printf(",\n      \"server\": {\n");
 	printf("        \"hostname\": \"%s\",\n", hostname);
 	printf("        \"version\": \"%s\",\n", SCANOSS_VERSION);
+	printf("        \"kb_version\": %s,\n", kb_version);
+	
 	printf("        \"flags\": \"%ld\",\n", engine_flags);
 	if (ignored_assets)
 		printf("        \"ignored\": \"%s\",\n", ignored_assets);
 	printf("        \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
 	printf("      }\n");
+
 }
 
 /**
@@ -105,7 +136,7 @@ void print_json_nomatch(scan_data *scan)
 	if (quiet) return;
 
 	printf("    {\n");
-	printf("      \"id\": \"none\",\n");
+	printf("      \"id\": \"none\"");
 	print_server_stats(scan);
 	printf("    }\n");
 	fflush(stdout);
@@ -214,14 +245,11 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 
 	free(file_id);
 
+	print_licenses(match);
+
 	if (!(engine_flags & DISABLE_DEPENDENCIES))
 	{
 		print_dependencies(match);
-	}
-
-	if (!(engine_flags & DISABLE_LICENSES))
-	{
-		print_licenses(match);
 	}
 
 	if (!(engine_flags & DISABLE_COPYRIGHTS))
@@ -243,8 +271,8 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	{
 		print_cryptography(match);
 	}
-
-	print_server_stats(scan);
+	if (!(engine_flags & DISABLE_SERVER_INFO))
+		print_server_stats(scan);
 	printf("    }\n");
 	fflush(stdout);
 }
