@@ -111,6 +111,9 @@ void kb_version_get(void)
 void print_server_stats(scan_data *scan)
 {
 	char hostname[MAX_ARGLN + 1];
+
+	if (engine_flags & DISABLE_SERVER_INFO)
+		return;
 	
 	gethostname(hostname, MAX_ARGLN + 1);
 	double elapsed = (microseconds_now() - scan->timer);
@@ -271,8 +274,8 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	{
 		print_cryptography(match);
 	}
-	if (!(engine_flags & DISABLE_SERVER_INFO))
-		print_server_stats(scan);
+
+	print_server_stats(scan);
 	printf("    }\n");
 	fflush(stdout);
 }
