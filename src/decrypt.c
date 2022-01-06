@@ -31,8 +31,8 @@ void decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8
 */  
 void cat_decrypted_mz(struct mz_job *job, char *key)
 {
-  scanlog("Decrypt and MZ cat");
+  scanlog("Decompres and cat");
   if (ldb_valid_table("oss/sources")) mz_cat(job, key);
   else
-    scanlog("cannot open table sourcess");
+    scanlog("cannot open table sources");
 }
