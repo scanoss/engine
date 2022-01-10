@@ -76,7 +76,7 @@ void scanlog(const char *fmt, ...)
 	FILE *log = fopen(SCAN_LOG, "a");
 	if (!log)
 	{
-		printf("Warning: Cannot access the log file\n");
+		fprintf(stderr, "Warning: Cannot access the log file\n");
 		return;
 	}
 	/* Add entry to log */
@@ -132,7 +132,7 @@ void slow_query_log(scan_data *scan)
 		FILE *log = fopen(SLOW_QUERY_LOG, "a");
 		if (!log)
 		{
-			 printf("Warning: Cannot log slow query\n");
+			 fprintf(stderr,"Warning: Cannot log slow query\n");
 			 return;
 		}
 		
