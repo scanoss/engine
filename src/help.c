@@ -66,23 +66,23 @@ Options:\n\
 Engine scanning flags:\n\
 The scanning engine can be configured by passing configuration flags with the -F parameter.\n\
 Alternatively, these value can be written in %s\n\
-+------+---------------------------------------------+\n\
-| Flag | Setting                                     |\n\
-+------+---------------------------------------------+\n\
-|    1 | Disable snippet matching (default: enabled) |\n\
-|    2 | Enable snippet_ids (default: disabled)      |\n\
-|    4 | Disable dependencies (default: enabled)     |\n\
-|    8 | Disable licenses (default: enabled)         |\n\
-|   16 | Disable copyrights (default: enabled)       |\n\
-|   32 | Disable vulnerabilities (default: enabled)  |\n\
-|   64 | Disable quality (default: enabled)          |\n\
-|  128 | Disable criptography (defalt: enabled)      |\n\
-|  256 | Disable best match only (default: enabled)  |\n\
-|  512 | Report identified files (default: disabled) |\n\
-| 1024 | Enable download_url (default: disabled)     |\n\
-| 2048 | Enable GitHub full path (default: disabled) |\n\
-| 4096 | Disable server info (default: enabled)      |\n\
-+------+---------------------------------------------+\n\
++------+--------------------------------------------------+\n\
+| Flag | Setting                                          |\n\
++------+--------------------------------------------------+\n\
+|    1 | Disable snippet matching (default: enabled)      |\n\
+|    2 | Enable snippet_ids (default: disabled)           |\n\
+|    4 | Disable dependencies (default: enabled)          |\n\
+|    8 | Disable licenses (default: enabled)              |\n\
+|   16 | Disable copyrights (default: enabled)            |\n\
+|   32 | Disable vulnerabilities (default: enabled)       |\n\
+|   64 | Disable quality (default: enabled)               |\n\
+|  128 | Disable criptography (defalt: enabled)           |\n\
+|  256 | Disable best match only (default: enabled)       |\n\
+|  512 | Report identified files (default: disabled)      |\n\
+| 1024 | Enable download_url (default: disabled)          |\n\
+| 2048 | Enable GitHub full path (default: disabled)      |\n\
+| 4096 | Disable server info partially (default: enabled) |\n\
++------+--------------------------------------------------+\n\
 Example: scanoss -F 12 DIRECTORY (scans DIRECTORY disabling license and dependency data)\n\
 \n\
 Copyright (C) 2018-2021 SCANOSS.COM\n", ENGINE_FLAGS_FILE);

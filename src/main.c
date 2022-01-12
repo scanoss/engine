@@ -354,12 +354,14 @@ int main(int argc, char **argv)
 				break;
 
 			case 'q':
+				engine_flags = 0;
 				debug_on = true;
 				quiet = true;
 				scanlog("Quiet mode enabled. Displaying only debugging info via STDERR.\n");
 				break;
 
 			case 'd':
+				engine_flags = 0;
 				debug_on = true;
 				scanlog(""); // Log time stamp
 				break;

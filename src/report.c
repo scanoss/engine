@@ -111,21 +111,20 @@ void kb_version_get(void)
 void print_server_stats(scan_data *scan)
 {
 	char hostname[MAX_ARGLN + 1];
-
-	if (engine_flags & DISABLE_SERVER_INFO)
-		return;
-	
-	gethostname(hostname, MAX_ARGLN + 1);
-	double elapsed = (microseconds_now() - scan->timer);
 	printf(",\n      \"server\": {\n");
-	printf("        \"hostname\": \"%s\",\n", hostname);
 	printf("        \"version\": \"%s\",\n", SCANOSS_VERSION);
-	printf("        \"kb_version\": %s,\n", kb_version);
+	printf("        \"kb_version\": %s", kb_version);
 	
-	printf("        \"flags\": \"%ld\",\n", engine_flags);
-	if (ignored_assets)
-		printf("        \"ignored\": \"%s\",\n", ignored_assets);
-	printf("        \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
+	if (!(engine_flags & DISABLE_SERVER_INFO))
+	{
+		gethostname(hostname, MAX_ARGLN + 1);
+		double elapsed = (microseconds_now() - scan->timer);
+		printf(",\n        \"hostname\": \"%s\",\n", hostname);
+		printf("        \"flags\": \"%ld\",\n", engine_flags);
+		if (ignored_assets)
+			printf("        \"ignored\": \"%s\",\n", ignored_assets);
+		printf("        \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
+	}
 	printf("      }\n");
 
 }
