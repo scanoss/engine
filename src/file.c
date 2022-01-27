@@ -209,6 +209,32 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	return false;
 }
 
+/**
+ * @brief Collect all files function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+ * @param key //TODO
+ * @param subkey //TODO
+ * @param subkey_ln //TODO
+ * @param raw_data //TODO
+ * @param datalen //TODO
+ * @param iteration //TODO
+ * @param ptr //TODO
+ * @return //TODO
+ */
+bool count_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+{
+	/* Ignore path lengths over the limit */
+	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+
+	int * count = ptr;
+	*count = iteration;
+	if (iteration >= FETCH_MAX_FILES)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 /* Returns a pointer to the file extension of "path" */
 char *file_extension(char *path)
 {

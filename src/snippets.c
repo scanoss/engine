@@ -113,6 +113,23 @@ int get_shortest_path(uint8_t *md5)
 }
 
 /**
+ * @brief Returns the length of the shortest path among files matching md5
+ * @param md5 MD5 pointer
+ * @return lenght of shortest path
+ */
+int get_match_popularity(uint8_t *md5, int setpoint)
+{
+	/* Direct component match has a top priority */
+	if (!ldb_key_exists(oss_file, md5)) 
+		return 0;
+		
+	int set = setpoint;
+	ldb_fetch_recordset(NULL, oss_file, md5, false, count_all_files, (void *) &set);
+
+	return set;
+}
+
+/**
  * @brief If the extension of the matched file does not match the extension of the scanned file
  *	and the matched file is not among known source code extensions, the match will be discarded
  * 
@@ -152,11 +169,10 @@ uint8_t *biggest_snippet(scan_data *scan)
 {
 	uint8_t *out = NULL;
 	int hits = 0;
-
+	int shortest_path = MAX_PATH;
 	while (true)
 	{
 		int most_hits = 0;
-		int shortest_path = 0;
 
 		/* Select biggest snippet */
 		for (int i = 0; i < scan->matchmap_size; i++)
@@ -165,28 +181,42 @@ uint8_t *biggest_snippet(scan_data *scan)
 
 			if (hits < most_hits) continue;
 
-			/* Calculate length of shortest path */
-			int shortest = get_shortest_path(scan->matchmap[i].md5);
-			bool shorter = false;
-			if (shortest && shortest < shortest_path)
-			{
-				shorter = true;
-				shortest_path = shortest;
-			}
-
 			/* Select match if hits is greater, or equal and shorter path */
-			if ((hits > most_hits) || (hits == most_hits && shorter))
+			if (hits > most_hits)
 			{
 				most_hits = hits;
 				out = scan->matchmap[i].md5;
+				char aux_hex[32];
+				ldb_bin_to_hex(out,16,aux_hex);
+				shortest_path = get_shortest_path(out);
+				scanlog(" selected: %s\n", aux_hex);
+			}
+			else if (hits == most_hits)
+			{
+				int shortest_new = get_shortest_path(scan->matchmap[i].md5);
 
-				/* reset shortest_path in case we have > most_hits */
-				shortest_path = shortest;
+				int populatity = get_match_popularity(out, 0);
+				int populatity_new = get_match_popularity(scan->matchmap[i].md5, populatity * 2);
+
+				char aux_hex[32];
+				ldb_bin_to_hex(out,16,aux_hex);
+
+				char aux_hex2[32];
+				ldb_bin_to_hex(scan->matchmap[i].md5,16,aux_hex);
+
+				scanlog(" %s/%s - pop: %d/%d - short: %d/%d\n", aux_hex2, aux_hex, populatity_new, populatity, shortest_new, shortest_path);
+
+				if (populatity_new >= populatity * 2 || shortest_new < shortest_path)
+				{
+					out = scan->matchmap[i].md5;
+					shortest_path = shortest_new;
+				}			
+
 			}
 		}
 
 		scanlog("Biggest snippet: %d\n", most_hits);
-		scanlog("File path len: %d\n", shortest_path);
+//		scanlog("File path len: %d\n", shortest_path);
 
 		if (most_hits < min_match_hits)
 		{
