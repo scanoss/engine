@@ -165,11 +165,14 @@ bool snippet_extension_discard(scan_data *scan, uint8_t *md5)
  * @param scan scan data pointer
  * @return pointer to selected match
  */
+#define SNIPPET_HITS_RELATIVE_FACTOR 0.5
+#define	SNIPPET_POPULARITY_RELATIVE_FACTOR 1
 uint8_t *biggest_snippet(scan_data *scan)
 {
 	uint8_t *out = NULL;
 	int hits = 0;
 	int shortest_path = MAX_PATH;
+	float hits_relative = 0.0;
 	while (true)
 	{
 		int most_hits = 0;
@@ -180,33 +183,44 @@ uint8_t *biggest_snippet(scan_data *scan)
 			hits = scan->matchmap[i].hits;
 
 			if (hits < most_hits) continue;
-
-			/* Select match if hits is greater, or equal and shorter path */
-			if (hits > most_hits)
+			/* Calculate the relative difference between hits */
+			if (most_hits > 0)
+					hits_relative = (hits - most_hits) / most_hits;
+			
+			/* Select match if the relative hits are biggers than previous selected or if it is the first one*/
+			if (hits_relative > SNIPPET_HITS_RELATIVE_FACTOR || !out) //(hits > most_hits)
 			{
 				most_hits = hits;
 				out = scan->matchmap[i].md5;
-				char aux_hex[32];
-				ldb_bin_to_hex(out,16,aux_hex);
 				shortest_path = get_shortest_path(out);
-				scanlog(" selected: %s - hits %d\n", aux_hex, hits);
+				
+				/* for debuging */
+				char aux_hex[33];
+				ldb_bin_to_hex(out,16,aux_hex);
+				scanlog(" selected: %s - hits relative: %.2f\n", aux_hex, hits_relative);
 			}
-			else if (hits == most_hits)
+			else //(hits == most_hits)
 			{
 				int shortest_new = get_shortest_path(scan->matchmap[i].md5);
 
-				int populatity = get_match_popularity(out, 0);
-				int populatity_new = get_match_popularity(scan->matchmap[i].md5, populatity * 2);
+				int popularity = get_match_popularity(out, 0);
+				int popularity_new = get_match_popularity(scan->matchmap[i].md5, popularity * 2);
 
+				float popularity_relative = 0.0;
+	
+				/* Calculate the relative difference between popularities */
+				if (popularity)
+					popularity_relative = (popularity_new - popularity) / popularity;
+
+				/* for debugging */
 				char aux_hex[33];
-				ldb_bin_to_hex(out,16,aux_hex);
-
+				ldb_bin_to_hex(scan->matchmap[i].md5,16,aux_hex);
 				char aux_hex2[33];
-				ldb_bin_to_hex(scan->matchmap[i].md5,16,aux_hex2);
-
-				scanlog("%s/%s - hits: %d- pop: %d/%d - short: %d/%d\n", aux_hex2, aux_hex, hits, populatity_new, populatity, shortest_new, shortest_path);
-
-				if (populatity_new > populatity * 2 || (shortest_new && shortest_new < shortest_path))
+				ldb_bin_to_hex(out,16,aux_hex2);
+				scanlog("%s / %s - hits: %d- popularity rel: %.2f - short: %d/%d\n", aux_hex, aux_hex2, hits, popularity_relative, shortest_new, shortest_path);
+	
+				/* ponderate the relative popularity and the shortest path*/
+				if (popularity_relative > SNIPPET_POPULARITY_RELATIVE_FACTOR || (shortest_new && shortest_new < shortest_path))
 				{
 					out = scan->matchmap[i].md5;
 					shortest_path = shortest_new;
