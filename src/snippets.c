@@ -122,7 +122,7 @@ int get_match_popularity(uint8_t *md5, int setpoint)
 	/* Direct component match has a top priority */
 	if (!ldb_key_exists(oss_file, md5)) 
 		return 0;
-		
+
 	int set = setpoint;
 	ldb_fetch_recordset(NULL, oss_file, md5, false, count_all_files, (void *) &set);
 
@@ -189,7 +189,7 @@ uint8_t *biggest_snippet(scan_data *scan)
 				char aux_hex[32];
 				ldb_bin_to_hex(out,16,aux_hex);
 				shortest_path = get_shortest_path(out);
-				scanlog(" selected: %s\n", aux_hex);
+				scanlog(" selected: %s - hits %d\n", aux_hex, hits);
 			}
 			else if (hits == most_hits)
 			{
@@ -198,15 +198,15 @@ uint8_t *biggest_snippet(scan_data *scan)
 				int populatity = get_match_popularity(out, 0);
 				int populatity_new = get_match_popularity(scan->matchmap[i].md5, populatity * 2);
 
-				char aux_hex[32];
+				char aux_hex[33];
 				ldb_bin_to_hex(out,16,aux_hex);
 
-				char aux_hex2[32];
-				ldb_bin_to_hex(scan->matchmap[i].md5,16,aux_hex);
+				char aux_hex2[33];
+				ldb_bin_to_hex(scan->matchmap[i].md5,16,aux_hex2);
 
-				scanlog(" %s/%s - pop: %d/%d - short: %d/%d\n", aux_hex2, aux_hex, populatity_new, populatity, shortest_new, shortest_path);
+				scanlog("%s/%s - hits: %d- pop: %d/%d - short: %d/%d\n", aux_hex2, aux_hex, hits, populatity_new, populatity, shortest_new, shortest_path);
 
-				if (populatity_new >= populatity * 2 || shortest_new < shortest_path)
+				if (populatity_new > populatity * 2 || (shortest_new && shortest_new < shortest_path))
 				{
 					out = scan->matchmap[i].md5;
 					shortest_path = shortest_new;
