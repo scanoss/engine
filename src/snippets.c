@@ -176,20 +176,25 @@ uint8_t *biggest_snippet(scan_data *scan)
 	while (true)
 	{
 		int most_hits = scan->matchmap[0].hits;
-		out = scan->matchmap[0].md5;
+
+		/*search initialization, skip useless snippets */
+		int j = 0;
+		for (j = 0; j < scan->matchmap_size; j++)
+			if (scan->matchmap[j].hits >= min_match_hits)
+				break;
 		
+		out = scan->matchmap[j].md5;
 		shortest_path = get_shortest_path(out);
 		if (!shortest_path)
 			shortest_path = MAX_PATH;
-		/* for debuging */
-		char aux_hex[33];
 
 		/* Select biggest snippet */
-		for (int i = 1; i < scan->matchmap_size; i++)
+		for (int i = j; i < scan->matchmap_size; i++)
 		{
 			bool update = false;
 			/* for debugging */
-			char aux_hex2[33];
+			char aux_hex[MD5_LEN * 2 + 1];
+			char aux_hex2[MD5_LEN * 2 + 1];
 			
 			if (debug_on)
 			{
@@ -199,7 +204,7 @@ uint8_t *biggest_snippet(scan_data *scan)
 			
 			hits = scan->matchmap[i].hits;
 
-			if (hits < most_hits) continue;
+			if (hits < most_hits || hits < min_match_hits) continue;
 			/* Calculate the relative difference between hits */
 			if (most_hits > 0)
 				hits_relative = (hits - most_hits) / most_hits;
