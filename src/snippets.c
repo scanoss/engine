@@ -113,6 +113,23 @@ int get_shortest_path(uint8_t *md5)
 }
 
 /**
+ * @brief Returns the number of entries for a md5 into the files table.
+ * @param md5 MD5 pointer
+ * @return lenght of shortest path
+ */
+int get_match_popularity(uint8_t *md5)
+{
+	/* Direct component match has a top priority */
+	if (!ldb_key_exists(oss_file, md5)) 
+		return 0;
+
+	int set = 0;
+	ldb_fetch_recordset(NULL, oss_file, md5, false, count_all_files, (void *) &set);
+
+	return set;
+}
+
+/**
  * @brief If the extension of the matched file does not match the extension of the scanned file
  *	and the matched file is not among known source code extensions, the match will be discarded
  * 
@@ -148,45 +165,101 @@ bool snippet_extension_discard(scan_data *scan, uint8_t *md5)
  * @param scan scan data pointer
  * @return pointer to selected match
  */
+#define SNIPPET_HITS_RELATIVE_FACTOR 0.5
+#define	SNIPPET_POPULARITY_RELATIVE_FACTOR 1
 uint8_t *biggest_snippet(scan_data *scan)
 {
 	uint8_t *out = NULL;
 	int hits = 0;
-
+	int shortest_path = MAX_PATH;
+	float hits_relative = 0.0;
 	while (true)
 	{
-		int most_hits = 0;
-		int shortest_path = 0;
+		int most_hits = scan->matchmap[0].hits;
+
+		/*search initialization, skip useless snippets */
+		int j = 0;
+		for (j = 0; j < scan->matchmap_size; j++)
+			if (scan->matchmap[j].hits >= min_match_hits)
+				break;
+		
+		out = scan->matchmap[j].md5;
+		shortest_path = get_shortest_path(out);
+		if (!shortest_path)
+			shortest_path = MAX_PATH;
 
 		/* Select biggest snippet */
-		for (int i = 0; i < scan->matchmap_size; i++)
+		for (int i = j; i < scan->matchmap_size; i++)
 		{
+			bool update = false;
+			/* for debugging */
+			char aux_hex[MD5_LEN * 2 + 1];
+			char aux_hex2[MD5_LEN * 2 + 1];
+			
+			if (debug_on)
+			{
+				ldb_bin_to_hex(out, MD5_LEN, aux_hex);
+				ldb_bin_to_hex(scan->matchmap[i].md5, MD5_LEN, aux_hex2);
+			}
+			
 			hits = scan->matchmap[i].hits;
 
-			if (hits < most_hits) continue;
-
-			/* Calculate length of shortest path */
-			int shortest = get_shortest_path(scan->matchmap[i].md5);
-			bool shorter = false;
-			if (shortest && shortest < shortest_path)
+			if (hits < most_hits || hits < min_match_hits) continue;
+			/* Calculate the relative difference between hits */
+			if (most_hits > 0)
+				hits_relative = (hits - most_hits) / most_hits;
+			else if (hits > 0)
+				hits_relative = 999.0;
+			
+			scanlog(" --- hits: %d / %d --- \n",hits, most_hits);
+			/* Select match if the relative hits are biggers than previous selected or if it is the first one*/
+			if (hits_relative > SNIPPET_HITS_RELATIVE_FACTOR)
 			{
-				shorter = true;
-				shortest_path = shortest;
+				update = true;
+			}
+			else 
+			{
+				shortest_path = get_shortest_path(out);
+				int shortest_new = get_shortest_path(scan->matchmap[i].md5);
+				float popularity_relative = 0.0;
+				scanlog("short: %d/%d\n",  shortest_new, shortest_path);
+				/* Check for the shortest path*/
+				if (shortest_new && shortest_new < shortest_path)
+				{
+					update = true;
+					shortest_path = shortest_new;
+				}
+				/*check for the popularity*/
+				else
+				{
+					int popularity = get_match_popularity(out);
+					int popularity_new = get_match_popularity(scan->matchmap[i].md5);
+					/* Calculate the relative difference between popularities */
+					if (popularity)
+						popularity_relative = (popularity_new - popularity) / popularity;
+					else if (popularity_new)
+						popularity_relative = 999.0;
+				}
+				
+				 scanlog("popularity rel: %.2f\n", popularity_relative);
+	
+				/* ponderate the relative popularity and the shortest path*/
+				if (popularity_relative > SNIPPET_POPULARITY_RELATIVE_FACTOR) 
+				{
+					update = true;
+					shortest_path = shortest_new;
+				}			
 			}
 
-			/* Select match if hits is greater, or equal and shorter path */
-			if ((hits > most_hits) || (hits == most_hits && shorter))
+			if (update)
 			{
 				most_hits = hits;
-				out = scan->matchmap[i].md5;
-
-				/* reset shortest_path in case we have > most_hits */
-				shortest_path = shortest;
+				out = scan->matchmap[i].md5;				
+				scanlog("%s	-> %s\n", aux_hex, aux_hex2);
 			}
 		}
 
 		scanlog("Biggest snippet: %d\n", most_hits);
-		scanlog("File path len: %d\n", shortest_path);
 
 		if (most_hits < min_match_hits)
 		{

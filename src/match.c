@@ -454,7 +454,6 @@ void load_matches(scan_data *scan, match_data *matches)
 
 		file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
 		records = ldb_fetch_recordset(NULL, oss_file, scan->match_ptr, false, collect_all_files, (void *) files);
-
 		if (records)
 		{
 			if (engine_flags & DISABLE_BEST_MATCH)
@@ -463,7 +462,6 @@ void load_matches(scan_data *scan, match_data *matches)
 			}
 			else
 			{
-
 				char new_component_hint[MAX_FIELD_LN] = "\0";
 				component_name_rank *component_rank = calloc(sizeof(struct component_name_rank), rank_items);
 				scanlog("Inherited component hint from context: %s\n", *component_hint ? component_hint : "NULL");
@@ -605,10 +603,6 @@ match_data *compile_matches(scan_data *scan)
 			/* Otherwise break loop */
 			else break;
 		}
-
-		/* Log matching MD5 */
-		for (int i = 0; i < MD5_LEN; i++) scanlog("%02x", scan->match_ptr[i]);
-		scanlog(" selected\n");
 
 		/* Dump match map */
 		if (debug_on) map_dump(scan);

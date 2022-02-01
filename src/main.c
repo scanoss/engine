@@ -257,6 +257,7 @@ int main(int argc, char **argv)
 	}
 
 	engine_flags = read_flags();
+	int engine_flags_cmd_line = 0;
 
 	bool force_wfp = false;
 
@@ -309,7 +310,8 @@ int main(int argc, char **argv)
 				break;
 
 			case 'F':
-				engine_flags |= atol(optarg);
+				engine_flags_cmd_line = atol(optarg);
+				engine_flags |= engine_flags_cmd_line;
 				break;
 
 			case 'l':
@@ -354,14 +356,14 @@ int main(int argc, char **argv)
 				break;
 
 			case 'q':
-				engine_flags = 0;
+				engine_flags = engine_flags_cmd_line;
 				debug_on = true;
 				quiet = true;
 				scanlog("Quiet mode enabled. Displaying only debugging info via STDERR.\n");
 				break;
 
 			case 'd':
-				engine_flags = 0;
+				engine_flags = engine_flags_cmd_line;
 				debug_on = true;
 				scanlog(""); // Log time stamp
 				break;
