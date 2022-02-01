@@ -210,7 +210,7 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 }
 
 /**
- * @brief Collect all files function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
+ * @brief Count all entries for a given md5. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO
  * @param subkey_ln //TODO

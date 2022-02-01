@@ -113,17 +113,17 @@ int get_shortest_path(uint8_t *md5)
 }
 
 /**
- * @brief Returns the length of the shortest path among files matching md5
+ * @brief Returns the number of entries for a md5 into the files table.
  * @param md5 MD5 pointer
  * @return lenght of shortest path
  */
-int get_match_popularity(uint8_t *md5, int setpoint)
+int get_match_popularity(uint8_t *md5)
 {
 	/* Direct component match has a top priority */
 	if (!ldb_key_exists(oss_file, md5)) 
 		return 0;
 
-	int set = setpoint;
+	int set = 0;
 	ldb_fetch_recordset(NULL, oss_file, md5, false, count_all_files, (void *) &set);
 
 	return set;
@@ -198,8 +198,8 @@ uint8_t *biggest_snippet(scan_data *scan)
 			
 			if (debug_on)
 			{
-				ldb_bin_to_hex(out,16,aux_hex);
-				ldb_bin_to_hex(scan->matchmap[i].md5,16,aux_hex2);
+				ldb_bin_to_hex(out, MD5_LEN, aux_hex);
+				ldb_bin_to_hex(scan->matchmap[i].md5, MD5_LEN, aux_hex2);
 			}
 			
 			hits = scan->matchmap[i].hits;
@@ -232,8 +232,8 @@ uint8_t *biggest_snippet(scan_data *scan)
 				/*check for the popularity*/
 				else
 				{
-					int popularity = get_match_popularity(out, 0);
-					int popularity_new = get_match_popularity(scan->matchmap[i].md5, popularity * 2);
+					int popularity = get_match_popularity(out);
+					int popularity_new = get_match_popularity(scan->matchmap[i].md5);
 					/* Calculate the relative difference between popularities */
 					if (popularity)
 						popularity_relative = (popularity_new - popularity) / popularity;

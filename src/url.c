@@ -165,7 +165,7 @@ void fill_main_url(match_data *match)
 	if (build_main_url(match, "pkg:nuget/", "https://www.nuget.org/packages", false)) return;
 	if (build_main_url(match, "pkg:pypi/", "https://pypi.org/project", false)) return;
 	if (build_main_url(match, "pkg:sourceforge/", "https://sourceforge.net/projects", false)) return;
-	if (build_main_url(match, "pkg:gem/", "https://rubygems.org/gems/allowable", false)) return;
+	if (build_main_url(match, "pkg:gem/", "https://rubygems.org/gems", false)) return;
 	if (build_main_url(match, "pkg:gitee/", "https://gitee.com", false)) return;
 	if (build_main_url(match, "pkg:gitlab/", "https://gitlab.com", false)) return;
 

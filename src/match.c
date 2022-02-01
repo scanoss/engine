@@ -454,13 +454,11 @@ void load_matches(scan_data *scan, match_data *matches)
 
 		file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
 		records = ldb_fetch_recordset(NULL, oss_file, scan->match_ptr, false, collect_all_files, (void *) files);
-		scanlog("RECORDS: %d \n", records);
 		if (records)
 		{
 			if (engine_flags & DISABLE_BEST_MATCH)
 			{
 				records = add_all_files_to_matches(files, records, scan, matches);
-				scanlog("RECORDS: %d \n", records);
 			}
 			else
 			{
@@ -605,11 +603,6 @@ match_data *compile_matches(scan_data *scan)
 			/* Otherwise break loop */
 			else break;
 		}
-
-		/* Log matching MD5 */
-		char aux_hex[32];
-		ldb_bin_to_hex(scan->match_ptr,16,aux_hex);
-		scanlog(" selected MD5: %s\n", aux_hex);
 
 		/* Dump match map */
 		if (debug_on) map_dump(scan);
