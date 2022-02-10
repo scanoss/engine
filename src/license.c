@@ -41,6 +41,7 @@
 #include "osadl_metadata.h"
 #include "license_translation.h"
 #include "decrypt.h"
+#include "file.h"
 
 /** @brief  License sources
 	 0 = Declared in component
@@ -163,12 +164,57 @@ char *incompatible_licenses(char *license)
 	return NULL;
 }
 
+#define OSADL_FILE_SIZE (1024 * 1024 * 1024)
+
+char osadl_json_content [OSADL_FILE_SIZE] = "\0";
+
+bool osadl_load_file(void)
+{
+	char * path = NULL;
+	asprintf(&path,"/var/lib/ldb/%s/osadl.json",oss_url.db);
+	int size = read_file(osadl_json_content, path, OSADL_FILE_SIZE);
+	free(path);
+	if (size)
+		return true;
+	else
+		return false;
+}
+
+void osadl_print_license(const char * license) 
+{
+	char * key = NULL;
+	asprintf(&key,"\"%s\":", license);
+
+	char * content = strstr(osadl_json_content, key);
+	free(key);
+	
+	if (!content)
+		return;
+	
+	content = strchr(content, '{') + 1;
+	if (content)
+	{
+		char * end = strchr(content, '}');
+		if (end)
+		{
+			int key_len = end - content;
+			char license_osadl[key_len+1];
+			license_osadl[key_len] = '\0';
+			strncpy(license_osadl, content, key_len);
+			printf("%s,\n", license_osadl);
+		}
+	}
+}
+
 /**
  * @brief Output OSADL license metadata
  * @param license license string
  */
 void oasdl_license_data(char *license)
 {
+	
+	osadl_print_license(license);
+/*
 	if (is_osadl_license(license))
 	{
 		printf("          \"obligations\": \"https://www.osadl.org/fileadmin/checklists/unreflicenses/%s.txt\",\n", license);
@@ -178,6 +224,7 @@ void oasdl_license_data(char *license)
 		if (incompatible)
 		printf("          \"incompatible_with\": \"%s\",\n", incompatible);
 	}
+*/
 }
 
 /**

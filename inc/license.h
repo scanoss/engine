@@ -5,5 +5,5 @@
 
 void print_licenses(match_data match);
 void print_osadl_license_data(char *license);
-
+bool osadl_load_file(void);
 #endif
