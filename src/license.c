@@ -38,7 +38,6 @@
 #include "debug.h"
 #include "util.h"
 #include "parse.h"
-#include "osadl_metadata.h"
 #include "license_translation.h"
 #include "decrypt.h"
 #include "file.h"
@@ -98,76 +97,12 @@ void normalize_license(char *license)
 	}
 }
 
-/**
- * @brief Return true if license is in the osadl license list
- * @param license license string
- * @return true if it is in osadl license list
- */
-bool is_osadl_license(char *license)
-{
-	int i = 0;
-	while (osadl_licenses[i])
-	{
-		if (!strcmp(license,osadl_licenses[i++])) return true;
-	}
-	return false;
-}
-
-/**
- * @brief Return true if license is copyleft
- * @param license license string
- * @return true if it is copyleft
- */
-bool is_copyleft(char *license)
-{
-	int i = 0;
-	while (copyleft_licenses[i])
-	{
-		if (!strcmp(license,copyleft_licenses[i++])) return true;
-	}
-	return false;
-}
-
-/**
- * @brief Return true if patent hints are found in the license
- * @param license license string
- * @return true if it  has patent hints
- */
-bool has_patent_hints(char *license)
-{
-	int i = 0;
-	while (patent_hints[i])
-	{
-		if (!strcmp(license,patent_hints[i++])) return true;
-	}
-	return false;
-}
-
-/**
- * @brief Return pointer to incompatible license list (or NULL)
- * @param license license string
- * @return pointer to incompatible license list
- */
-char *incompatible_licenses(char *license)
-{
-	int i = 0;
-	int lic_ln = strlen(license);
-	while (incompatibilities[i])
-	{
-		if (!strncmp(license,incompatibilities[i], lic_ln))
-		{
-			/* Skip colon and space after license name */
-			return (char *) incompatibilities[i] + lic_ln + 2;
-		}
-		i++;
-	}
-	return NULL;
-}
-
 #define OSADL_FILE_SIZE (1024 * 1024 * 1024)
-
 char osadl_json_content [OSADL_FILE_SIZE] = "\0";
 
+/**
+ * @brief Load OSADL license metadata from json fule
+ */
 bool osadl_load_file(void)
 {
 	char * path = NULL;
@@ -180,7 +115,11 @@ bool osadl_load_file(void)
 		return false;
 }
 
-void osadl_print_license(const char * license) 
+/**
+ * @brief Output OSADL license metadata
+ * @param license license string
+ */
+void osadl_print_license(const char * license, bool more_keys_after) 
 {
 	char * key = NULL;
 	asprintf(&key,"\"%s\":", license);
@@ -201,30 +140,21 @@ void osadl_print_license(const char * license)
 			char license_osadl[key_len+1];
 			license_osadl[key_len] = '\0';
 			strncpy(license_osadl, content, key_len);
-			printf("%s,\n", license_osadl);
+			printf("   	   %s,\n", license_osadl);
 		}
 	}
-}
+	//print osadl version
+	content = strstr(osadl_json_content, "\"osadl_updated\":");
+	char * end = strchr(content, ',');
+	int key_len = end - content;
+	char version_key[key_len + 1];
+	version_key[key_len] = '\0';
+	//version_key[key_len] = '\0';
+	strncpy(version_key, content, key_len);
+	printf("   	   %s", version_key);
 
-/**
- * @brief Output OSADL license metadata
- * @param license license string
- */
-void oasdl_license_data(char *license)
-{
-	
-	osadl_print_license(license);
-/*
-	if (is_osadl_license(license))
-	{
-		printf("          \"obligations\": \"https://www.osadl.org/fileadmin/checklists/unreflicenses/%s.txt\",\n", license);
-		printf("          \"copyleft\": \"%s\",\n", is_copyleft(license) ? "yes": "no");
-		printf("          \"patent_hints\": \"%s\",\n", has_patent_hints(license) ? "yes": "no");
-		char *incompatible = incompatible_licenses(license);
-		if (incompatible)
-		printf("          \"incompatible_with\": \"%s\",\n", incompatible);
-	}
-*/
+	if (more_keys_after)
+		printf(",\n");
 }
 
 /**
@@ -233,21 +163,9 @@ void oasdl_license_data(char *license)
  */
 void print_osadl_license_data(char *license)
 {
-	printf("{\n  \"%s\": [\n", license);
-	if (is_osadl_license(license))
-	{
-		printf("    {\n");
-		printf("      \"obligations\": \"https://www.osadl.org/fileadmin/checklists/unreflicenses/%s.txt\",\n", license);
-		printf("      \"copyleft\": \"%s\",\n", is_copyleft(license) ? "yes": "no");
-		printf("      \"patent_hints\": \"%s\"", has_patent_hints(license) ? "yes": "no");
-		char *incompatible = incompatible_licenses(license);
-		if (incompatible)
-			printf(",\n      \"incompatible_with\": \"%s\"\n", incompatible);
-		else
-			printf("\n");
-		printf("    }\n");
-	}
-	printf("  ]\n}\n");
+	printf("{\n  \"%s\": {\n", license);
+	osadl_print_license(license, false);
+	printf("  }\n}\n");
 }
 
 /**
@@ -321,7 +239,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 		printf("        {\n");
 		printf("          \"name\": \"%s\",\n", license);
-		oasdl_license_data(license);
+		osadl_print_license(license, true);
 		printf("          \"source\": \"%s\"\n", license_sources[atoi(source)]);
 		printf("        }");
 	}
@@ -363,7 +281,7 @@ void print_licenses(match_data match)
 		normalize_license(match.license);
 		printf("\n        {\n");
 		printf("          \"name\": \"%s\",\n", match.license);
-		oasdl_license_data(match.license);
+		osadl_print_license(match.license, true);
 		printf("          \"source\": \"%s\"\n", license_sources[0]);
 		printf("        }");
 		scanlog("License present in URL table\n");
