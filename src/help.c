@@ -81,7 +81,7 @@ Alternatively, these value can be written in %s\n\
 |  512 | Report identified files (default: disabled)      |\n\
 | 1024 | Enable download_url (default: disabled)          |\n\
 | 2048 | Enable GitHub full path (default: disabled)      |\n\
-| 4096 | Disable server info partially (default: enabled) |\n\
+| 4096 | Disable extended server stats (default: enabled) |\n\
 +------+--------------------------------------------------+\n\
 Example: scanoss -F 12 DIRECTORY (scans DIRECTORY disabling license and dependency data)\n\
 \n\

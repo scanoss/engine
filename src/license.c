@@ -101,18 +101,22 @@ void normalize_license(char *license)
 char osadl_json_content [OSADL_FILE_SIZE] = "\0";
 
 /**
- * @brief Load OSADL license metadata from json fule
+ * @brief Load OSADL license metadata from json file
  */
 bool osadl_load_file(void)
 {
+	bool result = false;
 	char * path = NULL;
 	asprintf(&path,"/var/lib/ldb/%s/osadl.json",oss_url.db);
 	int size = read_file(osadl_json_content, path, OSADL_FILE_SIZE);
-	free(path);
-	if (size)
-		return true;
+	
+	if (!size)
+		fprintf(stderr, "Warning: Cannot find OSADL definition. Please check that %s is present\n", path);
 	else
-		return false;
+		result = true;
+	
+	free(path);
+	return result;
 }
 
 /**
