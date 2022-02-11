@@ -76,7 +76,7 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	slow_query_log(scan);
 
 	/* Print comma separator */
-	if (!quiet) if (!first_file) printf("  ,\n");
+	if (!quiet) if (!first_file) printf(",");
 	first_file = false;
 
 	/* Open file structure */

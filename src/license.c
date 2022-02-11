@@ -144,7 +144,7 @@ void osadl_print_license(const char * license, bool more_keys_after)
 			char license_osadl[key_len+1];
 			license_osadl[key_len] = '\0';
 			strncpy(license_osadl, content, key_len);
-			printf("   	   %s,\n", license_osadl);
+			printf("%s,", license_osadl);
 		}
 	}
 	//print osadl version
@@ -155,10 +155,10 @@ void osadl_print_license(const char * license, bool more_keys_after)
 	version_key[key_len] = '\0';
 	//version_key[key_len] = '\0';
 	strncpy(version_key, content, key_len);
-	printf("   	   %s", version_key);
+	printf("%s", version_key);
 
 	if (more_keys_after)
-		printf(",\n");
+		printf(",");
 }
 
 /**
@@ -167,9 +167,9 @@ void osadl_print_license(const char * license, bool more_keys_after)
  */
 void print_osadl_license_data(char *license)
 {
-	printf("{\n  \"%s\": {\n", license);
+	printf("{\"%s\": {", license);
 	osadl_print_license(license, false);
-	printf("  }\n}\n");
+	printf("}}");
 }
 
 /**
@@ -238,14 +238,14 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 	if (!dup && *license && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
 	{
-		if (!match->first_record) printf(",\n"); else printf("\n");
+		if (!match->first_record) printf(","); 
 		match->first_record = false;
 
-		printf("        {\n");
-		printf("          \"name\": \"%s\",\n", license);
+		printf("{");
+		printf("\"name\": \"%s\",", license);
 		osadl_print_license(license, true);
-		printf("          \"source\": \"%s\"\n", license_sources[atoi(source)]);
-		printf("        }");
+		printf("\"source\": \"%s\"", license_sources[atoi(source)]);
+		printf("}");
 	}
 
 	free(source);
@@ -270,7 +270,7 @@ void print_licenses(match_data match)
 	}
 
 	/* Open licenses structure */
-	printf("      \"licenses\": ");
+	printf("\"licenses\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */
@@ -283,12 +283,12 @@ void print_licenses(match_data match)
 	if (*match.license)
 	{
 		normalize_license(match.license);
-		printf("\n        {\n");
-		printf("          \"name\": \"%s\",\n", match.license);
+		printf("{");
+		printf("\"name\": \"%s\",", match.license);
 		osadl_print_license(match.license, true);
-		printf("          \"source\": \"%s\"\n", license_sources[0]);
-		printf("        }");
-		scanlog("License present in URL table\n");
+		printf("\"source\": \"%s\"", license_sources[0]);
+		printf("}");
+		scanlog("License present in URL table");
 		match.first_record = false;
 
 		/* Add license to CRC list (to avoid duplicates) */
@@ -316,5 +316,5 @@ void print_licenses(match_data match)
 			scanlog("License for %s license returns %d hits\n", match.purl[i], records);
 		}
 	}	
-	printf("\n      ]");
+	printf("]");
 }

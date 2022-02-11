@@ -51,7 +51,7 @@ char  kb_version[MAX_INPUT];
  */
 void json_open()
 {
-	if (!quiet) printf("{\n");
+	if (!quiet) printf("{");
 }
 
 /**
@@ -59,7 +59,7 @@ void json_open()
  */
 void json_close()
 {
-	if (!quiet) printf("}\n");
+	if (!quiet) printf("}");
 }
 
 /**
@@ -67,8 +67,8 @@ void json_close()
  * @param filename file name string
  */
 void json_open_file(char *filename)
-{    
-	if (!quiet) printf("  \"%s\": [\n", filename);
+{
+	if (!quiet) printf("\"%s\": [", filename);
 }
 
 /**
@@ -76,7 +76,7 @@ void json_open_file(char *filename)
  */
 void json_close_file()
 {
-	if (!quiet) printf("  ]\n");
+	if (!quiet) printf("]");
 }
 
 void kb_version_get(void)
@@ -111,21 +111,21 @@ void kb_version_get(void)
 void print_server_stats(scan_data *scan)
 {
 	char hostname[MAX_ARGLN + 1];
-	printf(",\n      \"server\": {\n");
-	printf("        \"version\": \"%s\",\n", SCANOSS_VERSION);
-	printf("        \"kb_version\": %s", kb_version);
+	printf(",\"server\": {");
+	printf("\"version\": \"%s\",", SCANOSS_VERSION);
+	printf("\"kb_version\": %s", kb_version);
 	
 	if (!(engine_flags & DISABLE_SERVER_INFO))
 	{
 		gethostname(hostname, MAX_ARGLN + 1);
 		double elapsed = (microseconds_now() - scan->timer);
-		printf(",\n        \"hostname\": \"%s\",\n", hostname);
-		printf("        \"flags\": \"%ld\",\n", engine_flags);
+		printf(",\"hostname\": \"%s\",", hostname);
+		printf("\"flags\": \"%ld\",", engine_flags);
 		if (ignored_assets)
-			printf("        \"ignored\": \"%s\",\n", ignored_assets);
-		printf("        \"elapsed\": \"%.6fs\"\n", elapsed / 1000000);
+			printf("\"ignored\": \"%s\",", ignored_assets);
+		printf("\"elapsed\": \"%.6fs\"", elapsed / 1000000);
 	}
-	printf("      }\n");
+	printf("}");
 
 }
 
@@ -137,10 +137,10 @@ void print_json_nomatch(scan_data *scan)
 {
 	if (quiet) return;
 
-	printf("    {\n");
-	printf("      \"id\": \"none\"");
+	printf("{");
+	printf("\"id\": \"none\"");
 	print_server_stats(scan);
-	printf("    }\n");
+	printf("}");
 	fflush(stdout);
 }
 
@@ -150,15 +150,15 @@ void print_json_nomatch(scan_data *scan)
  */
 void print_purl_array(match_data match)
 {
-	printf("      \"purl\": [");
+	printf("\"purl\": [");
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
 		if (*match.purl[i]) {
-			printf("\n        \"%s\"", match.purl[i]);
+			printf("\"%s\"", match.purl[i]);
 			if (i < (MAX_PURLS - 1)) if (*match.purl[i + 1]) printf(",");
 		} else break;
 	}
-	printf("\n      ],\n");
+	printf("],");
 }
 
 /**
@@ -187,7 +187,7 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	if (quiet) return;
 
 	/* Comma separator */
-	if ((*match_counter)++) printf("  ,\n");
+	if ((*match_counter)++) printf(",");
 
 	/* Calculate component/vendor md5 for aggregated data queries */
 	vendor_component_md5(match.vendor, match.component, match.pair_md5);
@@ -198,52 +198,52 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	/* Calculate main URL */
 	fill_main_url(&match);
 
-	printf("    {\n");
-	printf("      \"id\": \"%s\",\n", matchtypes[match.type == 1 ? 2 : match.type]);
-	printf("      \"status\": \"%s\",\n", scan->identified ? "identified" : "pending");
-	printf("      \"lines\": \"%s\",\n", scan->line_ranges);
-	printf("      \"oss_lines\": \"%s\",\n", scan->oss_ranges);
+	printf("{");
+	printf("\"id\": \"%s\",", matchtypes[match.type == 1 ? 2 : match.type]);
+	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
+	printf("\"lines\": \"%s\",", scan->line_ranges);
+	printf("\"oss_lines\": \"%s\",", scan->oss_ranges);
 
 	if ((engine_flags & ENABLE_SNIPPET_IDS) && match.type == snippet)
 	{
-		printf("      \"snippet_ids\": \"%s\",\n", scan->snippet_ids);
+		printf("\"snippet_ids\": \"%s\",", scan->snippet_ids);
 	}
 
-	printf("      \"matched\": \"%s\",\n", scan->matched_percent);
+	printf("\"matched\": \"%s\",", scan->matched_percent);
 
 	print_purl_array(match);
 
-	printf("      \"vendor\": \"%s\",\n", match.vendor);
-	printf("      \"component\": \"%s\",\n", match.component);
-	printf("      \"version\": \"%s\",\n", match.version);
-	printf("      \"latest\": \"%s\",\n", match.latest_version);
+	printf("\"vendor\": \"%s\",", match.vendor);
+	printf("\"component\": \"%s\",", match.component);
+	printf("\"version\": \"%s\",", match.version);
+	printf("\"latest\": \"%s\",", match.latest_version);
 
-	printf("      \"url\": \"%s\",\n", *match.main_url ? match.main_url : match.url);
+	printf("\"url\": \"%s\",", *match.main_url ? match.main_url : match.url);
 
 	/* Print (optional download_url */
 	if (engine_flags & ENABLE_DOWNLOAD_URL)
-	printf("      \"download_url\": \"%s\",\n", match.url);
+	printf("\"download_url\": \"%s\",", match.url);
 
-	printf("      \"release_date\": \"%s\",\n", match.release_date);
-	printf("      \"file\": \"%s\",\n", match.type == 1 ? basename(match.url) : file_skip_release(match.purl[0], match.file));
+	printf("\"release_date\": \"%s\",", match.release_date);
+	printf("\"file\": \"%s\",", match.type == 1 ? basename(match.url) : file_skip_release(match.purl[0], match.file));
 
 	char *url_id = md5_hex(match.url_md5);
-	printf("      \"url_hash\": \"%s\",\n", url_id);
+	printf("\"url_hash\": \"%s\",", url_id);
 	free(url_id);
 
 	char *file_id = md5_hex(match.file_md5);
 
-	printf("      \"file_hash\": \"%s\",\n", file_id);
-	printf("      \"source_hash\": \"%s\",\n", scan->source_md5);
+	printf("\"file_hash\": \"%s\",", file_id);
+	printf("\"source_hash\": \"%s\",", scan->source_md5);
 
 	/* Output file_url (same as url when match type = url) */
 	if (match.type != url)
 	{
 		char *custom_url = getenv("SCANOSS_API_URL");
-		printf("      \"file_url\": \"%s/file_contents/%s\",\n", custom_url ? custom_url : API_URL, file_id);
+		printf("\"file_url\": \"%s/file_contents/%s\",", custom_url ? custom_url : API_URL, file_id);
 	}
 	else
-		printf("      \"file_url\": \"%s\",\n", match.url);
+		printf("\"file_url\": \"%s\",", match.url);
 
 	free(file_id);
 
@@ -275,6 +275,6 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	}
 
 	print_server_stats(scan);
-	printf("    }\n");
+	printf("}");
 	fflush(stdout);
 }
