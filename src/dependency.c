@@ -81,13 +81,13 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 
 	if (*vendor && *component)
 	{
-		if (iteration) printf(",\n"); else printf("\n");
-		printf("        {\n");
-		printf("          \"vendor\": \"%s\",\n", vendor);
-		printf("          \"component\": \"%s\",\n", component);
-		printf("          \"version\": \"%s\",\n", version);
-		printf("          \"source\": \"%s\"\n", dependency_sources[src]);
-		printf("        }");
+		if (iteration) printf(",");
+		printf("{");
+		printf("\"vendor\": \"%s\",", vendor);
+		printf("\"component\": \"%s\",", component);
+		printf("\"version\": \"%s\",", version);
+		printf("\"source\": \"%s\"", dependency_sources[src]);
+		printf("}");
 	}
 
 	free(source);
@@ -106,7 +106,7 @@ void print_dependencies(match_data match)
 	if (!ldb_table_exists(oss_dependency.db, oss_dependency.table)) //skip dependencies if the table is not present
 		return;
 	
-	printf(",\n      \"dependencies\": ");	
+	printf(",\"dependencies\": ");	
 	printf("[");
 
 	uint32_t records = 0;
@@ -150,7 +150,6 @@ void print_dependencies(match_data match)
 			else scanlog("No dependency matches reported for %s@%s\n", match.purl[i],match.latest_version);
 		}
 
-	if (records) printf("\n      ");
 	printf("]");
 }
 

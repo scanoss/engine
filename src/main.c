@@ -147,6 +147,7 @@ void initialize_ldb_tables(char *name)
 	oss_cryptography.tmp = false;
 
 	kb_version_get();
+	osadl_load_file();
 }
 
 /**

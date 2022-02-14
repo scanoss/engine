@@ -75,11 +75,11 @@ bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
 
 	if (!dup && *algorithm)
 	{
-		if (iteration) printf(",\n"); else printf("\n");
-		printf("        {\n");
-		printf("          \"algorithm\": \"%s\",\n", algorithm);
-		printf("          \"strength\": \"%s\"\n", strength);
-		printf("        }");
+		if (iteration) printf(",");
+		printf("{");
+		printf("\"algorithm\": \"%s\",", algorithm);
+		printf("\"strength\": \"%s\"", strength);
+		printf("}");
 	}
 
 	free(algorithm);
@@ -96,17 +96,13 @@ void print_cryptography(match_data match)
 {
 	if (!ldb_table_exists(oss_cryptography.db, oss_cryptography.table)) //skip crypto if the table is not present
 		return;
-	printf(",\n      \"cryptography\": ");
+	printf(",\"cryptography\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */
 	for (int i = 0; i < CRC_LIST_LEN; i++) match.crclist[i] = 0;
 
-	uint32_t records = 0;
-
-	records = ldb_fetch_recordset(NULL, oss_cryptography, match.file_md5, false, print_crypto_item, &match);
-
-	if (records) printf("\n      ");
+	ldb_fetch_recordset(NULL, oss_cryptography, match.file_md5, false, print_crypto_item, &match);
 	printf("]");
 }
 

@@ -109,11 +109,11 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 
 	if (!dup && (*copyright) && (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0]))))
 	{
-		if (iteration) printf(",\n"); else printf("\n");
-		printf("        {\n");
-		printf("          \"name\": \"%s\",\n", copyright);
-		printf("          \"source\": \"%s\"\n", copyright_sources[atoi(source)]);
-		printf("        }");
+		if (iteration) printf(",");
+		printf("{");
+		printf("\"name\": \"%s\",", copyright);
+		printf("\"source\": \"%s\"", copyright_sources[atoi(source)]);
+		printf("}");
 	}
 
 	free(source);
@@ -143,7 +143,7 @@ void print_copyrights(match_data match)
 {
 	if (!ldb_table_exists(oss_copyright.db, oss_copyright.table)) //skip purl if the table is not present
 		return;
-	printf(",\n      \"copyrights\": ");
+	printf(",\"copyrights\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */
@@ -158,6 +158,5 @@ void print_copyrights(match_data match)
 		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
 			if (ldb_fetch_recordset(NULL, oss_copyright, match.purl_md5[i], false, print_copyrights_item, &match)) break;
 
-	if (records) printf("\n      ");
 	printf("]");
 }

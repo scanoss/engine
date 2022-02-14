@@ -74,14 +74,14 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 
 	if (*quality && (src < (sizeof(quality_sources) / sizeof(quality_sources[0]))))
 	{
-		if (iteration) printf(",\n"); else printf("\n");
-		printf("        {\n");
+		if (iteration) printf(",");
+		printf("{");
 		if (!src) 
-			printf("          \"score\": \"%s/5\",\n", quality);
+			printf("\"score\": \"%s/5\",", quality);
 		else
-			printf("          \"score\": \"%s\",\n", quality);
-		printf("          \"source\": \"%s\"\n", quality_sources[atoi(source)]);
-		printf("        }");
+			printf("\"score\": \"%s\",", quality);
+		printf("\"source\": \"%s\"", quality_sources[atoi(source)]);
+		printf("}");
 		reported = true;
 	}
 
@@ -100,14 +100,10 @@ void print_quality(match_data match)
 	if (!ldb_table_exists(oss_quality.db, oss_quality.table)) //skip purl if the table is not present
 		return;
 	
-	printf(",\n      \"quality\": ");
+	printf(",\"quality\": ");
 	printf("[");
 
-	uint32_t records = 0;
-
-	records = ldb_fetch_recordset(NULL, oss_quality, match.file_md5, false, print_quality_item, NULL);
-
-	if (records) printf("\n      ");
+	ldb_fetch_recordset(NULL, oss_quality, match.file_md5, false, print_quality_item, NULL);
 	printf("]");
 }
 
