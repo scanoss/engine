@@ -60,6 +60,7 @@ void json_open()
 void json_close()
 {
 	if (!quiet) printf("}");
+	printf("\n");
 }
 
 /**
