@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "scanoss.h"
 #include "debug.h"
+#include <scanoss_encoder.h>
 
 /**
   * @file decrypt.c
@@ -22,6 +23,18 @@
 void decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey)
 {
 	/* Add here your decryption routines if needed */
+  if (!strcmp(table, "file"))
+	{
+		if (size < 36) return;
+
+		uint8_t *msg = calloc(2048, 1);
+	//	memcpy(msg, data + 16, size - 16);
+  	int out_len = scanoss_decode(COMPRESS, NULL, NULL,  data + 16, size - 16, msg);
+		//dekodethis(seed, msg);
+		memcpy(data + 16, msg, out_len);
+
+		free(msg);
+	}
 }
 
 /**

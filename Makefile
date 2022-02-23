@@ -13,7 +13,7 @@ OBJ = bin/main.o bin/decrypt.o bin/ignorelist.o bin/ignored_extensions.o bin/sni
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 scanoss: $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ -lldb -lm -lpthread -lcrypto
+	$(CC) $(CFLAGS) -o $@ $^ -lldb -lm -lpthread -lcrypto -lscanoss_encoder
 	@echo Scanoss built
 clean:
 	@echo Cleaning...
