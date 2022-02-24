@@ -197,10 +197,10 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	/* Decrypt data */
 	char * decrypted = decrypt_data(raw_data, datalen, "file", key, subkey);
 	if (!decrypted)
-		return;
+		return NULL;
 	/* Copy data to memory */
 	file_recordset *files = ptr;
-	int path_ln = datalen - MD5_LEN;
+
 	memcpy(files[iteration].url_id, raw_data, MD5_LEN);
 	strcpy(files[iteration].path, decrypted);
 	free(decrypted);

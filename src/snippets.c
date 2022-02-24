@@ -85,7 +85,7 @@ static bool shortest_path_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 		if (!decrypted)
 			return false;
 
-		int depth = path_depth(decrypted, strlen(decrypted));
+		int depth = path_depth((uint8_t*) decrypted, strlen(decrypted));
 
 		free(decrypted);
 		

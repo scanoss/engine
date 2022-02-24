@@ -83,9 +83,9 @@ bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln,
 {
 	char * decrypted = decrypt_data(data, datalen, "url", key, subkey);
 
-	uint8_t *record = (uint8_t *) ptr;
+	char *record = (char *) ptr;
 
-	if (decrypted && !ignored_asset_match(decrypted))
+	if (decrypted && !ignored_asset_match((uint8_t*) decrypted))
 	{
 		/* Not ignored, means copy record and exit */
 		strcpy(record, decrypted);

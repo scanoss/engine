@@ -60,7 +60,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	if (!data)
 		return false;
 
-	if (ignored_asset_match(data)) 
+	if (ignored_asset_match((uint8_t*) data)) 
 	{
 		free(data);
 		return false;
@@ -73,7 +73,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	int total_matches = count_matches(matches);
 	if (total_matches >= scan_limit) return true;
 
-	match = fill_match(NULL, NULL, data);
+	match = fill_match(NULL, NULL, (uint8_t*) data);
 	free(data);
 
 	/* Save match component id */

@@ -269,7 +269,7 @@ void print_licenses(match_data match)
 	}
 
 	/* Open licenses structure */
-	printf("\"licenses\": ");
+	printf(",\"licenses\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */
