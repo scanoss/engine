@@ -810,8 +810,6 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 
 			}
 
-			printf("%d - %s - %s\n", path_rank[r].id, date, url_rec);
-
 			if (strcmp((char *) date, (char *) oldest) < 0)
 			{
 				dup_dates = 0;
