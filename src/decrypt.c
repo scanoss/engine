@@ -20,21 +20,29 @@
  * @param key //TODO
  * @param subkey //TODO
  */
-void decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey)
+char * decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey)
 {
-	/* Add here your decryption routines if needed */
+	char * msg = NULL;
+  /* Add here your decryption routines if needed */
   if (!strcmp(table, "file"))
 	{
-		if (size < 36) return;
+		if (size < 36) 
+      return NULL;
 
-		uint8_t *msg = calloc(2048, 1);
+		char *msg = calloc(2048, 1);
 	//	memcpy(msg, data + 16, size - 16);
-  	int out_len = scanoss_decode(COMPRESS, NULL, NULL,  data + 16, size - 16, msg);
+  	int msize = scanoss_decode(COMPRESS, NULL, NULL, (char *) data + 16, size - 16, (unsigned char *) msg);
+    msg[msize] = 0;
 		//dekodethis(seed, msg);
-		memcpy(data + 16, msg, out_len);
-
-		free(msg);
+    return msg;
 	}
+  else
+    msg = strndup((char*) data, size);
+
+  msg[size] = 0;
+
+  return msg;
+
 }
 
 /**

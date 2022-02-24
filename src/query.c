@@ -56,16 +56,16 @@ char *get_filename(char *md5)
 	ldb_get_first_record(oss_file, md5bin, (void *) record);
 
 	uint32_t recln = uint32_read(record);
-	if (record)
-	{
-		memmove(record, record + 4, recln);
-		record[recln] = 0;
 
-		/* Decrypt data */
-		decrypt_data(record, recln, "file", md5bin, md5bin + LDB_KEY_LN);
-	}
+	memmove(record, record + 4, recln);
+	record[recln] = 0;
 
-	return (char *)record;
+	/* Decrypt data */
+	char *  decrypted = decrypt_data(record, recln, "file", md5bin, md5bin + LDB_KEY_LN);
+	free (record);
+
+
+	return decrypted;
 }
 
 /**
@@ -81,18 +81,19 @@ char *get_filename(char *md5)
  */
 bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	decrypt_data(data, datalen, "url", key, subkey);
+	char * decrypted = decrypt_data(data, datalen, "url", key, subkey);
 
 	uint8_t *record = (uint8_t *) ptr;
 
-	if (datalen) if (!ignored_asset_match(data))
+	if (decrypted && !ignored_asset_match(decrypted))
 	{
 		/* Not ignored, means copy record and exit */
-		memcpy(record, data, datalen);
-		record[datalen] = 0;
+		strcpy(record, decrypted);
+		free(decrypted);
 		return true;
 	}
-
+	
+	free(decrypted);
 	return false;
 }
 
@@ -126,17 +127,27 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	long *age = (long *) ptr;
 
-	decrypt_data(data, datalen, "purl", key, subkey);
+	char * decrypted = decrypt_data(data, datalen, "purl", key, subkey);
 
 	/* Expect at least a date*/
-	if (datalen < 9) return false;
+	if (strlen(decrypted) < 9) 
+	{
+		free(decrypted);
+		return false;
+	}
 
 	/* Ignore purl relation records */
-	if (!memcmp(data, "pkg:", 4)) return false;
+	if (!memcmp(decrypted, "pkg:", 4)) 
+	{
+		free(decrypted);
+		return false;
+	}
 
 	/* Extract created date (1st CSV field) from popularity record */
 	char date[MAX_FIELD_LN] = "\0";
-	extract_csv(date, (char *) data, 1, MAX_FIELD_LN);
+	extract_csv(date, decrypted, 1, MAX_FIELD_LN);
+	free(decrypted);
+
 	/* Expect date separators. Format 2009-03-21T22:32:25Z */
 	if (date[4] != '-' || date[7] != '-') return false;
 

@@ -195,14 +195,16 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
 
 	/* Decrypt data */
-	decrypt_data(raw_data, datalen, "file", key, subkey);
-
+	char * decrypted = decrypt_data(raw_data, datalen, "file", key, subkey);
+	if (!decrypted)
+		return;
 	/* Copy data to memory */
 	file_recordset *files = ptr;
 	int path_ln = datalen - MD5_LEN;
 	memcpy(files[iteration].url_id, raw_data, MD5_LEN);
-	memcpy(files[iteration].path, raw_data + MD5_LEN, path_ln);
-	files[iteration].path[path_ln] = 0;
+	strcpy(files[iteration].path, decrypted);
+	free(decrypted);
+	
 	files[iteration].path_ln = dir_count(files[iteration].path);
 
 	scanlog("#%d File %s\n", iteration, files[iteration].path);
@@ -262,19 +264,20 @@ char *file_extension(char *path)
 bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen) return false;
-        uint8_t file_data[MAX_PATH + 1] = "\0";
 
-	decrypt_data(data, datalen, "file", key, subkey);
-	memcpy(file_data, data, datalen);
-	file_data[datalen] = 0;
-
-	if (!*file_data) return false;
+	char * file_data = decrypt_data(data, datalen, "file", key, subkey);
+	
+	if (!file_data || !*file_data) 
+		return false;
 
 	*(char *)ptr = 0;
 	char *ext = file_extension((char *)file_data + MD5_LEN);
-	if (!ext) return true;
-
-	strcpy((char *) ptr, ext);
+	
+	if (ext)
+		strcpy((char *) ptr, ext);
+	
+	free(file_data);
+	
 	return true;
 }
 /**
