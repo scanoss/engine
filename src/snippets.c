@@ -192,6 +192,7 @@ uint8_t *biggest_snippet(scan_data *scan)
 		for (int i = j; i < scan->matchmap_size; i++)
 		{
 			bool update = false;
+			bool is_url = false;
 			/* for debugging */
 			char aux_hex[MD5_LEN * 2 + 1];
 			char aux_hex2[MD5_LEN * 2 + 1];
@@ -219,7 +220,6 @@ uint8_t *biggest_snippet(scan_data *scan)
 			}
 			else 
 			{
-				shortest_path = get_shortest_path(out);
 				int shortest_new = get_shortest_path(scan->matchmap[i].md5);
 				float popularity_relative = 0.0;
 				scanlog("short: %d/%d\n",  shortest_new, shortest_path);
@@ -237,11 +237,17 @@ uint8_t *biggest_snippet(scan_data *scan)
 					/* Calculate the relative difference between popularities */
 					if (popularity)
 						popularity_relative = (popularity_new - popularity) / popularity;
+					/* If the preset selected is URL, keep it */	
+					else if (!is_url && ldb_key_exists(oss_url,out))
+					{
+						is_url = true;
+						popularity_relative = 0;
+					}
 					else if (popularity_new)
 						popularity_relative = 999.0;
 				}
 				
-				 scanlog("popularity rel: %.2f\n", popularity_relative);
+				 scanlog("popularity rel: %.2f - is url: %d\n", popularity_relative, is_url);
 	
 				/* ponderate the relative popularity and the shortest path*/
 				if (popularity_relative > SNIPPET_POPULARITY_RELATIVE_FACTOR) 
@@ -254,6 +260,7 @@ uint8_t *biggest_snippet(scan_data *scan)
 			if (update)
 			{
 				most_hits = hits;
+				is_url = false;
 				out = scan->matchmap[i].md5;				
 				scanlog("%s	-> %s\n", aux_hex, aux_hex2);
 			}
