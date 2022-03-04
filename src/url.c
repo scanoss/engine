@@ -146,6 +146,7 @@ bool build_main_url(match_data *match, char *schema, char *url, bool fixed)
 		if (!fixed) 
 		{
 			char * part = strchr(match->purl[0], '/');
+			/*verify with match url for casing inconsistencies */
 			char * case_test = strcasestr(match->url, part);
 			if (case_test)
 			{
