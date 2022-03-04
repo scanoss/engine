@@ -143,7 +143,19 @@ bool build_main_url(match_data *match, char *schema, char *url, bool fixed)
 	if (starts_with(match->purl[0], schema))
 	{
 		strcpy(match->main_url, url);
-		if (!fixed) strcat(match->main_url, strstr(match->purl[0], "/"));
+		if (!fixed) 
+		{
+			char * part = strchr(match->purl[0], '/');
+			char * case_test = strcasestr(match->url, part);
+			if (case_test)
+			{
+				char * partb = strndup(case_test, strlen(part));
+				strcat(match->main_url, partb);
+				free(partb);
+			}
+			else
+				strcat(match->main_url, part);
+		}
 		return true;
 	}
 	return false;
