@@ -26,8 +26,6 @@ char * decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uin
   /* Add here your decryption routines if needed */
   if (!strcmp(table, "file"))
 	{
-		if (size < 36) 
-      return NULL;
 
 		char *msg = calloc(2048, 1);
 	//	memcpy(msg, data + 16, size - 16);
