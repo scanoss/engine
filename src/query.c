@@ -36,6 +36,7 @@
 #include "ldb.h"
 #include "scanoss.h"
 #include "decrypt.h"
+#include "debug.h"
 
 /**
  * @brief Obtain the first file name for the given file MD5 hash
@@ -136,7 +137,6 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 	/* Extract created date (1st CSV field) from popularity record */
 	char date[MAX_FIELD_LN] = "\0";
 	extract_csv(date, (char *) data, 1, MAX_FIELD_LN);
-
 	/* Expect date separators. Format 2009-03-21T22:32:25Z */
 	if (date[4] != '-' || date[7] != '-') return false;
 
@@ -171,6 +171,8 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 
 	/* Keep the oldest date in case there are multiple sources */
 	long seconds = (long) time (NULL) - (long) epoch;
+	scanlog("<-- %s  --- %ld -->\n",data, seconds);
+
 	if (seconds > *age) *age = seconds;
 
 	return false;

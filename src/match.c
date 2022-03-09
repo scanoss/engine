@@ -443,13 +443,13 @@ void load_matches(scan_data *scan, match_data *matches)
 	uint32_t records = 0;
 
 	/* Snippet and url match should look for the matching md5 in urls */
-	if (scan->match_type != file)
+	/*if (scan->match_type != file)
 	{
 		records = ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *) matches);
 		scanlog("URL recordset contains %u records\n", records);
-	}
+	}*/
 
-	if (!records)
+	//if (!records)
 	{
 
 		file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
@@ -549,7 +549,8 @@ void load_matches(scan_data *scan, match_data *matches)
 				free(component_rank);
 			}
 		}
-
+		records = ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *) matches);
+		scanlog("URL recordset contains %u records\n", records);
 		/* Add version ranges to selected match */
 		add_versions(scan, matches, files, records);
 
