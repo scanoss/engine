@@ -281,7 +281,7 @@ uint8_t *biggest_snippet(scan_data *scan)
 	}
 
 	if (snippet_extension_discard(scan, out)) return NULL;
-
+	
 	scan->match_ptr = out;
 	return out;
 }

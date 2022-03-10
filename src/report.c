@@ -190,6 +190,9 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	/* Comma separator */
 	if ((*match_counter)++) printf(",");
 
+	if (scan->match_type == snippet)
+		match.type = snippet;
+
 	/* Calculate component/vendor md5 for aggregated data queries */
 	vendor_component_md5(match.vendor, match.component, match.pair_md5);
 

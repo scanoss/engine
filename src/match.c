@@ -166,12 +166,14 @@ int add_all_files_to_matches(file_recordset *files, int file_count, scan_data *s
 
 		/* Fill match with component info */
 		match = fill_match(files[i].url_id, files[i].path, url_rec);
+		match.type = url;
 		free(url_rec);
 
 		/* Add file MD5 */
 		memcpy(match.file_md5, scan->match_ptr, MD5_LEN);
 		memcpy(match.url_md5, files[i].url_id, MD5_LEN);
-		match.type = scan->match_type;
+		if (scan->match_type == snippet)
+			match.type = snippet;
 
 		/* Add match to matches */
 		add_match(-1, match, matches);
@@ -390,6 +392,7 @@ void add_match(int position, match_data match, match_data *matches)
 			memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
 			matches[n].path_ln = match.path_ln;
 			matches[n].selected = match.selected;
+			matches[n].type = match.type;
 			matches[n].loaded = true;
 		}
 	}
@@ -406,11 +409,11 @@ void add_selected_file_to_matches(\
 {
 	/* Create empty match item */
 	struct match_data match = match_init();
-
 	/* Fill match with component info */
 	match = fill_match(component_rank[rank_id].url_id,\
 			component_rank[rank_id].file,\
 			(uint8_t *) component_rank[rank_id].url_record);
+	match.type = file;
 
 	/* Add file MD5 */
 	memcpy(match.file_md5, file_md5, MD5_LEN);
@@ -560,8 +563,7 @@ void load_matches(scan_data *scan, match_data *matches)
 			}
 		}
 
-		//records += ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *) matches);
-		//scanlog("URL recordset contains %u records\n", records);
+		
 		/* Add version ranges to selected match */
 		add_versions(scan, matches, files, records);
 

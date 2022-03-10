@@ -809,6 +809,7 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 				strcpy((char *) top_recs, (char *) url_rec);
 				memcpy(top_md5s, files[path_rank[r].id].url_id, MD5_LEN);
 				strcpy(oldest, date);
+				scanlog("<<<%s - %s>>>\n", files[path_rank[r].id].path, oldest);
 			}
 
 			else if (!strcmp(date, oldest))
