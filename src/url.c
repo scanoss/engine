@@ -80,7 +80,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	match.path_ln = strlen(match.url);
 	match.type = url;
 
-	add_match(-1, match, matches);
+	add_match(0, match, matches);
 	return false;
 }
 /**

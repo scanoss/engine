@@ -316,9 +316,9 @@ void add_match(int position, match_data match, match_data *matches)
 {
 
 	/* Verify if metadata is complete */
-	if (!*match.url || !*match.version || !*match.file || !*match.purl[0])
+	if (!*match.url || !*match.version || !*match.file || !*match.purl[0] || strlen(match.release_date) < 4)
 	{
-		scanlog("Metadata is incomplete: %s,%s,%s,%s\n",match.purl[0], match.version, match.url, match.file);
+		scanlog("Metadata is incomplete: %s,%s,%s,%s,%s\n",match.purl[0], match.version, match.url, match.file, match.release_date);
 		return;
 	}
 	int n = count_matches(matches);
@@ -359,29 +359,39 @@ void add_match(int position, match_data match, match_data *matches)
 		int n = 0;
 
 		/* Match position is given */
-		if (position >= 0) n = position;
+		//if (position >= 0) n = position;
 
 		/* Search for a free match position */
-		else n = count_matches(matches);
+		//else n = count_matches(matches);
 
-		if (n >= scan_limit) return;
+		if (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) < 0 )	
+			return;	
 
-		/* Copy match information */
-		strcpy(matches[n].vendor, match.vendor);
-		strcpy(matches[n].component, match.component);
-		strcpy(matches[n].purl[0], match.purl[0]);
-		memcpy(matches[n].purl_md5[0], match.purl_md5[0], MD5_LEN);
-		strcpy(matches[n].version, match.version);
-		strcpy(matches[n].latest_version, match.latest_version);
-		strcpy(matches[n].url, match.url);
-		strcpy(matches[n].file, match.file);
-		strcpy(matches[n].license, match.license);
-		strcpy(matches[n].release_date, match.release_date);
-		memcpy(matches[n].url_md5, match.url_md5, MD5_LEN);
-		memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
-		matches[n].path_ln = match.path_ln;
-		matches[n].selected = match.selected;
-		matches[n].loaded = true;
+		while (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) == 0 && n < scan_limit)
+			n++;
+		
+		if (n > scan_limit) return;
+
+		if (!matches[n].loaded || strcmp(matches[n].release_date, match.release_date) >= 0)
+		{ 
+			scanlog("%s - %s\n", matches[n].release_date, match.release_date);
+			/* Copy match information */
+			strcpy(matches[n].vendor, match.vendor);
+			strcpy(matches[n].component, match.component);
+			strcpy(matches[n].purl[0], match.purl[0]);
+			memcpy(matches[n].purl_md5[0], match.purl_md5[0], MD5_LEN);
+			strcpy(matches[n].version, match.version);
+			strcpy(matches[n].latest_version, match.latest_version);
+			strcpy(matches[n].url, match.url);
+			strcpy(matches[n].file, match.file);
+			strcpy(matches[n].license, match.license);
+			strcpy(matches[n].release_date, match.release_date);
+			memcpy(matches[n].url_md5, match.url_md5, MD5_LEN);
+			memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
+			matches[n].path_ln = match.path_ln;
+			matches[n].selected = match.selected;
+			matches[n].loaded = true;
+		}
 	}
 }
 
@@ -443,17 +453,17 @@ void load_matches(scan_data *scan, match_data *matches)
 	uint32_t records = 0;
 
 	/* Snippet and url match should look for the matching md5 in urls */
-	/*if (scan->match_type != file)
+	if (scan->match_type != file)
 	{
 		records = ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *) matches);
 		scanlog("URL recordset contains %u records\n", records);
-	}*/
+	}
 
 	//if (!records)
 	{
 
 		file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
-		records = ldb_fetch_recordset(NULL, oss_file, scan->match_ptr, false, collect_all_files, (void *) files);
+		records += ldb_fetch_recordset(NULL, oss_file, scan->match_ptr, false, collect_all_files, (void *) files);
 		if (records)
 		{
 			if (engine_flags & DISABLE_BEST_MATCH)
@@ -549,8 +559,9 @@ void load_matches(scan_data *scan, match_data *matches)
 				free(component_rank);
 			}
 		}
-		records = ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *) matches);
-		scanlog("URL recordset contains %u records\n", records);
+
+		//records += ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *) matches);
+		//scanlog("URL recordset contains %u records\n", records);
 		/* Add version ranges to selected match */
 		add_versions(scan, matches, files, records);
 
@@ -621,11 +632,11 @@ match_data *compile_matches(scan_data *scan)
 		/* Loop only if DISABLE_BEST_MATCH and match type is snippet */
 	} while ((engine_flags & DISABLE_BEST_MATCH) && scan->match_type == snippet);
 
-	for (int i = 0; i < scan_limit && *matches[i].component; i++) scanlog("Match #%d = %d\n", i, matches[i].selected);
+	for (int i = 0; i < scan_limit && *matches[i].component; i++) 
+		scanlog("Match #%d = %d - %s\n", i, matches[i].selected, matches[i].release_date);
 
 	/* The latter could result in no matches */
 	if (!matches[0].loaded) scan->match_type = none;
 	scanlog("Final match: %s\n",matchtypes[scan->match_type]);
-
 	return matches;
 }
