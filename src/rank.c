@@ -787,7 +787,6 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 	int path_id = 0;
 	int dup_dates = 0;
 	char date[MAX_ARGLN + 1] = "\0";
-	char release_date_test[MAX_ARGLN + 1] = "\0";
 	char oldest[MAX_ARGLN + 1] = "9999";
 
 	for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
@@ -799,16 +798,8 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 
 			/* Extract date from url_rec */
 			*date = 0;
-				extract_csv(date, (char *) url_rec , 4, MAX_ARGLN);
-			purl_release_date(url_rec, release_date_test);
+			extract_csv(date, (char *) url_rec , 4, MAX_ARGLN);
 			if (!*date) continue;
-
-			if (*release_date_test)
-			{
-				if (strcmp((char *) release_date_test, (char *) date) < 0)
-					strcpy(date, release_date_test);
-
-			}
 
 			if (strcmp((char *) date, (char *) oldest) < 0)
 			{
@@ -861,7 +852,6 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 	free(path_rank);
 	return selected;
 }
-
 /**
  * @brief Analyse files, selecting those matching the provided hints
 	 return the file id if matched, otherwise a negative value if no hits
