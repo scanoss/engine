@@ -43,6 +43,9 @@
 #include "scanoss.h"
 #include "util.h"
 
+#include "decrypt.h"
+ #include <dlfcn.h>
+
 struct ldb_table oss_url;
 struct ldb_table oss_file;
 struct ldb_table oss_wfp;
@@ -235,6 +238,28 @@ uint64_t read_flags()
 	return 0;
 }
 
+
+void * lib_handle = NULL;
+bool lib_load()
+{
+	/*set decode funtion pointer to NULL*/
+	decode = NULL;
+	lib_handle = dlopen("libscanoss_encoder.so", RTLD_NOW);
+	char * err;
+    if (lib_handle) 
+	{
+		fprintf(stderr, "Lib scanoss-enocder present\n");
+		decode = dlsym(lib_handle, "scanoss_decode");
+		if ((err = dlerror())) 
+		{
+			printf("%s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		return true;
+     }
+	 
+	 return false;
+}
 /**
  * @brief //TODO
  * @param argc //TODO
@@ -250,6 +275,8 @@ int main(int argc, char **argv)
 	/* File tracing with -qi */
 	trace_on = false;
 	memset(trace_id, 0 ,16);
+	
+	bool lib_mode = lib_load();
 
 	if (argc <= 1)
 	{
@@ -461,6 +488,9 @@ int main(int argc, char **argv)
 	if (ignore_components) free(ignore_components);
 	if (declared_components) free(declared_components);
 	if (ignored_assets)  free (ignored_assets);
+    
+	if (lib_mode)
+		dlclose(lib_handle);
 
 	return EXIT_SUCCESS;
 }
