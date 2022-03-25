@@ -796,7 +796,9 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 			if (path_rank[r].len < min)
 				min = path_rank[r].len;
 
-			if (path_rank[r].len > min +1)
+			if (path_rank[r].len > min +1
+			
+			)
 				break;
 			strcpy((char *) url_rec, "9999");
 			ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *) url_rec);
@@ -814,7 +816,7 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 				strcpy((char *) top_recs, (char *) url_rec);
 				memcpy(top_md5s, files[path_rank[r].id].url_id, MD5_LEN);
 				strcpy(oldest, date);
-				scanlog("<<<%d,%d,%d - %s - %s>>>\n", r,min, path_rank[r].len, files[path_rank[r].id].path, oldest);
+				scanlog("<<<%d,%d,%d - %s - %s - %s>>>\n", r,min, path_rank[r].len, files[path_rank[r].id].path, oldest, url_rec);
 			}
 
 			else if (!strcmp(date, oldest))
@@ -822,7 +824,7 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 				if (++dup_dates >= TOP_BEST_DATES) dup_dates = TOP_BEST_DATES - 1;
 				strcpy((char *) top_recs + LDB_MAX_REC_LN * dup_dates, (char *) url_rec);
 				memcpy(top_md5s + MD5_LEN * dup_dates, files[path_rank[r].id].url_id, MD5_LEN);
-				scanlog("<<<dup %d,%d - %s - %s>>>\n", r, path_rank[r].len, files[path_rank[r].id].path, oldest);
+				scanlog("<<<dup %d,%d,%d - %s - %s - %s>>>\n", r,min, path_rank[r].len, files[path_rank[r].id].path, oldest, url_rec);
 			}
 		}
 	}
