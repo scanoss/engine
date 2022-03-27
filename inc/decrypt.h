@@ -2,6 +2,9 @@
     #define __DECRYPT_H
 
 #include "scanoss.h"
+#define DECOMPRESS 4
+#define DECRYPT 2
+extern unsigned char global_key[];
 int (*decode) (int op, unsigned char *key, unsigned char *nonce,
 		        const char *buffer_in, int buffer_in_len, unsigned char *buffer_out);
                 

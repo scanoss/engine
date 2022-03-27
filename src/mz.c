@@ -33,8 +33,115 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include "ldb.h"
 #include "decrypt.h"
+#include <ldb.h>
+
+/**
+ * @brief Handler for MZ cat operation
+ * 
+ * @param job pointer to input mz job
+ * @return true to finish
+ * @return false to continue
+ */
+static bool mz_cat_handler(struct mz_job *job)
+{
+	if (!memcmp(job->id, job->key + 2, MZ_MD5))
+	{
+		/* Decompress */
+		mz_deflate(job);
+
+		job->data[job->data_ln] = 0;
+		printf("%s", job->data);
+
+		return false;
+	}
+	return true;
+}
+/**
+ * @brief Find a key and print the result
+ * 
+ * @param job input mz job
+ * @param key key to be found
+ */
+static void mz_get_key(struct mz_job *job, char *key)
+{
+	/* Calculate mz file path */
+	char mz_path[LDB_MAX_PATH + MD5_LEN] = "\0";
+	char mz_file_id[5] = "\0\0\0\0\0";
+	memcpy(mz_file_id, key, 4);
+
+	sprintf(mz_path, "%s/%s.mz", job->path, mz_file_id);
+
+	/* Save path and key on job */
+	job->key = calloc(MD5_LEN, 1);
+	ldb_hex_to_bin(key, MD5_LEN * 2, job->key);	
+
+	/* Read source mz file into memory */
+	job->mz = file_read(mz_path, &job->mz_ln);
+
+	/* Search and display "key" file contents */
+	/* Recurse mz contents */
+	uint64_t ptr = 0;
+	while (ptr < job->mz_ln)
+	{
+		/* Position pointers */
+		job->id = job->mz + ptr;
+		uint8_t *file_ln = job->id + MZ_MD5;
+		job->zdata = file_ln + MZ_SIZE;
+
+		/* Get compressed data size */
+		uint32_t tmpln;
+		memcpy((uint8_t*)&tmpln, file_ln, MZ_SIZE);
+		job->zdata_ln = tmpln;
+
+		/* Get total mz record length */
+		job->ln = MZ_MD5 + MZ_SIZE + job->zdata_ln;
+
+		/* Pass job to handler */
+		if (!memcmp(job->id, job->key + 2, MZ_MD5))
+		{
+			 /*Make a nonce using md5 key*/
+			unsigned char nonce[24];
+			memcpy(nonce, job->id, MZ_MD5);
+			memcpy(nonce+MZ_MD5, job->id, 24 - MZ_MD5);
+			if (decode)
+			{
+				unsigned char decoded[job->zdata_ln+1];
+      			int msize = decode(1, global_key, nonce, (char *) job->zdata, job->zdata_ln, decoded);
+
+				char key_hex[MD5_LEN * 2 + 1];
+				char data_hex1[129];
+				char data_hex2[129];
+
+				ldb_bin_to_hex(job->key, MD5_LEN, key_hex);
+				ldb_bin_to_hex((uint8_t*) job->zdata, 64, data_hex1);
+				ldb_bin_to_hex((uint8_t*) decoded, 64, data_hex2);
+
+				fprintf(stderr, "%s - %ld/%d - <<%s>> <<%s>>\n",key_hex, job->zdata_ln,msize, data_hex1, data_hex2);
+      			if (msize)
+				  memcpy(job->zdata, decoded, job->zdata_ln);
+			}
+			/* Decompress */
+			mz_deflate(job);
+
+			job->data[job->data_ln] = 0;
+			printf("%s", job->data);
+			return;
+		}
+		/* Increment pointer */
+		ptr += job->ln;
+		if (ptr > job->mz_ln)
+		{
+			printf("%s integrity failed\n", job->path);
+			exit(EXIT_FAILURE);
+		}
+	}
+	mz_parse(job, mz_cat_handler);
+
+	free(job->key);
+	free(job->mz);
+}
+
 
 /**
  * @brief uncompress the file contents of a given md5 key
@@ -42,7 +149,6 @@
  */
 void mz_file_contents(char *key)
 {
-
 	/* Extract values from command */
 	char dbtable[] = "oss/sources";
 
@@ -65,7 +171,7 @@ void mz_file_contents(char *key)
 	job.md5[MD5_LEN] = 0;
 	job.key = NULL;
 
-	cat_decrypted_mz(&job, key);
+	mz_get_key(&job, key);
 
 	free(src);
 	free(zsrc);
