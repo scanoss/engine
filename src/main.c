@@ -250,6 +250,7 @@ bool lib_load()
 	{
 		fprintf(stderr, "Lib scanoss-enocder present\n");
 		decode = dlsym(lib_handle, "scanoss_decode");
+		decrypt_data = dlsym(lib_handle, "scanoss_decode_table");
 		if ((err = dlerror())) 
 		{
 			printf("%s\n", err);
@@ -257,7 +258,7 @@ bool lib_load()
 		}
 		return true;
      }
-	 
+	 decrypt_data = standalone_decrypt_data;
 	 return false;
 }
 /**
