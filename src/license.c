@@ -111,7 +111,7 @@ bool osadl_load_file(void)
 	int size = read_file(osadl_json_content, path, OSADL_FILE_SIZE);
 	
 	if (!size)
-		fprintf(stderr, "Warning: Cannot find OSADL definition. Please check that %s is present\n", path);
+		scanlog("Warning: Cannot find OSADL definition. Please check that %s is present\n", path);
 	else
 		result = true;
 	

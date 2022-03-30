@@ -273,6 +273,5 @@ int seek_component_hint_in_path(\
 		component_name_rank *component_rank);
 void init_path_ranking(path_ranking *path_rank);
 bool select_best_match(match_data *matches);
-void mz_file_contents(char *key);
 void print_attribution_notices(match_data match);
 #endif

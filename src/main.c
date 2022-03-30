@@ -243,23 +243,23 @@ void * lib_handle = NULL;
 bool lib_load()
 {
 	/*set decode funtion pointer to NULL*/
-	decode = NULL;
 	lib_handle = dlopen("libscanoss_encoder.so", RTLD_NOW);
 	char * err;
     if (lib_handle) 
 	{
-		fprintf(stderr, "Lib scanoss-enocder present\n");
-		decode = dlsym(lib_handle, "scanoss_decode");
+		scanlog("Lib scanoss-enocder present\n");
 		decrypt_data = dlsym(lib_handle, "scanoss_decode_table");
+		decrypt_mz = dlsym(lib_handle, "scanoss_decode_mz");
 		if ((err = dlerror())) 
 		{
 			printf("%s\n", err);
 			exit(EXIT_FAILURE);
 		}
 		return true;
-     }
-	 decrypt_data = standalone_decrypt_data;
-	 return false;
+    }
+	decrypt_data = standalone_decrypt_data;
+	decrypt_mz = NULL;
+	return false;
 }
 /**
  * @brief //TODO
@@ -329,7 +329,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'k':
-				mz_file_contents(optarg);
+				mz_file_contents(optarg, oss_file.db);
 				exit(EXIT_SUCCESS);
 				break;
 

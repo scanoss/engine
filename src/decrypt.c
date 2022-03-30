@@ -12,7 +12,6 @@
   * @see https://github.com/scanoss/engine/blob/master/src/decrypt.c
   */
 
-unsigned char global_key[] = {0x6b,0x47,0xc0,0xa1,0x3f,0xab,0x5f,0x9b,0x94,0xa3,0x34,0x85,0xbe,0x5f,0x1c,0xf6,0x4c,0x07,0xa1,0x2f,0xfc,0x8c,0x3f,0x8c,0x35,0xc2,0x4d,0xd3,0xd7,0x5f,0x20,0x41};
 /**
  * @brief Decrypt data function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param data //TODO  
@@ -24,23 +23,12 @@ unsigned char global_key[] = {0x6b,0x47,0xc0,0xa1,0x3f,0xab,0x5f,0x9b,0x94,0xa3,
 char * standalone_decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey)
 {
 	char * msg = NULL;
- 
-  msg = strndup((char*) data, size);
-  msg[size] = 0;
-
+  
+  if (!strcmp(table, "file"))
+    msg = strndup((char*) data + 16, size - 16);
+  else
+    msg = strndup((char*) data, size);
+  
   return msg;
 
-}
-
-/**
- * @brief Decrypt mz data
- * @param mz_job Job to decompress
- * @param key Decryption key
-*/  
-void cat_decrypted_mz(struct mz_job *job, char *key)
-{
-  scanlog("Decompress and cat");
-  if (ldb_valid_table("oss/sources")) mz_cat(job, key);
-  else
-    scanlog("cannot open table sources");
 }

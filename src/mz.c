@@ -100,26 +100,9 @@ static void mz_get_key(struct mz_job *job, char *key)
 		/* Pass job to handler */
 		if (!memcmp(job->id, job->key + 2, MZ_MD5))
 		{
-			 /*Make a nonce using md5 key*/
-			unsigned char nonce[24];
-			memcpy(nonce, job->id, MZ_MD5);
-			memcpy(nonce+MZ_MD5, job->id, 24 - MZ_MD5);
-			if (decode)
+			if (decrypt_mz)
 			{
-				unsigned char decoded[job->zdata_ln+1];
-      			int msize = decode(1, global_key, nonce, (char *) job->zdata, job->zdata_ln, decoded);
-
-				char key_hex[MD5_LEN * 2 + 1];
-				char data_hex1[129];
-				char data_hex2[129];
-
-				ldb_bin_to_hex(job->key, MD5_LEN, key_hex);
-				ldb_bin_to_hex((uint8_t*) job->zdata, 64, data_hex1);
-				ldb_bin_to_hex((uint8_t*) decoded, 64, data_hex2);
-
-				fprintf(stderr, "%s - %ld/%d - <<%s>> <<%s>>\n",key_hex, job->zdata_ln,msize, data_hex1, data_hex2);
-      			if (msize)
-				  memcpy(job->zdata, decoded, job->zdata_ln);
+				decrypt_mz(job->id, job->zdata_ln);
 			}
 			/* Decompress */
 			mz_deflate(job);
@@ -147,10 +130,11 @@ static void mz_get_key(struct mz_job *job, char *key)
  * @brief uncompress the file contents of a given md5 key
  * @param key md5 key
  */
-void mz_file_contents(char *key)
+void mz_file_contents(char *key, char * db)
 {
 	/* Extract values from command */
-	char dbtable[] = "oss/sources";
+	char dbtable[64];
+	sprintf(dbtable,"%s/sources",db);
 
 	/* Reserve memory for compressed and uncompressed data */
 	char *src = calloc(MZ_MAX_FILE + 1, 1);
