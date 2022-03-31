@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include "scanoss.h"
 #include "debug.h"
-//#include <scanoss_encoder.h>
 #include "decrypt.h"
 /**
   * @file decrypt.c
