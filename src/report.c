@@ -190,6 +190,9 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	/* Comma separator */
 	if ((*match_counter)++) printf(",");
 
+	if (scan->match_type == snippet)
+		match.type = snippet;
+
 	/* Calculate component/vendor md5 for aggregated data queries */
 	vendor_component_md5(match.vendor, match.component, match.pair_md5);
 
@@ -241,10 +244,10 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	if (match.type != url)
 	{
 		char *custom_url = getenv("SCANOSS_API_URL");
-		printf("\"file_url\": \"%s/file_contents/%s\",", custom_url ? custom_url : API_URL, file_id);
+		printf("\"file_url\": \"%s/file_contents/%s\"", custom_url ? custom_url : API_URL, file_id);
 	}
 	else
-		printf("\"file_url\": \"%s\",", match.url);
+		printf("\"file_url\": \"%s\"", match.url);
 
 	free(file_id);
 

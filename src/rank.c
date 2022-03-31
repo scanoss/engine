@@ -788,11 +788,18 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 	int dup_dates = 0;
 	char date[MAX_ARGLN + 1] = "\0";
 	char oldest[MAX_ARGLN + 1] = "9999";
-
+	int min = 999;
 	for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
 	{
 		if (path_rank[r].len)
 		{
+			if (path_rank[r].len < min)
+				min = path_rank[r].len;
+
+			if (path_rank[r].len > min +1
+			
+			)
+				break;
 			strcpy((char *) url_rec, "9999");
 			ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *) url_rec);
 
@@ -809,6 +816,7 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 				strcpy((char *) top_recs, (char *) url_rec);
 				memcpy(top_md5s, files[path_rank[r].id].url_id, MD5_LEN);
 				strcpy(oldest, date);
+				scanlog("<<<%d,%d,%d - %s - %s - %s>>>\n", r,min, path_rank[r].len, files[path_rank[r].id].path, oldest, url_rec);
 			}
 
 			else if (!strcmp(date, oldest))
@@ -816,6 +824,7 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 				if (++dup_dates >= TOP_BEST_DATES) dup_dates = TOP_BEST_DATES - 1;
 				strcpy((char *) top_recs + LDB_MAX_REC_LN * dup_dates, (char *) url_rec);
 				memcpy(top_md5s + MD5_LEN * dup_dates, files[path_rank[r].id].url_id, MD5_LEN);
+				scanlog("<<<dup %d,%d,%d - %s - %s - %s>>>\n", r,min, path_rank[r].len, files[path_rank[r].id].path, oldest, url_rec);
 			}
 		}
 	}
@@ -851,7 +860,6 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 	free(path_rank);
 	return selected;
 }
-
 /**
  * @brief Analyse files, selecting those matching the provided hints
 	 return the file id if matched, otherwise a negative value if no hits
@@ -981,17 +989,20 @@ int seek_component_hint_in_path_start(\
 bool select_best_match(match_data *matches)
 {
 	scanlog("Running select_best_match()\n");
-	long oldest = 0;
+	unsigned long oldest = 0;
 	int oldest_id = 0;
 
 	/* Search for matches in component with version ranges */
 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
 	{
-		int age = get_component_age(matches[i].purl_md5[0]);
+		unsigned long age = get_component_age(matches[i].purl_md5[0]);
+	
 		if (age > oldest)
 		{
 			oldest = age;
 			oldest_id = i;
+			scanlog("<<<oldst in  %d - %ld>>>>\n", oldest_id, oldest);
+
 		}
 	}
 

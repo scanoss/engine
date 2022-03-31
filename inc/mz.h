@@ -3,6 +3,6 @@
 
 #include "scanoss.h"
 
-void mz_file_contents(char *key);
+void mz_file_contents(char *key, char * dbtable);
 
 #endif

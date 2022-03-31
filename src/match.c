@@ -42,9 +42,9 @@
 #include "rank.h"
 #include "decrypt.h"
 
-bool first_file = true; /** global first file flag */
+bool first_file = true;										   /** global first file flag */
 const char *matchtypes[] = {"none", "url", "file", "snippet"}; /** describe the availables kinds of match */
-bool match_extensions = false; /** global match extension flag */
+bool match_extensions = false;								   /** global match extension flag */
 
 char vendor_hint[MAX_FIELD_LN];
 char component_hint[MAX_FIELD_LN];
@@ -56,7 +56,9 @@ char component_hint[MAX_FIELD_LN];
 void flip_slashes(char *data)
 {
 	int len = strlen(data);
-	for (int i = 0; i < len ; i++) if (data[i] == '\\') data[i] = '/';
+	for (int i = 0; i < len; i++)
+		if (data[i] == '\\')
+			data[i] = '/';
 }
 
 /**
@@ -76,7 +78,9 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	slow_query_log(scan);
 
 	/* Print comma separator */
-	if (!quiet) if (!first_file) printf(",");
+	if (!quiet)
+		if (!first_file)
+			printf(",");
 	first_file = false;
 
 	/* Open file structure */
@@ -98,18 +102,23 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		}
 
 		/* Print matches with version ranges first */
-		if (!selected || (engine_flags & DISABLE_BEST_MATCH)) for (int i = 0; i < scan_limit && *matches[i].component; i++)
-			if (!matches[i].selected) if (strcmp(matches[i].version, matches[i].latest_version))
-				print_json_match(scan, matches[i], &match_counter);
+		if (!selected || (engine_flags & DISABLE_BEST_MATCH))
+			for (int i = 0; i < scan_limit && *matches[i].component; i++)
+				if (!matches[i].selected)
+					if (strcmp(matches[i].version, matches[i].latest_version))
+						print_json_match(scan, matches[i], &match_counter);
 
 		/* Print matches without version ranges */
-		if (!selected || (engine_flags & DISABLE_BEST_MATCH)) for (int i = 0; i < scan_limit && *matches[i].component; i++)
-			if (!matches[i].selected) if (!strcmp(matches[i].version, matches[i].latest_version))
-				print_json_match(scan, matches[i], &match_counter);
+		if (!selected || (engine_flags & DISABLE_BEST_MATCH))
+			for (int i = 0; i < scan_limit && *matches[i].component; i++)
+				if (!matches[i].selected)
+					if (!strcmp(matches[i].version, matches[i].latest_version))
+						print_json_match(scan, matches[i], &match_counter);
 	}
 
 	/* Print no match */
-	if (!match_counter) print_json_nomatch(scan);
+	if (!match_counter)
+		print_json_nomatch(scan);
 	json_close_file();
 }
 
@@ -166,12 +175,14 @@ int add_all_files_to_matches(file_recordset *files, int file_count, scan_data *s
 
 		/* Fill match with component info */
 		match = fill_match(files[i].url_id, files[i].path, url_rec);
+		match.type = url;
 		free(url_rec);
 
 		/* Add file MD5 */
 		memcpy(match.file_md5, scan->match_ptr, MD5_LEN);
 		memcpy(match.url_md5, files[i].url_id, MD5_LEN);
-		match.type = scan->match_type;
+		if (scan->match_type == snippet)
+			match.type = snippet;
 
 		/* Add match to matches */
 		add_match(-1, match, matches);
@@ -185,16 +196,17 @@ int add_all_files_to_matches(file_recordset *files, int file_count, scan_data *s
  */
 bool ignored_asset_match(uint8_t *url_record)
 {
-	if (!ignore_components) return false;
+	if (!ignore_components)
+		return false;
 
 	/* Extract fields from URL record */
 	char *vendor = calloc(LDB_MAX_REC_LN, 1);
 	char *component = calloc(LDB_MAX_REC_LN, 1);
 	char *purl = calloc(LDB_MAX_REC_LN, 1);
 
-	extract_csv(vendor, (char *) url_record, 1, LDB_MAX_REC_LN);
-	extract_csv(component, (char *) url_record, 2, LDB_MAX_REC_LN);
-	extract_csv(purl, (char *) url_record, 6, LDB_MAX_REC_LN);
+	extract_csv(vendor, (char *)url_record, 1, LDB_MAX_REC_LN);
+	extract_csv(component, (char *)url_record, 2, LDB_MAX_REC_LN);
+	extract_csv(purl, (char *)url_record, 6, LDB_MAX_REC_LN);
 
 	bool found = false;
 
@@ -206,12 +218,13 @@ bool ignored_asset_match(uint8_t *url_record)
 		char *dpurl = ignore_components[i].purl;
 
 		/* Exit if reached the end */
-		if (!*dcomponent && !*dvendor && !*dpurl) break;
+		if (!*dcomponent && !*dvendor && !*dpurl)
+			break;
 
 		/* Compare purl */
 		if (*dpurl)
 		{
-			if (!strcmp((const char *) purl, (const char *) dpurl))
+			if (!strcmp((const char *)purl, (const char *)dpurl))
 			{
 				found = true;
 				break;
@@ -235,7 +248,8 @@ bool ignored_asset_match(uint8_t *url_record)
 	free(component);
 	free(purl);
 
-	if (found) scanlog("Component ignored: %s\n", url_record);
+	if (found)
+		scanlog("Component ignored: %s\n", url_record);
 	return found;
 }
 
@@ -259,18 +273,19 @@ match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 		strcpy(match.file, file_path);
 		match.path_ln = strlen(file_path);
 	}
-	else strcpy(match.file, "all");
+	else
+		strcpy(match.file, "all");
 
 	/* Extract fields from url record */
-	extract_csv(match.vendor,       (char *) url_record, 1, sizeof(match.vendor));
-	extract_csv(match.component,    (char *) url_record, 2, sizeof(match.component));
-	extract_csv(match.version,      (char *) url_record, 3, sizeof(match.version));
-	extract_csv(match.release_date, (char *) url_record, 4, sizeof(match.release_date));
-	extract_csv(match.license,      (char *) url_record, 5, sizeof(match.license));
-	extract_csv(match.purl[0],      (char *) url_record, 6, sizeof(match.purl[0]));
+	extract_csv(match.vendor, (char *)url_record, 1, sizeof(match.vendor));
+	extract_csv(match.component, (char *)url_record, 2, sizeof(match.component));
+	extract_csv(match.version, (char *)url_record, 3, sizeof(match.version));
+	extract_csv(match.release_date, (char *)url_record, 4, sizeof(match.release_date));
+	extract_csv(match.license, (char *)url_record, 5, sizeof(match.license));
+	extract_csv(match.purl[0], (char *)url_record, 6, sizeof(match.purl[0]));
 	MD5((uint8_t *)match.purl[0], strlen(match.purl[0]), match.purl_md5[0]);
 
-	extract_csv(match.url,          (char *) url_record, 7, sizeof(match.url));
+	extract_csv(match.url, (char *)url_record, 7, sizeof(match.url));
 	strcpy(match.latest_version, match.version);
 
 	flip_slashes(match.vendor);
@@ -302,7 +317,8 @@ int count_matches(match_data *matches)
 		return 0;
 	}
 	int c = 0;
-	for (int i = 0; i < scan_limit && matches[i].loaded; i++) c++;
+	for (int i = 0; i < scan_limit && matches[i].loaded; i++)
+		c++;
 	return c;
 }
 
@@ -316,9 +332,9 @@ void add_match(int position, match_data match, match_data *matches)
 {
 
 	/* Verify if metadata is complete */
-	if (!*match.url || !*match.version || !*match.file || !*match.purl[0])
+	if (!*match.url || !*match.version || !*match.file || !*match.purl[0] || strlen(match.release_date) < 4)
 	{
-		scanlog("Metadata is incomplete: %s,%s,%s,%s\n",match.purl[0], match.version, match.url, match.file);
+		scanlog("Metadata is incomplete: %s,%s,%s,%s,%s\n", match.purl[0], match.version, match.url, match.file, match.release_date);
 		return;
 	}
 	int n = count_matches(matches);
@@ -359,29 +375,37 @@ void add_match(int position, match_data match, match_data *matches)
 		int n = 0;
 
 		/* Match position is given */
-		if (position >= 0) n = position;
 
-		/* Search for a free match position */
-		else n = count_matches(matches);
+		if (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) < 0)
+			return;
 
-		if (n >= scan_limit) return;
+		while (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) == 0 && n < scan_limit)
+			n++;
 
-		/* Copy match information */
-		strcpy(matches[n].vendor, match.vendor);
-		strcpy(matches[n].component, match.component);
-		strcpy(matches[n].purl[0], match.purl[0]);
-		memcpy(matches[n].purl_md5[0], match.purl_md5[0], MD5_LEN);
-		strcpy(matches[n].version, match.version);
-		strcpy(matches[n].latest_version, match.latest_version);
-		strcpy(matches[n].url, match.url);
-		strcpy(matches[n].file, match.file);
-		strcpy(matches[n].license, match.license);
-		strcpy(matches[n].release_date, match.release_date);
-		memcpy(matches[n].url_md5, match.url_md5, MD5_LEN);
-		memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
-		matches[n].path_ln = match.path_ln;
-		matches[n].selected = match.selected;
-		matches[n].loaded = true;
+		if (n > scan_limit)
+			return;
+
+		if (!matches[n].loaded || strcmp(matches[n].release_date, match.release_date) >= 0)
+		{
+			scanlog("%s - %s\n", matches[n].release_date, match.release_date);
+			/* Copy match information */
+			strcpy(matches[n].vendor, match.vendor);
+			strcpy(matches[n].component, match.component);
+			strcpy(matches[n].purl[0], match.purl[0]);
+			memcpy(matches[n].purl_md5[0], match.purl_md5[0], MD5_LEN);
+			strcpy(matches[n].version, match.version);
+			strcpy(matches[n].latest_version, match.latest_version);
+			strcpy(matches[n].url, match.url);
+			strcpy(matches[n].file, match.file);
+			strcpy(matches[n].license, match.license);
+			strcpy(matches[n].release_date, match.release_date);
+			memcpy(matches[n].url_md5, match.url_md5, MD5_LEN);
+			memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
+			matches[n].path_ln = match.path_ln;
+			matches[n].selected = match.selected;
+			matches[n].type = match.type;
+			matches[n].loaded = true;
+		}
 	}
 }
 
@@ -391,16 +415,16 @@ void add_match(int position, match_data match, match_data *matches)
  * @param component_rank component ranking
  * @param file_md5 md5 hash of file
  */
-void add_selected_file_to_matches(\
-		match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *file_md5)
+void add_selected_file_to_matches(
+	match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *file_md5)
 {
 	/* Create empty match item */
 	struct match_data match = match_init();
-
 	/* Fill match with component info */
-	match = fill_match(component_rank[rank_id].url_id,\
-			component_rank[rank_id].file,\
-			(uint8_t *) component_rank[rank_id].url_record);
+	match = fill_match(component_rank[rank_id].url_id,
+					   component_rank[rank_id].file,
+					   (uint8_t *)component_rank[rank_id].url_record);
+	match.type = file;
 
 	/* Add file MD5 */
 	memcpy(match.file_md5, file_md5, MD5_LEN);
@@ -418,7 +442,7 @@ void load_matches(scan_data *scan, match_data *matches)
 {
 	strcpy(scan->line_ranges, "all");
 	strcpy(scan->oss_ranges, "all");
-	sprintf(scan->matched_percent,"100%%");
+	sprintf(scan->matched_percent, "100%%");
 
 	/* Compile match ranges and fill up matched percent */
 	int hits = 100;
@@ -430,14 +454,18 @@ void load_matches(scan_data *scan, match_data *matches)
 		hits = compile_ranges(scan);
 
 		float percent = (hits * 100) / scan->total_lines;
-		if (hits) matched_percent = floor(percent);
-		if (matched_percent > 99) matched_percent = 99;
-		if (matched_percent < 1) matched_percent = 1;
+		if (hits)
+			matched_percent = floor(percent);
+		if (matched_percent > 99)
+			matched_percent = 99;
+		if (matched_percent < 1)
+			matched_percent = 1;
 
 		scanlog("compile_ranges returns %d hits\n", hits);
-		if (!hits) return;
+		if (!hits)
+			return;
 
-		sprintf(scan->matched_percent,"%u%%", matched_percent);
+		sprintf(scan->matched_percent, "%u%%", matched_percent);
 	}
 
 	uint32_t records = 0;
@@ -445,118 +473,117 @@ void load_matches(scan_data *scan, match_data *matches)
 	/* Snippet and url match should look for the matching md5 in urls */
 	if (scan->match_type != file)
 	{
-		records = ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *) matches);
+		records = ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *)matches);
 		scanlog("URL recordset contains %u records\n", records);
 	}
 
-	if (!records)
+	file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
+	records += ldb_fetch_recordset(NULL, oss_file, scan->match_ptr, false, collect_all_files, (void *)files);
+	if (records)
 	{
-
-		file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
-		records = ldb_fetch_recordset(NULL, oss_file, scan->match_ptr, false, collect_all_files, (void *) files);
-		if (records)
+		if (engine_flags & DISABLE_BEST_MATCH)
 		{
-			if (engine_flags & DISABLE_BEST_MATCH)
+			records = add_all_files_to_matches(files, records, scan, matches);
+		}
+		else
+		{
+			char new_component_hint[MAX_FIELD_LN] = "\0";
+			component_name_rank *component_rank = calloc(sizeof(struct component_name_rank), rank_items);
+			scanlog("Inherited component hint from context: %s\n", *component_hint ? component_hint : "NULL");
+
+			/* Try the contextual component_hint, if any */
+			int selected = seek_component_hint_in_path(files, records, component_hint, component_rank);
+
+			/* Query components for files with shortest path */
+			if (selected < 0)
+				selected = shortest_paths_check(files, records, component_rank);
+
+			/* Get new component hint and try that instead */
+			if (selected < 0)
 			{
-				records = add_all_files_to_matches(files, records, scan, matches);
+				/* Mark external files and collect new_component_hint */
+				external_component_hint_in_path(files, records, new_component_hint, component_rank);
+
+				/* Attempt to identify hints in start of path and component name */
+				selected = seek_component_hint_in_path(files, records, new_component_hint, component_rank);
 			}
+
+			/* Attempt to identify components from paths starting with the component name */
+			if (selected < 0)
+			{
+				selected = seek_component_hint_in_path_start(files, records, component_rank);
+			}
+
+			if (selected >= 0)
+			{
+				add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
+
+				/* Update component_hint for the next file */
+				strcpy(component_hint, component_rank[selected].component);
+			}
+
+			/* Attempt matching selecting the shortest paths */
 			else
 			{
-				char new_component_hint[MAX_FIELD_LN] = "\0";
-				component_name_rank *component_rank = calloc(sizeof(struct component_name_rank), rank_items);
-				scanlog("Inherited component hint from context: %s\n", *component_hint ? component_hint : "NULL");
+				/* Init path ranking */
+				path_ranking *path_rank = calloc(sizeof(path_ranking), rank_items);
 
-				/* Try the contextual component_hint, if any */
-				int selected = seek_component_hint_in_path(files, records, component_hint, component_rank);
+				/* Attempt matching start of short paths with their respective components names */
+				bool hint_found = component_hint_from_shortest_paths(
+					files, records,
+					component_hint, new_component_hint,
+					component_rank,
+					path_rank);
 
-				/* Query components for files with shortest path */
-				if (selected < 0) selected = shortest_paths_check(files, records, component_rank);
+				/* Otherwise try again without passing hints, just ranking from shortest paths */
+				if (!hint_found)
+					hint_found = component_hint_from_shortest_paths(
+						files, records,
+						"", "",
+						component_rank,
+						path_rank);
 
-				/* Get new component hint and try that instead */
-				if (selected < 0)
+				free(path_rank);
+
+				/* Select the best component hint from the collected rank */
+				if (hint_found)
+					select_best_component_from_rank(component_rank, component_hint);
+
+				/* Show component hint, if found */
+				if (hint_found)
+					scanlog("Component hint = %s/%s\n", *vendor_hint ? vendor_hint : "?", component_hint);
+
+				/* Add relevant files to matches */
+				if (!add_files_to_matches(files, records, component_hint, scan->match_ptr, matches, false))
 				{
-					/* Mark external files and collect new_component_hint */
-					external_component_hint_in_path(files, records, new_component_hint, component_rank);
-
-					/* Attempt to identify hints in start of path and component name */
-					selected = seek_component_hint_in_path(files, records, new_component_hint, component_rank);
-				}
-
-				/* Attempt to identify components from paths starting with the component name */
-				if (selected < 0)
-				{
+					/* If this did not work, attempt finding the component name in the path */
 					selected = seek_component_hint_in_path_start(files, records, component_rank);
-				}
 
-				if (selected >= 0)
-				{
+					/* If still no luck, forget about hint and add all files to matches */
+					if (selected < 0)
+					{
+						add_files_to_matches(files, records, component_hint, scan->match_ptr, matches, true);
+						selected = 0;
+					}
+
+					/* Add file to matches */
 					add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
 
 					/* Update component_hint for the next file */
 					strcpy(component_hint, component_rank[selected].component);
 				}
-
-				/* Attempt matching selecting the shortest paths */
-				else
-				{
-					/* Init path ranking */
-					path_ranking *path_rank = calloc(sizeof(path_ranking), rank_items);
-
-					/* Attempt matching start of short paths with their respective components names */
-					bool hint_found = component_hint_from_shortest_paths(\
-							files, records,\
-							component_hint, new_component_hint,\
-							component_rank,\
-							path_rank\
-							);
-
-					/* Otherwise try again without passing hints, just ranking from shortest paths */
-					if (!hint_found) hint_found = component_hint_from_shortest_paths(\
-							files, records,\
-							"", "",\
-							component_rank,\
-							path_rank\
-							);
-
-					free(path_rank);
-
-					/* Select the best component hint from the collected rank */
-					if (hint_found) select_best_component_from_rank(component_rank, component_hint);
-
-					/* Show component hint, if found */
-					if (hint_found) scanlog("Component hint = %s/%s\n", *vendor_hint ? vendor_hint : "?", component_hint);
-
-					/* Add relevant files to matches */
-					if (!add_files_to_matches(files, records, component_hint, scan->match_ptr, matches, false))
-					{
-						/* If this did not work, attempt finding the component name in the path */
-						selected = seek_component_hint_in_path_start(files, records, component_rank);
-
-						/* If still no luck, forget about hint and add all files to matches */
-						if (selected < 0)
-						{
-							add_files_to_matches(files, records, component_hint, scan->match_ptr, matches, true);
-							selected = 0;
-						}
-
-						/* Add file to matches */
-						add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
-
-						/* Update component_hint for the next file */
-						strcpy(component_hint, component_rank[selected].component);
-					}
-				}
-				free(component_rank);
 			}
+			free(component_rank);
 		}
-
-		/* Add version ranges to selected match */
-		add_versions(scan, matches, files, records);
-
-		free(files);
 	}
 
-	if (!records) scanlog("Match type is 'none' after loading matches\n");
+	/* Add version ranges to selected match */
+	add_versions(scan, matches, files, records);
+
+	free(files);
+
+	if (!records)
+		scanlog("Match type is 'none' after loading matches\n");
 }
 
 /**
@@ -601,30 +628,36 @@ match_data *compile_matches(scan_data *scan)
 			}
 
 			/* Otherwise break loop */
-			else break;
+			else
+				break;
 		}
 
 		/* Dump match map */
-		if (debug_on) map_dump(scan);
+		if (debug_on)
+			map_dump(scan);
 
 		/* Gather and load match metadata */
-		scanlog("Starting match: %s\n",matchtypes[scan->match_type]);
-		if (scan->match_type != none) load_matches(scan, matches);
+		scanlog("Starting match: %s\n", matchtypes[scan->match_type]);
+		if (scan->match_type != none)
+			load_matches(scan, matches);
 
 		/* Set hits to zero for the selected record (to skip it in the next iteration) */
-		if (scan->match_type == snippet) clear_hits(scan->match_ptr);
+		if (scan->match_type == snippet)
+			clear_hits(scan->match_ptr);
 
 		/* If matches are full, break loop */
-		if (matches[scan_limit - 1].loaded) break;
+		if (matches[scan_limit - 1].loaded)
+			break;
 
 		/* Loop only if DISABLE_BEST_MATCH and match type is snippet */
 	} while ((engine_flags & DISABLE_BEST_MATCH) && scan->match_type == snippet);
 
-	for (int i = 0; i < scan_limit && *matches[i].component; i++) scanlog("Match #%d = %d\n", i, matches[i].selected);
+	for (int i = 0; i < scan_limit && *matches[i].component; i++)
+		scanlog("Match #%d = %d - %s\n", i, matches[i].selected, matches[i].release_date);
 
 	/* The latter could result in no matches */
-	if (!matches[0].loaded) scan->match_type = none;
-	scanlog("Final match: %s\n",matchtypes[scan->match_type]);
-
+	if (!matches[0].loaded)
+		scan->match_type = none;
+	scanlog("Final match: %s\n", matchtypes[scan->match_type]);
 	return matches;
 }

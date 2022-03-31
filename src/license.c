@@ -111,7 +111,7 @@ bool osadl_load_file(void)
 	int size = read_file(osadl_json_content, path, OSADL_FILE_SIZE);
 	
 	if (!size)
-		fprintf(stderr, "Warning: Cannot find OSADL definition. Please check that %s is present\n", path);
+		scanlog("Warning: Cannot find OSADL definition. Please check that %s is present\n", path);
 	else
 		result = true;
 	
@@ -185,11 +185,9 @@ void print_osadl_license_data(char *license)
  */
 bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	decrypt_data(data, datalen, "license", key, subkey);
-
-	char *CSV = calloc(datalen + 1, 1);
-	memcpy(CSV, (char *) data, datalen);
-
+	char * CSV = decrypt_data(data, datalen, "license", key, subkey);
+	if (!CSV)
+		return false;
 	extract_csv(ptr, CSV, 2, MAX_JSON_VALUE_LEN);
 	free(CSV);
 
@@ -212,10 +210,11 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	match_data *match = ptr;
 
 	if (!datalen) return false;
-	decrypt_data(data, datalen, "license", key, subkey);
+	
+	char * CSV = decrypt_data(data, datalen, "license", key, subkey);
 
-	char *CSV  = calloc(datalen + 1, 1);
-	memcpy(CSV, data, datalen);
+	if (!CSV)
+		return false;
 
 	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *license = calloc(MAX_JSON_VALUE_LEN, 1);
@@ -270,7 +269,7 @@ void print_licenses(match_data match)
 	}
 
 	/* Open licenses structure */
-	printf("\"licenses\": ");
+	printf(",\"licenses\": ");
 	printf("[");
 
 	/* Clean crc list (used to avoid duplicates) */

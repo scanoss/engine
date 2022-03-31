@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include "scanoss.h"
 #include "debug.h"
-
+#include "decrypt.h"
 /**
   * @file decrypt.c
   * @date 27 Jun 2021 
@@ -19,20 +19,15 @@
  * @param key //TODO
  * @param subkey //TODO
  */
-void decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey)
+char * standalone_decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey)
 {
-	/* Add here your decryption routines if needed */
-}
-
-/**
- * @brief Decrypt mz data
- * @param mz_job Job to decompress
- * @param key Decryption key
-*/  
-void cat_decrypted_mz(struct mz_job *job, char *key)
-{
-  scanlog("Decompress and cat");
-  if (ldb_valid_table("oss/sources")) mz_cat(job, key);
+	char * msg = NULL;
+  
+  if (!strcmp(table, "file"))
+    msg = strndup((char*) data + 16, size - 16);
   else
-    scanlog("cannot open table sources");
+    msg = strndup((char*) data, size);
+  
+  return msg;
+
 }

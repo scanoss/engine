@@ -81,8 +81,14 @@ static bool shortest_path_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 	int *shortest = (int *) ptr;
 	if (datalen)
 	{
-		decrypt_data(data, datalen, "file", key, subkey);
-		int depth = path_depth(data, datalen - MD5_LEN);
+		char * decrypted = decrypt_data(data, datalen, "file", key, subkey);
+		if (!decrypted)
+			return false;
+
+		int depth = path_depth((uint8_t*) decrypted, strlen(decrypted));
+
+		free(decrypted);
+		
 		if (depth < 1) return false;
 
 		if (!*shortest)
@@ -281,7 +287,7 @@ uint8_t *biggest_snippet(scan_data *scan)
 	}
 
 	if (snippet_extension_discard(scan, out)) return NULL;
-
+	
 	scan->match_ptr = out;
 	return out;
 }

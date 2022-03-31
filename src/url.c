@@ -55,13 +55,16 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 {
 	if (!datalen && datalen >= MAX_PATH) return false;
 
-	decrypt_data(raw_data, datalen, "url", key, subkey);
+	char * data = decrypt_data(raw_data, datalen, "url", key, subkey);
 
-	uint8_t data[MAX_PATH] = "\0";
-	memcpy(data, raw_data, datalen);
-	data[datalen] = 0;
+	if (!data)
+		return false;
 
-	if (ignored_asset_match(data)) return false;
+	if (ignored_asset_match((uint8_t*) data)) 
+	{
+		free(data);
+		return false;
+	}
 
 	match_data *matches = (match_data*) ptr;
 	struct match_data match = match_init();
@@ -70,7 +73,8 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	int total_matches = count_matches(matches);
 	if (total_matches >= scan_limit) return true;
 
-	match = fill_match(NULL, NULL, data);
+	match = fill_match(NULL, NULL, (uint8_t*) data);
+	free(data);
 
 	/* Save match component id */
 	memcpy(match.url_md5, key, LDB_KEY_LN);
@@ -80,7 +84,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	match.path_ln = strlen(match.url);
 	match.type = url;
 
-	add_match(-1, match, matches);
+	add_match(0, match, matches);
 	return false;
 }
 /**
@@ -213,15 +217,17 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 {
 	match_data *match = (match_data *) ptr;
 
-	decrypt_data(data, datalen, "purl", key, subkey);
+	char * purl = decrypt_data(data, datalen, "purl", key, subkey);
+
+	if (!purl)
+		return false;
 
 	/* Only use purl relation records */
-	if (memcmp(data, "pkg:", 4)) return false;
-
-	/* Save purl record */
-	char *purl = calloc(datalen + 1, 1);
-	memcpy(purl, data, datalen);
-	purl[datalen] = 0;
+	if (memcmp(purl, "pkg:", 4)) 
+	{
+		free(purl);
+		return false;
+	}
 
 	/* Copy purl record to match */
 	for (int i = 0; i < MAX_PURLS; i++)
@@ -276,12 +282,12 @@ bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 {
 	if (!datalen) return false;
 
-	decrypt_data(data, datalen, "purl", key, subkey);
+	char * purl = decrypt_data(data, datalen, "purl", key, subkey);
 	uint8_t *oldest = (uint8_t *) ptr;
 
-	char purl[LDB_MAX_REC_LN + 1] = "\0";
-	memcpy(purl, data, datalen);
-	purl[datalen] = 0;
+	if (!purl)
+		return false;
+
 	/* Ignore pkg relation records */
 	if (memcmp(purl, "pkg:", 4))
 	{
@@ -290,7 +296,7 @@ bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 		if (!*oldest || (strcmp((char *)oldest, release_date) > 0))
 			strcpy((char *)oldest, release_date);
 	}
-
+	free(purl);
 	return false;
 }
 
@@ -322,19 +328,16 @@ void purl_release_date(char *url, char *date)
 **/
 bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	decrypt_data(data, datalen, "url", key, subkey);
-	if (!datalen) return false;
+	char * url = decrypt_data(data, datalen, "url", key, subkey);
+	if (!url) 
+		return false;
 
 	/* Get oldest */
 	char oldest[MAX_ARGLN + 1] = "\0";
 	extract_csv(oldest, (char *) ptr, 4, MAX_ARGLN);
 
-	char url[LDB_MAX_REC_LN + 1] = "\0";
-	memcpy(url, data, datalen);
-	url[datalen] = 0;
-
 	/* Skip ignored records (-b SBOM.json) */
-	if (datalen) if (!ignored_asset_match((uint8_t *)url))
+	if (!ignored_asset_match((uint8_t *)url))
 	{
 
 		/* Extract date */
@@ -348,5 +351,6 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 			memcpy((uint8_t *) ptr, url, datalen + 1);
 		}
 	}
+	free(url);
 	return false;
 }

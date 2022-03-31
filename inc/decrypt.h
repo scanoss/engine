@@ -2,7 +2,10 @@
     #define __DECRYPT_H
 
 #include "scanoss.h"
-void decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey);
-void cat_decrypted_mz(struct mz_job *job, char *key);
+
+char * (*decrypt_data) (uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey);
+void  (*decrypt_mz) (uint8_t *data, uint32_t len);
+
+char * standalone_decrypt_data(uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey);
 
 #endif
