@@ -89,6 +89,7 @@ void kb_version_get(void)
 	{
 		uint64_t len = read_file(kb_version, kb_version_path, sizeof(kb_version));
 		free(kb_version_path);
+		
 		if (len > 0)
 		{
 			char * end = strrchr(kb_version, '}');
@@ -100,8 +101,8 @@ void kb_version_get(void)
 			}
 		}
 	}
-	
-	free(kb_version_path);
+	else
+		free(kb_version_path);
 	sprintf(kb_version,"\"N/A\"");
 }
 
