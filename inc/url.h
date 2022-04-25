@@ -17,6 +17,6 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr);
 
 void select_best_url(match_data *matches);
-void purl_release_date(uint8_t *url, char *date);
+void purl_release_date(char *purl, char *date);
 
 #endif

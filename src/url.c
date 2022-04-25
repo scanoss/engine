@@ -306,14 +306,12 @@ bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
  * @param data[out] date
 **/
 
-void purl_release_date(char *url, char *date)
+void purl_release_date(char *purl, char *date)
 {
 	*date = 0;
 
 	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
 		return; 
-	char purl[MAX_ARGLN + 1] = "\0";
-	extract_csv(purl, (char *) url , 6, MAX_ARGLN);
 
 	uint8_t purl_md5[MD5_LEN];
 	MD5((uint8_t *)purl, strlen(purl), purl_md5);
@@ -342,7 +340,9 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 
 		/* Extract date */
 		char release_date[MAX_ARGLN + 1] = "\0";
-		purl_release_date(url, release_date);
+		char purl[MAX_ARGLN + 1] = "\0";
+		extract_csv(purl, (char *) url , 6, MAX_ARGLN);
+		purl_release_date(purl, release_date);
 
 		/* If it is older, then we copy to oldest */
 		if (!*oldest || (*release_date && (strcmp(release_date, oldest) < 0)))

@@ -487,91 +487,15 @@ void load_matches(scan_data *scan, match_data *matches)
 		}
 		else
 		{
-			char new_component_hint[MAX_FIELD_LN] = "\0";
 			component_name_rank *component_rank = calloc(sizeof(struct component_name_rank), rank_items);
 			scanlog("Inherited component hint from context: %s\n", *component_hint ? component_hint : "NULL");
 
 			/* Try the contextual component_hint, if any */
-			int selected = seek_component_hint_in_path(files, records, component_hint, component_rank);
-
 			/* Query components for files with shortest path */
-			if (selected < 0)
-				selected = shortest_paths_check(files, records, component_rank);
-
-			/* Get new component hint and try that instead */
-			if (selected < 0)
-			{
-				/* Mark external files and collect new_component_hint */
-				external_component_hint_in_path(files, records, new_component_hint, component_rank);
-
-				/* Attempt to identify hints in start of path and component name */
-				selected = seek_component_hint_in_path(files, records, new_component_hint, component_rank);
-			}
-
-			/* Attempt to identify components from paths starting with the component name */
-			if (selected < 0)
-			{
-				selected = seek_component_hint_in_path_start(files, records, component_rank);
-			}
-
+			int	selected = shortest_paths_check(files, records, component_rank);
 			if (selected >= 0)
 			{
 				add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
-
-				/* Update component_hint for the next file */
-				strcpy(component_hint, component_rank[selected].component);
-			}
-
-			/* Attempt matching selecting the shortest paths */
-			else
-			{
-				/* Init path ranking */
-				path_ranking *path_rank = calloc(sizeof(path_ranking), rank_items);
-
-				/* Attempt matching start of short paths with their respective components names */
-				bool hint_found = component_hint_from_shortest_paths(
-					files, records,
-					component_hint, new_component_hint,
-					component_rank,
-					path_rank);
-
-				/* Otherwise try again without passing hints, just ranking from shortest paths */
-				if (!hint_found)
-					hint_found = component_hint_from_shortest_paths(
-						files, records,
-						"", "",
-						component_rank,
-						path_rank);
-
-				free(path_rank);
-
-				/* Select the best component hint from the collected rank */
-				if (hint_found)
-					select_best_component_from_rank(component_rank, component_hint);
-
-				/* Show component hint, if found */
-				if (hint_found)
-					scanlog("Component hint = %s/%s\n", *vendor_hint ? vendor_hint : "?", component_hint);
-
-				/* Add relevant files to matches */
-				if (!add_files_to_matches(files, records, component_hint, scan->match_ptr, matches, false))
-				{
-					/* If this did not work, attempt finding the component name in the path */
-					selected = seek_component_hint_in_path_start(files, records, component_rank);
-
-					/* If still no luck, forget about hint and add all files to matches */
-					if (selected < 0)
-					{
-						add_files_to_matches(files, records, component_hint, scan->match_ptr, matches, true);
-						selected = 0;
-					}
-
-					/* Add file to matches */
-					add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
-
-					/* Update component_hint for the next file */
-					strcpy(component_hint, component_rank[selected].component);
-				}
 			}
 			free(component_rank);
 		}

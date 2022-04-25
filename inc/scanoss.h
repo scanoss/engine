@@ -266,11 +266,7 @@ void consider_file_record(\
 		match_data *matches,\
 		char *component_hint,\
 		uint8_t *match_md5);
-int seek_component_hint_in_path(\
-		file_recordset *files,\
-		int records,\
-		char *hint,\
-		component_name_rank *component_rank);
+
 void init_path_ranking(path_ranking *path_rank);
 bool select_best_match(match_data *matches);
 void print_attribution_notices(match_data match);

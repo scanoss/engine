@@ -15,15 +15,7 @@ int add_files_to_matches(\
 		uint8_t *file_md5,\
 		match_data *matches,
 		bool add_all);
-int seek_component_hint_in_path(\
-    file_recordset *files,\
-    int records,\
-    char *hint,\
-    component_name_rank *component_rank);
-int seek_component_hint_in_path_start(\
-    file_recordset *files,\
-    int records,\
-    component_name_rank *component_rank);
+
 bool select_best_match(match_data *matches);
 int fill_component_age(component_name_rank *component_rank);
 long component_age(char *vendor, char *component);
