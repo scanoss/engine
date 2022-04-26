@@ -37,6 +37,7 @@
 #include "debug.h"
 #include "util.h"
 #include "parse.h"
+#include "decrypt.h"
 
 /** @brief */
 const char *quality_sources[] = {"best_practices"};
@@ -54,9 +55,8 @@ const char *quality_sources[] = {"best_practices"};
  */
 bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char *CSV  = calloc(datalen + 1, 1);
-	memcpy(CSV, data, datalen);
-
+	
+	char *CSV = decrypt_data(data, datalen, "quality", key, subkey);
 	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *quality = calloc(MAX_JSON_VALUE_LEN, 1);
 
