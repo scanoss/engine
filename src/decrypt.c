@@ -11,6 +11,8 @@
   * @see https://github.com/scanoss/engine/blob/master/src/decrypt.c
   */
 
+char * (*decrypt_data) (uint8_t *data, uint32_t size, char *table, uint8_t *key, uint8_t *subkey);
+void  (*decrypt_mz) (uint8_t *data, uint32_t len);
 /**
  * @brief Decrypt data function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param data //TODO  
