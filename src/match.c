@@ -490,7 +490,6 @@ void load_matches(scan_data *scan, match_data *matches)
 			component_name_rank *component_rank = calloc(sizeof(struct component_name_rank), rank_items);
 			scanlog("Inherited component hint from context: %s\n", *component_hint ? component_hint : "NULL");
 
-			/* Try the contextual component_hint, if any */
 			/* Query components for files with shortest path */
 			int	selected = shortest_paths_check(files, records, component_rank);
 			if (selected >= 0)
