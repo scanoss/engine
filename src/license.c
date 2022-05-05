@@ -243,7 +243,8 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 		printf("{");
 		printf("\"name\": \"%s\",", license);
 		osadl_print_license(license, true);
-		printf("\"source\": \"%s\"", license_sources[atoi(source)]);
+		printf("\"source\": \"%s\",", license_sources[atoi(source)]);
+		printf("\"spdx-url\": \"https://spdx.org/licenses/%s.html\"",license);
 		printf("}");
 	}
 
