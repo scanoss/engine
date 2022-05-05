@@ -66,6 +66,18 @@
     },
     {
       "type": "library",
+      "publisher": "h2non",
+      "group": "h2non",
+      "name": "semver.c",
+      "url": "https://github.com/h2non/semver.c",
+      "licenses": [
+        {
+          "id": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "publisher": "udp",
       "group": "udp",
       "name": "json-parser",
