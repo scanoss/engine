@@ -12,6 +12,10 @@ By freeing developers to focus on writing great, compliant code that they and th
 The Scanoss engine requires a Knowledge database installed for retrieving results. Scanoss use the SCANOSS LDB (Linked-list database) as a shared library. LDB Source code and installation guide can be found on https://github.com/scanoss/ldb
 The knowledge database is incrementally built using the SCANOSS mining tool (minr). It source code and installation guide can be found on https://github.com/scanoss/minr
 
+# Prerequisites
+- Open SSL shared library. In Debian install with: apt install libssl-dev
+- LDB shared library. Installation instructions: https://github.com/scanoss/ldb/README.md
+
 # Installation
 
 The SCANOSS Engine is a command-line tool used for comparing a file or directory against the SCANOSS Knowledgebase. The source code can be downloaded and compiled as follows:

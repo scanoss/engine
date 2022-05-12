@@ -727,33 +727,6 @@ void dump_path_rank(len_rank *path_rank, file_recordset *files)
  * @param top_md5s top records md5
  * @return pointer to the oldest record
  */
-uint8_t *select_best_top_date(int dup_dates, uint8_t *top_recs, uint8_t *top_md5s)
-{
-	if (!dup_dates) return top_recs;
-
-	char release_date[MAX_ARGLN + 1] = "\0";
-	char oldest[MAX_ARGLN + 1] = "9999";
-	uint8_t *oldest_ptr = top_recs;
-
-	/* Walk dup_dates and save pointer to top_recs with oldest first release date */
-	for (int i = 0; i <= dup_dates; i++)
-	{
-
-		uint8_t *rec = top_recs + (i * LDB_MAX_REC_LN);
-		uint8_t *md5 = top_md5s + (i * MD5_LEN);
-		if (!*rec) continue;
-
-		purl_release_date(rec, release_date);
-		if (*release_date) if (strcmp(release_date, oldest) < 1)
-		{
-			oldest_ptr = rec;
-			strcpy(oldest, release_date);
-			memcpy(top_md5s, md5, MD5_LEN);
-		}
-	}
-
-	return oldest_ptr;
-}
 
 /**
  * @brief Look for shortest file paths and query component/purl information to determine
@@ -779,26 +752,23 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 	dump_path_rank(path_rank, files);
 
 	/* Obtain oldest URL record */
-	const int TOP_BEST_DATES = 100;
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
 	uint8_t *old_rec = calloc(LDB_MAX_REC_LN, 1);
-	uint8_t *top_recs = calloc(LDB_MAX_REC_LN * TOP_BEST_DATES, 1);
-	uint8_t *top_md5s = calloc(LDB_MAX_REC_LN * MD5_LEN, 1);
+
 	int path_id = 0;
-	int dup_dates = 0;
 	char date[MAX_ARGLN + 1] = "\0";
+	char purl_date[MAX_ARGLN + 1] = "\0";
 	char oldest[MAX_ARGLN + 1] = "9999";
 	int min = 999;
+	
 	for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
 	{
 		if (path_rank[r].len)
 		{
-			if (path_rank[r].len < min)
+			if (path_rank[r].len > 1 && path_rank[r].len < min)
 				min = path_rank[r].len;
-
-			if (path_rank[r].len > min +1
 			
-			)
+			if (path_rank[r].len > min +1)
 				break;
 			strcpy((char *) url_rec, "9999");
 			ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *) url_rec);
@@ -810,31 +780,40 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 
 			if (strcmp((char *) date, (char *) oldest) < 0)
 			{
-				dup_dates = 0;
 				path_id = path_rank[r].id;
 				strcpy((char *) old_rec, (char *) url_rec);
-				strcpy((char *) top_recs, (char *) url_rec);
-				memcpy(top_md5s, files[path_rank[r].id].url_id, MD5_LEN);
 				strcpy(oldest, date);
-				scanlog("<<<%d,%d,%d - %s - %s - %s>>>\n", r,min, path_rank[r].len, files[path_rank[r].id].path, oldest, url_rec);
+				scanlog("<<<New best: %d,%d,%d - %s - %s>>>\n", r,min, path_rank[r].len, files[path_rank[r].id].path, oldest);
 			}
 
 			else if (!strcmp(date, oldest))
 			{
-				if (++dup_dates >= TOP_BEST_DATES) dup_dates = TOP_BEST_DATES - 1;
-				strcpy((char *) top_recs + LDB_MAX_REC_LN * dup_dates, (char *) url_rec);
-				memcpy(top_md5s + MD5_LEN * dup_dates, files[path_rank[r].id].url_id, MD5_LEN);
-				scanlog("<<<dup %d,%d,%d - %s - %s - %s>>>\n", r,min, path_rank[r].len, files[path_rank[r].id].path, oldest, url_rec);
+				char purl[MAX_ARGLN + 1] = "\0";
+				extract_csv(purl, (char *) old_rec , 6, MAX_ARGLN);
+				purl_release_date(purl, purl_date); //date of actual purl
+
+				char new_purl[MAX_ARGLN + 1] = "\0";
+				extract_csv(new_purl, (char *) url_rec , 6, MAX_ARGLN);
+				
+				char new_purl_date[MAX_ARGLN + 1] = "\0";
+				purl_release_date(new_purl, new_purl_date); //date of new purl
+				scanlog("<<<Duplicated: %d,%d,%d - %s - %s - %s/%s>>>\n", r,min, path_rank[r].len, files[path_rank[r].id].path, oldest, purl_date, new_purl_date);
+
+				if (!*new_purl_date)
+					continue;
+
+				if (!*purl_date || strcmp(new_purl_date, purl_date) < 1)
+				{
+					path_id = path_rank[r].id;
+					strcpy((char *) old_rec, (char *) url_rec);
+				}
 			}
 		}
 	}
 
-	char release_date[MAX_ARGLN + 1] = "\0";
-	extract_csv(release_date, (char *) top_recs, 4, MAX_ARGLN);
-
-	if (*release_date)
+	if (*oldest)
 	{
-		uint8_t *best_rec = select_best_top_date(dup_dates, top_recs, top_md5s);
+		uint8_t *best_rec = old_rec;
 		scanlog("shortest_paths_check() best_rec = %s\n", best_rec);
 
 		/* Fetch vendor and component name */
@@ -848,136 +827,14 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 		MD5((uint8_t *)purl, strlen(purl), purl_md5);
 
 		/* Insert winning record and select first and only item */
-		update_component_rank(component_rank, vendor, component, purl, purl_md5, files[path_id].path, top_md5s, (char *) best_rec);
+		update_component_rank(component_rank, vendor, component, purl, purl_md5, files[path_id].path, files[path_id].url_id, (char *) best_rec);
 		selected = 0;
 	}
 	else scanlog("shortest_paths_check() best_rec not selected\n");
 
 	free(url_rec);
 	free(old_rec);
-	free(top_recs);
-	free(top_md5s);
 	free(path_rank);
-	return selected;
-}
-/**
- * @brief Analyse files, selecting those matching the provided hints
-	 return the file id if matched, otherwise a negative value if no hits
- * @param files pointer to file recordset list
- * @param records records number
- * @param hint hint string
- * @param component_rank pointer to component_name_rank
- * @return file id if matched, -1 otherwise
- */
-int seek_component_hint_in_path(\
-		file_recordset *files,\
-		int records,\
-		char *hint,\
-		component_name_rank *component_rank)
-{
-	/* No hits returns a negative value */
-	if (!*hint) return -1;
-
-	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
-	bool hits = false;
-	clear_component_rank(component_rank);
-
-	/* Walk files, adding to rank those paths which:
-		 - Start with the hint
-		 - Point to a component name matching the hint */
-	for (int i = 0; i < records; i++)
-	{
-		bool skip = true;
-
-		/* If the path starts the hint, check vendor and component */
-		if (stristart(hint, files[i].path)) skip = false;
-
-		if (!skip)
-		{
-			/* Fetch vendor and component name */
-			get_url_record(files[i].url_id, url_rec);
-			char vendor[MAX_ARGLN + 1] = "\0";
-			char component[MAX_ARGLN + 1] = "\0";
-			char purl[MAX_ARGLN + 1] = "\0";
-			extract_csv(vendor, (char *) url_rec, 1, MAX_ARGLN);
-			extract_csv(component, (char *) url_rec, 2, MAX_ARGLN);
-			extract_csv(purl, (char *) url_rec, 2, MAX_ARGLN);
-			uint8_t purl_md5[MD5_LEN];
-			MD5((uint8_t *)purl, strlen(purl), purl_md5);
-
-			/* If the path starts with the component name, add it to the rank */
-			if (stristart(component, files[i].path))
-			{
-				update_component_rank(component_rank, vendor, component, purl, purl_md5, files[i].path, files[i].url_id, (char *) url_rec);
-				hits = true;
-			}
-		}
-	}
-	free(url_rec);
-
-	/* Add component age to rank */
-	if (hits)
-	{
-		int selected_id = fill_component_age(component_rank);
-		log_component_ranking(component_rank);
-		if (selected_id >= 0) return selected_id;
-	}
-
-	scanlog("seek_component_hint_in_path for %s results in no hits\n", hint);
-	return -1;
-}
-
-/**
- * @brief Analyse files, selecting those with a component name matching the beginning of the path
- * @param files pointer to file recorset list
- * @param records records number
- * @param component_rank pinter to component rank list
- * @return index of the selected item
- */
-int seek_component_hint_in_path_start(\
-		file_recordset *files,\
-		int records,\
-		component_name_rank *component_rank)
-{
-	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
-	bool hits = false;
-	clear_component_rank(component_rank);
-
-	/* Walk files, adding to rank those starting with its component name */
-	for (int i = 0; i < records; i++)
-	{
-		/* Fetch vendor, component and purl */
-		get_url_record(files[i].url_id, url_rec);
-		char vendor[MAX_ARGLN + 1] = "\0";
-		char component[MAX_ARGLN + 1] = "\0";
-		char purl[MAX_ARGLN + 1] = "\0";
-		extract_csv(vendor, (char *) url_rec, 1, MAX_ARGLN);
-		extract_csv(component, (char *) url_rec, 2, MAX_ARGLN);
-		extract_csv(purl, (char *) url_rec, 2, MAX_ARGLN);
-		uint8_t purl_md5[MD5_LEN];
-		MD5((uint8_t *)purl, strlen(purl), purl_md5);
-
-		/* If the path starts with the component name, add it to the rank */
-		if (stristart(component, files[i].path))
-		{
-			update_component_rank(component_rank, vendor, component, purl, purl_md5, files[i].path, files[i].url_id, (char *) url_rec);
-			hits = true;
-		}
-	}
-	free(url_rec);
-
-	int selected = -1;
-
-	/* Select most repeated component */
-	if (hits)
-	{
-		selected = rank_by_occurrences(component_rank);
-		log_component_ranking(component_rank);
-	}
-
-	if (selected >= 0) scanlog("seek_component_hint_in_path_start selected path #%d\n",selected);
-	else scanlog("seek_component_hint_in_path_start results in no hits\n");
-
 	return selected;
 }
 
