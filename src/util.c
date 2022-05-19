@@ -165,6 +165,24 @@ void string_clean(char *str)
   }
 }
 
+char * json_remove_invalid_char(char * input)
+{
+	const char unwanted[] = "\\";
+
+	for (int i = 0; i < strlen(unwanted); i++)
+	{
+		char * ch = strchr(input, unwanted[i]);
+		while (ch != NULL)
+		{
+			*ch = ' ';
+			ch = strchr(input, unwanted[i]);
+		}
+	}
+
+	return input;
+}
+
+
 /**
  * @brief Returns the current date stamp
  * @return pointer to date string

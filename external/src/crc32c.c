@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Zlib
 /* crc32c.c -- compute CRC-32C using the Intel crc32 instruction
  * Copyright (C) 2013 Mark Adler
  * Version 1.1  1 Aug 2013  Mark Adler

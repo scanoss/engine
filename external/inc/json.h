@@ -1,6 +1,7 @@
 
 /* vim: set et ts=3 sw=3 sts=3 ft=c:
  *
+ // SPDX-License-Identifier: BSD-2-Clause
  * Copyright (C) 2012, 2013, 2014 James McLaughlin et al.  All rights reserved.
  * https://github.com/udp/json-parser
  *

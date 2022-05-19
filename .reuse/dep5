@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: SCANOSS Engine
+Upstream-Contact: Mariano Scasso <support@scanoss.com>
+Source: https://github.com/scanoss/engine
+
+Files: src/* inc/* doc/* external/inc/winnowing.h .gitignore CODE_OF_CONDUCT.md CONTRIBUTING.md Doxyfile Makefile README.md SBOM.json
+Copyright: 2018 SCANOSS <info@scanoss.com>
+License: GPL-2.0-or-later

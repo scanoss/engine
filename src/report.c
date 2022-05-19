@@ -106,6 +106,7 @@ void kb_version_get(void)
 	sprintf(kb_version,"\"N/A\"");
 }
 
+
 /**
  * @brief Add server statistics to JSON
  * @param scan scan data pointer
