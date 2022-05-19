@@ -354,7 +354,6 @@ void add_match(int position, match_data match, match_data *matches)
 		if (!strcmp(matches[i].purl[0], match.purl[0]))
 		{
 			placed = true;
-
 			/* Compare version and, if needed, update range (version-latest) */
 			if (strcmp(match.version, matches[i].version) < 0)
 			{
@@ -370,21 +369,22 @@ void add_match(int position, match_data match, match_data *matches)
 	/* Otherwise add a new match */
 	if (!placed)
 	{
-
-		/* Locate free position */
-		int n = 0;
-
 		/* Match position is given */
+		if (!(engine_flags & DISABLE_BEST_MATCH))
+		{
+		/* Locate free position */
+			int n = 0;
 
-		if (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) < 0)
-			return;
+			if (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) < 0)
+				return;
 
-		while (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) == 0 && n < scan_limit)
-			n++;
+			while (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) == 0 && n < scan_limit)
+				n++;
+		}
 
 		if (n > scan_limit)
 			return;
-
+		
 		if (!matches[n].loaded || strcmp(matches[n].release_date, match.release_date) >= 0)
 		{
 			scanlog("%s - %s\n", matches[n].release_date, match.release_date);

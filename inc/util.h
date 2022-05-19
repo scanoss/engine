@@ -59,4 +59,6 @@ bool valid_md5(char *str);
 /* Wipe match.crclist */
 void clean_crclist(match_data *match);
 
+char * json_remove_invalid_char(char * input);
+
 #endif

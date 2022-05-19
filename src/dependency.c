@@ -83,7 +83,7 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 		printf("{");
 		printf("\"vendor\": \"%s\",", vendor);
 		printf("\"component\": \"%s\",", component);
-		printf("\"version\": \"%s\",", version);
+		printf("\"version\": \"%s\",", json_remove_invalid_char(version));
 		printf("\"source\": \"%s\"", dependency_sources[src]);
 		printf("}");
 	}
