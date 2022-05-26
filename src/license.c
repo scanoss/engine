@@ -314,6 +314,16 @@ void print_licenses(match_data match)
 		{
 			records = ldb_fetch_recordset(NULL, oss_license, match.purl_md5[i], false, print_licenses_item, &match);
 			scanlog("License for %s license returns %d hits\n", match.purl[i], records);
+
+			/* Calculate purl@version md5 */
+			char * purlversion = NULL;
+			asprintf(&purlversion, "%s@%s", match.purl[i], match.version);
+			uint8_t purlversion_md5[MD5_LEN];
+			MD5((uint8_t *)purlversion, strlen(purlversion), purlversion_md5);
+			
+			records = ldb_fetch_recordset(NULL, oss_license, purlversion_md5, false, print_licenses_item, &match);
+			scanlog("License for %s license returns %d hits\n", purlversion, records);
+			free(purlversion);
 		}
 	}	
 	printf("]");

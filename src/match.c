@@ -300,7 +300,6 @@ match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 		return match_init();
 	}
 
-	//clean_versions(&match);
 	return match;
 }
 
