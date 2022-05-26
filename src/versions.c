@@ -75,6 +75,14 @@ void clean_versions(match_data *match)
 	normalise_version(match->latest_version, match->component);
 }
 
+char * version_cleanup(char *  version, char * component)
+{
+	char * cleaned = strdup(version);
+	normalise_version(cleaned, component);
+
+	return cleaned;
+}
+
 /**
  * @brief get purl version handler.
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.

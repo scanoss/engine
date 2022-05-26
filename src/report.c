@@ -42,7 +42,7 @@
 #include "url.h"
 #include "parse.h"
 #include "file.h"
-
+#include "versions.h"
 uint64_t engine_flags = 0;
 char  kb_version[MAX_INPUT];
 
@@ -189,6 +189,7 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 {
 	if (quiet) return;
 
+	char * version_clean = NULL;
 	/* Comma separator */
 	if ((*match_counter)++) printf(",");
 
@@ -221,9 +222,15 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 
 	printf("\"vendor\": \"%s\",", match.vendor);
 	printf("\"component\": \"%s\",", match.component);
-	printf("\"version\": \"%s\",", match.version);
-	printf("\"latest\": \"%s\",", match.latest_version);
 
+	version_clean = version_cleanup(match.version, match.component);
+	printf("\"version\": \"%s\",", version_clean);
+	free(version_clean);
+
+	version_clean = version_cleanup(match.latest_version, match.component);
+	printf("\"latest\": \"%s\",", match.latest_version);
+	free(version_clean);
+	
 	printf("\"url\": \"%s\",", *match.main_url ? match.main_url : match.url);
 
 	/* Print (optional download_url */
