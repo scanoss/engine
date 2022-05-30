@@ -41,6 +41,7 @@
 #include "license_translation.h"
 #include "decrypt.h"
 #include "file.h"
+#include "query.h"
 
 /** @brief  License sources
 	 0 = Declared in component
@@ -316,14 +317,11 @@ void print_licenses(match_data match)
 			scanlog("License for %s license returns %d hits\n", match.purl[i], records);
 
 			/* Calculate purl@version md5 */
-			char * purlversion = NULL;
-			asprintf(&purlversion, "%s@%s", match.purl[i], match.version);
-			uint8_t purlversion_md5[MD5_LEN];
-			MD5((uint8_t *)purlversion, strlen(purlversion), purlversion_md5);
+			uint8_t  purlversion_md5[MD5_LEN];
+			purl_version_md5(purlversion_md5, match.purl[i], match.version);
 			
 			records = ldb_fetch_recordset(NULL, oss_license, purlversion_md5, false, print_licenses_item, &match);
-			scanlog("License for %s license returns %d hits\n", purlversion, records);
-			free(purlversion);
+			scanlog("License for %s@%s license returns %d hits\n", match.purl[i], match.version, records);
 		}
 	}	
 	printf("]");

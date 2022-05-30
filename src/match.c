@@ -372,21 +372,19 @@ void add_match(int position, match_data match, match_data *matches)
 		if (!(engine_flags & DISABLE_BEST_MATCH))
 		{
 		/* Locate free position */
-			int n = 0;
-
+			n = 0;
 			if (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) < 0)
 				return;
-
 			while (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) == 0 && n < scan_limit)
 				n++;
 		}
 
 		if (n > scan_limit)
 			return;
-		
+
 		if (!matches[n].loaded || strcmp(matches[n].release_date, match.release_date) >= 0)
 		{
-			scanlog("%s - %s\n", matches[n].release_date, match.release_date);
+			scanlog("New best match: %s - %s\n", matches[n].release_date, match.release_date);
 			/* Copy match information */
 			strcpy(matches[n].vendor, match.vendor);
 			strcpy(matches[n].component, match.component);
