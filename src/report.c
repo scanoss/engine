@@ -43,6 +43,7 @@
 #include "parse.h"
 #include "file.h"
 #include "versions.h"
+#include "libhpsm.h"
 
 uint64_t engine_flags = 0;
 char  kb_version[MAX_INPUT];
@@ -209,15 +210,25 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	printf("{");
 	printf("\"id\": \"%s\",", matchtypes[match.type == 1 ? 2 : match.type]);
 	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
-	printf("\"lines\": \"%s\",", scan->line_ranges);
-	printf("\"oss_lines\": \"%s\",", scan->oss_ranges);
+
+	if(scan->match_type == snippet ){
+		char * file=md5_hex(match.file_md5);
+	    struct ranges r = HPSM(scan->lines_crc,file);
+	 	printf("\"lines\": \"%s\",", r.local);
+		printf("\"oss_lines\": \"%s\",", r.remote);
+		printf("\"matched\": \"%s\",", r.matched);
+	} else {
+			printf("\"lines\": \"%s\",", scan->line_ranges);
+			printf("\"oss_lines\": \"%s\",", scan->oss_ranges);
+			printf("\"matched\": \"%s\",", scan->matched_percent);
+	}
+
+
 
 	if ((engine_flags & ENABLE_SNIPPET_IDS) && match.type == snippet)
 	{
 		printf("\"snippet_ids\": \"%s\",", scan->snippet_ids);
 	}
-
-	printf("\"matched\": \"%s\",", scan->matched_percent);
 
 	print_purl_array(match);
 

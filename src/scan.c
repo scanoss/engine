@@ -349,7 +349,13 @@ int wfp_scan(scan_data *scan)
 
 		bool is_component = (memcmp(line, "component=", 4) == 0);
 		bool is_file = (memcmp(line, "file=", 5) == 0);
-		bool is_wfp = (!is_file && !is_component);
+		bool is_hpsm = (memcmp(line, "hpsm=", 5) == 0);
+		bool is_wfp = (!is_file && !is_component && !is_hpsm);
+
+		if (is_hpsm) 
+		{
+			asprintf(&scan->lines_crc,"%s",&line[5]);
+		}
 
 		/* Scan previous file */
 		if ((is_component || is_file) && read_data) ldb_scan(scan);

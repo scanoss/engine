@@ -1,5 +1,5 @@
 #ifndef __SCANOSS_H
-    #define __SCANOSS_H
+#define __SCANOSS_H
     
 #include <arpa/inet.h>
 #include <ctype.h>
@@ -137,6 +137,9 @@ typedef struct scan_data
 	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1];
 	char matched_percent[MAX_FIELD_LN];
 	bool identified;
+	/* HPSM - Normalized CRC8 for each line */
+	uint8_t *lines_crc;
+
 } scan_data;
 
 typedef struct component_item
