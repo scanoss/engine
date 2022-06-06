@@ -21,16 +21,6 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 
 #line 3 "libhpsm.go"
 
-int go_multiply(int a, int b);
-
-typedef int (*multiply_f)(int a, int b);
-multiply_f multiply;
-
-
-static inline int multiplyWithFp(int a, int b) {
-    return multiply(a, b);
-
-}
  struct ranges{
 	char *local;
 	char *remote;
@@ -88,6 +78,7 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern char* HashFileContents(char* data);
 extern struct ranges HPSM(char* data, char* md5);
 extern struct ranges ProcessHPSM(unsigned char* data, int length, char* md5);
 

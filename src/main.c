@@ -60,6 +60,8 @@ struct ldb_table oss_cryptography;
 component_item *ignore_components;
 component_item *declared_components;
 
+bool hpsm_enabled;
+
 /* File tracing -qi */
 uint8_t trace_id[MD5_LEN];
 bool trace_on;
@@ -184,7 +186,7 @@ void recurse_directory(char *name)
 
 			bool wfp = false;
 			if (extension(path)) if (!strcmp(extension(path), "wfp")) wfp = true;
-
+		
 			if (wfp)
 				wfp_scan(&scan);
 			else
@@ -289,6 +291,8 @@ int main(int argc, char **argv)
 	int engine_flags_cmd_line = 0;
 
 	bool force_wfp = false;
+	
+	bool hpsm = false;
 
 	microseconds_start = microseconds_now();
 
@@ -301,7 +305,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:wtvhedq")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:wtvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -406,6 +410,10 @@ int main(int argc, char **argv)
 				printf("Unsupported option: %c\n", optopt);
 				invalid_argument = true;
 				break;
+			
+			case 'H':
+				hpsm_enabled = true;
+				break;
 		}
 		if (invalid_argument) break;
 	}
@@ -460,7 +468,7 @@ int main(int argc, char **argv)
 
 		/* Scan hash */
 		else if (ishash) hash_scan(&scan);
-
+	
 		/* Scan file */
 		else
 		{
