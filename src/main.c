@@ -44,7 +44,8 @@
 #include "util.h"
 
 #include "decrypt.h"
- #include <dlfcn.h>
+#include "hpsm.h"
+#include <dlfcn.h>
 
 struct ldb_table oss_url;
 struct ldb_table oss_file;
@@ -59,8 +60,6 @@ struct ldb_table oss_attribution;
 struct ldb_table oss_cryptography;
 component_item *ignore_components;
 component_item *declared_components;
-
-bool hpsm_enabled;
 
 /* File tracing -qi */
 uint8_t trace_id[MD5_LEN];
@@ -241,17 +240,17 @@ uint64_t read_flags()
 }
 
 
-void * lib_handle = NULL;
-bool lib_load()
+void * lib_encoder_handle = NULL;
+bool lib_encoder_load()
 {
 	/*set decode funtion pointer to NULL*/
-	lib_handle = dlopen("libscanoss_encoder.so", RTLD_NOW);
+	lib_encoder_handle = dlopen("libscanoss_encoder.so", RTLD_NOW);
 	char * err;
-    if (lib_handle) 
+    if (lib_encoder_handle) 
 	{
 		scanlog("Lib scanoss-enocder present\n");
-		decrypt_data = dlsym(lib_handle, "scanoss_decode_table");
-		decrypt_mz = dlsym(lib_handle, "scanoss_decode_mz");
+		decrypt_data = dlsym(lib_encoder_handle, "scanoss_decode_table");
+		decrypt_mz = dlsym(lib_encoder_handle, "scanoss_decode_mz");
 		if ((err = dlerror())) 
 		{
 			printf("%s\n", err);
@@ -261,6 +260,31 @@ bool lib_load()
     }
 	decrypt_data = standalone_decrypt_data;
 	decrypt_mz = NULL;
+	return false;
+}
+
+void * lib_hpsm_handle = NULL;
+bool lib_hpsm_load()
+{
+		/*set decode funtion pointer to NULL*/
+	lib_hpsm_handle = dlopen("libhpsm.so", RTLD_NOW);
+	char * err;
+    if (lib_hpsm_handle) 
+	{
+		scanlog("Lib HPSM present\n");
+		hpsm_hash_file_contents = dlsym(lib_hpsm_handle, "HashFileContents");
+		hpsm = dlsym(lib_hpsm_handle, "HPSM");
+		hpsm_process = dlsym(lib_hpsm_handle, "ProcessHPSM");
+		if ((err = dlerror())) 
+		{
+			printf("%s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		return true;
+    }
+	hpsm_hash_file_contents = NULL;
+	hpsm = NULL;
+	hpsm_process = NULL;
 	return false;
 }
 /**
@@ -279,7 +303,8 @@ int main(int argc, char **argv)
 	trace_on = false;
 	memset(trace_id, 0 ,16);
 	
-	bool lib_mode = lib_load();
+	bool lib_encoder_present = lib_encoder_load();
+	bool lib_hpsm_present = lib_hpsm_load();
 
 	if (argc <= 1)
 	{
@@ -292,8 +317,6 @@ int main(int argc, char **argv)
 
 	bool force_wfp = false;
 	
-	bool hpsm = false;
-
 	microseconds_start = microseconds_now();
 
 	*component_hint = 0;
@@ -412,7 +435,13 @@ int main(int argc, char **argv)
 				break;
 			
 			case 'H':
-				hpsm_enabled = true;
+				if (lib_hpsm_present)
+					hpsm_enabled = true;
+				else
+				{
+					printf("Lib HPSM is needed to execute this command\n");
+					exit(1);
+				}
 				break;
 		}
 		if (invalid_argument) break;
@@ -498,8 +527,14 @@ int main(int argc, char **argv)
 	if (declared_components) free(declared_components);
 	if (ignored_assets)  free (ignored_assets);
     
-	if (lib_mode)
-		dlclose(lib_handle);
+	if (lib_encoder_present)
+		dlclose(lib_encoder_handle);
+
+	if (lib_hpsm_present)
+	{
+		dlclose(lib_hpsm_handle);
+		free(hpsm_crc_lines);
+	}
 
 	return EXIT_SUCCESS;
 }

@@ -43,7 +43,7 @@
 #include "parse.h"
 #include "file.h"
 #include "versions.h"
-#include "libhpsm.h"
+#include "hpsm.h"
 
 uint64_t engine_flags = 0;
 char  kb_version[MAX_INPUT];
@@ -211,29 +211,30 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	printf("{");
 	printf("\"id\": \"%s\",", matchtypes[match.type == 1 ? 2 : match.type]);
 	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
-	if(scan->match_type == snippet )
+	if(scan->match_type == snippet && hpsm_enabled)
 	{
-		if(hpsm_enabled)
+		char * file = md5_hex(match.file_md5);
+	   	struct ranges r = hpsm(hpsm_crc_lines, file);
+		
+		if (memcmp(r.matched, "0%%", 2))
 		{
-			char * file=md5_hex(match.file_md5);
-	    	struct ranges r = HPSM(scan->lines_crc,file);
-	 		printf("\"lines\": \"%s\",", r.local);
+			printf("\"lines\": \"%s\",", r.local);
 			printf("\"oss_lines\": \"%s\",", r.remote);
-			printf("\"matched\": \"%s\",", r.matched);
-			free(r.local);
-			free(r.remote);
-			free(r.matched);
-		} else {
-			printf("\"lines\": \"%s\",", scan->line_ranges);
-			printf("\"oss_lines\": \"%s\",", scan->oss_ranges);
-			printf("\"matched\": \"%s\",", scan->matched_percent);
-		} 
-	} else {
+		}
+		printf("\"matched\": \"%s\",", r.matched);
+		
+		free(file);
+		free(r.local);
+		free(r.remote);
+		free(r.matched);
+	} 
+	else 
+	{
 		printf("\"lines\": \"%s\",", scan->line_ranges);
 		printf("\"oss_lines\": \"%s\",", scan->oss_ranges);
 		printf("\"matched\": \"%s\",", scan->matched_percent);
-	}
-
+	} 
+	
 	if ((engine_flags & ENABLE_SNIPPET_IDS) && match.type == snippet)
 	{
 		printf("\"snippet_ids\": \"%s\",", scan->snippet_ids);

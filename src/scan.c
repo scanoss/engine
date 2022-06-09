@@ -35,7 +35,7 @@
 #include "util.h"
 #include "versions.h"
 #include "winnowing.h"
-#include "libhpsm.h"
+#include "hpsm.h"
 
 /**
   @file scan.c
@@ -359,7 +359,7 @@ int wfp_scan(scan_data *scan)
 		if (is_hpsm) 
 		{
 			hpsm_enabled =true;
-			asprintf(&scan->lines_crc,"%s",&line[5]);
+			hpsm_crc_lines = strdup(&line[5]);
 		}
 
 		/* Scan previous file */
@@ -482,9 +482,12 @@ void ldb_scan(scan_data *scan)
 				if (file_size < MAX_FILE_SIZE) read_file(src, scan->file_path, 0);
 				
 				if(hpsm_enabled) {
-					char *aux=HashFileContents(src);
-					if(aux != NULL)
-						asprintf(&scan->lines_crc,"%s",&aux[5]);
+					char *aux = hpsm_hash_file_contents(src);
+					if(aux)
+					{
+						hpsm_crc_lines = strdup(&aux[5]);
+						free(aux);
+					}
 				}					
 				/* Determine if file is to skip snippet search */
 				if (!skip_snippets(src, file_size))
