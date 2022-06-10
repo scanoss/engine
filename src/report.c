@@ -213,17 +213,12 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
 	if(scan->match_type == snippet && hpsm_enabled)
 	{
-		char * file = md5_hex(match.file_md5);
-	   	struct ranges r = hpsm(hpsm_crc_lines, file);
+	   	struct ranges r = hpsm_get_result();
 		
-		if (memcmp(r.matched, "0%%", 2))
-		{
-			printf("\"lines\": \"%s\",", r.local);
-			printf("\"oss_lines\": \"%s\",", r.remote);
-		}
+		printf("\"lines\": \"%s\",", r.local);
+		printf("\"oss_lines\": \"%s\",", r.remote);
 		printf("\"matched\": \"%s\",", r.matched);
 		
-		free(file);
 		free(r.local);
 		free(r.remote);
 		free(r.matched);

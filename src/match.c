@@ -41,6 +41,7 @@
 #include "file.h"
 #include "rank.h"
 #include "decrypt.h"
+#include "hpsm.h"
 
 bool first_file = true;										   /** global first file flag */
 const char *matchtypes[] = {"none", "url", "file", "snippet"}; /** describe the availables kinds of match */
@@ -96,7 +97,9 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		{
 			if (matches[i].selected)
 			{
-				print_json_match(scan, matches[i], &match_counter);
+				if (hpsm_calc(matches[i].file_md5))
+					print_json_match(scan, matches[i], &match_counter);
+
 				selected = true;
 			}
 		}
