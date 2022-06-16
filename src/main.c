@@ -263,30 +263,7 @@ bool lib_encoder_load()
 	return false;
 }
 
-void * lib_hpsm_handle = NULL;
-bool lib_hpsm_load()
-{
-		/*set decode funtion pointer to NULL*/
-	lib_hpsm_handle = dlopen("libhpsm.so", RTLD_NOW);
-	char * err;
-    if (lib_hpsm_handle) 
-	{
-		scanlog("Lib HPSM present\n");
-		hpsm_hash_file_contents = dlsym(lib_hpsm_handle, "HashFileContents");
-		hpsm = dlsym(lib_hpsm_handle, "HPSM");
-		hpsm_process = dlsym(lib_hpsm_handle, "ProcessHPSM");
-		if ((err = dlerror())) 
-		{
-			printf("%s\n", err);
-			exit(EXIT_FAILURE);
-		}
-		return true;
-    }
-	hpsm_hash_file_contents = NULL;
-	hpsm = NULL;
-	hpsm_process = NULL;
-	return false;
-}
+
 /**
  * @brief //TODO
  * @param argc //TODO
@@ -304,7 +281,7 @@ int main(int argc, char **argv)
 	memset(trace_id, 0 ,16);
 	
 	bool lib_encoder_present = lib_encoder_load();
-	bool lib_hpsm_present = lib_hpsm_load();
+	hpsm_lib_load();
 
 	if (argc <= 1)
 	{
@@ -435,11 +412,11 @@ int main(int argc, char **argv)
 				break;
 			
 			case 'H':
-				if (lib_hpsm_present)
+				if (hpsm_lib_present)
 					hpsm_enabled = true;
 				else
 				{
-					printf("Lib HPSM is needed to execute this command\n");
+					printf("'libhpsm.so' must be present in the system to execute this command\n");
 					exit(1);
 				}
 				break;
@@ -529,12 +506,9 @@ int main(int argc, char **argv)
     
 	if (lib_encoder_present)
 		dlclose(lib_encoder_handle);
-
-	if (lib_hpsm_present)
-	{
-		dlclose(lib_hpsm_handle);
-		free(hpsm_crc_lines);
-	}
+	
+	hpsm_lib_close();
+	
 
 	return EXIT_SUCCESS;
 }

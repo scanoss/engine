@@ -48,8 +48,6 @@
 
 char *ignored_assets = NULL;
 
-extern bool hpsm_enabled;
-
 /** @brief Calculate and write source wfp md5 in scan->source_md5 
     @param scan Scan data
 	*/
@@ -481,7 +479,8 @@ void ldb_scan(scan_data *scan)
 				char *src = calloc(MAX_FILE_SIZE, 1);
 				if (file_size < MAX_FILE_SIZE) read_file(src, scan->file_path, 0);
 				
-				if(hpsm_enabled) {
+				if(hpsm_enabled) 
+				{
 					char *aux = hpsm_hash_file_contents(src);
 					if(aux)
 					{

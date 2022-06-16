@@ -47,7 +47,6 @@
 
 uint64_t engine_flags = 0;
 char  kb_version[MAX_INPUT];
-extern bool hpsm_enabled;
 
 /**
  * @brief Open JSON report
@@ -213,15 +212,9 @@ void print_json_match(scan_data *scan, match_data match, int *match_counter)
 	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
 	if(scan->match_type == snippet && hpsm_enabled)
 	{
-	   	struct ranges r = hpsm_get_result();
-		
-		printf("\"lines\": \"%s\",", r.local);
-		printf("\"oss_lines\": \"%s\",", r.remote);
-		printf("\"matched\": \"%s\",", r.matched);
-		
-		free(r.local);
-		free(r.remote);
-		free(r.matched);
+	   	printf("\"lines\": \"%s\",", hpsm_result.local);
+		printf("\"oss_lines\": \"%s\",", hpsm_result.remote);
+		printf("\"matched\": \"%s\",", hpsm_result.matched);
 	} 
 	else 
 	{
