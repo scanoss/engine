@@ -1,5 +1,5 @@
 #ifndef __SCANOSS_H
-    #define __SCANOSS_H
+#define __SCANOSS_H
     
 #include <arpa/inet.h>
 #include <ctype.h>
@@ -43,7 +43,7 @@
 #define SNIPPET_LINE_TOLERANCE 10
 
 /* Log files */
-#define SCANOSS_VERSION "4.5.2"
+#define SCANOSS_VERSION "4.5.3"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"

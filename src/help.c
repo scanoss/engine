@@ -45,23 +45,24 @@ Results are printed in STDOUT in JSON format\n\
 Syntax: scanoss [parameters] [TARGET]\n\
 \n\
 Configuration:\n\
--w         Treats TARGET as a .wfp file regardless of the actual file extension\n\
--e         Expect matching extensions to equal the file extension being scanned (default: off)\n\
--s SBOM    Use assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification\n\
--b SBOM    Ignore matches to assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format)\n\
--a SBOM    Displays attribution notices for provided SBOM.json\n\
--c HINT    Provide a component HINT to influence scan results\n\
--k KEY     Displays contents of file KEY from MZ sources archive\n\
--l LICENSE Displays OSADL metadata for the provided SPDX license ID\n\
+-w         Treats TARGET as a .wfp file regardless of the actual file extension.\n\
+-H         High Precision Snippet Match mode, 'libhpsm.so' must be present in the system.\n\
+-e         Expect matching extensions to equal the file extension being scanned (default: off).\n\
+-s SBOM    Use assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification.\n\
+-b SBOM    Ignore matches to assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format).\n\
+-a SBOM    Displays attribution notices for provided SBOM.json.\n\
+-c HINT    Provide a component HINT to influence scan results.\n\
+-k KEY     Displays contents of file KEY from MZ sources archive.\n\
+-l LICENSE Displays OSADL metadata for the provided SPDX license ID.\n\
 \n\
 Options:\n\
--t  Tests engine performance\n\
--v  Display version and exit\n\
--n  Specify DB name (default: oss)\n\
--h  Display this help and exit\n\
--d  Save debugging information to disk (/tmp)\n\
--q  Produces no JSON output. Only debugging info via STDERR\n\
--i  Trace specific file id when debugging (requires -q)\n\
+-t  Tests engine performance.\n\
+-v  Display version and exit.\n\
+-n  Specify DB name (default: oss).\n\
+-h  Display this help and exit.\n\
+-d  Save debugging information to disk (/tmp).\n\
+-q  Produces no JSON output. Only debugging info via STDERR.\n\
+-i  Trace specific file id when debugging (requires -q).\n\
 \n\
 Engine scanning flags:\n\
 The scanning engine can be configured by passing configuration flags with the -F parameter.\n\
@@ -85,6 +86,6 @@ Alternatively, these value can be written in %s\n\
 +------+--------------------------------------------------+\n\
 Example: scanoss -F 12 DIRECTORY (scans DIRECTORY disabling license and dependency data)\n\
 \n\
-Copyright (C) 2018-2021 SCANOSS.COM\n", ENGINE_FLAGS_FILE);
+Copyright (C) 2018-2022 SCANOSS.COM\n", ENGINE_FLAGS_FILE);
 
 }

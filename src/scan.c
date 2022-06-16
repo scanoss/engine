@@ -35,6 +35,7 @@
 #include "util.h"
 #include "versions.h"
 #include "winnowing.h"
+#include "hpsm.h"
 
 /**
   @file scan.c
@@ -120,6 +121,7 @@ void scan_data_free(scan_data scan)
 	free(scan.hashes);
 	free(scan.lines);
 	free(scan.matchmap);
+	
 }
 
 /** @brief Returns true if md5 is the md5sum for NULL
@@ -349,7 +351,14 @@ int wfp_scan(scan_data *scan)
 
 		bool is_component = (memcmp(line, "component=", 4) == 0);
 		bool is_file = (memcmp(line, "file=", 5) == 0);
-		bool is_wfp = (!is_file && !is_component);
+		bool is_hpsm = (memcmp(line, "hpsm=", 5) == 0);
+		bool is_wfp = (!is_file && !is_component && !is_hpsm);
+
+		if (is_hpsm) 
+		{
+			hpsm_enabled = hpsm_lib_load();
+			hpsm_crc_lines = strdup(&line[5]);
+		}
 
 		/* Scan previous file */
 		if ((is_component || is_file) && read_data) ldb_scan(scan);
@@ -458,6 +467,7 @@ void ldb_scan(scan_data *scan)
 		free(tmp_md5_hex);
 	
 		scan->match_type = ldb_scan_file(scan->md5);
+		
 
 		/* If no match, scan snippets */
 		if (scan->match_type == none)
@@ -468,11 +478,19 @@ void ldb_scan(scan_data *scan)
 				/* Read file into memory */
 				char *src = calloc(MAX_FILE_SIZE, 1);
 				if (file_size < MAX_FILE_SIZE) read_file(src, scan->file_path, 0);
-
+				
+				if(hpsm_enabled) 
+				{
+					char *aux = hpsm_hash_file_contents(src);
+					if(aux)
+					{
+						hpsm_crc_lines = strdup(&aux[5]);
+						free(aux);
+					}
+				}					
 				/* Determine if file is to skip snippet search */
 				if (!skip_snippets(src, file_size))
-				{
-					/* Load wfps into scan structure */
+				{	/* Load wfps into scan structure */
 					scan->hash_count = winnowing(src, scan->hashes, scan->lines, MAX_FILE_SIZE);
 					if (scan->hash_count) scan->total_lines = scan->lines[scan->hash_count - 1];
 				}
@@ -518,6 +536,7 @@ void ldb_scan(scan_data *scan)
 				break;
 			}
 		}
+		
 
 		/* Perform post scan intelligence */
 		if (scan->match_type != none)

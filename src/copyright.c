@@ -89,8 +89,6 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 {
 	match_data *match = ptr;
 
-	decrypt_data(data, datalen, "copyright", key, subkey);
-
 	char * CSV = decrypt_data(data, datalen, "copyright", key, subkey);
 
 	char *source  = calloc(MAX_JSON_VALUE_LEN + 1, 1);
