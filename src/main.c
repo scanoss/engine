@@ -281,7 +281,6 @@ int main(int argc, char **argv)
 	memset(trace_id, 0 ,16);
 	
 	bool lib_encoder_present = lib_encoder_load();
-	hpsm_lib_load();
 
 	if (argc <= 1)
 	{
@@ -412,7 +411,7 @@ int main(int argc, char **argv)
 				break;
 			
 			case 'H':
-				if (hpsm_lib_present)
+				if (hpsm_lib_load())
 					hpsm_enabled = true;
 				else
 				{

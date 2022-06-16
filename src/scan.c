@@ -356,7 +356,7 @@ int wfp_scan(scan_data *scan)
 
 		if (is_hpsm) 
 		{
-			hpsm_enabled =true;
+			hpsm_enabled = hpsm_lib_load();
 			hpsm_crc_lines = strdup(&line[5]);
 		}
 

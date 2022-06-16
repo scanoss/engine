@@ -41,7 +41,10 @@ struct ranges (*hpsm_process)(unsigned char *data, int length, char *md5);
 void * lib_hpsm_handle = NULL;
 bool hpsm_lib_load()
 {
-		/*set decode funtion pointer to NULL*/
+	if (hpsm_lib_present)
+        return true;
+
+    /*set decode funtion pointer to NULL*/
 	lib_hpsm_handle = dlopen("libhpsm.so", RTLD_NOW);
 	char * err;
     if (lib_hpsm_handle) 
