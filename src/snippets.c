@@ -38,6 +38,8 @@
 #include "decrypt.h"
 #include "file.h"
 
+#include "match_list.h"
+
 int map_rec_len;
 
 /**
@@ -171,125 +173,33 @@ bool snippet_extension_discard(scan_data *scan, uint8_t *md5)
  * @param scan scan data pointer
  * @return pointer to selected match
  */
-#define SNIPPET_HITS_RELATIVE_FACTOR 0.5
+#define SNIPPET_HITS_RELATIVE_FACTOR 0.2
 #define	SNIPPET_POPULARITY_RELATIVE_FACTOR 1
-uint8_t *biggest_snippet(scan_data *scan)
+
+bool test(match_data_t * a, match_data_t * b)
 {
-	uint8_t *out = NULL;
-	int hits = 0;
-	int shortest_path = MAX_PATH;
-	float hits_relative = 0.0;
-	while (true)
+	if (a->hits <= b->hits)
+		return true;
+	else
+		return false;
+}
+struct listhead * biggest_snippet(scan_data *scan)
+{
+	struct listhead * list = match_list_init();
+	for (int j = 0; j < scan->matchmap_size; j++)
 	{
-		int most_hits = scan->matchmap[0].hits;
-
-		/*search initialization, skip useless snippets */
-		int j = 0;
-		for (j = 0; j < scan->matchmap_size; j++)
-			if (scan->matchmap[j].hits >= min_match_hits)
-				break;
-		
-		out = scan->matchmap[j].md5;
-		shortest_path = get_shortest_path(out);
-		if (!shortest_path)
-			shortest_path = MAX_PATH;
-
-		/* Select biggest snippet */
-		for (int i = j; i < scan->matchmap_size; i++)
+		if (scan->matchmap[j].hits >= min_match_hits)
 		{
-			bool update = false;
-			bool is_url = false;
-			/* for debugging */
-			char aux_hex[MD5_LEN * 2 + 1];
-			char aux_hex2[MD5_LEN * 2 + 1];
-			
-			if (debug_on)
-			{
-				ldb_bin_to_hex(out, MD5_LEN, aux_hex);
-				ldb_bin_to_hex(scan->matchmap[i].md5, MD5_LEN, aux_hex2);
-			}
-			
-			hits = scan->matchmap[i].hits;
-
-			if (hits < most_hits || hits < min_match_hits) continue;
-			/* Calculate the relative difference between hits */
-			if (most_hits > 0)
-				hits_relative = (hits - most_hits) / most_hits;
-			else if (hits > 0)
-				hits_relative = 999.0;
-			
-			scanlog(" --- hits: %d / %d --- \n",hits, most_hits);
-			/* Select match if the relative hits are biggers than previous selected or if it is the first one*/
-			if (hits_relative > SNIPPET_HITS_RELATIVE_FACTOR)
-			{
-				update = true;
-			}
-			else 
-			{
-				int shortest_new = get_shortest_path(scan->matchmap[i].md5);
-				float popularity_relative = 0.0;
-				scanlog("short: %d/%d\n",  shortest_new, shortest_path);
-				/* Check for the shortest path*/
-				if (shortest_new && shortest_new < shortest_path)
-				{
-					update = true;
-					shortest_path = shortest_new;
-				}
-				/*check for the popularity*/
-				else
-				{
-					int popularity = get_match_popularity(out);
-					int popularity_new = get_match_popularity(scan->matchmap[i].md5);
-					/* Calculate the relative difference between popularities */
-					if (popularity)
-						popularity_relative = (popularity_new - popularity) / popularity;
-					/* If the preset selected is URL, keep it */	
-					else if (!is_url && ldb_key_exists(oss_url,out))
-					{
-						is_url = true;
-						popularity_relative = 0;
-					}
-					else if (popularity_new)
-						popularity_relative = 999.0;
-				}
-				
-				 scanlog("popularity rel: %.2f - is url: %d\n", popularity_relative, is_url);
-	
-				/* ponderate the relative popularity and the shortest path*/
-				if (popularity_relative > SNIPPET_POPULARITY_RELATIVE_FACTOR) 
-				{
-					update = true;
-					shortest_path = shortest_new;
-				}			
-			}
-
-			if (update)
-			{
-				most_hits = hits;
-				is_url = false;
-				out = scan->matchmap[i].md5;				
-				scanlog("%s	-> %s\n", aux_hex, aux_hex2);
-			}
+			match_data_t * match_new = calloc(1,sizeof(match_data_t));
+			memcpy(match_new->file_md5, scan->matchmap[j].md5, MD5_LEN);
+			match_new->hits = scan->matchmap[j].hits;
+			match_new->matchmap_reg = scan->matchmap[j].md5;
+			match_list_add(list, match_new, test, false);
 		}
-
-		scanlog("Biggest snippet: %d\n", most_hits);
-
-		if (most_hits < min_match_hits)
-		{
-			scanlog("Not reaching min_match_hits\n");
-			return NULL;
-		}
-
-		if (!hits) break;
-
-		/* Erase match from map if MD5 is orphan (no files/components found) */
-		if (shortest_path == MAX_PATH) clear_hits(out); else break;
 	}
+//	match_list_print(list);
 
-	if (snippet_extension_discard(scan, out)) return NULL;
-	
-	scan->match_ptr = out;
-	return out;
+	return list;
 }
 
 /**
@@ -505,6 +415,11 @@ uint32_t compile_ranges(scan_data *scan) {
 	*scan->oss_ranges = 0;
 	*scan->snippet_ids = 0;
 
+	if (!scan->match_ptr)
+	{
+		fprintf(stderr,"ACA!!\n");
+		return 0;
+	}
 	uint16_t reported_hits = uint16_read(scan->match_ptr + MD5_LEN);
 	if (reported_hits < 2) return 0;
 

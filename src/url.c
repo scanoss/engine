@@ -67,7 +67,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	}
 
 	match_data *matches = (match_data*) ptr;
-	struct match_data match = match_init();
+	struct match_data match;// = match_init();
 
 	/* Exit if we have enough matches */
 	int total_matches = count_matches(matches);
@@ -142,24 +142,32 @@ void select_best_url(match_data *matches)
  * @param fixed none
  * @return true if succed
 **/
-bool build_main_url(match_data *match, char *schema, char *url, bool fixed)
+bool build_main_url(match_data_t *match, char *schema, char *url, bool fixed)
 {
-	if (starts_with(match->purl[0], schema))
+	if (!match->purls[0])
+		return false;
+
+	if (starts_with(match->purls[0], schema))
 	{
-		strcpy(match->main_url, url);
+		char * aux = strdup(url);
 		if (!fixed) 
 		{
-			char * part = strchr(match->purl[0], '/');
+			char * part = strchr(match->purls[0], '/');
 			/*verify with match url for casing inconsistencies */
 			char * case_test = strcasestr(match->url, part);
 			if (case_test)
 			{
 				char * partb = strndup(case_test, strlen(part));
-				strcat(match->main_url, partb);
+				asprintf(&match->main_url,"%s%s", aux, partb);
+				//strcat(match->main_url, partb);
 				free(partb);
 			}
 			else
-				strcat(match->main_url, part);
+			{
+				asprintf(&match->main_url,"%s%s", aux, part);
+			//	strcat(match->main_url, part);
+			}
+			free(aux);
 		}
 		return true;
 	}
@@ -171,7 +179,7 @@ bool build_main_url(match_data *match, char *schema, char *url, bool fixed)
  * @param match pointer to a match struct
 **/
 
-void fill_main_url(match_data *match)
+void fill_main_url(match_data_t *match)
 {
 	/* URL translations */
 	if (build_main_url(match, "pkg:github/", "https://github.com", false)) return;
@@ -199,7 +207,7 @@ void fill_main_url(match_data *match)
 
 bool purl_type_matches(char *purl1, char *purl2)
 {
-	if (!*purl1 || !*purl2) return false;
+	if (!purl1 || !purl2) return false;
 	int len = strlen(purl1);
 	for (int i = 0; i < len; i++)
 	{
@@ -215,7 +223,7 @@ bool purl_type_matches(char *purl1, char *purl2)
 
 bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	match_data *match = (match_data *) ptr;
+	match_data_t *match = (match_data_t *) ptr;
 
 	char * purl = decrypt_data(data, datalen, "purl", key, subkey);
 
@@ -233,18 +241,19 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
 		/* Skip purl with existing type */
-		if (purl_type_matches(match->purl[i], purl)) break;
+		if (purl_type_matches(match->purls[i], purl)) break;
 
 		/* Add to end of list */
-		if (!*match->purl[i])
+		if (!match->purls[i])
 		{
 			scanlog("Related PURL: %s\n", purl);
-			strcpy(match->purl[i], purl);
-			MD5((uint8_t *)purl, strlen(purl), match->purl_md5[i]);
-			break;
+			match->purls[i] = purl;
+			match->purls_md5[i] = malloc(MD5_LEN);
+			MD5((uint8_t *)purl, strlen(purl), match->purls_md5[i]);
+			return false;
 		}
 		/* Already exists, exit */
-		if (!strcmp(match->purl[i], purl)) break;
+		else if (!strcmp(match->purls[i], purl)) break;
 	}
 
 	free(purl);
@@ -256,7 +265,7 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 **/
 
 /* Fetch related purls */
-void fetch_related_purls(match_data *match)
+void fetch_related_purls(match_data_t *match)
 {
 	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
 		return;
@@ -264,12 +273,12 @@ void fetch_related_purls(match_data *match)
 	/* Fill purls */
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
-		if (!*match->purl[i]) break;
-		int purls = ldb_fetch_recordset(NULL, oss_purl, match->purl_md5[i], false, handle_purl_record, match);
+		if (!match->purls[i]) break;
+		int purls = ldb_fetch_recordset(NULL, oss_purl, match->purls_md5[i], false, handle_purl_record, match);
 		if (purls)
-			scanlog("Finding related PURLs for %s returned %d matches\n", match->purl[i], purls);
+			scanlog("Finding related PURLs for %s returned %d matches\n", match->purls[i], purls);
 		else
-			scanlog("Finding related PURLs for %s returned no matches\n", match->purl[i]);
+			scanlog("Finding related PURLs for %s returned no matches\n", match->purls[i]);
 	}
 }
 

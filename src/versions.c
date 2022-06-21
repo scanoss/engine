@@ -53,12 +53,21 @@
 void normalise_version(char *version, char *component)
 {
 	/* Remove leading component name from version */
-	if (stristart(version, component))
-		memmove(version, version + strlen(component), strlen(version + strlen(component)) + 1);
+	if ((version && component) && stristart(version, component))
+	{
+		int org_len = strlen(version);
+		int compt_len = strlen(component);
+		strcpy(version, version + compt_len);
+		version[org_len+compt_len-2] = '\0';
+	}
 
 	/* Remove unwanted leading characters from the version */
-	if (((*version == 'v' || *version =='r') && isdigit(version[1]))\
-		|| !isalnum(*version)) memmove(version, version + 1, strlen(version) + 1);
+	if (version && (((*version == 'v' || *version =='r') && isdigit(version[1])) || !isalnum(*version)))
+	{
+		int org_len = strlen(version);
+		strcpy(version, version + 1);
+		version[org_len-2] = '\0';
+	} 
 
 	/* Remove trailing ".orig" from version */
 	char *orig = strstr(version, ".orig");
@@ -189,7 +198,7 @@ void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
  * @param files pointer to files recordset list
  * @param records records number
  */
-void add_versions(scan_data *scan, match_data *matches, file_recordset *files, uint32_t records)
+void add_versions(match_data *matches, file_recordset *files, uint32_t records)
 {
 	release_version *release = calloc(sizeof(release_version), 1);
 

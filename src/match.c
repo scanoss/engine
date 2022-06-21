@@ -43,6 +43,7 @@
 #include "decrypt.h"
 #include "hpsm.h"
 
+
 bool first_file = true;										   /** global first file flag */
 const char *matchtypes[] = {"none", "url", "file", "snippet"}; /** describe the availables kinds of match */
 bool match_extensions = false;								   /** global match extension flag */
@@ -67,11 +68,9 @@ void flip_slashes(char *data)
  * @param matches pointer to matches list
  * @param scan_ptr scan_data pointer, common scan information.
  */
-void output_matches_json(match_data *matches, scan_data *scan_ptr)
+void output_matches_json(struct listhead * matches, scan_data *scan_ptr)
 {
 	scan_data *scan = scan_ptr;
-
-	int match_counter = 0;
 
 	flip_slashes(scan->file_path);
 
@@ -88,72 +87,14 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 	json_open_file(scan->file_path);
 
 	/* Print matches */
-	if (matches)
+	if (matches->lh_first)
 	{
-		bool selected = false;
-
-		/* Print selected match */
-		for (int i = 0; i < scan_limit && *matches[i].component; i++)
-		{
-			if (matches[i].selected)
-			{
-			//	printf("aca %d\n", matches[i].type);
-				if (scan->match_type != snippet || hpsm_calc(matches[i].file_md5))
-					print_json_match(scan, matches[i], &match_counter);
-
-				selected = true;
-			}
-		}
-
-		/* Print matches with version ranges first */
-		if (!selected || (engine_flags & DISABLE_BEST_MATCH))
-			for (int i = 0; i < scan_limit && *matches[i].component; i++)
-				if (!matches[i].selected)
-					if (strcmp(matches[i].version, matches[i].latest_version))
-						print_json_match(scan, matches[i], &match_counter);
-
-		/* Print matches without version ranges */
-		if (!selected || (engine_flags & DISABLE_BEST_MATCH))
-			for (int i = 0; i < scan_limit && *matches[i].component; i++)
-				if (!matches[i].selected)
-					if (!strcmp(matches[i].version, matches[i].latest_version))
-						print_json_match(scan, matches[i], &match_counter);
+		match_list_print(matches, print_json_match, ",");
 	}
-
-	/* Print no match */
-	if (!match_counter)
+	else
 		print_json_nomatch(scan);
+	
 	json_close_file();
-}
-
-/**
- * @brief Initialize the match structure
- * @return match_data initialized structure
- */
-match_data match_init()
-{
-	match_data match;
-	*match.vendor = 0;
-	*match.component = 0;
-	*match.version = 0;
-	*match.latest_version = 0;
-	*match.url = 0;
-	*match.main_url = 0;
-	*match.file = 0;
-	*match.release_date = 0;
-	*match.latest_release_date = 0;
-	*match.license = 0;
-	match.vulnerabilities = 0;
-	match.path_ln = 0;
-	match.selected = false;
-	memset(match.url_md5, 0, MD5_LEN);
-	memset(match.file_md5, 0, MD5_LEN);
-	for (int i = 0; i < MAX_PURLS; i++)
-	{
-		*match.purl[i] = 0;
-		memset(match.purl_md5[i], 0, MD5_LEN);
-	}
-	return match;
 }
 
 /**
@@ -171,7 +112,7 @@ int add_all_files_to_matches(file_recordset *files, int file_count, scan_data *s
 	for (int i = 0; i < file_count && i < scan_limit; i++)
 	{
 		/* Create empty match item */
-		struct match_data match = match_init();
+		struct match_data match;// = match_init();
 
 		/* Get URL record */
 		uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
@@ -301,7 +242,8 @@ match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record)
 	if (!*match.url || !*match.version || !*match.file || !*match.purl[0])
 	{
 		scanlog("Incomplete metadata for %s\n", file_path);
-		return match_init();
+		memset(&match,0,sizeof(match));
+		//return match_init();
 	}
 
 	return match;
@@ -420,7 +362,7 @@ void add_selected_file_to_matches(
 	match_data *matches, component_name_rank *component_rank, int rank_id, uint8_t *file_md5)
 {
 	/* Create empty match item */
-	struct match_data match = match_init();
+	struct match_data match;// = match_init();
 	/* Fill match with component info */
 	match = fill_match(component_rank[rank_id].url_id,
 					   component_rank[rank_id].file,
@@ -488,21 +430,20 @@ void load_matches(scan_data *scan, match_data *matches)
 		}
 		else
 		{
-			component_name_rank *component_rank = calloc(sizeof(struct component_name_rank), rank_items);
+			component_name_rank component;
 			scanlog("Inherited component hint from context: %s\n", *component_hint ? component_hint : "NULL");
 
 			/* Query components for files with shortest path */
-			int	selected = shortest_paths_check(files, records, component_rank);
-			if (selected >= 0)
+			component = shortest_paths_check(files, records);
+			if (component.file[0] != 0)
 			{
-				add_selected_file_to_matches(matches, component_rank, selected, scan->match_ptr);
+				add_selected_file_to_matches(matches, &component, 0, scan->match_ptr);
 			}
-			free(component_rank);
 		}
 	}
 
 	/* Add version ranges to selected match */
-	add_versions(scan, matches, files, records);
+	add_versions(matches, files, records);
 
 	free(files);
 
@@ -510,78 +451,110 @@ void load_matches(scan_data *scan, match_data *matches)
 		scanlog("Match type is 'none' after loading matches\n");
 }
 
+scan_data scan_aux;
+
+bool match_process(match_data_t * fp1)
+{
+	struct match_data matches[3];
+	fp1->type = MATCH_SNIPPET;
+	memcpy(scan_aux.md5, fp1->file_md5, MD5_LEN);
+	scan_aux.match_ptr = fp1->matchmap_reg;
+	memset(matches, 0, sizeof(matches));
+	
+	load_matches(&scan_aux, matches);
+	if (*matches[0].url && *matches[0].version && *matches[0].file && *matches[0].purl[0])
+	{
+		fp1->file = strdup(matches[0].file);
+		fp1->latest_release_date = strdup(matches[0].latest_release_date);
+		fp1->release_date = strdup(matches[0].release_date);
+		fp1->url = strdup(matches[0].url);
+		memcpy(fp1->url_md5, matches[0].url_md5, MD5_LEN);
+		fp1->vendor = strdup(matches[0].vendor);
+		fp1->component = strdup(matches[0].component);
+		fp1->latest_version = strdup(matches[0].version);
+		fp1->purls[0] = strdup(matches[0].purl[0]);
+		fp1->purls_md5[0] = malloc(MD5_LEN);
+		memcpy(fp1->purls_md5[0], matches[0].purl_md5, MD5_LEN);
+		fp1->line_ranges = strdup(scan_aux.line_ranges);
+		fp1->version = strdup(matches[0].version);
+		fp1->matched_percent = strdup(scan_aux.matched_percent);
+		fp1->oss_ranges = strdup(scan_aux.oss_ranges);
+		strcpy(fp1->source_md5, scan_aux.source_md5);
+	}
+	return false;
+}
 /**
  * @brief Compile matches if DISABLE_BEST_MATCH is one
  * @param scan scan data
  * @return matches list
  */
-match_data *compile_matches(scan_data *scan)
+struct listhead * compile_matches(scan_data *scan)
 {
-	/* Init matches structure */
-	struct match_data *matches = calloc(sizeof(match_data), scan_limit);
-	for (int i = 0; i < scan_limit; i++)
-	{
-		matches[i].type = scan->match_type;
-		matches[i].selected = false;
-		matches[i].loaded = false;
-		matches[i].scandata = scan;
-		memset(matches[i].file_md5, 0, MD5_LEN);
-		memset(matches[i].url_md5, 0, MD5_LEN);
-	}
-
 	scan->match_ptr = scan->md5;
+	struct listhead * list = NULL;
 
-	do
+	/* Search for biggest snippet */
+	if (scan->match_type == snippet)
 	{
-		/* Search for biggest snippet */
-		if (scan->match_type == snippet)
-		{
-			scanlog("%ld matches in snippet map\n", scan->matchmap_size);
-			scan->match_ptr = biggest_snippet(scan);
-		}
-
-		/* No match pointer */
-		if (!scan->match_ptr)
-		{
-			/* No previous matches loaded, exit */
-			if (!matches[0].loaded)
-			{
-				scan->match_type = none;
-				scanlog("No matching file id\n");
-				return NULL;
-			}
-
-			/* Otherwise break loop */
-			else
-				break;
-		}
-
 		/* Dump match map */
 		if (debug_on)
 			map_dump(scan);
 
+		scanlog("%ld matches in snippet map\n", scan->matchmap_size);
+		list = biggest_snippet(scan);
+	}
+	else
+	{
+		struct match_data matches[3];
+		memset(matches, 0, sizeof(matches));
+		load_matches(scan, matches);
+		list = match_list_init();
+		match_data_t * match_new = malloc(sizeof(match_data_t));
+		match_new->type = MATCH_FILE;
+
+		match_new->file = strdup(matches[0].file);
+		match_new->latest_release_date = strdup(matches[0].latest_release_date);
+		match_new->release_date = strdup(matches[0].release_date);
+		match_new->url = strdup(matches[0].url);	
+		memcpy(match_new->url_md5, matches[0].url_md5, MD5_LEN);
+		match_new->vendor = strdup(matches[0].vendor);
+		match_new->component = strdup(matches[0].component);
+		match_new->latest_version = strdup(matches[0].version);
+		match_new->purls[0] = strdup(matches[0].purl[0]);
+		match_new->purls_md5[0] = malloc(MD5_LEN);
+		memcpy(match_new->purls_md5[0], matches[0].purl_md5, MD5_LEN);
+		match_list_add(list, match_new, NULL, false);
+	}
+
+		// /* No match pointer */
+		// if (!scan->match_ptr)
+		// {
+		// 	/* No previous matches loaded, exit */
+		// 	if (!matches[0].loaded)
+		// 	{
+		// 		scan->match_type = none;
+		// 		scanlog("No matching file id\n");
+		// 		return NULL;
+		// 	}
+		// }
+
 		/* Gather and load match metadata */
 		scanlog("Starting match: %s\n", matchtypes[scan->match_type]);
 		if (scan->match_type != none)
-			load_matches(scan, matches);
-
-		/* Set hits to zero for the selected record (to skip it in the next iteration) */
-		if (scan->match_type == snippet)
-			clear_hits(scan->match_ptr);
-
-		/* If matches are full, break loop */
-		if (matches[scan_limit - 1].loaded)
-			break;
+		{
+			memcpy(&scan_aux, scan, sizeof(scan_data));
+			match_list_process(list, match_process);
+		}
 
 		/* Loop only if DISABLE_BEST_MATCH and match type is snippet */
-	} while ((engine_flags & DISABLE_BEST_MATCH) && scan->match_type == snippet);
+//	} while ((engine_flags & DISABLE_BEST_MATCH) && scan->match_type == snippet);
 
-	for (int i = 0; i < scan_limit && *matches[i].component; i++)
-		scanlog("Match #%d = %d - %s\n", i, matches[i].selected, matches[i].release_date);
+	//for (int i = 0; i < scan_limit && *matches[i].component; i++)
+	//	scanlog("Match #%d = %d - %s\n", i, matches[i].selected, matches[i].release_date);
 
 	/* The latter could result in no matches */
-	if (!matches[0].loaded)
-		scan->match_type = none;
-	scanlog("Final match: %s\n", matchtypes[scan->match_type]);
-	return matches;
+	//if (!matches[0].loaded)
+	//	scan->match_type = none;
+	//scanlog("Final match: %s\n", matchtypes[scan->match_type]);
+	return list;
 }

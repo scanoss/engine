@@ -19,6 +19,6 @@ int add_files_to_matches(\
 bool select_best_match(match_data *matches);
 int fill_component_age(component_name_rank *component_rank);
 long component_age(char *vendor, char *component);
-int shortest_paths_check(file_recordset *files, int records, component_name_rank *component_rank);
+component_name_rank shortest_paths_check(file_recordset *files, int records);
 
 #endif

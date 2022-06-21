@@ -248,60 +248,6 @@ bool skip_file_path(char *path, match_data *matches)
 	return unwanted;
 }
 
-/** @brief Evaluate file and decide whether or not to add it to *matches 
-    @param url_id File ID
-    @param path File path
-    @param matches Match data
-    @param component_hint Component hint?
-    @param match_md5 Match md5
-	  */
-void consider_file_record(\
-		uint8_t *url_id,\
-		char *path,\
-		match_data *matches,\
-		char *component_hint,\
-		uint8_t *match_md5)
-{
-	/* Skip unwanted paths */
-	if (skip_file_path(path, matches)) return;
-
-	struct match_data match = match_init();
-
-	int total_matches = count_matches(matches);
-
-	/* If we have a full set, and this path is longer than others, skip it */
-	int position = -1;
-	if (longer_path_in_set(matches, total_matches, strlen(path), &position)) return;
-
-	/* Check if matched file is a ignored extension */
-	if (extension(path))
-	{
-		if (ignored_extension(path))
-		{
-			scanlog("Ignored extension\n");
-			return;
-		}
-	}
-
-	uint8_t *url = calloc(LDB_MAX_REC_LN, 1);
-	get_url_record(url_id, url);
-	if (*url)
-	{
-		match = fill_match(url_id, path, url);
-
-		/* Save match file id */
-		memcpy(match.file_md5, match_md5, MD5_LEN);
-	}
-	else
-	{
-		scanlog("Orphan file\n");
-		free(url);
-		return;
-	}
-
-	add_match(position, match, matches);
-	free(url);
-}
 
 /** @brief Scans a file hash only
     @param scan Scan data
@@ -506,50 +452,49 @@ void ldb_scan(scan_data *scan)
 	}
 
 	/* Compile matches */
-	match_data *matches = compile_matches(scan);
-
-	if (matches && scan->match_type != none)
+	struct listhead * matches = compile_matches(scan);
+	//match_list_print(matches);
+	if (matches->lh_first && scan->match_type != none)
 	{
-		int total_matches = count_matches(matches);
-
 		/* Debug match info */
-		scanlog("%d matches compiled:\n", total_matches);
-		if (debug_on) for (int i = 0; i < total_matches; i++)
-			scanlog("#%d %s, %s\n",i,  matches[i].purl, matches[i].file);
+	//	scanlog("%d matches compiled:\n", total_matches);
+	//	if (debug_on) for (int i = 0; i < total_matches; i++)
+	//		scanlog("#%d %s, %s\n",i,  matches[i].purl, matches[i].file);
 
 		/* Matched asset in SBOM.json? */
-		for (int i = 0; i < total_matches; i++)
-		{
-			if (asset_declared(matches[i]))
-			{
-				scanlog("Asset matched\n");
-				if (engine_flags & ENABLE_REPORT_IDENTIFIED)
-				{
-					scan->identified = true;
-				}
-				else
-				{
-					if (matches) free(matches);
-					matches = NULL;
-					scan->match_type = none;
-				}
-				break;
-			}
-		}
+		// for (int i = 0; i < total_matches; i++)
+		// {
+		// 	if (asset_declared(matches[i]))
+		// 	{
+		// 		scanlog("Asset matched\n");
+		// 		if (engine_flags & ENABLE_REPORT_IDENTIFIED)
+		// 		{
+		// 			scan->identified = true;
+		// 		}
+		// 		else
+		// 		{
+		// 			if (matches) free(matches);
+		// 			matches = NULL;
+		// 			scan->match_type = none;
+		// 		}
+		// 		break;
+		// 	}
+		// }
 		
 
 		/* Perform post scan intelligence */
-		if (scan->match_type != none)
-		{
-			scanlog("Starting post-scan analysis\n");
-			post_scan(matches);
-		}
+		// if (scan->match_type != none)
+		// {
+		// 	scanlog("Starting post-scan analysis\n");
+		// 	post_scan(matches);
+		// }
 	}
 
 	/* Output matches */
 	scanlog("Match output starts\n");
 	output_matches_json(matches, scan);
 
-	if (matches) free(matches);
+	//if (matches) free(matches);
+	match_list_destroy(matches);
 	scan_data_reset(scan);
 }

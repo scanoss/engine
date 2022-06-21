@@ -105,62 +105,6 @@ bool is_external_indicator(char *str)
 }
 
 /**
- * @brief Add component to component_rank
- * @param component_rank component rank structure
- * @param vendor component vendor
- * @param component component name
- * @param purl component purl
- * @param purl_md5 md5 hash of the component purl
- * @param path component path
- * @param url_id md5 of the url
- * @param url_record url record
- */
-void update_component_rank(\
-component_name_rank *component_rank,
-char *vendor,
-char *component,
-char *purl,
-uint8_t *purl_md5,
-char *path,
-uint8_t *url_id,
-char *url_record)
-{
-	/* Walk ranking items */
-	for (int i = 0; i < rank_items; i++)
-	{
-		if (!component_rank[i].score)
-		{
-			strcpy(component_rank[i].vendor, vendor);
-			strcpy(component_rank[i].component, component);
-			strcpy(component_rank[i].file, path);
-			strcpy(component_rank[i].url_record, url_record);
-			strcpy(component_rank[i].purl, purl);
-
-			if (purl_md5) memcpy(component_rank[i].purl_md5, purl_md5, MD5_LEN);
-			else memset(component_rank[i].purl_md5, 0, MD5_LEN);
-
-			if (url_id) memcpy(component_rank[i].url_id, url_id, MD5_LEN);
-			else memset(component_rank[i].url_id, 0, MD5_LEN);
-
-			component_rank[i].score++;
-			component_rank[i].age = get_component_age(purl_md5);
-			return;
-		}
-		bool vendor_ok = false;
-		if (*vendor)
-		{
-			if (stristart(component_rank[i].vendor, vendor)) vendor_ok = true;
-		}
-		else vendor_ok = true;
-		if (vendor_ok && stristart(component_rank[i].component, component))
-		{
-			component_rank[i].score++;
-			return;
-		}
-	}
-}
-
-/**
  * @brief Attempt to guess a component name from the file path
  * @param file_path file path
  * @param component[out] found component
@@ -233,35 +177,6 @@ void log_path_ranking(path_ranking *path_rank, file_recordset *files)
 	}
 }
 
-/**
- * @brief Look for hints of /external/ component names in collected file paths
- * @param files pointer to file recordset list
- * @param records number of records
- * @param hint listo of hints to find
- * @param component_rank component name rank list
- */
-void external_component_hint_in_path(file_recordset *files, int records, char *hint, component_name_rank *component_rank)
-{
-	bool found = false;
-
-	/* Walk through file records */
-	for (int i = 0; i < records; i++)
-	{
-		/* Attempt to get a component name */
-		get_external_component_name_from_path(files[i].path, hint);
-		if (*hint)
-		{
-			/* Add component to rank */
-			update_component_rank(component_rank, "", hint, "", NULL, "", NULL, "");
-			files[i].external = true;
-			found = true;
-		}
-	}
-
-	if (found) select_best_component_from_rank(component_rank, hint);
-	log_component_ranking(component_rank);
-	scanlog("external_component_hint_in_path returned: %s\n", found ? hint : "no hints");
-}
 
 /**
  * @brief Check if a path exist in a path rank. 
@@ -358,90 +273,6 @@ void collect_shortest_paths(\
 	log_path_ranking(path_rank, files);
 }
 
-/**
- * @brief Select the path matcihin with 
- * @param files pointer to file recordset list
- * @param records number of records
- * @param path_rank[out] pointer to path rank list
- * @param hint1 hint 1
- * @param hint2 hint 2
- * @return true if there is a match
- */
-bool select_paths_matching_component_names_in_rank(\
-		file_recordset *files,\
-		int records,\
-		component_name_rank *component_rank,\
-		path_ranking *path_rank,\
-		char *hint1,\
-		char *hint2)
-{
-	bool found = false;
-
-	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
-
-	if (*hint1 || *hint2) scanlog("Hints %s, %s\n", hint1, hint2);
-
-	/* Walk through the ranking */
-	for (int i = 0; i < rank_items; i++)
-	{
-		if (path_rank[i].score)
-		{
-			bool skip = true;
-
-			/* If there are component hints, accept only matching files */
-			if (!files[path_rank[i].pathid].external)
-			{
-
-				/* If hints are provided, consider only paths starting with either hint */
-				if (*hint1 || *hint2)
-				{
-					if ((stristart(files[path_rank[i].pathid].path, hint1) || \
-								stristart(files[path_rank[i].pathid].path, hint2)))
-					{
-						skip = false;
-					}
-				}
-
-				/* If no hints are provided, path is considered */
-				else skip = false;
-			}
-
-			if (!skip)
-			{
-				*path_rank[i].component = 0;
-				*path_rank[i].vendor = 0;
-				*path_rank[i].purl = 0;
-
-				/* Fetch vendor, component name and purl */
-				get_url_record(files[path_rank[i].pathid].url_id, url_rec);
-				extract_csv(path_rank[i].vendor, (char *) url_rec, 1, sizeof(path_rank[0].vendor));
-				extract_csv(path_rank[i].component, (char *) url_rec, 2, sizeof(path_rank[0].component));
-				extract_csv(path_rank[i].purl, (char *) url_rec, 6, sizeof(path_rank[0].purl));
-				MD5((uint8_t *)path_rank[i].purl, strlen(path_rank[i].purl), path_rank[i].purl_md5);
-
-				/* If the path starts with the component name, add it to the rank */
-				if (stristart(path_rank[i].component, files[path_rank[i].pathid].path))
-				{
-					update_component_rank(\
-							component_rank,\
-							path_rank[i].vendor,\
-							path_rank[i].component,\
-							path_rank[i].purl,\
-							path_rank[i].purl_md5,\
-							files[path_rank[i].pathid].path,\
-							files[path_rank[i].pathid].url_id,\
-							(char *) url_rec);
-					found = true;
-				}
-			}
-		}
-	}
-
-	free(url_rec);
-
-	scanlog("select_paths_matching_component_names_in_rank returned %shints\n", found?"":"NO ");
-	return found;
-}
 
 /**
  * @brief Update component score with component age, return file id for the oldest
@@ -565,47 +396,6 @@ void init_component_ranking(component_name_rank *component_rank)
 }
 
 /**
- * @brief Search for a matching component hint among files with shortest paths
- * 
- * @param files 
- * @param records 
- * @param hint1 
- * @param hint2 
- * @param component_rank 
- * @param path_rank 
- * @return true 
- * @return false 
- */
-bool component_hint_from_shortest_paths(\
-		file_recordset *files,\
-		int records,\
-		char *hint1,\
-		char *hint2,\
-		component_name_rank *component_rank,\
-		path_ranking *path_rank)
-{
-	/* Init component ranking */
-	init_component_ranking(component_rank);
-
-	bool hint_found = false;
-
-	/* Collect shortest paths */
-	collect_shortest_paths(files, records, path_rank);
-
-	/* Query components for those shortest paths, and select those
-		 which match with component name */
-	hint_found = select_paths_matching_component_names_in_rank(files, records,\
-			component_rank, path_rank, hint1, hint2);
-
-	/* Add component age */
-	fill_component_age(component_rank);
-
-	scanlog("search_component_hint returned %shints\n", hint_found ? "" : "NO ");
-
-	return hint_found;
-}
-
-/**
  * @brief Add relevant files into matches structure
  * @param files pointer to file recordset list to be added
  * @param records number of records
@@ -631,13 +421,13 @@ int add_files_to_matches(\
 		{
 			if (add_all || strstr(files[i].path, component_hint))
 			{
-				consider_file_record(\
-						files[i].url_id,\
-						files[i].path,\
-						matches,\
-						component_hint,\
-						file_md5);
-				considered++;
+				// consider_file_record(\
+				// 		files[i].url_id,\
+				// 		files[i].path,\
+				// 		matches,\
+				// 		component_hint,\
+				// 		file_md5);
+				// considered++;
 			}
 		}
 	}
@@ -736,11 +526,8 @@ void dump_path_rank(len_rank *path_rank, file_recordset *files)
  * @param component_rank pointer to component rank list
  * @return index of the selected item
  */
-int shortest_paths_check(file_recordset *files, int records, component_name_rank *component_rank)
+component_name_rank shortest_paths_check(file_recordset *files, int records)
 {
-	/* Wipe component_rank */
-	clear_component_rank(component_rank);
-	int selected = -1;
 
 	/* Load path rank */
 	len_rank *path_rank = load_path_rank(files, records);
@@ -760,11 +547,13 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 	char purl_date[MAX_ARGLN + 1] = "\0";
 	char oldest[MAX_ARGLN + 1] = "9999";
 	int min = 999;
+	component_name_rank component_rank;
 	
 	for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
 	{
-		if (path_rank[r].len)
+		if (path_rank[r].len && *files[path_rank[r].id].path)
 		{
+			scanlog("PATH: %s\n", files[path_rank[r].id].path);
 			if (path_rank[r].len > 1 && path_rank[r].len < min)
 				min = path_rank[r].len;
 			
@@ -776,6 +565,7 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 			/* Extract date from url_rec */
 			*date = 0;
 			extract_csv(date, (char *) url_rec , 4, MAX_ARGLN);
+
 			if (!*date) continue;
 
 			if (strcmp((char *) date, (char *) oldest) < 0)
@@ -817,25 +607,22 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 		scanlog("shortest_paths_check() best_rec = %s\n", best_rec);
 
 		/* Fetch vendor and component name */
-		char vendor[MAX_ARGLN + 1] = "\0";
-		char component[MAX_ARGLN + 1] = "\0";
-		char purl[MAX_ARGLN + 1] = "\0";
-		extract_csv(vendor, (char *) best_rec, 2, MAX_ARGLN);
-		extract_csv(component, (char *) best_rec, 3, MAX_ARGLN);
-		extract_csv(purl, (char *) best_rec, 7, MAX_ARGLN);
-		uint8_t purl_md5[MD5_LEN];
-		MD5((uint8_t *)purl, strlen(purl), purl_md5);
-
-		/* Insert winning record and select first and only item */
-		update_component_rank(component_rank, vendor, component, purl, purl_md5, files[path_id].path, files[path_id].url_id, (char *) best_rec);
-		selected = 0;
+		extract_csv(component_rank.vendor, (char *) best_rec, 2, MAX_ARGLN);
+		extract_csv(component_rank.component, (char *) best_rec, 3, MAX_ARGLN);
+		extract_csv(component_rank.purl, (char *) best_rec, 7, MAX_ARGLN);
+		MD5((uint8_t *)component_rank.purl, strlen(component_rank.purl), component_rank.purl_md5);
+		strcpy(component_rank.file, files[path_id].path);
+		strcpy(component_rank.url_record, (char*) best_rec);
+		memcpy(component_rank.url_id, files[path_id].url_id, MD5_LEN);
+		component_rank.age = get_component_age(component_rank.purl_md5);
+			/* Insert winning record and select first and only item */
 	}
 	else scanlog("shortest_paths_check() best_rec not selected\n");
 
 	free(url_rec);
 	free(old_rec);
 	free(path_rank);
-	return selected;
+	return component_rank;
 }
 
 /**

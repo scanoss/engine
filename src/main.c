@@ -65,6 +65,7 @@ component_item *declared_components;
 uint8_t trace_id[MD5_LEN];
 bool trace_on;
 
+
 /* Initialize tables for the DB name indicated (defaults to oss) */
 void initialize_ldb_tables(char *name)
 {

@@ -260,7 +260,10 @@ bool strn_icmp(char *a, char *b, int len)
 /* Check if a string starts with the given start string */
 bool starts_with(char *str, char *start)
 {
-    int len = strlen(start);
+    if (!str)
+		return false;
+		
+	int len = strlen(start);
     if (strn_icmp(str, start, len)) return true;
     return false;
 }
