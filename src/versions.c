@@ -55,18 +55,14 @@ void normalise_version(char *version, char *component)
 	/* Remove leading component name from version */
 	if ((version && component) && stristart(version, component))
 	{
-		int org_len = strlen(version);
 		int compt_len = strlen(component);
-		strcpy(version, version + compt_len);
-		version[org_len+compt_len-2] = '\0';
+		sprintf(version, "%s",version + compt_len);
 	}
 
 	/* Remove unwanted leading characters from the version */
 	if (version && (((*version == 'v' || *version =='r') && isdigit(version[1])) || !isalnum(*version)))
 	{
-		int org_len = strlen(version);
-		strcpy(version, version + 1);
-		version[org_len-2] = '\0';
+		sprintf(version, "%s",version + 1);
 	} 
 
 	/* Remove trailing ".orig" from version */
@@ -86,6 +82,9 @@ void clean_versions(match_data *match)
 
 char * version_cleanup(char *  version, char * component)
 {
+	if (!version)
+		return NULL;
+		
 	char * cleaned = strdup(version);
 	normalise_version(cleaned, component);
 

@@ -5,8 +5,8 @@
 #include "match_list.h"
 
 void flip_slashes(char *data);
-void output_matches_json(struct listhead * matches, scan_data *scan_ptr);
-struct listhead * compile_matches(scan_data *scan);
+void output_matches_json(match_list_t * matches, scan_data *scan_ptr);
+match_list_t * compile_matches(scan_data *scan);
 void add_match(int position, match_data match, match_data *matches);
 match_data fill_match(uint8_t *url_key, char *file_path, uint8_t *url_record);
 

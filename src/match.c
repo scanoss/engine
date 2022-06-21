@@ -68,7 +68,7 @@ void flip_slashes(char *data)
  * @param matches pointer to matches list
  * @param scan_ptr scan_data pointer, common scan information.
  */
-void output_matches_json(struct listhead * matches, scan_data *scan_ptr)
+void output_matches_json(match_list_t * matches, scan_data *scan_ptr)
 {
 	scan_data *scan = scan_ptr;
 
@@ -87,7 +87,7 @@ void output_matches_json(struct listhead * matches, scan_data *scan_ptr)
 	json_open_file(scan->file_path);
 
 	/* Print matches */
-	if (matches->lh_first)
+	if (matches->headp.lh_first)
 	{
 		match_list_print(matches, print_json_match, ",");
 	}
@@ -459,6 +459,8 @@ bool match_process(match_data_t * fp1)
 	fp1->type = MATCH_SNIPPET;
 	memcpy(scan_aux.md5, fp1->file_md5, MD5_LEN);
 	scan_aux.match_ptr = fp1->matchmap_reg;
+	scan_aux.matched_percent[0]='0';
+	scan_aux.line_ranges[0]='0';
 	memset(matches, 0, sizeof(matches));
 	
 	load_matches(&scan_aux, matches);
@@ -488,10 +490,10 @@ bool match_process(match_data_t * fp1)
  * @param scan scan data
  * @return matches list
  */
-struct listhead * compile_matches(scan_data *scan)
+match_list_t * compile_matches(scan_data *scan)
 {
 	scan->match_ptr = scan->md5;
-	struct listhead * list = NULL;
+	match_list_t * list = NULL;
 
 	/* Search for biggest snippet */
 	if (scan->match_type == snippet)

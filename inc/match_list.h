@@ -43,11 +43,20 @@ struct entry {
     match_data_t * match;
 };
 
-void match_list_print(struct listhead * list, bool (*printer) (match_data_t * fpa), char * separator);
-void match_list_debug(struct listhead * list);
-bool match_list_add(struct listhead * list, match_data_t * new_match, bool (* val) (match_data_t * a, match_data_t * b), bool remove_a);
-void match_list_destroy(struct listhead * list);
-struct listhead * match_list_init();
-void match_list_process(struct listhead * list, bool (*funct_p) (match_data_t * fpa));
-bool match_list_is_empty(struct listhead * list);
+typedef struct match_list_t
+{
+	struct listhead headp;
+	int items;
+	int max_items;
+	bool autolimit;  
+} match_list_t;
+
+
+void match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa), char * separator);
+void match_list_debug(match_list_t * list);
+bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) (match_data_t * a, match_data_t * b), bool remove_a);
+void match_list_destroy(match_list_t * list);
+match_list_t * match_list_init();
+void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa));
+bool match_list_is_empty(match_list_t * list);
 #endif

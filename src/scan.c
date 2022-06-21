@@ -452,9 +452,9 @@ void ldb_scan(scan_data *scan)
 	}
 
 	/* Compile matches */
-	struct listhead * matches = compile_matches(scan);
+	match_list_t * matches = compile_matches(scan);
 	//match_list_print(matches);
-	if (matches->lh_first && scan->match_type != none)
+	if (matches->headp.lh_first && scan->match_type != none)
 	{
 		/* Debug match info */
 	//	scanlog("%d matches compiled:\n", total_matches);

@@ -183,9 +183,9 @@ bool test(match_data_t * a, match_data_t * b)
 	else
 		return false;
 }
-struct listhead * biggest_snippet(scan_data *scan)
+match_list_t * biggest_snippet(scan_data *scan)
 {
-	struct listhead * list = match_list_init();
+	match_list_t * list = match_list_init();
 	for (int j = 0; j < scan->matchmap_size; j++)
 	{
 		if (scan->matchmap[j].hits >= min_match_hits)
@@ -194,11 +194,10 @@ struct listhead * biggest_snippet(scan_data *scan)
 			memcpy(match_new->file_md5, scan->matchmap[j].md5, MD5_LEN);
 			match_new->hits = scan->matchmap[j].hits;
 			match_new->matchmap_reg = scan->matchmap[j].md5;
-			match_list_add(list, match_new, test, false);
+			match_list_add(list, match_new, test, true);
 		}
 	}
-//	match_list_print(list);
-
+	match_list_debug(list);
 	return list;
 }
 
