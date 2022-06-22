@@ -6,24 +6,10 @@
 #include <ldb.h>
 #include "debug.h"
 
-struct entry *nn, *nmax, *nmin, *n1, *n2, *np;
-
 int list_size = 0;
 
-match_list_t * match_list_init()
+void component_data_free(component_data_t * data)
 {
-    match_list_t * list_new = malloc(sizeof(*list_new));
-    LIST_INIT(&list_new->headp);                       /* Initialize the list. */
-    list_new->items = 0;
-    list_new->max_items = 1;
-    return list_new;
-}
-
-void match_data_free(match_data_t * data)
-{
-    if (!data)
-        return;
-
     free(data->vendor);
 	free(data->component);
 	free (data->version);
@@ -33,16 +19,56 @@ void match_data_free(match_data_t * data)
 	free (data->license);
 	free (data->url);
 	free (data->file);
-	free(data->line_ranges);
-    free(data->main_url);
-    free (data->oss_ranges);
-    free(data->matched_percent);
-    
+
     for (int i=0; i<MAX_PURLS; i++)
     {
         free (data->purls[i]);
         free(data->purls_md5[i]);
+    }    for (int i=0; i<MAX_PURLS; i++)
+    {
+        free (data->purls[i]);
+        free(data->purls_md5[i]);
     }
+}
+
+void component_list_destroy(component_list_t * list)
+{
+    while (list->headp.lh_first != NULL)           /* Delete. */
+    {
+        component_data_free(list->headp.lh_first->component);
+        LIST_REMOVE(list->headp.lh_first, entries);
+        list->items--;
+    }
+}
+
+void component_list_init(component_list_t * comp_list)
+{
+    LIST_INIT(&comp_list->headp);                       /* Initialize the list. */
+    comp_list->items = 0;
+    comp_list->max_items = 1;
+}
+
+match_list_t * match_list_init()
+{
+    match_list_t * list_new = malloc(sizeof(*list_new));
+    LIST_INIT(&list_new->headp);                       /* Initialize the list. */
+    list_new->items = 0;
+    list_new->max_items = 1;
+
+    return list_new;
+}
+
+void match_data_free(match_data_t * data)
+{
+    if (!data)
+        return;
+
+	free(data->line_ranges);
+    free(data->main_url);
+    free (data->oss_ranges);
+    free(data->matched_percent);
+
+    component_list_destroy(&data->component_list);
 }
 
 void match_list_destroy(match_list_t * list)
@@ -57,6 +83,48 @@ void match_list_destroy(match_list_t * list)
      free(list);
 }
 
+bool component_list_add(component_list_t * list, component_data_t * new_comp, bool (* val) (component_data_t * a, component_data_t * b), bool remove_a)
+{
+    if (!list->headp.lh_first)
+    {
+        scanlog("Init List\n");
+        struct comp_entry * nn = malloc(sizeof(struct comp_entry));      /* Insert at the head. */
+        LIST_INSERT_HEAD(&list->headp, nn, entries);
+        nn->component = new_comp;
+        list->items = 1;
+        return true;
+    }
+    else if (val)
+    {
+        for (struct comp_entry * np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
+        {
+            if (val(np->component, new_comp))
+            {
+                struct comp_entry * nn = malloc(sizeof(struct entry));      /* Insert after. */
+                nn->component = new_comp;
+                LIST_INSERT_BEFORE(np, nn, entries);
+                if (remove_a && list->items == list->max_items)
+                    LIST_REMOVE(np, entries);
+                else
+                    list->items++;
+
+                return true;
+            }
+        }
+    }
+    else
+    {
+        scanlog("Add to list nc\n");
+        struct comp_entry * nn = malloc(sizeof(struct entry));      /* Insert after. */
+        nn->component = new_comp;
+        LIST_INSERT_AFTER(list->headp.lh_first, nn, entries);
+        return true;   
+    }
+
+    return false;
+}
+
+
 bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) (match_data_t * a, match_data_t * b), bool remove_a)
 {
     /*if (list->items + 1 > list->max_items)
@@ -65,11 +133,12 @@ bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) 
         match_data_free(new_match);
         return false;
     }*/
+    component_list_init(&new_match->component_list);
     
     if (!list->headp.lh_first)
     {
         scanlog("Init List\n");
-        nn = malloc(sizeof(struct entry));      /* Insert at the head. */
+        struct entry * nn = malloc(sizeof(struct entry));      /* Insert at the head. */
         LIST_INSERT_HEAD(&list->headp, nn, entries);
         nn->match = new_match;
         list->items = 1;
@@ -77,11 +146,11 @@ bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) 
     }
     else if (val)
     {
-        for (np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
+        for (struct entry * np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
         {
             if (val(np->match, new_match))
             {
-                nn = malloc(sizeof(struct entry));      /* Insert after. */
+                struct entry * nn = malloc(sizeof(struct entry));      /* Insert after. */
                 nn->match = new_match;
                 LIST_INSERT_BEFORE(np, nn, entries);
                 if (remove_a && list->items == list->max_items)
@@ -96,7 +165,7 @@ bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) 
     else
     {
         scanlog("Add to list nc\n");
-        nn = malloc(sizeof(struct entry));      /* Insert after. */
+        struct entry * nn = malloc(sizeof(struct entry));      /* Insert after. */
         nn->match = new_match;
         LIST_INSERT_AFTER(list->headp.lh_first, nn, entries);
         return true;   
@@ -109,7 +178,7 @@ void match_list_debug(match_list_t * list)
 {
     int i = 0;
     scanlog("Print list\n");
-	for (np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
+	for (struct entry * np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
         char md5_hex[MD5_LEN * 2 + 1];
         ldb_bin_to_hex(np->match->matchmap_reg, MD5_LEN, md5_hex);
@@ -122,7 +191,7 @@ void match_list_debug(match_list_t * list)
 
 void match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa), char * separator)
 {
-    for (np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
+    for (struct entry * np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
         if (printer(np->match))
             break;
@@ -136,7 +205,7 @@ void match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa),
 
 void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa))
 {
-    for (np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
+    for (struct entry * np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
         bool result = funct_p(np->match);
         
@@ -157,35 +226,3 @@ bool match_list_is_empty(match_list_t * list)
 {
     return (list->headp.lh_first != NULL);
 }
-
-// void list_test()
-// {
-	
-// 	n1 = malloc(sizeof(struct entry));      /* Insert at the head. */
-// 	LIST_INSERT_HEAD(&head, n1, entries);
-
-// 	n2 = malloc(sizeof(struct entry));      /* Insert after. */
-// 	LIST_INSERT_AFTER(n1, n2, entries);
-//                                         /* Forward traversal. */
-// 	for (np = head.lh_first; np != NULL; np = np->entries.le_next)
-//     {
-// 		np->p1 = 0;
-// 		np->p2 = 1;
-// 	}
-	
-// 	for (np = head.lh_first; np != NULL; np = np->entries.le_next)
-//     {
-// 		np->p1++;
-// 		np->p2++;
-// 	}
-// 	int i = 0;
-// 	for (np = head.lh_first; np != NULL; np = np->entries.le_next)
-//     {
-// 		printf("Element %d, p1: %d p2 %d\n", i, np->p1, np->p2);
-// 		i++;
-// 	}
-
-// 	while (head.lh_first != NULL)           /* Delete. */
-//     	LIST_REMOVE(head.lh_first, entries);
-// }
-/****************************************************/

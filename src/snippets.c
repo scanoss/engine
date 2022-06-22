@@ -300,7 +300,7 @@ void add_snippet_ids(scan_data *scan, long from, long to)
  * @param scan[out] pointer to scan data
  * @return hits
  */
-int ranges_assemble(matchmap_range *ranges, scan_data *scan)
+int ranges_assemble(matchmap_range *ranges, char * line_ranges, char * oss_ranges)
 {
 	int out = 0;
 
@@ -313,12 +313,12 @@ int ranges_assemble(matchmap_range *ranges, scan_data *scan)
 		if (from && to && oss)
 		{
 			/* Add commas unless it is the first range */
-			if (*scan->line_ranges) strcat(scan->line_ranges, ",");
-			if (*scan->oss_ranges) strcat(scan->oss_ranges, ",");
+			if (*line_ranges) strcat(line_ranges, ",");
+			if (*oss_ranges) strcat(oss_ranges, ",");
 
 			/* Add from-to values */
-			sprintf (scan->line_ranges + strlen(scan->line_ranges), "%d-%d", from, to);
-			sprintf (scan->oss_ranges + strlen(scan->oss_ranges), "%d-%d", oss, to - from + oss);
+			sprintf (line_ranges + strlen(line_ranges), "%d-%d", from, to);
+			sprintf (oss_ranges + strlen(oss_ranges), "%d-%d", oss, to - from + oss);
 
 			/* Increment hits */
 			out += (to - from);
@@ -408,33 +408,35 @@ void ranges_add_tolerance(matchmap_range *ranges, scan_data *scan)
  * @param scan point to scan data to process
  * @return uint32_t snippet hits
  */
-uint32_t compile_ranges(scan_data *scan) {
+uint32_t compile_ranges(match_data_t *match) {
 
-	*scan->line_ranges = 0;
-	*scan->oss_ranges = 0;
-	*scan->snippet_ids = 0;
+	char line_ranges[MAX_FIELD_LN * 2] = "\0";
+	char oss_ranges[MAX_FIELD_LN * 2] = "\0";
+	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1] = "\0";
+	char matched_percent[MAX_FIELD_LN] = "\0";
 
-	if (!scan->match_ptr)
+	if (!match->matchmap_reg)
 	{
-		fprintf(stderr,"ACA!!\n");
+		scanlog("compile ranges fail");
 		return 0;
 	}
-	uint16_t reported_hits = uint16_read(scan->match_ptr + MD5_LEN);
+
+	uint16_t reported_hits = uint16_read(match->matchmap_reg + MD5_LEN);
 	if (reported_hits < 2) return 0;
 
 	/* Lowest tolerance simply requires selecting the higher match count */
 	if (min_match_lines == 1)
 	{
-		strcpy(scan->line_ranges, "N/A");
-		strcpy(scan->oss_ranges, "N/A");
-		return uint16_read(scan->match_ptr + MD5_LEN);
+		asprintf(&match->line_ranges, "N/A");
+		asprintf(&match->oss_ranges, "N/A");
+		return uint16_read(match->matchmap_reg + MD5_LEN);
 	}
 
 	/* Revise hits and decrease if needed */
 	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
 	{
-		long from     = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6);
-		long to       = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6 + 2);
+		long from     = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6);
+		long to       = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6 + 2);
 		long delta = to - from;
 
 		if (to < 1) break;
@@ -461,37 +463,37 @@ uint32_t compile_ranges(scan_data *scan) {
 	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
 	{
 
-		long from     = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6);
-		long to       = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6 + 2);
-		long oss_from = uint16_read(scan->match_ptr + MD5_LEN + 2 + i * 6 + 4);
+		long from     = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6);
+		long to       = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6 + 2);
+		long oss_from = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6 + 4);
 
 		scanlog("compile_ranges #%d = %ld to %ld\n", i, from, to);
 
 		/* Determine if this is the last (first) range */
 		bool first_range = false;
 		if (i == MATCHMAP_RANGES) first_range = true;
-		else if (!uint16_read(scan->match_ptr + MD5_LEN + 2 + (i + 1) * 6 + 2)) first_range = true;
+		else if (!uint16_read(match->matchmap_reg + MD5_LEN + 2 + (i + 1) * 6 + 2)) first_range = true;
 
 		if (to < 1) break;
 
 		/* Add range as long as the minimum number of match lines is reached */
 		if ((to - from) >= min_match_lines)
 		{
-			add_snippet_ids(scan, from, to);
+		//	add_snippet_ids(scan, from, to); //has to be reformulated
 
-			/* Add tolerance to end of last range */
-			if (!i)
-			{
-				to += range_tolerance;
-				if (to > scan->total_lines) to = scan->total_lines;
-			}
+			// /* Add tolerance to end of last range */
+			// if (!i)
+			// {
+			// 	to += range_tolerance;
+			// 	if (to > scan->total_lines) to = scan->total_lines;
+			// }
 
-			/* Add tolerance to start of first range */
-			if (first_range)
-			{
-				from -= range_tolerance;
-				if (from < 1) from = 1;
-			}
+			// /* Add tolerance to start of first range */
+			// if (first_range)
+			// {
+			// 	from -= range_tolerance;
+			// 	if (from < 1) from = 1;
+			// }
 
 			ranges[i].from = from;
 			ranges[i].to= to;
@@ -500,16 +502,13 @@ uint32_t compile_ranges(scan_data *scan) {
 	}
 
 	/* Add tolerances and assemble line ranges */
-	ranges_add_tolerance(ranges, scan);
+	//ranges_add_tolerance(ranges, scan);
 	ranges_remove_empty(ranges);
 	ranges_join_overlapping(ranges);
-	hits = ranges_assemble(ranges, scan);
+	hits = ranges_assemble(ranges, line_ranges, oss_ranges);
+	match->line_ranges = strdup(line_ranges);
+	match->oss_ranges = strdup(oss_ranges);
 	free(ranges);
-
-	/* Remove last comma */
-	if (!scan->line_ranges) strcpy(scan->line_ranges, "all");
-	if (!scan->oss_ranges)  strcpy(scan->oss_ranges, "all");
-
 	return hits;
 }
 

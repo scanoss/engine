@@ -6,10 +6,8 @@
 
 typedef enum {MATCH_NONE, MATCH_URL, MATCH_FILE, MATCH_SNIPPET} match_t;
 
-typedef struct match_data_t
+typedef struct component_data_t
 {
-	match_t type;
-    int hits;
 	char * vendor;
 	char * component;
 	char * version;
@@ -19,6 +17,36 @@ typedef struct match_data_t
 	char * license;
 	char * url;
 	char * file;
+	
+	/* PURL array */
+	char *purls[MAX_PURLS];
+	uint8_t *purls_md5[MAX_PURLS];
+	int vulnerabilities;
+	int path_ln;
+	uint8_t url_md5[MD5_LEN];
+	long age;
+} component_data_t;
+
+LIST_HEAD(comp_listhead, comp_entry) comp_head;
+struct comp_listhead *cheadp;                 /* List head. */
+struct comp_entry {
+    LIST_ENTRY(comp_entry) entries;          /* List. */
+    component_data_t * component;
+};
+
+
+typedef struct component_list_t
+{
+	struct comp_listhead headp;
+	int items;
+	int max_items;
+	bool autolimit;  
+} component_list_t;
+
+typedef struct match_data_t
+{
+	match_t type;
+    int hits;
 	char * main_url;
 	char * line_ranges;
 	char * oss_ranges;
@@ -26,14 +54,10 @@ typedef struct match_data_t
 	int  path_ln;
 	uint8_t file_md5[MD5_LEN];
 	char source_md5[MD5_LEN * 2 + 1];
-	uint8_t url_md5[MD5_LEN];
     uint8_t * matchmap_reg;
+	uint8_t * snippet_ids;
+	component_list_t component_list;
 
-	/* PURL array */
-	char *purls[MAX_PURLS];
-	uint8_t *purls_md5[MAX_PURLS];
-	int vulnerabilities;
-	bool selected;
 } match_data_t;
 
 LIST_HEAD(listhead, entry) head;
@@ -59,4 +83,8 @@ void match_list_destroy(match_list_t * list);
 match_list_t * match_list_init();
 void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa));
 bool match_list_is_empty(match_list_t * list);
+
+bool component_list_add(component_list_t * list, component_data_t * new_comp, bool (* val) (component_data_t * a, component_data_t * b), bool remove_a);
+void component_data_free(component_data_t * data);
+
 #endif

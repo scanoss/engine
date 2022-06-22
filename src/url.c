@@ -66,25 +66,26 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 		return false;
 	}
 
-	match_data *matches = (match_data*) ptr;
-	struct match_data match;// = match_init();
+	component_list_t * component_list = (component_list_t*) ptr;
+	
+	component_data_t * new_comp = malloc(new_comp);
+	bool result = fill_match(new_comp, NULL, NULL, (uint8_t*) data);
 
-	/* Exit if we have enough matches */
-	int total_matches = count_matches(matches);
-	if (total_matches >= scan_limit) return true;
-
-	match = fill_match(NULL, NULL, (uint8_t*) data);
+	if (result)
+	{
+		/* Save match component id */
+		memcpy(new_comp->url_md5, key, LDB_KEY_LN);
+		memcpy(new_comp->url_md5 + LDB_KEY_LN, subkey, subkey_ln);
+//		memcpy(match.file_md5, match.url_md5, MD5_LEN);
+//		match.path_ln = strlen(match.url);
+//		match.type = url;
+		component_list_add(component_list, new_comp, NULL, true);
+	}
+	else
+		component_data_free(new_comp);
+	
 	free(data);
 
-	/* Save match component id */
-	memcpy(match.url_md5, key, LDB_KEY_LN);
-	memcpy(match.url_md5 + LDB_KEY_LN, subkey, subkey_ln);
-	memcpy(match.file_md5, match.url_md5, MD5_LEN);
-
-	match.path_ln = strlen(match.url);
-	match.type = url;
-
-	add_match(0, match, matches);
 	return false;
 }
 /**
