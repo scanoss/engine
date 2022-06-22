@@ -16,15 +16,16 @@ typedef struct component_data_t
 	char * latest_version;
 	char * license;
 	char * url;
-	char * file;
-	
+	char * file;	
+	char * main_url;
 	/* PURL array */
 	char *purls[MAX_PURLS];
 	uint8_t *purls_md5[MAX_PURLS];
 	int vulnerabilities;
 	int path_ln;
 	uint8_t url_md5[MD5_LEN];
-	long age;
+	int age;
+	bool url_match;
 } component_data_t;
 
 LIST_HEAD(comp_listhead, comp_entry) comp_head;
@@ -47,7 +48,6 @@ typedef struct match_data_t
 {
 	match_t type;
     int hits;
-	char * main_url;
 	char * line_ranges;
 	char * oss_ranges;
 	char * matched_percent;
@@ -86,5 +86,6 @@ bool match_list_is_empty(match_list_t * list);
 
 bool component_list_add(component_list_t * list, component_data_t * new_comp, bool (* val) (component_data_t * a, component_data_t * b), bool remove_a);
 void component_data_free(component_data_t * data);
-
+void component_list_print(component_list_t * list, bool (*printer) (component_data_t * fpa), char * separator);
+bool component_date_comparation(component_data_t * a, component_data_t * b);
 #endif

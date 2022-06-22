@@ -194,10 +194,11 @@ match_list_t * biggest_snippet(scan_data *scan)
 			memcpy(match_new->file_md5, scan->matchmap[j].md5, MD5_LEN);
 			match_new->hits = scan->matchmap[j].hits;
 			match_new->matchmap_reg = scan->matchmap[j].md5;
+			match_new->type = MATCH_SNIPPET;
 			match_list_add(list, match_new, test, true);
 		}
 	}
-	match_list_debug(list);
+	//match_list_debug(list);
 	return list;
 }
 
@@ -412,8 +413,7 @@ uint32_t compile_ranges(match_data_t *match) {
 
 	char line_ranges[MAX_FIELD_LN * 2] = "\0";
 	char oss_ranges[MAX_FIELD_LN * 2] = "\0";
-	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1] = "\0";
-	char matched_percent[MAX_FIELD_LN] = "\0";
+	//char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1] = "\0";
 
 	if (!match->matchmap_reg)
 	{

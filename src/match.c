@@ -170,30 +170,31 @@ bool ignored_asset_match(uint8_t *url_record)
 bool fill_component(component_data_t * component, uint8_t *url_key, char *file_path, uint8_t *url_record)
 {
 	char vendor[MAX_FIELD_LN];
-	char component[MAX_FIELD_LN];
+	char comp[MAX_FIELD_LN];
 	char version[MAX_FIELD_LN];
 	char release_date[MAX_FIELD_LN];
-	char latest_release_date[MAX_FIELD_LN];
 	char latest_version[MAX_FIELD_LN];
-	char main_url[MAX_FILE_PATH];
 	char license[MAX_FIELD_LN];
 	char url[MAX_FILE_PATH];
 	char purl[MAX_FILE_PATH];
-	uint8_t purl_md5[MD5_LEN];
-	component->path_ln = 0;
-	
+	//component->path_ln = 0;
+	if (!component)
+		return false;
 	/* Extract fields from file record */
 	if (url_key)
 	{
 		memcpy(component->url_md5, url_key, MD5_LEN);
-		component->file = strdup(file_path);
-		component->path_ln = strlen(file_path);
-		flip_slashes(component->file);
+		if (file_path)
+		{
+			component->file = strdup(file_path);
+			component->path_ln = strlen(file_path);
+			flip_slashes(component->file);
+		}
 	}
 
 	/* Extract fields from url record */
 	extract_csv(vendor, (char *)url_record, 1, sizeof(vendor));
-	extract_csv(component, (char *)url_record, 2, sizeof(component));
+	extract_csv(comp, (char *)url_record, 2, sizeof(comp));
 	extract_csv(version, (char *)url_record, 3, sizeof(version));
 	extract_csv(release_date, (char *)url_record, 4, sizeof(release_date));
 	extract_csv(license, (char *)url_record, 5, sizeof(license));
@@ -202,7 +203,7 @@ bool fill_component(component_data_t * component, uint8_t *url_key, char *file_p
 	strcpy(latest_version, version);
 
 	flip_slashes(vendor);
-	flip_slashes(component);
+	flip_slashes(comp);
 	flip_slashes(version);
 	flip_slashes(url);
 
@@ -212,15 +213,15 @@ bool fill_component(component_data_t * component, uint8_t *url_key, char *file_p
 		return false;
 	}
 	component->vendor = strdup(vendor);
-	component->component = strdup(component);
+	component->component = strdup(comp);
 	component->version = strdup(version);
 	component->release_date = strdup(release_date);
 	component->license = strdup(license);
-	component->purls[0] = strdup(purl);
 	component->url = strdup(url);
 	component->latest_version = strdup(latest_version);
 	if (*purl)
 	{
+		component->purls[0] = strdup(purl);
 		component->purls_md5[0] = malloc(MD5_LEN);
 		MD5((uint8_t *)purl, strlen(purl), component->purls_md5[0]);
 		component->age = get_component_age(component->purls_md5[0]);
@@ -346,9 +347,10 @@ static int path_struct_cmp(const void *a, const void *b) {
 	return 0;
 }
 
+
 static bool load_components(component_list_t * component_list, file_recordset *files, int records)
 {
-
+	scanlog("Load components\n");
 	/* Load path rank */
 	len_rank *path_rank = load_path_rank(files, records);
 
@@ -360,12 +362,7 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 
 	/* Obtain oldest URL record */
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1);
-	uint8_t *old_rec = calloc(LDB_MAX_REC_LN, 1);
 
-	int path_id = 0;
-	char date[MAX_ARGLN + 1] = "\0";
-	char purl_date[MAX_ARGLN + 1] = "\0";
-	char oldest[MAX_ARGLN + 1] = "9999";
 	int min = 999;
 	
 	for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
@@ -384,30 +381,32 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 		ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *) url_rec);
 
 		/* Extract date from url_rec */
-		*date = 0;
+		char date[MAX_ARGLN]= "0";
 		extract_csv(date, (char *) url_rec , 4, MAX_ARGLN);
 		if (!*date) continue;
 
-		component_data_t * new_comp = malloc(new_comp);
-		bool result = fill_component(new_comp, NULL, NULL, (uint8_t*) url_rec);
+		component_data_t * new_comp = calloc(1, sizeof(*new_comp));
+		bool result = fill_component(new_comp, files[path_rank[r].id].url_id, files[path_rank[r].id].path, (uint8_t*) url_rec);
 		if (result)
 		{
-			int n = path_rank[r].id;
-			memcpy(new_comp->url_md5, files[n].url_id, MD5_LEN);
-			release_version  release = {.version = "0", .date = "0"};
-			if (!files[n].url_id].external) 
-				get_purl_version(release, new_comp->purls[0], files[n].url_id);
-/*
-			if (*release.version) 
-				update_version_range(matches, release);
-*/			
-			component_list_add(component_list, new_comp, NULL, true);
+		//	int n = path_rank[r].id;
+			//memcpy(new_comp->url_md5, files[n].url_id, MD5_LEN);
+			//release_version  release = {.version = "0", .date = "0"};
+		//	if (!files[n].external) 
+		///		get_purl_version(&release, new_comp->purls[0], files[n].url_id); 
+
+		//	if (*release.version) 
+			//	update_version_range(matches, release);
+			
+			component_list_add(component_list, new_comp, component_date_comparation, true);
 		}
 		else
+		{
+			scanlog("incomplete component");
 			component_data_free(new_comp);
+		}
 	}
 	free(url_rec);
-	free(old_rec);
 	free(path_rank);
 	return true;
 }
@@ -418,9 +417,10 @@ static bool load_components(component_list_t * component_list, file_recordset *f
  * @param scan scan data
  * @param matches matches list
  */
-void load_matches (scan_data * scan, match_data_t *match)
+void load_matches (match_data_t *match)
 {
-	
+	scanlog("Load matches");
+
 	if (match->type == MATCH_FILE)
 	{
 		asprintf(&match->line_ranges, "all");
@@ -433,11 +433,11 @@ void load_matches (scan_data * scan, match_data_t *match)
 	int matched_percent = 100;
 
 	/* Get matching line ranges (snippet match) */
-	if (match->type == snippet)
+	if (match->type == MATCH_SNIPPET)
 	{
 		hits = compile_ranges(match);
 
-		float percent = (hits * 100) / scan->total_lines;
+		float percent = (hits * 100);// / scan->total_lines;
 		if (hits)
 			matched_percent = floor(percent);
 		if (matched_percent > 99)
@@ -455,14 +455,14 @@ void load_matches (scan_data * scan, match_data_t *match)
 	uint32_t records = 0;
 
 	/* Snippet and url match should look for the matching md5 in urls */
-	if (scan->match_type != file)
+	if (match->type != MATCH_FILE)
 	{
-		records = ldb_fetch_recordset(NULL, oss_url, scan->match_ptr, false, handle_url_record, (void *)&match->component_list);
+		records = ldb_fetch_recordset(NULL, oss_url, match->file_md5, false, handle_url_record, (void *)&match->component_list);
 		scanlog("URL recordset contains %u records\n", records);
 	}
 
 	file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
-	records = ldb_fetch_recordset(NULL, oss_file, scan->match_ptr, false, collect_all_files, (void *)files);
+	records = ldb_fetch_recordset(NULL, oss_file, match->file_md5, false, collect_all_files, (void *)files);
 	if (records)
 	{
 		load_components(&match->component_list, files, records);
@@ -477,10 +477,10 @@ void load_matches (scan_data * scan, match_data_t *match)
 		scanlog("Match type is 'none' after loading matches\n");
 }
 
-scan_data * scan_aux;
 bool match_process(match_data_t * fp1)
 {
-	load_matches(scan_aux, fp1);
+	load_matches(fp1);
+	return false;
 }
 /**
  * @brief Compile matches if DISABLE_BEST_MATCH is one
@@ -491,7 +491,6 @@ match_list_t * compile_matches(scan_data *scan)
 {
 	scan->match_ptr = scan->md5;
 	match_list_t * list = NULL;
-	scan_aux = scan;
 	/* Search for biggest snippet */
 	if (scan->match_type == snippet)
 	{
@@ -507,8 +506,8 @@ match_list_t * compile_matches(scan_data *scan)
 		struct match_data matches[3];
 		memset(matches, 0, sizeof(matches));
 		list = match_list_init();
-		match_data_t * match_new = malloc(sizeof(match_data_t));
-		match_new->type = MATCH_FILE;
+		match_data_t * match_new = calloc(1, sizeof(match_data_t));
+		match_new->type = (match_t) scan->match_type;
 		match_list_add(list, match_new, NULL, false);
 	}
 	

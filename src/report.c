@@ -153,14 +153,14 @@ void print_json_nomatch(scan_data *scan)
  * @brief Print purl array for a match
  * @param match match item
  */
-void print_purl_array(match_data_t * match)
+void print_purl_array(component_data_t * component)
 {
 	printf("\"purl\": [");
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
-		if (match->purls[i]) {
-			printf("\"%s\"", match->purls[i]);
-			if (i < (MAX_PURLS - 1)) if (match->purls[i + 1]) printf(",");
+		if (component->purls[i]) {
+			printf("\"%s\"", component->purls[i]);
+			if (i < (MAX_PURLS - 1)) if (component->purls[i + 1]) printf(",");
 		} else break;
 	}
 	printf("],");
@@ -302,19 +302,48 @@ char *file_skip_release(char *purl, char *file)
 // 	printf("}");
 // 	fflush(stdout);
 // }
+bool print_json_component(component_data_t * component)
+{
+	scanlog("print component\n");
+/* Fetch related purls */
+	printf("{");
+	fetch_related_purls(component);
+
+	/* Calculate main URL */
+	fill_main_url(component);
+
+	print_purl_array(component);
+
+	printf("\"vendor\": \"%s\",", component->vendor);
+	printf("\"component\": \"%s\",", component->component);
+	
+	char * version_clean = NULL;
+	version_clean = version_cleanup(component->version, component->component);
+	printf("\"version\": \"%s\",", version_clean);
+	free(version_clean);
+
+	version_clean = version_cleanup(component->latest_version, component->component);
+	printf("\"latest\": \"%s\",", version_clean);
+	free(version_clean);
+	
+	printf("\"url\": \"%s\",", component->main_url ? component->main_url : component->url);
+
+	/* Print (optional download_url */
+	if (engine_flags & ENABLE_DOWNLOAD_URL)
+	printf("\"download_url\": \"%s\",", component->url);
+
+	printf("\"release_date\": \"%s\",", component->release_date);
+	printf("\"file\": \"%s\",", component->url_match == true ? basename(component->url) : file_skip_release(component->purls[0], component->file));
+
+	char *url_id = md5_hex(component->url_md5);
+	printf("\"url_hash\": \"%s\"", url_id);
+	free(url_id);
+	printf("}");
+	return false;
+}
 
 bool print_json_match(struct match_data_t * match)
 {
-	char * version_clean = NULL;
-	/* Comma separator */
-//	if ((*match_counter)++) printf(",");
-
-	/* Fetch related purls */
-	fetch_related_purls(match);
-
-	/* Calculate main URL */
-	fill_main_url(match);
-
 	printf("{");
 	printf("\"id\": \"%s\",", matchtypes[match->type == 1 ? 2 : match->type]);
 //	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
@@ -337,31 +366,6 @@ bool print_json_match(struct match_data_t * match)
 	}*/
 
 
-	print_purl_array(match);
-
-	printf("\"vendor\": \"%s\",", match->vendor);
-	printf("\"component\": \"%s\",", match->component);
-
-	version_clean = version_cleanup(match->version, match->component);
-	printf("\"version\": \"%s\",", version_clean);
-	free(version_clean);
-
-	version_clean = version_cleanup(match->latest_version, match->component);
-	printf("\"latest\": \"%s\",", version_clean);
-	free(version_clean);
-	
-	printf("\"url\": \"%s\",", match->main_url ? match->main_url : match->url);
-
-	/* Print (optional download_url */
-	if (engine_flags & ENABLE_DOWNLOAD_URL)
-	printf("\"download_url\": \"%s\",", match->url);
-
-	printf("\"release_date\": \"%s\",", match->release_date);
-	printf("\"file\": \"%s\",", match->type == 1 ? basename(match->url) : file_skip_release(match->purls[0], match->file));
-
-	char *url_id = md5_hex(match->url_md5);
-	printf("\"url_hash\": \"%s\",", url_id);
-	free(url_id);
 
 	char *file_id = md5_hex(match->file_md5);
 
@@ -372,12 +376,20 @@ bool print_json_match(struct match_data_t * match)
 	if (match->type != MATCH_URL)
 	{
 		char *custom_url = getenv("SCANOSS_API_URL");
-		printf("\"file_url\": \"%s/file_contents/%s\"", custom_url ? custom_url : API_URL, file_id);
+		printf("\"file_url\": \"%s/file_contents/%s\",", custom_url ? custom_url : API_URL, file_id);
 	}
-	else
-		printf("\"file_url\": \"%s\"", match->url);
 
 	free(file_id);
+	printf("\"components\":[");
+	
+	if (match->component_list.headp.lh_first)
+	{
+		component_list_print(&match->component_list, print_json_component, ",");
+	}
+	else
+		scanlog("no components");
+
+	printf("]");
 /*
 	print_licenses(match);
 

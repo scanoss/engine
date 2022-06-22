@@ -182,8 +182,6 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 
 	/* Keep the oldest date in case there are multiple sources */
 	long seconds = (long) time (NULL) - (long) epoch;
-	scanlog("<-- %s  --- %ld -->\n",data, seconds);
-
 	if (seconds > *age) *age = seconds;
 
 	return false;

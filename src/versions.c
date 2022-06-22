@@ -44,6 +44,7 @@
 #include "winnowing.h"
 #include "ldb.h"
 #include "decrypt.h"
+#include "versions.h"
 
 /**
  * @brief Normalize component version

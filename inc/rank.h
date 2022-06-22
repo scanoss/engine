@@ -21,5 +21,7 @@ bool select_best_match(match_data *matches);
 int fill_component_age(component_name_rank *component_rank);
 long component_age(char *vendor, char *component);
 component_name_rank shortest_paths_check(file_recordset *files, int records);
+len_rank *load_path_rank(file_recordset *files, int records);
+void dump_path_rank(len_rank *path_rank, file_recordset *files);
 
 #endif
