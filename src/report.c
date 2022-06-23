@@ -344,6 +344,13 @@ bool print_json_component(component_data_t * component)
 
 bool print_json_match(struct match_data_t * match)
 {
+	char *file_id = md5_hex(match->file_md5);
+	if (!match->component_list.headp.lh_first)
+	{
+		scanlog("Match with no components ignored: %s", file_id);
+		free(file_id);
+		return false;
+	}
 	printf("{");
 	printf("\"id\": \"%s\",", matchtypes[match->type == 1 ? 2 : match->type]);
 //	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
@@ -367,7 +374,6 @@ bool print_json_match(struct match_data_t * match)
 
 
 
-	char *file_id = md5_hex(match->file_md5);
 
 	printf("\"file_hash\": \"%s\",", file_id);
 	printf("\"source_hash\": \"%s\",", match->source_md5);
@@ -380,16 +386,12 @@ bool print_json_match(struct match_data_t * match)
 	}
 
 	free(file_id);
-	printf("\"components\":[");
 	
-	if (match->component_list.headp.lh_first)
-	{
-		component_list_print(&match->component_list, print_json_component, ",");
-	}
-	else
-		scanlog("no components");
 
+	printf("\"components\":[");
+	component_list_print(&match->component_list, print_json_component, ",");
 	printf("]");
+
 /*
 	print_licenses(match);
 
@@ -421,5 +423,5 @@ bool print_json_match(struct match_data_t * match)
 	print_server_stats(scan);*/
 	printf("}");
 	fflush(stdout);
-	return false;
+	return true;
 }

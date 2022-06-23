@@ -200,11 +200,13 @@ void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), ch
 {
     for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
-        if (printer(np->match))
-            break;
-
-        if (separator && np->entries.le_next)
+        if (!np->match->component_list.items)
+            continue;
+        
+        if (separator && np != list->headp.lh_first)
             printf("%s", separator);
+         
+         printer(np->match);
     }
 }
 
@@ -238,11 +240,12 @@ bool match_list_is_empty(match_list_t *list)
 
 bool component_date_comparation(component_data_t * a, component_data_t * b)
 {
-	if (!b->release_date || a->release_date)
+	/*printf("<<%s, %s>>\n", b->release_date, a->release_date);
+    if (!b->release_date || a->release_date)
     {
         scanlog("error: incomplete component\n");
         return false;
-    }
+    }*/
     if (strcmp(b->release_date, a->release_date) <= 0)
 	{
 		return true;

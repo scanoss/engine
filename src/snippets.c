@@ -195,6 +195,7 @@ match_list_t * biggest_snippet(scan_data *scan)
 			match_new->hits = scan->matchmap[j].hits;
 			match_new->matchmap_reg = scan->matchmap[j].md5;
 			match_new->type = MATCH_SNIPPET;
+			strcpy(match_new->source_md5, scan->source_md5);
 			match_list_add(list, match_new, test, true);
 		}
 	}

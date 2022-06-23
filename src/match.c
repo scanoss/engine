@@ -508,6 +508,7 @@ match_list_t * compile_matches(scan_data *scan)
 		list = match_list_init();
 		match_data_t * match_new = calloc(1, sizeof(match_data_t));
 		match_new->type = (match_t) scan->match_type;
+		strcpy(match_new->source_md5, scan->source_md5);
 		match_list_add(list, match_new, NULL, false);
 	}
 	
