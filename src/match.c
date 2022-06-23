@@ -503,12 +503,11 @@ match_list_t * compile_matches(scan_data *scan)
 	}
 	else
 	{
-		struct match_data matches[3];
-		memset(matches, 0, sizeof(matches));
 		list = match_list_init();
 		match_data_t * match_new = calloc(1, sizeof(match_data_t));
 		match_new->type = (match_t) scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
+		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);
 		match_list_add(list, match_new, NULL, false);
 	}
 	
