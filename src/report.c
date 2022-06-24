@@ -338,6 +338,10 @@ bool print_json_component(component_data_t * component)
 	char *url_id = md5_hex(component->url_md5);
 	printf("\"url_hash\": \"%s\"", url_id);
 	free(url_id);
+
+	print_licenses(component);
+	printf("%s", component->license_text);
+	
 	printf("}");
 	return false;
 }
@@ -393,7 +397,6 @@ bool print_json_match(struct match_data_t * match)
 	printf("]");
 
 /*
-	print_licenses(match);
 
 	if (!(engine_flags & DISABLE_DEPENDENCIES))
 	{

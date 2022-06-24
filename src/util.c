@@ -289,7 +289,17 @@ bool valid_md5(char *str)
 char * str_cat_realloc(char **a, char * b)
 {
 	char * aux = *a;
-	*a = NULL;
-	asprintf(a,"%s%s", aux, b);
-	free(aux);
+	if (!aux)
+	{
+		asprintf(a,"%s", b);	
+	}
+	else
+	{
+		*a = NULL;
+		asprintf(a,"%s%s", aux, b);
+		free(aux);
+	}
+	
+	return *a;
 }
+

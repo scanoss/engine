@@ -369,7 +369,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 't':
-				scan_benchmark();
+//				scan_benchmark();
 				exit(EXIT_SUCCESS);
 				break;
 

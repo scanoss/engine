@@ -2,6 +2,7 @@
 #define __MATCH_LIST_H
 #include <stdint.h>
 #include <sys/queue.h>
+#include <stdbool.h>
 
 #define MD5_LEN 16
 #define MAX_PURLS 10
@@ -34,9 +35,10 @@ typedef struct component_data_t
 	bool url_match;
 	uint32_t * crclist;
 	uint8_t * file_md5_ref;
-
+	char * copyright_text;
 	char *license_text;
 	char * vulnerabilities_text;
+	char * dependency_text;
 } component_data_t;
 
 LIST_HEAD(comp_listhead, comp_entry) comp_head;
@@ -68,7 +70,10 @@ typedef struct match_data_t
 	char source_md5[MD5_LEN * 2 + 1];
     uint8_t * matchmap_reg;
 	uint8_t * snippet_ids;
+	uint32_t * crclist;
 	component_list_t component_list;
+	char * quality_text;
+	char * crytography_text;
 } match_data_t;
 
 LIST_HEAD(listhead, entry) head;
@@ -108,7 +113,7 @@ typedef struct matchmap_entry
 
 typedef struct scan_data_t
 {
-	uint8_t *md5;
+	uint8_t md5[MD5_LEN];
 	char *file_path;
 	char *file_size;
 	char source_md5[MD5_LEN * 2 + 1];

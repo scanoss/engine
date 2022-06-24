@@ -591,38 +591,38 @@ component_name_rank shortest_paths_check(file_recordset *files, int records)
  * @param matches pointer to matches list
  * @return true is there is a match.
  */
-bool select_best_match(match_data *matches)
-{
-	scanlog("Running select_best_match()\n");
-	unsigned long oldest = 0;
-	int oldest_id = 0;
+// bool select_best_match(match_data *matches)
+// {
+// 	scanlog("Running select_best_match()\n");
+// 	unsigned long oldest = 0;
+// 	int oldest_id = 0;
 
-	/* Search for matches in component with version ranges */
-	for (int i = 0; i < scan_limit && *matches[i].component; i++)
-	{
-		unsigned long age = get_component_age(matches[i].purl_md5[0]);
+// 	/* Search for matches in component with version ranges */
+// 	for (int i = 0; i < scan_limit && *matches[i].component; i++)
+// 	{
+// 		unsigned long age = get_component_age(matches[i].purl_md5[0]);
 	
-		if (age > oldest)
-		{
-			oldest = age;
-			oldest_id = i;
-			scanlog("<<<oldst in  %d - %ld>>>>\n", oldest_id, oldest);
+// 		if (age > oldest)
+// 		{
+// 			oldest = age;
+// 			oldest_id = i;
+// 			scanlog("<<<oldst in  %d - %ld>>>>\n", oldest_id, oldest);
 
-		}
-	}
+// 		}
+// 	}
 
-	/* Mark oldest component as selected match */
-	if (oldest)
-	{
-		matches[oldest_id].selected = true;
-		scanlog("Selected match #%d (%s/%s) with age = %ld\n",\
-				oldest_id,
-				matches[oldest_id].vendor,\
-				matches[oldest_id].component,\
-				oldest);
-		return true;
-	}
-	else scanlog("Component age returns no matches\n");
+// 	/* Mark oldest component as selected match */
+// 	if (oldest)
+// 	{
+// 		matches[oldest_id].selected = true;
+// 		scanlog("Selected match #%d (%s/%s) with age = %ld\n",\
+// 				oldest_id,
+// 				matches[oldest_id].vendor,\
+// 				matches[oldest_id].component,\
+// 				oldest);
+// 		return true;
+// 	}
+// 	else scanlog("Component age returns no matches\n");
 
-	return false;
-}
+// 	return false;
+// }

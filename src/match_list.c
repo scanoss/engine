@@ -74,8 +74,6 @@ void match_list_destroy(match_list_t *list)
         LIST_REMOVE(list->headp.lh_first, entries);
         list->items--;
     }
-
-    free(list);
 }
 
 bool component_list_add(component_list_t *list, component_data_t *new_comp, bool (*val)(component_data_t *a, component_data_t *b), bool remove_a)

@@ -66,6 +66,7 @@ static void calc_wfp_md5(scan_data_t *scan)
     */
 scan_data_t * scan_data_init(char *target)
 {
+	scanlog("Scan Init\n");
 	scan_data_t * scan = calloc(1, sizeof(*scan));
 	scan->file_path = strdup(target);
 	scan->hashes = malloc(MAX_FILE_SIZE);
@@ -104,13 +105,11 @@ static void scan_data_reset(scan_data_t *scan)
 	*/
 void scan_data_free(scan_data_t * scan)
 {
-	free(scan->md5);
 	free(scan->file_path);
 	free(scan->file_size);
 	free(scan->hashes);
 	free(scan->lines);
 	free(scan->matchmap);
-	free(scan);
 }
 
 /** @brief Returns true if md5 is the md5sum for NULL
@@ -187,7 +186,7 @@ int hash_scan(scan_data_t *scan)
 {
 	scan->preload = true;
 
-	/* Get file MD5 */
+		/* Get file MD5 */
 	ldb_hex_to_bin(scan->file_path, MD5_LEN * 2, scan->md5);
 
 	/* Fake file length */

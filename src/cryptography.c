@@ -52,7 +52,7 @@
  */
 bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	match_data *match = ptr;
+	match_data_t *match = ptr;
 
 	if (!datalen) return false;
 	char * CSV = decrypt_data(data, datalen, "cryptography", key, subkey);
@@ -69,15 +69,20 @@ bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
 	bool dup = add_CRC(match->crclist, CRC);
 
 	scanlog("Fetched cryptography %s (%s)\n", algorithm, strength);
-
+	
+	char result[MAX_FIELD_LN] = "\0";
+	int len = 0;
+	
 	if (!dup && *algorithm)
 	{
-		if (iteration) printf(",");
-		printf("{");
-		printf("\"algorithm\": \"%s\",", algorithm);
-		printf("\"strength\": \"%s\"", strength);
-		printf("}");
+		if (iteration) len += sprintf(result+len,",");
+		len += sprintf(result+len,"{");
+		len += sprintf(result+len,"\"algorithm\": \"%s\",", algorithm);
+		len += sprintf(result+len,"\"strength\": \"%s\"", strength);
+		len += sprintf(result+len,"}");
 	}
+	
+	str_cat_realloc(&match->crytography_text, result);
 
 	free(algorithm);
 	free(strength);
@@ -89,17 +94,24 @@ bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
  * @brief print the cryptography section for a match
  * @param match to be processed
  */
-void print_cryptography(match_data match)
+void print_cryptography(match_data_t * match)
 {
 	if (!ldb_table_exists(oss_cryptography.db, oss_cryptography.table)) //skip crypto if the table is not present
 		return;
-	printf(",\"cryptography\": ");
-	printf("[");
-
-	/* Clean crc list (used to avoid duplicates) */
-	for (int i = 0; i < CRC_LIST_LEN; i++) match.crclist[i] = 0;
-
-	ldb_fetch_recordset(NULL, oss_cryptography, match.file_md5, false, print_crypto_item, &match);
-	printf("]");
+	
+	char result[MAX_FIELD_LN] = "\0";
+	int len = 0;
+	
+	len += sprintf(result,"\"cryptography\": [");
+	
+	uint32_t crclist[CRC_LIST_LEN];
+	memset(crclist, 0, sizeof(crclist));
+	
+	ldb_fetch_recordset(NULL, oss_cryptography, match->file_md5, false, print_crypto_item, match);
+	
+	char * aux = NULL;
+	asprintf(&aux, "%s: %s]", result, match->crytography_text);
+	free(match->crytography_text);	
+	match->crytography_text = aux;
 }
 

@@ -90,53 +90,8 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 
 	return false;
 }
-/**
- * @brief Clean selected matches field in matches list 
- * @param key //TODO
-**/
-void clean_selected_matches(match_data *matches)
-{
-	for (int i = 0; i < scan_limit; i++)  matches[0].selected = false;
-}
 
-/**
- * @brief Select the purl for a match followin ta schema
- * @param schema propused schema
- * @param matches pointer to matches list
-**/
-bool select_purl_match(char *schema, match_data *matches)
-{
-	clean_selected_matches(matches);
 
-	/* Select first match if no purl schema is provided */
-	if (!schema)
-	{
-		matches[0].selected = 0;
-		return true;
-	}
-
-	for (int i = 0; i < scan_limit && *matches[i].purl; i++)
-	{
-		if (!memcmp(matches[i].purl, schema, strlen(schema)))
-		{
-			matches[i].selected = true;
-			return true;
-		}
-	}
-	return false;
-}
-/**
- * @brief Select preferred URLs based on favorite purl schema
- * @param matches pointer to matches list
-**/
-
-void select_best_url(match_data *matches)
-{
-	if (!select_purl_match("pkg:github",matches))
-		if (!select_purl_match("pkg:gitlab",matches))
-			if (!select_purl_match("pkg:maven",matches))
-				select_purl_match(NULL, matches);
-}
 /**
  * @brief Build a component URL from the provided PURL schema and actual URL
  * @param match pointer to a match

@@ -38,7 +38,6 @@
 #include "util.h"
 #include "parse.h"
 #include "debug.h"
-#include "psi.h"
 #include "limits.h"
 #include "ignorelist.h"
 #include "winnowing.h"

@@ -181,48 +181,48 @@ void map_dump(scan_data_t *scan)
 	fclose(map);
 }
 
-/**
- * @brief Test function to evaluete the performance of a scan
- */
-void scan_benchmark()
-{
-	uint32_t total_hashes = 100; // Number of hashes per pseudo file
-	uint32_t total_files = 100; // Number of pseudo hashes to scan
-	double elapsed = microseconds_now();
+// /**
+//  * @brief Test function to evaluete the performance of a scan
+//  */
+// void scan_benchmark()
+// {
+// 	uint32_t total_hashes = 100; // Number of hashes per pseudo file
+// 	uint32_t total_files = 100; // Number of pseudo hashes to scan
+// 	double elapsed = microseconds_now();
 
-	/* Init random number generator */
-	time_t t;
-	srand((unsigned) time(&t));
+// 	/* Init random number generator */
+// 	time_t t;
+// 	srand((unsigned) time(&t));
 
-	for (int f = 0; f < total_files ; f++)
-	{
-		scan_data_t scan = scan_data_init("");
-		scan.preload = true;
-		memcpy(scan.md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
-		strcpy(scan.file_path, "pseudo_file");
-		strcpy(scan.file_size, "1024");
+// 	for (int f = 0; f < total_files ; f++)
+// 	{
+// 		scan_data_t scan = scan_data_init("");
+// 		scan.preload = true;
+// 		memcpy(scan.md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
+// 		strcpy(scan.file_path, "pseudo_file");
+// 		strcpy(scan.file_size, "1024");
 
-		progress ("Scanning: ", f + 1, total_files, false);
+// 		progress ("Scanning: ", f + 1, total_files, false);
 
-		/* Fill up pseudo snippet hashes */
-		for (uint32_t i = 0; i < total_hashes; i++)
-		{
-			scan.lines[i] = i;
-			scan.hashes[i] = rand() % 256 + (rand() % 256) * 256 + (rand() % 256) * 256 * 256 + (rand() % 256) * 256 * 256 * 256;
-		}
-		scan.hash_count = total_hashes;
+// 		/* Fill up pseudo snippet hashes */
+// 		for (uint32_t i = 0; i < total_hashes; i++)
+// 		{
+// 			scan.lines[i] = i;
+// 			scan.hashes[i] = rand() % 256 + (rand() % 256) * 256 + (rand() % 256) * 256 * 256 + (rand() % 256) * 256 * 256 * 256;
+// 		}
+// 		scan.hash_count = total_hashes;
 
-		ldb_scan_snippets(&scan);
-		scan_data_free(scan);
-	}
-	printf("Analysis complete\n");
+// 		ldb_scan_snippets(&scan);
+// 		scan_data_free(scan);
+// 	}
+// 	printf("Analysis complete\n");
 
-	/* Calculate elapsed time */
-	int elapsed_ms = (microseconds_now() - elapsed) / 1000;
+// 	/* Calculate elapsed time */
+// 	int elapsed_ms = (microseconds_now() - elapsed) / 1000;
 
-	printf ("Test executed in %dms\n", elapsed_ms);
-	printf ("Average file scanning time is %dms\n", elapsed_ms / total_files);
-	printf ("Performance is %d fingerprints per second\n", (total_files * total_hashes * 1000) / elapsed_ms);
+// 	printf ("Test executed in %dms\n", elapsed_ms);
+// 	printf ("Average file scanning time is %dms\n", elapsed_ms / total_files);
+// 	printf ("Performance is %d fingerprints per second\n", (total_files * total_hashes * 1000) / elapsed_ms);
 
-}
+// }
 
