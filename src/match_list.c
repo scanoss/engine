@@ -136,13 +136,14 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         match_data_free(new_match);
         return false;
     }*/
+    component_list_init(&new_match->component_list);
+    new_match->component_list.match_ref = new_match;
 
     if (!list->headp.lh_first)
     {
         scanlog("Init List\n");
         struct entry *nn = malloc(sizeof(struct entry)); /* Insert at the head. */
         LIST_INSERT_HEAD(&list->headp, nn, entries);
-        component_list_init(&new_match->component_list);
         nn->match = new_match;
         list->items = 1;
         return true;
@@ -154,7 +155,6 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
             if (val(np->match, new_match))
             {
                 struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
-                component_list_init(&new_match->component_list);
                 nn->match = new_match;
                 LIST_INSERT_BEFORE(np, nn, entries);
                 if (remove_a && list->items == list->max_items)
@@ -170,7 +170,6 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
     {
         scanlog("Add to list nc\n");
         struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
-        component_list_init(&new_match->component_list);
         nn->match = new_match;
         LIST_INSERT_AFTER(list->headp.lh_first, nn, entries);
         return true;

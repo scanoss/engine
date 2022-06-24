@@ -3,6 +3,6 @@
     
 #include "scanoss.h"
 
-void get_copyright(match_data match, char *copyright);
-void print_copyrights(match_data match);
+void get_copyright(component_data_t * comp, char *copyright);
+void print_copyrights(component_data_t *  comp);
 #endif

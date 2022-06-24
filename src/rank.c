@@ -395,45 +395,6 @@ void init_component_ranking(component_name_rank *component_rank)
 	}
 }
 
-/**
- * @brief Add relevant files into matches structure
- * @param files pointer to file recordset list to be added
- * @param records number of records
- * @param component_hint component hint string
- * @param file_md5 file md5 hash
- * @param matches pointer to matches list
- * @param add_all true for add all files
- * @return number of files added
- */
-int add_files_to_matches(\
-		file_recordset *files,\
-		int records,\
-		char *component_hint,\
-		uint8_t *file_md5,\
-		match_data *matches, bool add_all)
-{
-	int considered=0;
-
-	/* Walk through all file records and add the relevant ones to *matches */
-	for (int i = 0; i < records; i++)
-	{
-		if (!files[i].external)
-		{
-			if (add_all || strstr(files[i].path, component_hint))
-			{
-				// consider_file_record(\
-				// 		files[i].url_id,\
-				// 		files[i].path,\
-				// 		matches,\
-				// 		component_hint,\
-				// 		file_md5);
-				// considered++;
-			}
-		}
-	}
-	scanlog("%u of %u files considered\n", considered, records);
-	return considered;
-}
 
 /**
  * @brief Reverse sort len_rank

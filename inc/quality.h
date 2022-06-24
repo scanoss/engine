@@ -3,6 +3,6 @@
     
 #include "scanoss.h"
 
-void print_quality(match_data match);
+void print_quality(component_data_t * comp);
 
 #endif

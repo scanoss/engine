@@ -113,7 +113,7 @@ void kb_version_get(void)
  * @brief Add server statistics to JSON
  * @param scan scan data pointer
  */
-void print_server_stats(scan_data *scan)
+void print_server_stats(scan_data_t *scan)
 {
 	char hostname[MAX_ARGLN + 1];
 	printf(",\"server\": {");
@@ -138,7 +138,7 @@ void print_server_stats(scan_data *scan)
  * @brief Return a match=none result
  * @param scan scan data pointer
  */
-void print_json_nomatch(scan_data *scan)
+void print_json_nomatch(scan_data_t *scan)
 {
 	if (quiet) return;
 
@@ -187,7 +187,7 @@ char *file_skip_release(char *purl, char *file)
  * @param match match item
  * @param match_counter[out] pointer to match counter
  */
-// void print_json_match(scan_data *scan, match_data match, int *match_counter)
+// void print_json_match(scan_data_t *scan, match_data match, int *match_counter)
 // {
 // 	if (quiet) return;
 

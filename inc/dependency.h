@@ -3,6 +3,6 @@
 
 #include "scanoss.h"
 
-void print_dependencies(match_data match);
+void print_dependencies(component_data_t * comp);
 
 #endif

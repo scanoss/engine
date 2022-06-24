@@ -286,8 +286,10 @@ bool valid_md5(char *str)
 	return true;
 }
 
-/* Erase match.crclist */
-void clean_crclist(match_data *match)
+char * str_cat_realloc(char **a, char * b)
 {
-	for (int i = 0; i < CRC_LIST_LEN; i++) match->crclist[i] = 0;
+	char * aux = *a;
+	*a = NULL;
+	asprintf(a,"%s%s", aux, b);
+	free(aux);
 }

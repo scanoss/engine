@@ -181,7 +181,7 @@ void recurse_directory(char *name)
 		else if (is_file(path))
 		{
 			/* Scan file directly */
-			scan_data * scan = scan_data_init(path);
+			scan_data_t * scan = scan_data_init(path);
 
 			bool wfp = false;
 			if (extension(path)) if (!strcmp(extension(path), "wfp")) wfp = true;
@@ -463,7 +463,7 @@ int main(int argc, char **argv)
 		for (int i=strlen(target)-1; i>=0; i--) if (target[i]=='/') target[i]=0; else break;
 
 		/* Init scan structure */
-		scan_data * scan = scan_data_init(target);
+		scan_data_t * scan = scan_data_init(target);
 
 		/* Open main report structure */
 		json_open();

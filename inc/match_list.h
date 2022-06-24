@@ -1,13 +1,16 @@
 #ifndef __MATCH_LIST_H
 #define __MATCH_LIST_H
 #include <stdint.h>
-#include "scanoss.h"
 #include <sys/queue.h>
 
+#define MD5_LEN 16
 #define MAX_PURLS 10
+#define MAX_FIELD_LN 1024
+
 
 typedef enum {MATCH_NONE, MATCH_URL, MATCH_FILE, MATCH_SNIPPET} match_t;
-
+typedef struct match_data_t match_data_t;
+typedef struct scan_data_t scan_data_t;
 typedef struct component_data_t
 {
 	char * vendor;
@@ -24,12 +27,16 @@ typedef struct component_data_t
 	char *purls[MAX_PURLS];
 	uint8_t *purls_md5[MAX_PURLS];
 	int vulnerabilities;
-	char * vulnerabilities_text;
+	bool identified;
 	int path_ln;
 	uint8_t url_md5[MD5_LEN];
 	int age;
 	bool url_match;
 	uint32_t * crclist;
+	uint8_t * file_md5_ref;
+
+	char *license_text;
+	char * vulnerabilities_text;
 } component_data_t;
 
 LIST_HEAD(comp_listhead, comp_entry) comp_head;
@@ -45,7 +52,8 @@ typedef struct component_list_t
 	struct comp_listhead headp;
 	int items;
 	int max_items;
-	bool autolimit;  
+	bool autolimit;
+	match_data_t * match_ref;
 } component_list_t;
 
 typedef struct match_data_t
@@ -76,8 +84,52 @@ typedef struct match_list_t
 	int items;
 	int max_items;
 	bool autolimit;
-	scan_data * scan_ref;  
+	scan_data_t * scan_ref;  
 } match_list_t;
+
+#define MAX_SNIPPET_IDS_RETURNED 10000
+#define WFP_LN 4
+#define WFP_REC_LN 18
+#define MATCHMAP_RANGES 10
+typedef struct matchmap_range
+{
+	uint16_t from;
+	uint16_t to;
+	uint16_t oss_line;
+} matchmap_range;
+
+typedef struct matchmap_entry
+{
+	uint8_t md5[MD5_LEN];
+	uint16_t hits;
+	matchmap_range range[MATCHMAP_RANGES];
+	uint8_t lastwfp[WFP_LN];
+} matchmap_entry;
+
+typedef struct scan_data_t
+{
+	uint8_t *md5;
+	char *file_path;
+	char *file_size;
+	char source_md5[MD5_LEN * 2 + 1];
+	uint32_t *hashes;
+	uint32_t *lines;
+	uint32_t hash_count;
+	long timer;
+	bool preload;
+	int total_lines;
+	match_t match_type;
+	matchmap_entry *matchmap;
+	uint32_t matchmap_size;
+	char line_ranges[MAX_FIELD_LN * 2];
+	char oss_ranges[MAX_FIELD_LN * 2];
+	uint8_t *match_ptr; // pointer to matching record in match_map
+	/* comma separated list of matching snippet ids */
+	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1];
+	char matched_percent[MAX_FIELD_LN];
+	bool identified;
+	match_list_t matches;
+} scan_data_t;
 
 
 void match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa), char * separator);

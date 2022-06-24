@@ -42,6 +42,7 @@
 #include "rank.h"
 #include "decrypt.h"
 #include "hpsm.h"
+#include "scan.h"
 
 
 bool first_file = true;										   /** global first file flag */
@@ -66,12 +67,10 @@ void flip_slashes(char *data)
 /**
  * @brief Output matches in JSON format via STDOUT
  * @param matches pointer to matches list
- * @param scan_ptr scan_data pointer, common scan information.
+ * @param scan_ptr scan_data_t pointer, common scan information.
  */
-void output_matches_json(match_list_t * matches, scan_data *scan_ptr)
+void output_matches_json(scan_data_t *scan)
 {
-	scan_data *scan = scan_ptr;
-
 	flip_slashes(scan->file_path);
 
 	/* Log slow query, if needed */
@@ -87,9 +86,9 @@ void output_matches_json(match_list_t * matches, scan_data *scan_ptr)
 	json_open_file(scan->file_path);
 
 	/* Print matches */
-	if (matches->headp.lh_first)
+	if (scan->matches.headp.lh_first)
 	{
-		match_list_print(matches, print_json_match, ",");
+		match_list_print(&scan->matches, print_json_match, ",");
 	}
 	else
 		print_json_nomatch(scan);
@@ -230,110 +229,6 @@ bool fill_component(component_data_t * component, uint8_t *url_key, char *file_p
 }
 
 /**
- * @brief Count matches into a matches list
- * @param matches matches list
- * @return count of matches
- */
-int count_matches(match_data *matches)
-{
-	if (!matches)
-	{
-		scanlog("Match metadata is empty\n");
-		return 0;
-	}
-	int c = 0;
-	for (int i = 0; i < scan_limit && matches[i].loaded; i++)
-		c++;
-	return c;
-}
-
-/**
- * @brief Adds match to matches list
- * @param position position to add the new match
- * @param match new match
- * @param matches matches list
- */
-void add_match(int position, match_data match, match_data *matches)
-{
-
-	/* Verify if metadata is complete */
-	if (!*match.url || !*match.version || !*match.file || !*match.purl[0] || strlen(match.release_date) < 4)
-	{
-		scanlog("Metadata is incomplete: %s,%s,%s,%s,%s\n", match.purl[0], match.version, match.url, match.file, match.release_date);
-		return;
-	}
-	int n = count_matches(matches);
-
-	if (n >= scan_limit)
-	{
-		scanlog("Match list is full\n");
-		return;
-	}
-
-	/* Attempt to place match among existing ones */
-	bool placed = false;
-
-	for (int i = 0; i < n; i++)
-	{
-		/* Are purls the same? */
-		if (!strcmp(matches[i].purl[0], match.purl[0]))
-		{
-			placed = true;
-			/* Compare version and, if needed, update range (version-latest) */
-			if (strcmp(match.version, matches[i].version) < 0)
-			{
-				strcpy(matches[i].version, match.version);
-			}
-			if (strcmp(match.version, matches[i].latest_version) > 0)
-			{
-				strcpy(matches[i].latest_version, match.version);
-			}
-		}
-	}
-
-	/* Otherwise add a new match */
-	if (!placed)
-	{
-		/* Match position is given */
-		if (!(engine_flags & DISABLE_BEST_MATCH))
-		{
-		/* Locate free position */
-			n = 0;
-			if (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) < 0)
-				return;
-			while (matches[n].loaded && strcmp(matches[n].release_date, match.release_date) == 0 && n < scan_limit)
-				n++;
-		}
-
-		if (n > scan_limit)
-			return;
-
-		if (!matches[n].loaded || strcmp(matches[n].release_date, match.release_date) >= 0)
-		{
-			scanlog("New best match: %s - %s\n", matches[n].release_date, match.release_date);
-			/* Copy match information */
-			strcpy(matches[n].vendor, match.vendor);
-			strcpy(matches[n].component, match.component);
-			strcpy(matches[n].purl[0], match.purl[0]);
-			memcpy(matches[n].purl_md5[0], match.purl_md5[0], MD5_LEN);
-			strcpy(matches[n].version, match.version);
-			strcpy(matches[n].latest_version, match.latest_version);
-			strcpy(matches[n].url, match.url);
-			strcpy(matches[n].file, match.file);
-			strcpy(matches[n].license, match.license);
-			strcpy(matches[n].release_date, match.release_date);
-			memcpy(matches[n].url_md5, match.url_md5, MD5_LEN);
-			memcpy(matches[n].file_md5, match.file_md5, MD5_LEN);
-			matches[n].path_ln = match.path_ln;
-			matches[n].selected = match.selected;
-			matches[n].type = match.type;
-			matches[n].loaded = true;
-		}
-	}
-}
-
-
-/**
  * @brief Sort len_rank
  * @param a len_rank a
  * @param b len_rank b
@@ -389,7 +284,10 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 		bool result = fill_component(new_comp, files[path_rank[r].id].url_id, files[path_rank[r].id].path, (uint8_t*) url_rec);
 		if (result)
 		{	
-			
+			new_comp->file_md5_ref = component_list->match_ref->file_md5;
+			if (asset_declared(new_comp))
+				new_comp->identified = true;
+
 			component_list_add(component_list, new_comp, component_date_comparation, true);
 		}
 		else
@@ -410,7 +308,7 @@ static bool load_components(component_list_t * component_list, file_recordset *f
  * @param scan scan data
  * @param matches matches list
  */
-void load_matches (match_data_t *match, scan_data * scan)
+void load_matches (match_data_t *match, scan_data_t * scan)
 {
 	scanlog("Load matches");
 
@@ -469,7 +367,7 @@ void load_matches (match_data_t *match, scan_data * scan)
 
 bool match_process(match_data_t * fp1, void * fp2)
 {
-	load_matches(fp1, (scan_data*) fp2);
+	load_matches(fp1, (scan_data_t*) fp2);
 	return false;
 }
 /**
@@ -477,11 +375,11 @@ bool match_process(match_data_t * fp1, void * fp2)
  * @param scan scan data
  * @return matches list
  */
-void compile_matches(scan_data *scan)
+void compile_matches(scan_data_t *scan)
 {
 	scan->match_ptr = scan->md5;
 	/* Search for biggest snippet */
-	if (scan->match_type == snippet)
+	if (scan->match_type == MATCH_SNIPPET)
 	{
 		/* Dump match map */
 		if (debug_on)
@@ -513,7 +411,7 @@ void compile_matches(scan_data *scan)
 
 		/* Gather and load match metadata */
 		scanlog("Starting match: %s\n", matchtypes[scan->match_type]);
-		if (scan->match_type != none)
+		if (scan->match_type != MATCH_NONE)
 		{
 			match_list_process(&scan->matches, match_process);
 		}

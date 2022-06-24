@@ -27,7 +27,6 @@
 #include "limits.h"
 #include "match.h"
 #include "parse.h"
-#include "psi.h"
 #include "query.h"
 #include "rank.h"
 #include "scan.h"
@@ -52,7 +51,7 @@ char *ignored_assets = NULL;
 /** @brief Calculate and write source wfp md5 in scan->source_md5 
     @param scan Scan data
 	*/
-static void calc_wfp_md5(scan_data *scan)
+static void calc_wfp_md5(scan_data_t *scan)
 {
 	uint8_t tmp_md5[16];
 	get_file_md5(scan->file_path, tmp_md5);
@@ -65,9 +64,9 @@ static void calc_wfp_md5(scan_data *scan)
     @param target File to scan
     @return Scan data
     */
-scan_data * scan_data_init(char *target)
+scan_data_t * scan_data_init(char *target)
 {
-	scan_data * scan = calloc(1, sizeof(*scan));
+	scan_data_t * scan = calloc(1, sizeof(*scan));
 	scan->file_path = strdup(target);
 	scan->hashes = malloc(MAX_FILE_SIZE);
 	scan->lines  = malloc(MAX_FILE_SIZE);
@@ -86,7 +85,7 @@ scan_data * scan_data_init(char *target)
 /** @brief Resets scan data 
     @param scan Scan data
 	*/
-static void scan_data_reset(scan_data *scan)
+static void scan_data_reset(scan_data_t *scan)
 {
 	*scan->file_path = 0;
 	*scan->file_size = 0;
@@ -103,7 +102,7 @@ static void scan_data_reset(scan_data *scan)
 /** @brief Frees scan data memory
     @param scan Scan data
 	*/
-void scan_data_free(scan_data * scan)
+void scan_data_free(scan_data_t * scan)
 {
 	free(scan->md5);
 	free(scan->file_path);
@@ -150,7 +149,7 @@ static matchtype ldb_scan_file(uint8_t *fid) {
     @param match Match data
     @return Asset declaration result
     */
-bool asset_declared(match_data match)
+bool asset_declared(component_data_t * comp)
 {
 	if (!declared_components) return false;
 
@@ -165,77 +164,18 @@ bool asset_declared(match_data match)
 		if (!*component && !*vendor && !*purl) break;
 
 		/* Compare purl */
-		if (*purl)
+		if (comp->purls[0])
 		{
-			if (!strcmp((const char *) match.purl, (const char *) purl)) return true;
+			if (!strcmp((const char *) comp->purls[0], (const char *) purl)) return true;
 		}
 
 		/* Compare vendor and component */
-		else if (*vendor && *component)
+		else if (comp->vendor && comp->component)
 		{
-			if (!strcmp(vendor, match.vendor) && !strcmp(component, match.component)) return true;
+			if (!strcmp(vendor, comp->vendor) && !strcmp(component, comp->component)) return true;
 		}
 	}
 	return false;
-}
-
-/** @brief Returns true if rec_ln is longer than everything else in "matches"
-	 also, update position with the position of a longer path 
-	  @param matches Match data
-	  @param total_matches Total number of matches
-	  @param rec_ln Path length
-	  @param position Position to be updated?
-    @return Scan result (SUCCESS/FAILURE)
-	*/
-bool longer_path_in_set(match_data *matches, int total_matches, int rec_ln, int *position)
-{
-	if (scan_limit > total_matches) return false;
-
-	/* Search for a longer path than rec_ln */
-	for (int i = 0; i < total_matches; i++)
-	{
-		if (matches[i].path_ln > rec_ln)
-		{
-			*position = i;
-			return false;
-		}
-	}
-
-	return true;
-}
-
-/** @brief Determine if a file is to be skipped based on extension or path content
-    @param path File path
-	  @param matches Match data
-    @return Skip result
-    */
-bool skip_file_path(char *path, match_data *matches)
-{
-	bool unwanted = false;
-
-	/* Skip unwanted path */
-	if (unwanted_path(path)) unwanted = true;
-
-	/* Skip ignored extension */
-	else if (extension(path) && ignored_extension(path))
-	{
-		scanlog("Ignored extension\n");
-		unwanted = true;
-	}
-
-	/* Compare extension of matched file with scanned file */
-	else if (match_extensions)
-	{
-		char *oss_ext = extension(path);
-		char *my_ext = extension(matches->scandata->file_path);
-		if (oss_ext) if (my_ext) if (strcmp(oss_ext, my_ext))
-		{
-			scanlog("Matched file extension does not match source\n");
-			unwanted = true;
-		}
-	}
-
-	return unwanted;
 }
 
 
@@ -243,7 +183,7 @@ bool skip_file_path(char *path, match_data *matches)
     @param scan Scan data
     @return Scan result (SUCCESS/FAILURE)
 	*/
-int hash_scan(scan_data *scan)
+int hash_scan(scan_data_t *scan)
 {
 	scan->preload = true;
 
@@ -263,7 +203,7 @@ int hash_scan(scan_data *scan)
     @param scan Scan data
     @return Scan result (SUCCESS/FAILURE)
 	*/
-int wfp_scan(scan_data *scan)
+int wfp_scan(scan_data_t *scan)
 {
 	char * line = NULL;
 	size_t len = 0;
@@ -367,7 +307,7 @@ int wfp_scan(scan_data *scan)
    otherwise, it will be loaded here (scanning a physical file) 
    @param scan //TODO
    */
-void ldb_scan(scan_data *scan)
+void ldb_scan(scan_data_t *scan)
 {
 	bool skip = false;
 
@@ -406,7 +346,7 @@ void ldb_scan(scan_data *scan)
 		
 
 		/* If no match, scan snippets */
-		if (scan->match_type == none)
+		if (scan->match_type == MATCH_NONE)
 		{
 			/* Load snippets into scan data */
 			if (!scan->preload)
@@ -442,9 +382,10 @@ void ldb_scan(scan_data *scan)
 	}
 
 	/* Compile matches */
-	match_list_t * matches = compile_matches(scan);
+	compile_matches(scan);
 	//match_list_print(matches);
-	if (matches->headp.lh_first && scan->match_type != none)
+	
+	if (scan->matches.headp.lh_first && scan->match_type != MATCH_NONE)
 	{
 		/* Debug match info */
 	//	scanlog("%d matches compiled:\n", total_matches);
@@ -482,9 +423,9 @@ void ldb_scan(scan_data *scan)
 
 	/* Output matches */
 	scanlog("Match output starts\n");
-	output_matches_json(matches, scan);
+	output_matches_json(scan);
 
 	//if (matches) free(matches);
-	match_list_destroy(matches);
-	scan_data_reset(scan);
+	match_list_destroy(&scan->matches);
+	free(scan);
 }

@@ -121,7 +121,7 @@ void progress(char *prompt, size_t count, size_t max, bool percent)
  * @brief Register if a query is taking to much time 
  * @param scan Processing scan
  */
-void slow_query_log(scan_data *scan)
+void slow_query_log(scan_data_t *scan)
 {
 	long elapsed = microseconds_now() - scan->timer;
 	if (elapsed > SLOW_QUERY_LIMIT_IN_USEC)
@@ -145,7 +145,7 @@ void slow_query_log(scan_data *scan)
  * @brief Output matchmap to a file (MAP_DUMP)
  * @param scan processing scan  
  */
-void map_dump(scan_data *scan)
+void map_dump(scan_data_t *scan)
 {
 	FILE *map = fopen(MAP_DUMP, "w");
 
@@ -196,7 +196,7 @@ void scan_benchmark()
 
 	for (int f = 0; f < total_files ; f++)
 	{
-		scan_data scan = scan_data_init("");
+		scan_data_t scan = scan_data_init("");
 		scan.preload = true;
 		memcpy(scan.md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
 		strcpy(scan.file_path, "pseudo_file");

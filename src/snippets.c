@@ -146,7 +146,7 @@ int get_match_popularity(uint8_t *md5)
  * @return true 
  * @return false 
  */
-bool snippet_extension_discard(scan_data *scan, uint8_t *md5)
+bool snippet_extension_discard(scan_data_t *scan, uint8_t *md5)
 {
 	bool discard = false;
 
@@ -183,7 +183,7 @@ bool test(match_data_t * a, match_data_t * b)
 	else
 		return false;
 }
-void biggest_snippet(scan_data *scan)
+void biggest_snippet(scan_data_t *scan)
 {
 	for (int j = 0; j < scan->matchmap_size; j++)
 	{
@@ -265,7 +265,7 @@ bool skip_snippets(char *src, uint64_t srcln)
  * @param from snippet start
  * @param to snippet end
  */
-void add_snippet_ids(scan_data *scan, long from, long to)
+void add_snippet_ids(scan_data_t *scan, long from, long to)
 {
 	int maxlen = MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES;
 	bool found = false;
@@ -376,7 +376,7 @@ void ranges_remove_empty(matchmap_range *ranges)
  * @param ranges ranges list to process
  * @param scan scan data pointer
  */
-void ranges_add_tolerance(matchmap_range *ranges, scan_data *scan)
+void ranges_add_tolerance(matchmap_range *ranges, scan_data_t *scan)
 {
 	/* Walk ranges */
 	for (int i = 0; i < MATCHMAP_RANGES; i++)
@@ -515,7 +515,7 @@ uint32_t compile_ranges(match_data_t *match) {
  * @brief Ajust snippet match tolerance
  * @param scan pointer to scan data struct
  */
-static void adjust_tolerance(scan_data *scan)
+static void adjust_tolerance(scan_data_t *scan)
 {
 	bool skip = false;
 	uint32_t wfpcount = scan->hash_count;
@@ -562,7 +562,7 @@ void wfp_invert(uint32_t wfpint32, uint8_t *out)
  * @param line line number
  * @param min_tolerance min tolerance
  */
-void add_popular_snippet_to_matchmap(scan_data *scan, uint32_t line, uint32_t min_tolerance)
+void add_popular_snippet_to_matchmap(scan_data_t *scan, uint32_t line, uint32_t min_tolerance)
 {
 	/* Travel the match map */
 	for (long n = 0; n < scan->matchmap_size; n++)
@@ -594,7 +594,7 @@ void add_popular_snippet_to_matchmap(scan_data *scan, uint32_t line, uint32_t mi
  * @param line line number
  * @param min_tolerance min tolerance
  */
-void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uint8_t *wfp, uint32_t line, uint32_t min_tolerance)
+void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, uint8_t *wfp, uint32_t line, uint32_t min_tolerance)
 {
 	uint32_t from = 0;
 	uint32_t to = 0;
@@ -690,7 +690,7 @@ void add_files_to_matchmap(scan_data *scan, uint8_t *md5s, uint32_t md5s_ln, uin
  * @param scan pointer to scan data to be processed
  * @return match type
  */
-matchtype ldb_scan_snippets(scan_data *scan) {
+matchtype ldb_scan_snippets(scan_data_t *scan) {
 
 	if (!scan->hash_count) return none;
 

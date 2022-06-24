@@ -3,6 +3,6 @@
     
 #include "scanoss.h"
 
-void print_cryptography(match_data match);
+void print_cryptography(component_data_t * comp);
 
 #endif
