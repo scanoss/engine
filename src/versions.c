@@ -75,10 +75,10 @@ void normalise_version(char *version, char *component)
  * @brief Normalize versions for a match
  * @param match match to be processed
  */
-void clean_versions(match_data *match)
+void clean_versions(component_data_t *component)
 {
-	normalise_version(match->version, match->component);
-	normalise_version(match->latest_version, match->component);
+	normalise_version(component->version, component->component);
+	normalise_version(component->latest_version, component->component);
 }
 
 char * version_cleanup(char *  version, char * component)
@@ -149,67 +149,69 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
 	return found;
 }
 
-/**
- * @brief Compare version and, if needed, update range (version-latest)
- * @param match pointer to match to br processed
- * @param release pointer to release version structure
- */
-void update_version_range(match_data *match, release_version *release)
-{
-	if (!*release->date) return;
+// /**
+//  * @brief Compare version and, if needed, update range (version-latest)
+//  * @param match pointer to match to br processed
+//  * @param release pointer to release version structure
+//  */
+// void update_version_range(component_data_t *component, release_version *release)
+// {
+// 	if (!*release->date) return;
 
-	if (strcmp(release->date, match->release_date) < 0)
-	{
-		scanlog("update_version_range() %s < %s, %s <- %s\n", release->date, match->release_date, match->version, release->version);
-		strcpy(match->version, release->version);
-		strcpy(match->release_date, release->date);
-		memcpy(match->url_md5, release->url_id, MD5_LEN);
-	}
+// 	if (strcmp(release->date, component->release_date) < 0)
+// 	{
+// 		scanlog("update_version_range() %s < %s, %s <- %s\n", release->date, component->release_date, component->version, release->version);
+// 		free(component->version);
+// 		component->version = strdup(release->version);
+// 		free(component->release_date);
+// 		component->release_date = strdup(release->date);
+// 		memcpy(component->url_md5, release->url_id, MD5_LEN);
+// 	}
 
-	if (strcmp(release->date, match->latest_release_date) > 0)
-	{
-		scanlog("update_version_range() %s > %s, %s <- %s\n", release->date, match->release_date, match->version, release->version);
-		strcpy(match->latest_release_date, release->date);
-		strcpy(match->latest_version, release->version);
-	}
-}
+// 	if (strcmp(release->date, component->latest_release_date) > 0)
+// 	{
+// 		scanlog("update_version_range() %s > %s, %s <- %s\n", release->date, component->release_date, component->version, release->version);
+// 		free(component->latest_version);
+// 		component->version = strdup(release->version);
+// 		free(component->release_date);
+// 		component->latest_release_date = strdup(release->date);
+// 	}
+// }
 
-/**
- * @brief Get ṕurl version
- * @param release[out] will be completed with the purl version
- * @param purl purl string
- * @param file_id file md5
- */
-void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
-{
-	/* Pass purl in version */
-	strcpy(release->version, purl);
+// /**
+//  * @brief Get ṕurl version
+//  * @param release[out] will be completed with the purl version
+//  * @param purl purl string
+//  * @param file_id file md5
+//  */
+// void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
+// {
+// 	/* Pass purl in version */
+// 	strcpy(release->version, purl);
 
-	ldb_fetch_recordset(NULL, oss_url, file_id, false, get_purl_version_handler, release);
+// 	ldb_fetch_recordset(NULL, oss_url, file_id, false, get_purl_version_handler, release);
 
-	/* If no version returned, clear version */
-	if (!strcmp(release->version, purl)) *release->version = 0;
-}
+// 	/* If no version returned, clear version */
+// 	if (!strcmp(release->version, purl)) *release->version = 0;
+// }
 
-/**
- * @brief Add version range to first match
- * @param scan scan data pointer
- * @param matches pointer to matches list
- * @param files pointer to files recordset list
- * @param records records number
- */
-void add_versions(match_data *matches, file_recordset *files, uint32_t records)
-{
-	release_version *release = calloc(sizeof(release_version), 1);
+// /**
+//  * @brief Add version range to first match
+//  * @param scan scan data pointer
+//  * @param matches pointer to matches list
+//  * @param files pointer to files recordset list
+//  * @param records records number
+//  */
+// void add_versions(component_data_t *component, file_recordset *files, uint32_t records)
+// {
+// 	release_version release = {"\0", "\0", "\0"};;
 
-	/* Recurse each record */
-	for (int n = 0; n < records; n++)
-	{
-		*release->version = 0;
-		*release->date = 0;
-		if (!files[n].external) get_purl_version(release, matches[0].purl[0], files[n].url_id);
-		if (*release->version) update_version_range(matches, release);
-	}
-
-	free(release);
-}
+// 	/* Recurse each record */
+// 	for (int n = 0; n < records; n++)
+// 	{
+// 		*release.version = 0;
+// 		*release.date = 0;
+// 		if (!files[n].external) get_purl_version(&release, component->purls[0], files[n].url_id);
+// 		if (*release.version) update_version_range(component, &release);
+// 	}
+// }

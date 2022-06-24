@@ -4,6 +4,8 @@
 #include "scanoss.h"
 #include <sys/queue.h>
 
+#define MAX_PURLS 10
+
 typedef enum {MATCH_NONE, MATCH_URL, MATCH_FILE, MATCH_SNIPPET} match_t;
 
 typedef struct component_data_t
@@ -22,10 +24,12 @@ typedef struct component_data_t
 	char *purls[MAX_PURLS];
 	uint8_t *purls_md5[MAX_PURLS];
 	int vulnerabilities;
+	char * vulnerabilities_text;
 	int path_ln;
 	uint8_t url_md5[MD5_LEN];
 	int age;
 	bool url_match;
+	uint32_t * crclist;
 } component_data_t;
 
 LIST_HEAD(comp_listhead, comp_entry) comp_head;
@@ -57,7 +61,6 @@ typedef struct match_data_t
     uint8_t * matchmap_reg;
 	uint8_t * snippet_ids;
 	component_list_t component_list;
-
 } match_data_t;
 
 LIST_HEAD(listhead, entry) head;
@@ -72,7 +75,8 @@ typedef struct match_list_t
 	struct listhead headp;
 	int items;
 	int max_items;
-	bool autolimit;  
+	bool autolimit;
+	scan_data * scan_ref;  
 } match_list_t;
 
 
@@ -80,8 +84,8 @@ void match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa),
 void match_list_debug(match_list_t * list);
 bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) (match_data_t * a, match_data_t * b), bool remove_a);
 void match_list_destroy(match_list_t * list);
-match_list_t * match_list_init();
-void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa));
+void match_list_init(match_list_t * list);
+void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa, void * fpb));
 bool match_list_is_empty(match_list_t * list);
 
 bool component_list_add(component_list_t * list, component_data_t * new_comp, bool (* val) (component_data_t * a, component_data_t * b), bool remove_a);

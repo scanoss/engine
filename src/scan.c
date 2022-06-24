@@ -36,6 +36,7 @@
 #include "versions.h"
 #include "winnowing.h"
 #include "hpsm.h"
+#include "match_list.h"
 
 /**
   @file scan.c
@@ -64,31 +65,20 @@ static void calc_wfp_md5(scan_data *scan)
     @param target File to scan
     @return Scan data
     */
-scan_data scan_data_init(char *target)
+scan_data * scan_data_init(char *target)
 {
-	scan_data scan;
-	scan.md5 = calloc (MD5_LEN,1);
-	scan.file_path = calloc(LDB_MAX_REC_LN, 1);
-	strcpy(scan.file_path, target);
-
-	scan.file_size = calloc(LDB_MAX_REC_LN, 1);
-
-	strcpy(scan.source_md5, "00000000000000000000000000000000\0");
-	scan.hashes = malloc(MAX_FILE_SIZE);
-	scan.lines  = malloc(MAX_FILE_SIZE);
-	scan.hash_count = 0;
-	scan.timer = 0;
-	scan.preload = false;
-	scan.total_lines = 0;
-	scan.matchmap = calloc(MAX_FILES, sizeof(matchmap_entry));
-	scan.matchmap_size = 0;
-	scan.match_type = none;
-	scan.preload = false;
-	*scan.snippet_ids = 0;
-	scan.identified = false;
+	scan_data * scan = calloc(1, sizeof(*scan));
+	scan->file_path = strdup(target);
+	scan->hashes = malloc(MAX_FILE_SIZE);
+	scan->lines  = malloc(MAX_FILE_SIZE);
+	scan->matchmap = calloc(MAX_FILES, sizeof(matchmap_entry));
+	scan->match_type = MATCH_NONE;
+	*scan->snippet_ids = 0;
+	match_list_init(&scan->matches);
+	scan->matches.scan_ref = scan;
 
 	/* Get wfp MD5 hash */
-	if (extension(target)) if (!strcmp(extension(target), "wfp")) calc_wfp_md5(&scan);
+	if (extension(target)) if (!strcmp(extension(target), "wfp")) calc_wfp_md5(scan);
 
 	return scan;
 }
@@ -113,15 +103,15 @@ static void scan_data_reset(scan_data *scan)
 /** @brief Frees scan data memory
     @param scan Scan data
 	*/
-void scan_data_free(scan_data scan)
+void scan_data_free(scan_data * scan)
 {
-	free(scan.md5);
-	free(scan.file_path);
-	free(scan.file_size);
-	free(scan.hashes);
-	free(scan.lines);
-	free(scan.matchmap);
-	
+	free(scan->md5);
+	free(scan->file_path);
+	free(scan->file_size);
+	free(scan->hashes);
+	free(scan->lines);
+	free(scan->matchmap);
+	free(scan);
 }
 
 /** @brief Returns true if md5 is the md5sum for NULL

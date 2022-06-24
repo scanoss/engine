@@ -180,17 +180,16 @@ void recurse_directory(char *name)
 
 		else if (is_file(path))
 		{
-
 			/* Scan file directly */
-			scan_data scan = scan_data_init(path);
+			scan_data * scan = scan_data_init(path);
 
 			bool wfp = false;
 			if (extension(path)) if (!strcmp(extension(path), "wfp")) wfp = true;
 		
 			if (wfp)
-				wfp_scan(&scan);
+				wfp_scan(scan);
 			else
-				ldb_scan(&scan);
+				ldb_scan(scan);
 
 			scan_data_free(scan);
 		}
@@ -464,7 +463,7 @@ int main(int argc, char **argv)
 		for (int i=strlen(target)-1; i>=0; i--) if (target[i]=='/') target[i]=0; else break;
 
 		/* Init scan structure */
-		scan_data scan = scan_data_init(target);
+		scan_data * scan = scan_data_init(target);
 
 		/* Open main report structure */
 		json_open();
@@ -473,7 +472,7 @@ int main(int argc, char **argv)
 		if (isdir) recurse_directory(target);
 
 		/* Scan hash */
-		else if (ishash) hash_scan(&scan);
+		else if (ishash) hash_scan(scan);
 	
 		/* Scan file */
 		else
@@ -484,10 +483,10 @@ int main(int argc, char **argv)
 				if (force_wfp) wfp_extension = true;
 
 			/* Scan wfp file */
-			if (wfp_extension) wfp_scan(&scan);
+			if (wfp_extension) wfp_scan(scan);
 
 			/* Scan file directly */
-			else ldb_scan(&scan);
+			else ldb_scan(scan);
 
 		}
 

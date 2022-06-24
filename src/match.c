@@ -388,15 +388,7 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 		component_data_t * new_comp = calloc(1, sizeof(*new_comp));
 		bool result = fill_component(new_comp, files[path_rank[r].id].url_id, files[path_rank[r].id].path, (uint8_t*) url_rec);
 		if (result)
-		{
-		//	int n = path_rank[r].id;
-			//memcpy(new_comp->url_md5, files[n].url_id, MD5_LEN);
-			//release_version  release = {.version = "0", .date = "0"};
-		//	if (!files[n].external) 
-		///		get_purl_version(&release, new_comp->purls[0], files[n].url_id); 
-
-		//	if (*release.version) 
-			//	update_version_range(matches, release);
+		{	
 			
 			component_list_add(component_list, new_comp, component_date_comparation, true);
 		}
@@ -406,6 +398,7 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 			component_data_free(new_comp);
 		}
 	}
+
 	free(url_rec);
 	free(path_rank);
 	return true;
@@ -417,7 +410,7 @@ static bool load_components(component_list_t * component_list, file_recordset *f
  * @param scan scan data
  * @param matches matches list
  */
-void load_matches (match_data_t *match)
+void load_matches (match_data_t *match, scan_data * scan)
 {
 	scanlog("Load matches");
 
@@ -437,7 +430,7 @@ void load_matches (match_data_t *match)
 	{
 		hits = compile_ranges(match);
 
-		float percent = (hits * 100);// / scan->total_lines;
+		float percent = (hits * 100) / scan->total_lines;
 		if (hits)
 			matched_percent = floor(percent);
 		if (matched_percent > 99)
@@ -468,18 +461,15 @@ void load_matches (match_data_t *match)
 		load_components(&match->component_list, files, records);
 	}
 
-	/* Add version ranges to selected match */
-	//add_versions(matches, files, records); moved to load componnets
-	//update_version_range(matches, release); add here
 	free(files);
 
 	if (!records)
 		scanlog("Match type is 'none' after loading matches\n");
 }
 
-bool match_process(match_data_t * fp1)
+bool match_process(match_data_t * fp1, void * fp2)
 {
-	load_matches(fp1);
+	load_matches(fp1, (scan_data*) fp2);
 	return false;
 }
 /**
@@ -487,10 +477,9 @@ bool match_process(match_data_t * fp1)
  * @param scan scan data
  * @return matches list
  */
-match_list_t * compile_matches(scan_data *scan)
+void compile_matches(scan_data *scan)
 {
 	scan->match_ptr = scan->md5;
-	match_list_t * list = NULL;
 	/* Search for biggest snippet */
 	if (scan->match_type == snippet)
 	{
@@ -499,16 +488,15 @@ match_list_t * compile_matches(scan_data *scan)
 			map_dump(scan);
 
 		scanlog("%ld matches in snippet map\n", scan->matchmap_size);
-		list = biggest_snippet(scan);
+		biggest_snippet(scan);
 	}
 	else
 	{
-		list = match_list_init();
 		match_data_t * match_new = calloc(1, sizeof(match_data_t));
 		match_new->type = (match_t) scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
 		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);
-		match_list_add(list, match_new, NULL, false);
+		match_list_add(&scan->matches, match_new, NULL, false);
 	}
 	
 		// /* No match pointer */
@@ -527,7 +515,7 @@ match_list_t * compile_matches(scan_data *scan)
 		scanlog("Starting match: %s\n", matchtypes[scan->match_type]);
 		if (scan->match_type != none)
 		{
-			match_list_process(list, match_process);
+			match_list_process(&scan->matches, match_process);
 		}
 
 		/* Loop only if DISABLE_BEST_MATCH and match type is snippet */
@@ -540,5 +528,4 @@ match_list_t * compile_matches(scan_data *scan)
 	//if (!matches[0].loaded)
 	//	scan->match_type = none;
 	//scanlog("Final match: %s\n", matchtypes[scan->match_type]);
-	return list;
 }

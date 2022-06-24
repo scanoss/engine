@@ -6,7 +6,7 @@
 
 void flip_slashes(char *data);
 void output_matches_json(match_list_t * matches, scan_data *scan_ptr);
-match_list_t * compile_matches(scan_data *scan);
+void compile_matches(scan_data *scan);
 void add_match(int position, match_data match, match_data *matches);
 bool fill_component(component_data_t * component, uint8_t *url_key, char *file_path, uint8_t *url_record);
 

@@ -46,14 +46,12 @@ void component_list_init(component_list_t *comp_list)
     comp_list->max_items = 3;
 }
 
-match_list_t *match_list_init()
+void match_list_init(match_list_t * list)
 {
-    match_list_t *list_new = malloc(sizeof(*list_new));
-    LIST_INIT(&list_new->headp); /* Initialize the list. */
-    list_new->items = 0;
-    list_new->max_items = 3;
+    LIST_INIT(&list->headp); /* Initialize the list. */
+    list->items = 0;
+    list->max_items = 3;
 
-    return list_new;
 }
 
 void match_data_free(match_data_t *data)
@@ -222,11 +220,11 @@ void component_list_print(component_list_t *list, bool (*printer)(component_data
     }
 }
 
-void match_list_process(match_list_t *list, bool (*funct_p)(match_data_t *fpa))
+void match_list_process(match_list_t *list, bool (*funct_p)(match_data_t *fpa, void * fpb))
 {
     for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
-        bool result = funct_p(np->match);
+        bool result = funct_p(np->match, (void*) list->scan_ref);
 
         if (result)
             break;

@@ -3,7 +3,6 @@
 
 #include "scanoss.h"
 
-scan_data scan_data_init();
 int get_component_age(uint8_t *md5);
 void consider_file_record(\
 		uint8_t *component_id,\

@@ -238,6 +238,9 @@ uint32_t string_crc32c(char *str)
  */
 bool add_CRC(uint32_t *list, uint32_t crc)
 {
+	if (!list)
+		return false;
+		
 	for (int i = 0; i < CRC_LIST_LEN; i++)
 	{
 		if (list[i] == 0)
