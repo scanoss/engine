@@ -10,6 +10,10 @@ int list_size = 0;
 
 void component_data_free(component_data_t *data)
 {
+    if (!data)
+    {
+        return;
+    }
     free(data->vendor);
     free(data->component);
     free(data->version);
@@ -20,6 +24,10 @@ void component_data_free(component_data_t *data)
     free(data->url);
     free(data->file);
     free(data->main_url);
+    free(data->license_text);
+    free(data->dependency_text);
+    free(data->vulnerabilities_text);
+    free(data->copyright_text);
 
     for (int i = 0; i < MAX_PURLS; i++)
     {
@@ -38,12 +46,12 @@ void component_list_destroy(component_list_t *list)
     }
 }
 
-void component_list_init(component_list_t *comp_list)
+void component_list_init(component_list_t *comp_list, int max_items)
 {
     scanlog("Init component list\n");
     LIST_INIT(&comp_list->headp); /* Initialize the list. */
     comp_list->items = 0;
-    comp_list->max_items = 3;
+    comp_list->max_items = max_items;
 }
 
 void match_list_init(match_list_t * list)
@@ -62,7 +70,8 @@ void match_data_free(match_data_t *data)
     free(data->line_ranges);
     free(data->oss_ranges);
     free(data->matched_percent);
-
+    free(data->crytography_text);
+    free(data->quality_text);
     component_list_destroy(&data->component_list);
 }
 
@@ -84,6 +93,7 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
     {
         scanlog("Incomple component\n");
         component_data_free(new_comp);
+        return false;
     }
 
     if (!list->headp.lh_first)
@@ -134,7 +144,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         match_data_free(new_match);
         return false;
     }*/
-    component_list_init(&new_match->component_list);
+    component_list_init(&new_match->component_list, list->scan_ref->max_components_to_process);
     new_match->component_list.match_ref = new_match;
 
     if (!list->headp.lh_first)
@@ -193,15 +203,19 @@ void match_list_debug(match_list_t *list)
 
 void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), char *separator)
 {
+    bool first = true;
     for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
         if (!np->match->component_list.items)
             continue;
         
-        if (separator && np != list->headp.lh_first)
+        if (separator && !first)
+        {
             printf("%s", separator);
-         
-         printer(np->match);
+        }
+        
+        printer(np->match);
+        first = false;
     }
 }
 

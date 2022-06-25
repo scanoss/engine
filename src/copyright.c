@@ -135,7 +135,7 @@ void print_copyrights(component_data_t * comp)
 
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
-	len += sprintf(result+len,",\"copyrights\": [");
+	len += sprintf(result+len,"\"copyrights\": [");
 
 	uint32_t crclist[CRC_LIST_LEN];
 	memset(crclist, 0, sizeof(crclist));
@@ -150,10 +150,12 @@ void print_copyrights(component_data_t * comp)
 		for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
 			if (ldb_fetch_recordset(NULL, oss_copyright, comp->purls_md5[i], false, print_copyrights_item, comp)) break;
 
-	len += sprintf(result+len,"]");
-
 	char * aux = NULL;
-	asprintf(&aux, "%s: %s]", result, comp->copyright_text);
+	if (comp->copyright_text && *comp->copyright_text)
+		asprintf(&aux, "%s%s]", result, comp->copyright_text);
+	else
+		asprintf(&aux, "%s]", result);
+
 	free(comp->copyright_text);	
 	comp->copyright_text = aux;
 }

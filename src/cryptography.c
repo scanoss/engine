@@ -106,11 +106,12 @@ void print_cryptography(match_data_t * match)
 	
 	uint32_t crclist[CRC_LIST_LEN];
 	memset(crclist, 0, sizeof(crclist));
+	match->crclist = crclist;
 	
 	ldb_fetch_recordset(NULL, oss_cryptography, match->file_md5, false, print_crypto_item, match);
 	
 	char * aux = NULL;
-	asprintf(&aux, "%s: %s]", result, match->crytography_text);
+	asprintf(&aux, "%s%s]", result, match->crytography_text ? match->crytography_text : "" );
 	free(match->crytography_text);	
 	match->crytography_text = aux;
 }

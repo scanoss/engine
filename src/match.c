@@ -93,7 +93,7 @@ void output_matches_json(scan_data_t *scan)
 	else
 		print_json_nomatch(scan);
 	
-	json_close_file();
+	json_close_file(scan);
 }
 
 /**
@@ -312,13 +312,6 @@ void load_matches (match_data_t *match, scan_data_t * scan)
 {
 	scanlog("Load matches");
 
-	if (match->type == MATCH_FILE)
-	{
-		asprintf(&match->line_ranges, "all");
-		asprintf(&match->oss_ranges, "all");
-		asprintf(&match->matched_percent, "100%%");
-	}
-
 	/* Compile match ranges and fill up matched percent */
 	int hits = 100;
 	int matched_percent = 100;
@@ -341,6 +334,12 @@ void load_matches (match_data_t *match, scan_data_t * scan)
 			return;
 
 		asprintf(&match->matched_percent, "%u%%", matched_percent);
+	}
+	else
+	{
+		asprintf(&match->line_ranges, "all");
+		asprintf(&match->oss_ranges, "all");
+		asprintf(&match->matched_percent, "100%%");
 	}
 
 	uint32_t records = 0;
@@ -378,6 +377,9 @@ bool match_process(match_data_t * fp1, void * fp2)
 void compile_matches(scan_data_t *scan)
 {
 	scan->match_ptr = scan->md5;
+	
+	/* Gather and load match metadata */
+	scanlog("Starting match: %s\n", matchtypes[scan->match_type]);
 	/* Search for biggest snippet */
 	if (scan->match_type == MATCH_SNIPPET)
 	{
@@ -391,39 +393,22 @@ void compile_matches(scan_data_t *scan)
 	else
 	{
 		match_data_t * match_new = calloc(1, sizeof(match_data_t));
-		match_new->type = (match_t) scan->match_type;
+		match_new->type = scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
 		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);
 		match_list_add(&scan->matches, match_new, NULL, false);
 	}
 	
-		// /* No match pointer */
-		// if (!scan->match_ptr)
-		// {
-		// 	/* No previous matches loaded, exit */
-		// 	if (!matches[0].loaded)
-		// 	{
-		// 		scan->match_type = none;
-		// 		scanlog("No matching file id\n");
-		// 		return NULL;
-		// 	}
-		// }
+		/* No match pointer */
+		if (!scan->match_ptr)
+		{
+				scan->match_type = MATCH_NONE;
+				scanlog("No matching file id\n");
+				return;
+		}
 
-		/* Gather and load match metadata */
-		scanlog("Starting match: %s\n", matchtypes[scan->match_type]);
 		if (scan->match_type != MATCH_NONE)
 		{
 			match_list_process(&scan->matches, match_process);
 		}
-
-		/* Loop only if DISABLE_BEST_MATCH and match type is snippet */
-//	} while ((engine_flags & DISABLE_BEST_MATCH) && scan->match_type == snippet);
-
-	//for (int i = 0; i < scan_limit && *matches[i].component; i++)
-	//	scanlog("Match #%d = %d - %s\n", i, matches[i].selected, matches[i].release_date);
-
-	/* The latter could result in no matches */
-	//if (!matches[0].loaded)
-	//	scan->match_type = none;
-	//scanlog("Final match: %s\n", matchtypes[scan->match_type]);
 }

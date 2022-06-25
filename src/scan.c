@@ -64,11 +64,12 @@ static void calc_wfp_md5(scan_data_t *scan)
     @param target File to scan
     @return Scan data
     */
-scan_data_t * scan_data_init(char *target)
+scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 {
 	scanlog("Scan Init\n");
 	scan_data_t * scan = calloc(1, sizeof(*scan));
 	scan->file_path = strdup(target);
+	scan->file_size = malloc(MAX_FILE_SIZE);
 	scan->hashes = malloc(MAX_FILE_SIZE);
 	scan->lines  = malloc(MAX_FILE_SIZE);
 	scan->matchmap = calloc(MAX_FILES, sizeof(matchmap_entry));
@@ -76,28 +77,14 @@ scan_data_t * scan_data_init(char *target)
 	*scan->snippet_ids = 0;
 	match_list_init(&scan->matches);
 	scan->matches.scan_ref = scan;
+	scan->max_components_to_process = max_components;
+	scan->max_snippets_to_process = max_snippets;
+	scan->matches.max_items = max_snippets;
 
 	/* Get wfp MD5 hash */
 	if (extension(target)) if (!strcmp(extension(target), "wfp")) calc_wfp_md5(scan);
 
 	return scan;
-}
-
-/** @brief Resets scan data 
-    @param scan Scan data
-	*/
-static void scan_data_reset(scan_data_t *scan)
-{
-	*scan->file_path = 0;
-	*scan->file_size = 0;
-	scan->hash_count = 0;
-	scan->timer = 0;
-	scan->total_lines = 0;
-	scan->matchmap_size = 0;
-	scan->hash_count = 0;
-	scan->match_type = none;
-	*scan->snippet_ids = 0;
-	scan->identified = false;
 }
 
 /** @brief Frees scan data memory
@@ -110,6 +97,8 @@ void scan_data_free(scan_data_t * scan)
 	free(scan->hashes);
 	free(scan->lines);
 	free(scan->matchmap);
+	match_list_destroy(&scan->matches);
+	free(scan);
 }
 
 /** @brief Returns true if md5 is the md5sum for NULL
@@ -241,7 +230,6 @@ int wfp_scan(scan_data_t *scan)
 		/* Parse file information with format: file=MD5(32),file_size,file_path */
 		if (is_file)
 		{
-			scan_data_reset(scan);
 			const int tagln = 5; // len of 'file='
 
 			/* Get file MD5 */
@@ -425,6 +413,5 @@ void ldb_scan(scan_data_t *scan)
 	output_matches_json(scan);
 
 	//if (matches) free(matches);
-	match_list_destroy(&scan->matches);
-	free(scan);
+	//free(scan);
 }

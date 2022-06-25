@@ -8,6 +8,9 @@
 #define MAX_PURLS 10
 #define MAX_FIELD_LN 1024
 
+#define SCAN_MAX_SNIPPETS_DEFAULT 3
+#define SCAN_MAX_COMPONENTS_DEFAULT 3
+
 
 typedef enum {MATCH_NONE, MATCH_URL, MATCH_FILE, MATCH_SNIPPET} match_t;
 typedef struct match_data_t match_data_t;
@@ -134,6 +137,8 @@ typedef struct scan_data_t
 	char matched_percent[MAX_FIELD_LN];
 	bool identified;
 	match_list_t matches;
+	int max_snippets_to_process;
+	int max_components_to_process;
 } scan_data_t;
 
 

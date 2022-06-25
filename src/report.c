@@ -71,15 +71,19 @@ void json_close()
  */
 void json_open_file(char *filename)
 {
-	if (!quiet) printf("\"%s\": [", filename);
+	if (!quiet) printf("\"%s\": {\"matches\":[", filename);
 }
 
 /**
  * @brief Close file section
  */
-void json_close_file()
+void json_close_file(scan_data_t * scan)
 {
-	if (!quiet) printf("]");
+	if (quiet) 
+		return;
+	printf("]");
+	print_server_stats(scan);
+	printf("}");
 }
 
 void kb_version_get(void)
@@ -340,7 +344,25 @@ bool print_json_component(component_data_t * component)
 	free(url_id);
 
 	print_licenses(component);
-	printf("%s", component->license_text);
+	printf(",%s", component->license_text);
+
+	if (!(engine_flags & DISABLE_DEPENDENCIES))
+	{
+		print_dependencies(component);
+		printf(",%s", component->dependency_text);
+	}
+
+	if (!(engine_flags & DISABLE_COPYRIGHTS))
+	{
+		print_copyrights(component);
+		printf(",%s", component->copyright_text);
+	}
+
+	if (!(engine_flags & DISABLE_VULNERABILITIES))
+	{
+		print_vulnerabilities(component);
+		printf(",%s", component->vulnerabilities_text);
+	}
 	
 	printf("}");
 	return false;
@@ -356,19 +378,19 @@ bool print_json_match(struct match_data_t * match)
 		return false;
 	}
 	printf("{");
-	printf("\"id\": \"%s\",", matchtypes[match->type == 1 ? 2 : match->type]);
+	printf("\"id\": \"%s\"", matchtypes[match->type == 1 ? 2 : match->type]);
 //	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
 	if(match->type == MATCH_SNIPPET && hpsm_enabled)
 	{
-	   	printf("\"lines\": \"%s\",", hpsm_result.local);
-		printf("\"oss_lines\": \"%s\",", hpsm_result.remote);
-		printf("\"matched\": \"%s\",", hpsm_result.matched);
+	   	printf(",\"lines\": \"%s\"", hpsm_result.local);
+		printf(",\"oss_lines\": \"%s\"", hpsm_result.remote);
+		printf(",\"matched\": \"%s\"", hpsm_result.matched);
 	} 
 	else 
 	{
-		printf("\"lines\": \"%s\",", match->line_ranges);
-		printf("\"oss_lines\": \"%s\",", match->oss_ranges);
-		printf("\"matched\": \"%s\",", match->matched_percent);
+		printf(",\"lines\": \"%s\"", match->line_ranges);
+		printf(",\"oss_lines\": \"%s\"", match->oss_ranges);
+		printf(",\"matched\": \"%s\"", match->matched_percent);
 	} 
 /*	
 	if ((engine_flags & ENABLE_SNIPPET_IDS) && match->type == snippet)
@@ -379,52 +401,33 @@ bool print_json_match(struct match_data_t * match)
 
 
 
-	printf("\"file_hash\": \"%s\",", file_id);
-	printf("\"source_hash\": \"%s\",", match->source_md5);
+	printf(",\"file_hash\": \"%s\"", file_id);
+	printf(",\"source_hash\": \"%s\"", match->source_md5);
 
 	/* Output file_url (same as url when match type = url) */
 	if (match->type != MATCH_URL)
 	{
 		char *custom_url = getenv("SCANOSS_API_URL");
-		printf("\"file_url\": \"%s/file_contents/%s\",", custom_url ? custom_url : API_URL, file_id);
+		printf(",\"file_url\": \"%s/file_contents/%s\"", custom_url ? custom_url : API_URL, file_id);
 	}
-
 	free(file_id);
 	
-
-	printf("\"components\":[");
-	component_list_print(&match->component_list, print_json_component, ",");
-	printf("]");
-
-/*
-
-	if (!(engine_flags & DISABLE_DEPENDENCIES))
-	{
-		print_dependencies(match);
-	}
-
-	if (!(engine_flags & DISABLE_COPYRIGHTS))
-	{
-		print_copyrights(match);
-	}
-
-	if (!(engine_flags & DISABLE_VULNERABILITIES))
-	{
-		print_vulnerabilities(match);
-	}
-
 	if (!(engine_flags & DISABLE_QUALITY))
 	{
 		print_quality(match);
+		printf(",%s", match->quality_text);
 	}
 
 	if (!(engine_flags & DISABLE_CRIPTOGRAPHY))
 	{
 		print_cryptography(match);
+		printf(",%s", match->crytography_text);
 	}
 
-	print_server_stats(scan);*/
+	printf(",\"components\":[");
+	component_list_print(&match->component_list, print_json_component, ",");
+	printf("]");
+
 	printf("}");
-	fflush(stdout);
 	return true;
 }

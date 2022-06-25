@@ -76,11 +76,9 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 		/* Save match component id */
 		memcpy(new_comp->url_md5, key, LDB_KEY_LN);
 		memcpy(new_comp->url_md5 + LDB_KEY_LN, subkey, subkey_ln);
-//		memcpy(match.file_md5, match.url_md5, MD5_LEN);
-//		match.path_ln = strlen(match.url);
-//		match.type = url;
 		new_comp->url_match = true;
-		new_comp->file = new_comp->url;
+		new_comp->file = strdup(new_comp->url);
+		new_comp->file_md5_ref = component_list->match_ref->file_md5;
 		component_list_add(component_list, new_comp, component_date_comparation, true);
 	}
 	else

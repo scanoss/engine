@@ -159,6 +159,9 @@ void initialize_ldb_tables(char *name)
  * @brief  Read a direactory recursively
  * @param name path of the directory to be read
  */
+int scan_max_snippets = SCAN_MAX_SNIPPETS_DEFAULT;
+int scan_max_components = SCAN_MAX_COMPONENTS_DEFAULT;
+
 void recurse_directory(char *name)
 {
 	DIR *dir;
@@ -181,7 +184,7 @@ void recurse_directory(char *name)
 		else if (is_file(path))
 		{
 			/* Scan file directly */
-			scan_data_t * scan = scan_data_init(path);
+			scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components);
 
 			bool wfp = false;
 			if (extension(path)) if (!strcmp(extension(path), "wfp")) wfp = true;
@@ -304,7 +307,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:wtvhedqH")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -354,7 +357,12 @@ int main(int argc, char **argv)
 			case 'n':
 				initialize_ldb_tables(optarg);
 				break;
-
+			case 'M':
+				scan_max_snippets = atol(optarg);
+				break;
+			case 'N':
+				scan_max_components = atol(optarg);
+				break;
 			case 'i':
 				if (strlen(optarg) == (MD5_LEN * 2))
 				{
@@ -462,8 +470,6 @@ int main(int argc, char **argv)
 		strcpy (target, argv[argc-1]);
 		for (int i=strlen(target)-1; i>=0; i--) if (target[i]=='/') target[i]=0; else break;
 
-		/* Init scan structure */
-		scan_data_t * scan = scan_data_init(target);
 
 		/* Open main report structure */
 		json_open();
@@ -471,30 +477,33 @@ int main(int argc, char **argv)
 		/* Scan directory */
 		if (isdir) recurse_directory(target);
 
-		/* Scan hash */
-		else if (ishash) hash_scan(scan);
-	
 		/* Scan file */
 		else
 		{
+			/* Init scan structure */
+			scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components);
+			
+			if (ishash) 
+				hash_scan(scan);
+			else
+			{
+				bool wfp_extension = false;
+				if (extension(target)) if (!strcmp(extension(target), "wfp")) wfp_extension = true;
+					if (force_wfp) wfp_extension = true;
 
-			bool wfp_extension = false;
-			if (extension(target)) if (!strcmp(extension(target), "wfp")) wfp_extension = true;
-				if (force_wfp) wfp_extension = true;
+				/* Scan wfp file */
+				if (wfp_extension) wfp_scan(scan);
 
-			/* Scan wfp file */
-			if (wfp_extension) wfp_scan(scan);
+				/* Scan file directly */
+				else ldb_scan(scan);
+			}
 
-			/* Scan file directly */
-			else ldb_scan(scan);
-
+			/* Free scan data */
+			scan_data_free(scan);
 		}
 
 		/* Close main report structure */
 		json_close();
-
-		/* Free scan data */
-		scan_data_free(scan);
 
 		if (target) free (target);
 	}

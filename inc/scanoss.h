@@ -105,7 +105,7 @@ typedef struct component_item
 
 
 
-scan_data_t * scan_data_init(char *target);
+scan_data_t * scan_data_init(char *target, int max_snippets, int max_components);
 
 extern long microseconds_start;
 //unsigned char *linemap;

@@ -81,7 +81,7 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	int len = 0;
 	if (*vendor && *component)
 	{
-		if (iteration) len += sprintf(result+len,",");
+		if (comp->dependency_text) len += sprintf(result+len,",");
 		len += sprintf(result+len,"{");
 		len += sprintf(result+len,"\"vendor\": \"%s\",", vendor);
 		len += sprintf(result+len,"\"component\": \"%s\",", component);
@@ -110,7 +110,7 @@ void print_dependencies(component_data_t * comp)
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
 
-	len += sprintf(result+len,",\"dependencies\": [");	
+	len += sprintf(result+len,"\"dependencies\": [");	
 
 	uint32_t records = 0;
 
@@ -154,7 +154,11 @@ void print_dependencies(component_data_t * comp)
 		}
 
 	char * aux = NULL;
-	asprintf(&aux, "%s: %s]", result, comp->dependency_text);
+	if (comp->dependency_text && *comp->dependency_text)
+		asprintf(&aux, "%s%s]", result, comp->dependency_text);
+	else
+		asprintf(&aux, "%s]", result);
+
 	free(comp->dependency_text);	
 	comp->dependency_text = aux;
 }

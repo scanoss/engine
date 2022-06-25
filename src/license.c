@@ -124,8 +124,9 @@ bool osadl_load_file(void)
  * @brief Output OSADL license metadata
  * @param license license string
  */
-void osadl_print_license(const char * license, bool more_keys_after) 
+int osadl_print_license(char * output, const char * license, bool more_keys_after) 
 {
+	int len = 0;
 	char * key = NULL;
 	asprintf(&key,"\"%s\":", license);
 
@@ -133,7 +134,7 @@ void osadl_print_license(const char * license, bool more_keys_after)
 	free(key);
 	
 	if (!content)
-		return;
+		return 0;
 	
 	content = strchr(content, '{') + 1;
 	if (content)
@@ -145,7 +146,7 @@ void osadl_print_license(const char * license, bool more_keys_after)
 			char license_osadl[key_len+1];
 			license_osadl[key_len] = '\0';
 			strncpy(license_osadl, content, key_len);
-			printf("%s,", license_osadl);
+			len += sprintf(output+len,"%s,", license_osadl);
 		}
 	}
 	//print osadl version
@@ -154,12 +155,12 @@ void osadl_print_license(const char * license, bool more_keys_after)
 	int key_len = end - content;
 	char version_key[key_len + 1];
 	version_key[key_len] = '\0';
-	//version_key[key_len] = '\0';
 	strncpy(version_key, content, key_len);
-	printf("%s", version_key);
+	len += sprintf(output+len,"%s", version_key);
 
 	if (more_keys_after)
-		printf(",");
+		len += sprintf(output + len,",");
+	return len;
 }
 
 /**
@@ -168,9 +169,9 @@ void osadl_print_license(const char * license, bool more_keys_after)
  */
 void print_osadl_license_data(char *license)
 {
-	printf("{\"%s\": {", license);
-	osadl_print_license(license, false);
-	printf("}}");
+	char output[MAX_FIELD_LN];
+	osadl_print_license(output,license, false);
+	printf("{\"%s\": {%s}}", license, output);
 }
 
 /**
@@ -240,12 +241,12 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 	if (!dup && *license && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
 	{
-		if (comp->license_text) 
+		if (comp->license_text && *comp->license_text) 
 			len += sprintf(result+len,","); 
 
 		len += sprintf(result+len,"{");
 		len += sprintf(result+len,"\"name\": \"%s\",", license);
-	//	osadl_print_license(license, true);
+		len += osadl_print_license(result+len,license, true);
 		len += sprintf(result+len,"\"source\": \"%s\",", license_sources[atoi(source)]);
 		len += sprintf(result+len,"\"url\": \"https://spdx.org/licenses/%s.html\"",license);
 		len += sprintf(result+len,"}");
@@ -285,11 +286,13 @@ void print_licenses(component_data_t * comp)
 	/* Clean crc list (used to avoid duplicates) */
 	uint32_t crclist[CRC_LIST_LEN];
 	memset(crclist, 0, sizeof(crclist));
+
+	comp->crclist = crclist;
 	uint32_t records = 0;
 	bool first_record = true;
 	/* Print URL license */
 	
-	if (comp->license)
+	if (comp->license && *comp->license)
 	{
 		normalize_license(comp->license);
 		len += sprintf(result+len,"{");
@@ -315,7 +318,7 @@ void print_licenses(component_data_t * comp)
 
 		records = ldb_fetch_recordset(NULL, oss_license, comp->file_md5_ref, false, print_licenses_item, comp);
 		scanlog("License for file_id license returns %d hits\n", records);
-
+		
 		records = ldb_fetch_recordset(NULL, oss_license, comp->url_md5, false, print_licenses_item, comp);
 		scanlog("License for url_id license returns %d hits\n", records);
 
@@ -334,8 +337,8 @@ void print_licenses(component_data_t * comp)
 	}
 
 	char * aux = NULL;
-	if ( comp->license_text)
-		asprintf(&aux, "%s%s]", result, comp->license_text);
+	if (comp->license_text && *comp->license_text)
+		asprintf(&aux, "%s%s%s]", result,first_record == true ? "":"," ,comp->license_text);
 	else
 		asprintf(&aux, "%s]", result);
 	

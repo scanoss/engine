@@ -109,15 +109,13 @@ void print_quality(match_data_t * match)
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
 	
-	len += sprintf(result+len,",\"quality\": ");
+	len += sprintf(result+len,"\"quality\": ");
 	len += sprintf(result+len,"[");
 
-	ldb_fetch_recordset(NULL, oss_quality, match->file_md5, false, print_quality_item, NULL);
-	len += sprintf(result+len,"]");
-	
+	ldb_fetch_recordset(NULL, oss_quality, match->file_md5, false, print_quality_item, match);	
 	
 	char * aux = NULL;
-	asprintf(&aux, "%s: %s]", result, match->quality_text);
+	asprintf(&aux, "%s%s]", result, match->quality_text ? match->quality_text : "");
 	free(match->quality_text);	
 	match->quality_text = aux;
 
