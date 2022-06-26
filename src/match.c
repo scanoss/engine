@@ -88,7 +88,10 @@ void output_matches_json(scan_data_t *scan)
 	/* Print matches */
 	if (scan->matches.headp.lh_first)
 	{
-		match_list_print(&scan->matches, print_json_match, ",");
+		if (engine_flags & DISABLE_BEST_MATCH)
+			match_list_print(&scan->matches, print_json_match, ",");
+		else
+			print_json_match(scan->best_match);
 	}
 	else
 		print_json_nomatch(scan);
@@ -364,6 +367,31 @@ void load_matches (match_data_t *match, scan_data_t * scan)
 		scanlog("Match type is 'none' after loading matches\n");
 }
 
+
+
+bool find_oldest(match_data_t * fp1, void * fp2)
+{
+	scan_data_t * scan = fp2;
+
+	if(!fp1->component_list.headp.lh_first)
+		return false;
+
+	if (!scan->best_match)
+		scan->best_match = fp1;
+	else if (!strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) &&
+			scan->best_match->component_list.headp.lh_first->component->age < fp1->component_list.headp.lh_first->component->age)
+		scan->best_match = fp1;
+	else if (strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) < 0)
+		scan->best_match = fp1;
+
+	return false; 
+}
+
+void match_select_best(scan_data_t * scan)
+{
+	match_list_process(&scan->matches, find_oldest);
+}
+
 bool match_process(match_data_t * fp1, void * fp2)
 {
 	load_matches(fp1, (scan_data_t*) fp2);
@@ -410,5 +438,6 @@ void compile_matches(scan_data_t *scan)
 		if (scan->match_type != MATCH_NONE)
 		{
 			match_list_process(&scan->matches, match_process);
+			match_select_best(scan);
 		}
 }

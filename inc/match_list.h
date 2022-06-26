@@ -137,6 +137,7 @@ typedef struct scan_data_t
 	char matched_percent[MAX_FIELD_LN];
 	bool identified;
 	match_list_t matches;
+	match_data_t * best_match;
 	int max_snippets_to_process;
 	int max_components_to_process;
 } scan_data_t;

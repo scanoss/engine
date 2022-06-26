@@ -61,7 +61,10 @@ void json_open()
  */
 void json_close()
 {
-	if (!quiet) printf("}");
+	if (quiet) 
+		return;
+		
+	printf("}");
 	printf("\n");
 }
 
@@ -71,7 +74,13 @@ void json_close()
  */
 void json_open_file(char *filename)
 {
-	if (!quiet) printf("\"%s\": {\"matches\":[", filename);
+	if (quiet) 
+		return;
+	
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("\"%s\": {\"matches\":[", filename);
+	else
+		printf("\"%s\": [{", filename);
 }
 
 /**
@@ -81,9 +90,18 @@ void json_close_file(scan_data_t * scan)
 {
 	if (quiet) 
 		return;
-	printf("]");
+	
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("]");
+	
 	print_server_stats(scan);
-	printf("}");
+
+	if (!(engine_flags & DISABLE_BEST_MATCH))
+		printf("}]");
+	
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("}");
+
 }
 
 void kb_version_get(void)
@@ -309,8 +327,11 @@ char *file_skip_release(char *purl, char *file)
 bool print_json_component(component_data_t * component)
 {
 	scanlog("print component\n");
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("{");
+	else
+		printf(",");
 /* Fetch related purls */
-	printf("{");
 	fetch_related_purls(component);
 
 	/* Calculate main URL */
@@ -363,8 +384,9 @@ bool print_json_component(component_data_t * component)
 		print_vulnerabilities(component);
 		printf(",%s", component->vulnerabilities_text);
 	}
+	if (engine_flags & DISABLE_BEST_MATCH)	
+		printf("}");
 	
-	printf("}");
 	return false;
 }
 
@@ -377,7 +399,10 @@ bool print_json_match(struct match_data_t * match)
 		free(file_id);
 		return false;
 	}
-	printf("{");
+
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("{");
+
 	printf("\"id\": \"%s\"", matchtypes[match->type == 1 ? 2 : match->type]);
 //	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
 	if(match->type == MATCH_SNIPPET && hpsm_enabled)
@@ -423,11 +448,19 @@ bool print_json_match(struct match_data_t * match)
 		print_cryptography(match);
 		printf(",%s", match->crytography_text);
 	}
-
-	printf(",\"components\":[");
-	component_list_print(&match->component_list, print_json_component, ",");
-	printf("]");
-
-	printf("}");
+	if (!(engine_flags & DISABLE_BEST_MATCH))
+	{
+		print_json_component(match->component_list.headp.lh_first->component);
+	}
+	else
+	{
+		printf(",\"components\":[");
+		component_list_print(&match->component_list, print_json_component, ",");
+		printf("]");
+	}
+	
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("}");
+	
 	return true;
 }

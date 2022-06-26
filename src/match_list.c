@@ -249,15 +249,13 @@ bool match_list_is_empty(match_list_t *list)
 
 bool component_date_comparation(component_data_t * a, component_data_t * b)
 {
-	/*printf("<<%s, %s>>\n", b->release_date, a->release_date);
-    if (!b->release_date || a->release_date)
-    {
-        scanlog("error: incomplete component\n");
-        return false;
-    }*/
-    if (strcmp(b->release_date, a->release_date) <= 0)
-	{
+    /*if the relese date is the same untie with the component age (purl)*/
+    if (!strcmp(b->release_date, a->release_date) && b->age > a->age)
+        return true;
+    /*select the oldest release date */
+    if (strcmp(b->release_date, a->release_date) < 0)
 		return true;
-	}
+    
     return false;
 }
+
