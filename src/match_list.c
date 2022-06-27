@@ -51,7 +51,10 @@ void component_list_init(component_list_t *comp_list, int max_items)
     scanlog("Init component list\n");
     LIST_INIT(&comp_list->headp); /* Initialize the list. */
     comp_list->items = 0;
-    comp_list->max_items = max_items;
+    if (max_items)
+        comp_list->max_items = max_items;
+    else
+        comp_list->autolimit = true;
 }
 
 void match_list_init(match_list_t * list)
@@ -144,6 +147,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         match_data_free(new_match);
         return false;
     }*/
+
     component_list_init(&new_match->component_list, list->scan_ref->max_components_to_process);
     new_match->component_list.match_ref = new_match;
 
@@ -153,6 +157,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         struct entry *nn = malloc(sizeof(struct entry)); /* Insert at the head. */
         LIST_INSERT_HEAD(&list->headp, nn, entries);
         nn->match = new_match;
+        list->last_element = nn;
         list->items = 1;
         return true;
     }
@@ -165,11 +170,20 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
                 struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
                 nn->match = new_match;
                 LIST_INSERT_BEFORE(np, nn, entries);
-                if (remove_a && list->items == list->max_items)
-                    LIST_REMOVE(np, entries);
+                
+                if (np->entries.le_next == NULL)
+                    list->last_element = np;
+
+                if (list->autolimit && list->items && list->headp.lh_first->match->hits * 0.7 > list->last_element->match->hits)
+                {
+                    LIST_REMOVE(list->last_element, entries);
+                }
+                else if (!list->autolimit && remove_a && list->items == list->max_items)
+                {
+                    LIST_REMOVE(list->last_element, entries);
+                }
                 else
                     list->items++;
-
                 return true;
             }
         }

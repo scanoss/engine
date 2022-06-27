@@ -92,7 +92,8 @@ typedef struct match_list_t
 	int items;
 	int max_items;
 	bool autolimit;
-	scan_data_t * scan_ref;  
+	scan_data_t * scan_ref;
+	struct entry * last_element;  
 } match_list_t;
 
 #define MAX_SNIPPET_IDS_RETURNED 10000
