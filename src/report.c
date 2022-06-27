@@ -162,12 +162,14 @@ void print_server_stats(scan_data_t *scan)
  */
 void print_json_nomatch(scan_data_t *scan)
 {
-	if (quiet) return;
-
-	printf("{");
+	if (quiet) 
+		return;
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("{");
 	printf("\"id\": \"none\"");
-	print_server_stats(scan);
-	printf("}");
+	//print_server_stats(scan);
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("}");
 	fflush(stdout);
 }
 
@@ -392,13 +394,12 @@ bool print_json_component(component_data_t * component)
 
 bool print_json_match(struct match_data_t * match)
 {
-	char *file_id = md5_hex(match->file_md5);
 	if (!match->component_list.headp.lh_first)
 	{
-		scanlog("Match with no components ignored: %s", file_id);
-		free(file_id);
+		scanlog("Match with no components ignored: %s", match->source_md5);
 		return false;
 	}
+	char *file_id = md5_hex(match->file_md5);
 
 	if (engine_flags & DISABLE_BEST_MATCH)
 		printf("{");

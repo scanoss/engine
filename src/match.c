@@ -86,13 +86,10 @@ void output_matches_json(scan_data_t *scan)
 	json_open_file(scan->file_path);
 
 	/* Print matches */
-	if (scan->matches.headp.lh_first)
-	{
-		if (engine_flags & DISABLE_BEST_MATCH)
-			match_list_print(&scan->matches, print_json_match, ",");
-		else
-			print_json_match(scan->best_match);
-	}
+	if (scan->matches.headp.lh_first && (engine_flags & DISABLE_BEST_MATCH))
+		match_list_print(&scan->matches, print_json_match, ",");
+	else if (scan->best_match)
+		print_json_match(scan->best_match);
 	else
 		print_json_nomatch(scan);
 	
@@ -378,10 +375,11 @@ bool find_oldest(match_data_t * fp1, void * fp2)
 
 	if (!scan->best_match)
 		scan->best_match = fp1;
+
 	else if (!strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) &&
 			scan->best_match->component_list.headp.lh_first->component->age < fp1->component_list.headp.lh_first->component->age)
 		scan->best_match = fp1;
-	else if (strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) < 0)
+	else if (strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) > 0)
 		scan->best_match = fp1;
 
 	return false; 
