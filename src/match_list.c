@@ -163,30 +163,63 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
     }
     else if (val)
     {
+        bool inserted = false;
         for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
         {
+            if (np->entries.le_next == NULL)
+                list->last_element = np;
+
             if (val(np->match, new_match))
             {
                 struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
                 nn->match = new_match;
+                printf("<<---insert\n");
                 LIST_INSERT_BEFORE(np, nn, entries);
-                
-                if (np->entries.le_next == NULL)
-                    list->last_element = np;
+                  list->items++;
+  
+                inserted = true;
+                break;
+            }
 
-                if (list->autolimit && list->items && list->headp.lh_first->match->hits * 0.7 > list->last_element->match->hits)
-                {
-                    LIST_REMOVE(list->last_element, entries);
-                }
-                else if (!list->autolimit && remove_a && list->items == list->max_items)
-                {
-                    LIST_REMOVE(list->last_element, entries);
-                }
+        }
+
+        if(!inserted)
+        {
+            struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
+            nn->match = new_match;
+            printf("<<--- last insert\n");
+            LIST_INSERT_AFTER(list->last_element, nn, entries);
+            list->items++;
+            if (nn->entries.le_next == NULL)
+                list->last_element = nn;
+        }
+
+        if (list->autolimit)
+        {
+            while  (list->last_element && (list->headp.lh_first->match->hits * 0.75 > list->last_element->match->hits))
+            {
+                printf("<<<< %d - %d >>>>>>\n", list->headp.lh_first->match->hits, list->last_element->match->hits);
+                struct entry * aux = *list->last_element->entries.le_prev;
+                LIST_REMOVE(list->last_element, entries);
+                list->items--;
+                if (aux)
+                    list->last_element = aux;
                 else
-                    list->items++;
-                return true;
+                {
+                    list->last_element = list->headp.lh_first;   
+                    break;
+                }
             }
         }
+        else if (!list->autolimit && remove_a && list->items >= list->max_items)
+                {
+                    LIST_REMOVE(*list->last_element->entries.le_prev, entries);
+                    list->items--;
+                }
+
+        if (list->last_element)
+             printf("hits: %d [%d / %d] --list size: %d\n", new_match->hits, list->headp.lh_first->match->hits, list->last_element->match->hits, list->items);
+        return true;
     }
     else
     {

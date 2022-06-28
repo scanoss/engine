@@ -173,11 +173,10 @@ bool snippet_extension_discard(scan_data_t *scan, uint8_t *md5)
  * @param scan scan data pointer
  * @return pointer to selected match
  */
-#define SNIPPET_HITS_RELATIVE_FACTOR 0.2
-#define	SNIPPET_POPULARITY_RELATIVE_FACTOR 1
 
 bool test(match_data_t * a, match_data_t * b)
 {
+	printf("(%d,%d)", a->hits, b->hits);
 	if (a->hits <= b->hits)
 		return true;
 	else
@@ -736,7 +735,7 @@ matchtype ldb_scan_snippets(scan_data_t *scan) {
 		if (md5s_ln > (WFP_POPULARITY_THRESHOLD * WFP_REC_LN))
 		{
 			scanlog("Snippet %02x%02x%02x%02x (line %d) >= WFP_POPULARITY_THRESHOLD\n", wfp[0], wfp[1], wfp[2], wfp[3], line);
-			add_popular_snippet_to_matchmap(scan, line, last_line - line);
+		//	add_popular_snippet_to_matchmap(scan, line, last_line - line);
 			continue;
 		}
 
