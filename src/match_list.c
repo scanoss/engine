@@ -263,6 +263,10 @@ bool match_list_is_empty(match_list_t *list)
 
 bool component_date_comparation(component_data_t * a, component_data_t * b)
 {
+    if (!*b->release_date)
+        return false;
+    if (!*a->release_date)
+        return true;
     /*if the relese date is the same untie with the component age (purl)*/
     if (!strcmp(b->release_date, a->release_date) && b->age > a->age)
         return true;

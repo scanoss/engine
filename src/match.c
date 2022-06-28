@@ -287,7 +287,8 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 			new_comp->file_md5_ref = component_list->match_ref->file_md5;
 			if (asset_declared(new_comp))
 				new_comp->identified = true;
-
+			
+			add_versions(new_comp,files, records);
 			component_list_add(component_list, new_comp, component_date_comparation, true);
 		}
 		else
