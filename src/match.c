@@ -288,8 +288,9 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 			if (asset_declared(new_comp))
 				new_comp->identified = true;
 			
-			add_versions(new_comp,files, records);
+		//	add_versions(new_comp,files, records);
 			component_list_add(component_list, new_comp, component_date_comparation, true);
+			scanlog("<<<<<<comp list: %d >>>>>>>\n",  component_list->items);
 		}
 		else
 		{
@@ -297,7 +298,9 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 			component_data_free(new_comp);
 		}
 	}
-
+	struct comp_entry * comp = NULL;
+	LIST_FOREACH(comp, &component_list->headp, entries)
+		add_versions(comp->component, files, records);
 	free(url_rec);
 	free(path_rank);
 	return true;
@@ -436,6 +439,7 @@ void compile_matches(scan_data_t *scan)
 
 		if (scan->match_type != MATCH_NONE)
 		{
+			scanlog("<<<MATCH LIST SIZE: %d>>>>>>\n", scan->matches.items);
 			match_list_process(&scan->matches, match_process);
 			match_select_best(scan);
 		}

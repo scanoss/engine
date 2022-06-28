@@ -176,7 +176,6 @@ bool snippet_extension_discard(scan_data_t *scan, uint8_t *md5)
 
 bool test(match_data_t * a, match_data_t * b)
 {
-	printf("(%d,%d)", a->hits, b->hits);
 	if (a->hits <= b->hits)
 		return true;
 	else
