@@ -48,7 +48,7 @@ void component_list_destroy(component_list_t *list)
 
 void component_list_init(component_list_t *comp_list, int max_items)
 {
-    scanlog("Init component list\n");
+    //scanlog("Init component list\n");
     LIST_INIT(&comp_list->headp); /* Initialize the list. */
     comp_list->items = 0;
     if (max_items)
@@ -62,7 +62,6 @@ void match_list_init(match_list_t * list)
     LIST_INIT(&list->headp); /* Initialize the list. */
     list->items = 0;
     list->max_items = 3;
-
 }
 
 void match_data_free(match_data_t *data)
@@ -76,6 +75,8 @@ void match_data_free(match_data_t *data)
     free(data->crytography_text);
     free(data->quality_text);
     component_list_destroy(&data->component_list);
+
+    memset(data, 0, sizeof(*data));
 }
 
 void match_list_destroy(match_list_t *list)
@@ -90,8 +91,6 @@ void match_list_destroy(match_list_t *list)
 
 bool component_list_add(component_list_t *list, component_data_t *new_comp, bool (*val)(component_data_t *a, component_data_t *b), bool remove_a)
 {
-    scanlog("add component list function\n");
-
     if (!new_comp->url)
     {
         scanlog("Incomple component\n");
@@ -114,7 +113,6 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
         {
             if (val(np->component, new_comp))
             {
-                scanlog("Component Add to list\n");
                 struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert after. */
                 nn->component = new_comp;
                 LIST_INSERT_BEFORE(np, nn, entries);
@@ -147,13 +145,14 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         match_data_free(new_match);
         return false;
     }*/
-
-    component_list_init(&new_match->component_list, list->scan_ref->max_components_to_process);
-    new_match->component_list.match_ref = new_match;
+    if (!new_match->component_list.match_ref)
+    {
+        component_list_init(&new_match->component_list, list->scan_ref->max_components_to_process);
+        new_match->component_list.match_ref = new_match;
+    }
 
     if (!list->headp.lh_first)
     {
-        scanlog("Init List\n");
         struct entry *nn = malloc(sizeof(struct entry)); /* Insert at the head. */
         LIST_INSERT_HEAD(&list->headp, nn, entries);
         nn->match = new_match;
@@ -199,7 +198,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
                 struct entry * aux = *list->last_element->entries.le_prev;
                 match_data_free(list->last_element->match);
                 list->last_element->entries.le_next = NULL;
-                if (aux)
+                if (aux && *aux->entries.le_prev)
                 {
                     LIST_REMOVE(aux, entries);
                     list->items--;
@@ -217,7 +216,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
                     struct entry * aux = *list->last_element->entries.le_prev;
                     match_data_free(list->last_element->match);
                     list->last_element->entries.le_next=NULL;
-                    if (aux)
+                    if (aux && *aux->entries.le_prev)
                     {
                         LIST_REMOVE(aux, entries);
                         list->items--;

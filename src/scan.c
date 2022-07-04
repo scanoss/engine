@@ -80,10 +80,12 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	scan->max_components_to_process = max_components;
 	scan->max_snippets_to_process = max_snippets;
 
-		if (max_snippets)
+	if (max_snippets)
 		scan->matches.max_items = max_snippets;
 	else
-		scan->matches.autolimit = true;
+		scan->matches.max_items = 1;
+	
+	scan->matches.autolimit = true;
 
 	/* Get wfp MD5 hash */
 	if (extension(target)) if (!strcmp(extension(target), "wfp")) calc_wfp_md5(scan);
