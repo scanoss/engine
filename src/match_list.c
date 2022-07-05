@@ -34,6 +34,8 @@ void component_data_free(component_data_t *data)
         free(data->purls[i]);
         free(data->purls_md5[i]);
     }
+
+    free(data);
 }
 
 void component_list_destroy(component_list_t *list)
@@ -77,6 +79,8 @@ void match_data_free(match_data_t *data)
     component_list_destroy(&data->component_list);
 
     memset(data, 0, sizeof(*data));
+  //  free(data);
+   // data = NULL;
 }
 
 void match_list_destroy(match_list_t *list)
@@ -150,6 +154,12 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         component_list_init(&new_match->component_list, list->scan_ref->max_components_to_process);
         new_match->component_list.match_ref = new_match;
     }
+    else
+    {
+        if (!new_match->component_list.headp.lh_first|| !new_match->component_list.headp.lh_first->component->release_date)
+            return false;
+       // printf("%s - ", new_match->component_list.headp.lh_first->component->release_date);
+    }
 
     if (!list->headp.lh_first)
     {
@@ -163,7 +173,18 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
     else if (val)
     {
         bool inserted = false;
-        for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
+
+        if (list->last_element && list->items < list->max_items && !val(list->last_element->match, new_match))
+            {
+                struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
+                nn->match = new_match;
+                LIST_INSERT_AFTER(list->last_element, nn, entries);
+                list->last_element = nn;
+                list->items++;
+                inserted = true;
+            }
+        
+        for (struct entry *np = list->headp.lh_first; np != NULL && !inserted; np = np->entries.le_next)
         {
             if (np->entries.le_next == NULL)
                 list->last_element = np;
@@ -181,15 +202,15 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
 
         }
 
-        if(!inserted)
-        {
-            struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
-            nn->match = new_match;
-            LIST_INSERT_AFTER(list->last_element, nn, entries);
-            list->items++;
-            if (nn->entries.le_next == NULL)
-                list->last_element = nn;
-        }
+        // if(!inserted)
+        // {
+        //     struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
+        //     nn->match = new_match;
+        //     LIST_INSERT_AFTER(list->last_element, nn, entries);
+        //     list->items++;
+        //     if (nn->entries.le_next == NULL)
+        //         list->last_element = nn;
+        // } 
 
         if (list->autolimit)
         {
@@ -197,37 +218,42 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
             {
                 struct entry * aux = *list->last_element->entries.le_prev;
                 match_data_free(list->last_element->match);
-                list->last_element->entries.le_next = NULL;
+                free(list->last_element);
                 if (aux && *aux->entries.le_prev)
                 {
                     LIST_REMOVE(aux, entries);
                     list->items--;
                     list->last_element = aux;
+                   
                 }
                 else
                 {
                     list->last_element = list->headp.lh_first;
                     break;
                 }
+                 list->last_element->entries.le_next = NULL;
             }
         }
-        else if (list->last_element && !list->autolimit && remove_a && list->items >= list->max_items)
+        else if (list->last_element && !list->autolimit && remove_a && (list->items > list->max_items))
                 {
                     struct entry * aux = *list->last_element->entries.le_prev;
                     match_data_free(list->last_element->match);
-                    list->last_element->entries.le_next=NULL;
-                    if (aux && *aux->entries.le_prev)
+                                            
+                   // printf("elimina a- size %d\n",list->items);
+                    LIST_REMOVE(list->last_element, entries);
+                   // free(list->last_element);
+                    list->last_element = NULL;
+                    if (aux)
                     {
-                        LIST_REMOVE(aux, entries);
-                        list->items--;
+                        aux->entries.le_next = NULL;
                         list->last_element = aux;
+                        list->items--;
+                       // printf("elimina b - size %d\n",list->items);
                     }
-                    else
-                    {
-                        list->last_element = list->headp.lh_first;   
-                    }
+
                 }
 
+        scanlog("Add to list add: %d\n", list->items);
         return true;
     }
     else
@@ -252,7 +278,7 @@ void match_list_debug(match_list_t *list)
         ldb_bin_to_hex(np->match->matchmap_reg, MD5_LEN, md5_hex);
         //   printf("Item: %d - hits: %d - md5: %s - file: %s - release_date: %s - ranges: %s - purl:%s\n",
         // i, np->match->hits, md5_hex, np->match->file, np->match->release_date, np->match->line_ranges, np->match->purls[0]);
-        printf("Item: %d - hits: %d - md5: %s\n", i, np->match->hits, md5_hex);
+        printf("\nItem: %d - hits: %d - md5: %s - release: %s \n", i, np->match->hits, md5_hex, np->match->component_list.headp.lh_first->component->release_date);
         i++;
     }
 }
@@ -260,6 +286,7 @@ void match_list_debug(match_list_t *list)
 void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), char *separator)
 {
     bool first = true;
+    int i = 0;
     for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
         if (!np->match->component_list.items)
@@ -271,6 +298,8 @@ void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), ch
         }
         
         printer(np->match);
+        if (i++ > list->max_items && !list->autolimit)
+            break;
         first = false;
     }
 }

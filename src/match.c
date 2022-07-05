@@ -87,12 +87,17 @@ void output_matches_json(scan_data_t *scan)
 
 	/* Print matches */
 	if (scan->matches.headp.lh_first && (engine_flags & DISABLE_BEST_MATCH))
-		match_list_print(&scan->matches, print_json_match, ",");
-	else if (scan->max_snippets_to_process > 1)
 	{
-		match_list_t * best_list = match_select_m_best(scan);
-		match_list_print(best_list, print_json_match, ",");
-		free(best_list);
+		if (scan->max_snippets_to_process > 1)
+		{
+			match_list_t * best_list = match_select_m_best(scan);
+			scanlog("<<<best list items: %d>>>\n", best_list->items);
+			//match_list_debug(best_list);
+			match_list_print(best_list, print_json_match, ",");
+			free(best_list);
+		}
+		else
+			match_list_print(&scan->matches, print_json_match, ",");
 	}
 	else if (scan->best_match)
 		print_json_match(scan->best_match);
@@ -398,7 +403,7 @@ bool find_oldest(match_data_t * fp1, void * fp2)
 
 bool find_oldest_match(match_data_t * fp1, match_data_t * fp2)
 {
-	if (!fp1->component_list.headp.lh_first || !fp2->component_list.headp.lh_first)
+	if (!fp2->component_list.headp.lh_first || !fp1->component_list.headp.lh_first)
 		return false;
 
 	return component_date_comparation(fp1->component_list.headp.lh_first->component, fp2->component_list.headp.lh_first->component);
@@ -413,6 +418,7 @@ match_list_t * match_select_m_best(scan_data_t * scan)
 {
 	scanlog("<<<select_best_match_M: %d>>>>\n", scan->max_snippets_to_process);
 	match_list_t * final = calloc(1, sizeof(*final));
+	match_list_init(final);
 	final->max_items = scan->max_snippets_to_process;
 	final->autolimit = false;
 	struct entry * item = NULL;
