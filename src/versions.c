@@ -52,22 +52,27 @@
  */
 void normalise_version(char *version, char *component)
 {
+	if (!version)
+		return;
+
+	char aux[MAX_FIELD_LN] = "\0";
 	/* Remove leading component name from version */
 	if ((version && component) && stristart(version, component))
 	{
 		int compt_len = strlen(component);
-		sprintf(version, "%s",version + compt_len);
+		sprintf(aux, "%s",version + compt_len);
 	}
 
 	/* Remove unwanted leading characters from the version */
 	if (version && (((*version == 'v' || *version =='r') && isdigit(version[1])) || !isalnum(*version)))
 	{
-		sprintf(version, "%s",version + 1);
+		sprintf(aux, "%s",version + 1);
 	} 
 
 	/* Remove trailing ".orig" from version */
-	char *orig = strstr(version, ".orig");
+	char *orig = strstr(aux, ".orig");
 	if (orig) *orig = 0;
+	strcpy(version, aux);
 }
 
 /**

@@ -474,7 +474,7 @@ void compile_matches(scan_data_t *scan)
 
 		if (scan->match_type != MATCH_NONE)
 		{
-			scanlog("<<<MATCH LIST SIZE: %d- %d / %d>>>>>>\n", scan->matches.items, scan->matches.headp.lh_first->match->hits, scan->matches.last_element->match->hits);
+			//scanlog("<<<MATCH LIST SIZE: %d- %d / %d>>>>>>\n", scan->matches.items, scan->matches.headp.lh_first->match->hits, scan->matches.last_element->match->hits);
 			match_list_process(&scan->matches, match_process);
 			if (scan->max_snippets_to_process == 1)
 				match_select_best(scan);

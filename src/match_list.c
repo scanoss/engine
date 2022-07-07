@@ -218,10 +218,10 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
             {
                 struct entry * aux = *list->last_element->entries.le_prev;
                 match_data_free(list->last_element->match);
-                free(list->last_element);
-                if (aux && *aux->entries.le_prev)
+                if (aux)
                 {
-                    LIST_REMOVE(aux, entries);
+                   // LIST_REMOVE(aux, entries);
+                    aux->entries.le_next = NULL;
                     list->items--;
                     list->last_element = aux;
                    
@@ -240,7 +240,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
                     match_data_free(list->last_element->match);
                                             
                    // printf("elimina a- size %d\n",list->items);
-                    LIST_REMOVE(list->last_element, entries);
+               //     LIST_REMOVE(list->last_element, entries);
                    // free(list->last_element);
                     list->last_element = NULL;
                     if (aux)
@@ -250,7 +250,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
                         list->items--;
                        // printf("elimina b - size %d\n",list->items);
                     }
-
+                    list->last_element->entries.le_next = NULL;
                 }
 
         scanlog("Add to list add: %d\n", list->items);
