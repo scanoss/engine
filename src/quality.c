@@ -87,9 +87,11 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 		len += sprintf(result+len,"\"source\": \"%s\"", quality_sources[atoi(source)]);
 		len += sprintf(result+len,"}");
 		reported = true;
+		match->quality_text = strdup(result);
+
 	}
 
-	str_cat_realloc(&match->quality_text, result);
+	//str_cat_realloc(&match->quality_text, result);
 
 	free(source);
 	free(quality);
@@ -107,10 +109,9 @@ void print_quality(match_data_t * match)
 		return;
 	
 	char result[MAX_FIELD_LN] = "\0";
-	int len = 0;
-	
-	len += sprintf(result+len,"\"quality\": ");
-	len += sprintf(result+len,"[");
+
+	sprintf(result,"\"quality\": [");
+
 
 	ldb_fetch_recordset(NULL, oss_quality, match->file_md5, false, print_quality_item, match);	
 	

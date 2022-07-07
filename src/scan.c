@@ -244,10 +244,12 @@ int wfp_scan(scan_data_t *scan)
 			ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
 			free(hexmd5);
 
-			/* Extract fields from file record */
+			/* Extract fields from file record */  
 			strcpy((char *)rec, line + tagln + (MD5_LEN * 2) + 1);
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
-			strcpy(scan->file_path, field_n(2, (char *)rec));
+			free(scan->file_path);
+			scan->file_path = strdup(field_n(2, (char *)rec));
+			//strcpy(scan->file_path, field_n(2, (char *)rec));
 
 			read_data = true;
 		}
