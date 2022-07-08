@@ -34,7 +34,7 @@ void component_data_free(component_data_t *data)
         free(data->purls[i]);
         free(data->purls_md5[i]);
     }
-
+    memset(data, 0, sizeof(*data));
     free(data);
 }
 
@@ -238,7 +238,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
                 {
                     struct entry * aux = *list->last_element->entries.le_prev;
                     match_data_free(list->last_element->match);
-                                            
+                    list->last_element->match = NULL;                        
                    // printf("elimina a- size %d\n",list->items);
                //     LIST_REMOVE(list->last_element, entries);
                    // free(list->last_element);

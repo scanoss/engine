@@ -135,6 +135,9 @@ void print_copyrights(component_data_t * comp)
 
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
+
+	comp->copyright_text = NULL;
+	
 	len += sprintf(result+len,"\"copyrights\": [");
 
 	uint32_t crclist[CRC_LIST_LEN];

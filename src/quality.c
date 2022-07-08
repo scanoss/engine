@@ -109,6 +109,7 @@ void print_quality(match_data_t * match)
 		return;
 	
 	char result[MAX_FIELD_LN] = "\0";
+	match->quality_text = NULL;
 
 	sprintf(result,"\"quality\": [");
 

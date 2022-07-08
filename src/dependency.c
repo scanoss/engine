@@ -109,7 +109,7 @@ void print_dependencies(component_data_t * comp)
 	
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
-
+	comp->dependency_text = NULL;
 	len += sprintf(result+len,"\"dependencies\": [");	
 
 	uint32_t records = 0;

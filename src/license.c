@@ -290,6 +290,8 @@ void print_licenses(component_data_t * comp)
 	comp->crclist = crclist;
 	uint32_t records = 0;
 	bool first_record = true;
+
+	comp->license_text = NULL;
 	/* Print URL license */
 	
 	if (comp->license && *comp->license)

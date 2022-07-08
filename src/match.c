@@ -225,10 +225,14 @@ bool fill_component(component_data_t * component, uint8_t *url_key, char *file_p
 	component->vendor = strdup(vendor);
 	component->component = strdup(comp);
 	component->version = strdup(version);
-	component->release_date = strdup(release_date);
+	if (strlen(release_date) < 4)
+			component->release_date = strdup("9999-99-99");
+	else
+		component->release_date = strdup(release_date);
 	component->license = strdup(license);
 	component->url = strdup(url);
 	component->latest_version = strdup(latest_version);
+
 	if (*purl)
 	{
 		component->purls[0] = strdup(purl);
@@ -386,17 +390,30 @@ bool find_oldest(match_data_t * fp1, void * fp2)
 {
 	scan_data_t * scan = fp2;
 
-	if(!fp1->component_list.headp.lh_first)
+	if(!fp1->component_list.headp.lh_first || !fp1->component_list.headp.lh_first->component || !fp1->component_list.headp.lh_first->component->version)
 		return false;
+	
+	if(!fp1->component_list.headp.lh_first->component->release_date)
+		fp1->component_list.headp.lh_first->component->release_date = strdup("9999-99-99");
+	else if (!*fp1->component_list.headp.lh_first->component->release_date)
+	{
+		free(fp1->component_list.headp.lh_first->component->release_date);
+		fp1->component_list.headp.lh_first->component->release_date = strdup("9999-99-99");
+	}
 
-	if (!scan->best_match)
+
+	if (!scan->best_match || !scan->best_match->component_list.headp.lh_first)
 		scan->best_match = fp1;
-
-	else if (!strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) &&
+	else
+	{
+	//	printf(scan->best_match->component_list.headp.lh_first->component->version);
+	//	printf(fp1->component_list.headp.lh_first->component->release_date);
+	 if (!strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) &&
 			scan->best_match->component_list.headp.lh_first->component->age < fp1->component_list.headp.lh_first->component->age)
 		scan->best_match = fp1;
 	else if (strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) > 0)
 		scan->best_match = fp1;
+	}
 
 	return false; 
 }

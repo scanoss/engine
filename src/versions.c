@@ -90,10 +90,11 @@ char * version_cleanup(char *  version, char * component)
 	if (!version)
 		return NULL;
 		
-	char * cleaned = strdup(version);
+	char cleaned[MAX_FIELD_LN] = "\0";
+	strcpy(cleaned, version);
 	normalise_version(cleaned, component);
 
-	return cleaned;
+	return strdup(cleaned);
 }
 
 /**
