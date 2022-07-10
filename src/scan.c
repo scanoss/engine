@@ -51,10 +51,10 @@ char *ignored_assets = NULL;
 /** @brief Calculate and write source wfp md5 in scan->source_md5 
     @param scan Scan data
 	*/
-static void calc_wfp_md5(scan_data_t *scan)
+static void calc_wfp_md5(scan_data_t *scan, char * target)
 {
 	uint8_t tmp_md5[16];
-	get_file_md5(scan->file_path, tmp_md5);
+	get_file_md5(target, tmp_md5);
 	char *tmp_md5_hex = md5_hex(tmp_md5);
 	strcpy(scan->source_md5, tmp_md5_hex);
 	free(tmp_md5_hex);
@@ -88,7 +88,7 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	scan->matches.autolimit = true;
 
 	/* Get wfp MD5 hash */
-	if (extension(target)) if (!strcmp(extension(target), "wfp")) calc_wfp_md5(scan);
+	if (extension(target)) if (!strcmp(extension(target), "wfp")) calc_wfp_md5(scan, target);
 
 	return scan;
 }
@@ -105,6 +105,7 @@ void scan_data_free(scan_data_t * scan)
 	free(scan->matchmap);
 	match_list_destroy(&scan->matches);
 	free(scan);
+	scan = NULL;
 }
 
 /** @brief Returns true if md5 is the md5sum for NULL
@@ -177,8 +178,9 @@ bool asset_declared(component_data_t * comp)
     @param scan Scan data
     @return Scan result (SUCCESS/FAILURE)
 	*/
-int hash_scan(scan_data_t *scan)
+int hash_scan(char *path, int scan_max_snippets, int scan_max_components)
 {
+	scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components);
 	scan->preload = true;
 
 		/* Get file MD5 */
@@ -197,16 +199,16 @@ int hash_scan(scan_data_t *scan)
     @param scan Scan data
     @return Scan result (SUCCESS/FAILURE)
 	*/
-int wfp_scan(scan_data_t *scan)
+int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 {
+	scan_data_t * scan = NULL;
 	char * line = NULL;
 	size_t len = 0;
 	ssize_t lineln;
-	uint8_t *rec = calloc(LDB_MAX_REC_LN, 1);
-	scan->preload = true;
+	uint8_t *rec = NULL;
 
 	/* Open WFP file */
-	FILE *fp = fopen(scan->file_path, "r");
+	FILE *fp = fopen(path, "r");
 	if (fp == NULL)
 	{
 		fprintf(stdout, "E017 Cannot open target");
@@ -219,10 +221,9 @@ int wfp_scan(scan_data_t *scan)
 	{
 		trim(line);
 
-		bool is_component = (memcmp(line, "component=", 4) == 0);
 		bool is_file = (memcmp(line, "file=", 5) == 0);
 		bool is_hpsm = (memcmp(line, "hpsm=", 5) == 0);
-		bool is_wfp = (!is_file && !is_component && !is_hpsm);
+		bool is_wfp = (!is_file && !is_hpsm);
 
 		if (is_hpsm) 
 		{
@@ -230,34 +231,35 @@ int wfp_scan(scan_data_t *scan)
 			hpsm_crc_lines = strdup(&line[5]);
 		}
 
-		/* Scan previous file */
-		if ((is_component || is_file) && read_data) ldb_scan(scan);
-
 		/* Parse file information with format: file=MD5(32),file_size,file_path */
 		if (is_file)
 		{
+			if (scan)
+				ldb_scan(scan);
+
 			const int tagln = 5; // len of 'file='
 
 			/* Get file MD5 */
-			char *hexmd5 = calloc(MD5_LEN * 2 + 1, 1);
-			memcpy(hexmd5, line + tagln, MD5_LEN * 2);
+			//char *hexmd5 = calloc(MD5_LEN * 2 + 1, 1);
+			char * hexmd5 = strndup(line + tagln, MD5_LEN * 2);
+
+			/* Extract fields from file record */
+			calloc(LDB_MAX_REC_LN, 1);  
+			//strcpy((char *)rec, line + tagln + (MD5_LEN * 2) + 1);
+			rec = strdup(line + tagln + (MD5_LEN * 2) + 1);
+		
+			scan = scan_data_init(field_n(2, (char *)rec), scan_max_snippets, scan_max_components);
+			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
+			scan->preload = true;
+			free(rec);
 			ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
 			free(hexmd5);
-
-			/* Extract fields from file record */  
-			strcpy((char *)rec, line + tagln + (MD5_LEN * 2) + 1);
-			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
-			free(scan->file_path);
-			scan->file_path = strdup(field_n(2, (char *)rec));
-			//strcpy(scan->file_path, field_n(2, (char *)rec));
-
-			read_data = true;
 		}
 
 		/* Save hash/es to memory. Parse file information with format:
 			 linenr=wfp(6)[,wfp(6)]+ */
 
-		if (is_wfp && (scan->hash_count < MAX_HASHES_READ))
+		if (is_wfp && scan && (scan->hash_count < MAX_HASHES_READ))
 		{
 			/* Split string by the equal and commas */
 			int line_ln = strlen(line);
@@ -288,11 +290,10 @@ int wfp_scan(scan_data_t *scan)
 	}
 
 	/* Scan the last file */
-	if (read_data) ldb_scan(scan);
+	ldb_scan(scan);
 
 	fclose(fp);
 	if (line) free(line);
-	free(rec);
 
 	return EXIT_SUCCESS;
 }
@@ -302,9 +303,11 @@ int wfp_scan(scan_data_t *scan)
    otherwise, it will be loaded here (scanning a physical file) 
    @param scan //TODO
    */
-void ldb_scan(scan_data_t *scan)
+void ldb_scan(scan_data_t * scan)
 {
 	bool skip = false;
+	if (!scan)
+		return;
 
 	if (unwanted_path(scan->file_path)) skip = true;
 
@@ -421,5 +424,5 @@ void ldb_scan(scan_data_t *scan)
 	output_matches_json(scan);
 
 	//if (matches) free(matches);
-	//free(scan);
+	scan_data_free(scan);
 }

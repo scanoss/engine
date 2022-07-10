@@ -304,7 +304,8 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 				new_comp->identified = true;
 			
 		//	add_versions(new_comp,files, records);
-			component_list_add(component_list, new_comp, component_date_comparation, true);
+			if (!component_list_add(component_list, new_comp, component_date_comparation, true))
+				component_data_free(new_comp);
 		}
 		else
 		{
@@ -312,11 +313,11 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 			component_data_free(new_comp);
 		}
 	}
+	/*
 	struct comp_entry * comp = NULL;
-	
 	LIST_FOREACH(comp, &component_list->headp, entries)
 		add_versions(comp->component, files, records);
-	
+	*/
 	free(url_rec);
 	free(path_rank);
 	return true;
@@ -376,6 +377,8 @@ void load_matches (match_data_t *match, scan_data_t * scan)
 	if (records)
 	{
 		load_components(&match->component_list, files, records);
+		if (match->component_list.headp.lh_first && match->component_list.headp.lh_first->component)
+			add_versions(match->component_list.headp.lh_first->component, files, records);
 	}
 
 	free(files);
@@ -389,6 +392,9 @@ void load_matches (match_data_t *match, scan_data_t * scan)
 bool find_oldest(match_data_t * fp1, void * fp2)
 {
 	scan_data_t * scan = fp2;
+
+	if (!fp1)
+		return false;
 
 	if(!fp1->component_list.headp.lh_first || !fp1->component_list.headp.lh_first->component || !fp1->component_list.headp.lh_first->component->version)
 		return false;
@@ -478,7 +484,11 @@ void compile_matches(scan_data_t *scan)
 		match_new->type = scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
 		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);
-		match_list_add(&scan->matches, match_new, NULL, false);
+		if (!match_list_add(&scan->matches, match_new, NULL, false))
+		{
+			match_data_free(match_new);
+			//free(match_new);
+		}
 	}
 	
 		/* No match pointer */

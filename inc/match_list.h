@@ -59,6 +59,8 @@ typedef struct component_list_t
 	int max_items;
 	bool autolimit;
 	match_data_t * match_ref;
+	struct comp_entry * last_element;
+	struct comp_entry * last_element_aux;
 } component_list_t;
 
 typedef struct match_data_t
@@ -94,6 +96,7 @@ typedef struct match_list_t
 	bool autolimit;
 	scan_data_t * scan_ref;
 	struct entry * last_element;  
+	struct entry * last_element_aux;
 } match_list_t;
 
 #define MAX_SNIPPET_IDS_RETURNED 10000
@@ -151,6 +154,7 @@ void match_list_destroy(match_list_t * list);
 void match_list_init(match_list_t * list);
 void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa, void * fpb));
 bool match_list_is_empty(match_list_t * list);
+void match_data_free(match_data_t *data);
 
 bool component_list_add(component_list_t * list, component_data_t * new_comp, bool (* val) (component_data_t * a, component_data_t * b), bool remove_a);
 void component_data_free(component_data_t * data);

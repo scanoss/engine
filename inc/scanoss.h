@@ -29,6 +29,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "limits.h"
 
 #include "match_list.h"
 
@@ -144,8 +145,8 @@ extern component_item *ignore_components;
 extern component_item *declared_components;
 
 /* Prototype declarations */
-int wfp_scan(scan_data_t *scan);
-void ldb_scan(scan_data_t *scan);
+int wfp_scan(char * path, int scan_max_snippets, int scan_max_components);
+void ldb_scan(scan_data_t * scan);
 matchtype ldb_scan_snippets(scan_data_t *scan_ptr);
 bool key_find(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);
 void recurse_directory (char *path);

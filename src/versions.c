@@ -211,6 +211,9 @@ void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
  */
 void add_versions(component_data_t *component, file_recordset *files, uint32_t records)
 {
+	if (!component)
+		return;
+		
 	release_version release = {"\0", "\0", "\0"};;
 
 	*release.version = 0;

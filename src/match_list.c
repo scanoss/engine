@@ -43,7 +43,9 @@ void component_list_destroy(component_list_t *list)
     while (list->headp.lh_first != NULL) /* Delete. */
     {
         component_data_free(list->headp.lh_first->component);
+        struct comp_entry * aux = list->headp.lh_first;
         LIST_REMOVE(list->headp.lh_first, entries);
+        free(aux);
         list->items--;
     }
 }
@@ -57,6 +59,8 @@ void component_list_init(component_list_t *comp_list, int max_items)
         comp_list->max_items = max_items;
     else
         comp_list->autolimit = true;
+
+    comp_list->last_element = NULL;
 }
 
 void match_list_init(match_list_t * list)
@@ -78,9 +82,9 @@ void match_data_free(match_data_t *data)
     free(data->quality_text);
     component_list_destroy(&data->component_list);
 
-    memset(data, 0, sizeof(*data));
-  //  free(data);
-   // data = NULL;
+   // memset(data, 0, sizeof(*data));
+    free(data);
+    data = NULL;
 }
 
 void match_list_destroy(match_list_t *list)
@@ -88,7 +92,9 @@ void match_list_destroy(match_list_t *list)
     while (list->headp.lh_first != NULL) /* Delete. */
     {
         match_data_free(list->headp.lh_first->match);
+        struct entry * aux = list->headp.lh_first;
         LIST_REMOVE(list->headp.lh_first, entries);
+        free(aux);
         list->items--;
     }
 }
@@ -108,26 +114,65 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
         struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert at the head. */
         LIST_INSERT_HEAD(&list->headp, nn, entries);
         nn->component = new_comp;
-        list->items = 1;
+        list->items++;
+        list->last_element = nn;
+        list->last_element_aux = NULL;
         return true;
     }
     else if (val)
     {
-        for (struct comp_entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
+        if (list->last_element && list->last_element->component && !val(list->last_element->component, new_comp))
         {
+            if (list->items >= list->max_items)
+                return false;
+            
+            struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert after. */
+            nn->component = new_comp; 
+            LIST_INSERT_AFTER(list->last_element, nn, entries);
+            list->last_element_aux = list->last_element;
+            list->last_element = nn; 
+            list->items++;
+            return true;
+        }
+        struct comp_entry *np = list->headp.lh_first;
+        for (; np->entries.le_next != NULL; np = np->entries.le_next)
+        {
+            if (!np->entries.le_next->entries.le_next)
+                list->last_element_aux = np;
+
             if (val(np->component, new_comp))
             {
-                struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert after. */
-                nn->component = new_comp;
-                LIST_INSERT_BEFORE(np, nn, entries);
-                if (remove_a && list->items == list->max_items)
-                    LIST_REMOVE(np, entries);
-                else
-                    list->items++;
-
-                return true;
+                break;
             }
         }
+
+        struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert after. */
+        nn->component = new_comp; 
+        LIST_INSERT_BEFORE(np, nn, entries);
+       
+        if (!np->entries.le_next)
+        {
+            list->last_element = np;
+            list->last_element_aux = nn;
+        }
+        list->items++;
+
+        if (remove_a && list->items > list->max_items)
+        {
+            component_data_free(list->last_element->component);
+            list->last_element->component = NULL;
+            if (list->last_element_aux)
+            {
+                free(list->last_element);
+                list->last_element_aux->entries.le_next = NULL;
+                list->last_element = list->last_element_aux;
+                list->last_element_aux = NULL;
+            }
+         
+            list->last_element->entries.le_next = NULL;
+            list->items--;
+        }
+         return true;
     }
     else
     {
@@ -143,12 +188,6 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
 
 bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(match_data_t *a, match_data_t *b), bool remove_a)
 {
-    /*if (list->items + 1 > list->max_items)
-    {
-        scanlog("Max items reached");
-        match_data_free(new_match);
-        return false;
-    }*/
     if (!new_match->component_list.match_ref)
     {
         component_list_init(&new_match->component_list, list->scan_ref->max_components_to_process);
@@ -167,6 +206,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         LIST_INSERT_HEAD(&list->headp, nn, entries);
         nn->match = new_match;
         list->last_element = nn;
+        list->last_element_aux = NULL;
         list->items = 1;
         return true;
     }
@@ -174,84 +214,78 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
     {
         bool inserted = false;
 
-        if (list->last_element && list->items < list->max_items && !val(list->last_element->match, new_match))
-            {
-                struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
-                nn->match = new_match;
-                LIST_INSERT_AFTER(list->last_element, nn, entries);
-                list->last_element = nn;
-                list->items++;
-                inserted = true;
-            }
-        
-        for (struct entry *np = list->headp.lh_first; np != NULL && !inserted; np = np->entries.le_next)
+        if (list->last_element && !val(list->last_element->match, new_match))
         {
-            if (np->entries.le_next == NULL)
-                list->last_element = np;
-
-            if (val(np->match, new_match))
-            {
-                struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
-                nn->match = new_match;
-                LIST_INSERT_BEFORE(np, nn, entries);
-                  list->items++;
-  
-                inserted = true;
-                break;
-            }
-
+            if (!list->autolimit && list->items >= list->max_items)
+                return false;
+                
+            struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
+            nn->match = new_match;
+            LIST_INSERT_AFTER(list->last_element, nn, entries);
+            list->last_element_aux = list->last_element;
+            list->last_element = nn;
+            list->items++;
+            inserted = true;
         }
-
-        // if(!inserted)
-        // {
-        //     struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
-        //     nn->match = new_match;
-        //     LIST_INSERT_AFTER(list->last_element, nn, entries);
-        //     list->items++;
-        //     if (nn->entries.le_next == NULL)
-        //         list->last_element = nn;
-        // } 
-
-        if (list->autolimit)
+        
+        struct entry *np = list->headp.lh_first;
+        if (!inserted)
         {
-            while  (list->last_element && (list->headp.lh_first->match->hits * 0.75 > list->last_element->match->hits) && list->items > 1)
+            for (; np->entries.le_next != NULL; np = np->entries.le_next)
             {
-                struct entry * aux = *list->last_element->entries.le_prev;
-                match_data_free(list->last_element->match);
-                if (aux)
+                if (val(np->match, new_match))
                 {
-                   // LIST_REMOVE(aux, entries);
-                    aux->entries.le_next = NULL;
-                    list->items--;
-                    list->last_element = aux;
-                   
-                }
-                else
-                {
-                    list->last_element = list->headp.lh_first;
                     break;
                 }
-                 list->last_element->entries.le_next = NULL;
+
+            }
+
+            struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
+            nn->match = new_match;
+            LIST_INSERT_BEFORE(np, nn, entries);
+            list->items++;
+            
+
+            if (np->entries.le_next == NULL)
+            {
+                list->last_element_aux = nn;
+                list->last_element = np;
             }
         }
+        
+        if (list->autolimit && (list->headp.lh_first->match->hits * 0.75 > list->last_element->match->hits))
+        {
+            
+            np = list->headp.lh_first;
+            for (; np->entries.le_next != NULL && (list->headp.lh_first->match->hits * 0.75 <= np->match->hits); np = np->entries.le_next)
+            {
+
+            }
+            list->last_element = np;
+            list->last_element_aux = NULL;
+            while (list->last_element->entries.le_next != NULL) /* Delete. */
+            {
+                match_data_free(list->last_element->entries.le_next->match);
+                struct entry * aux = list->last_element->entries.le_next;
+                LIST_REMOVE(list->last_element->entries.le_next, entries);
+                free(aux);
+                list->items--;
+            }
+            list->last_element->entries.le_next = NULL;
+        }
         else if (list->last_element && !list->autolimit && remove_a && (list->items > list->max_items))
-                {
-                    struct entry * aux = *list->last_element->entries.le_prev;
-                    match_data_free(list->last_element->match);
-                    list->last_element->match = NULL;                        
-                   // printf("elimina a- size %d\n",list->items);
-               //     LIST_REMOVE(list->last_element, entries);
-                   // free(list->last_element);
-                    list->last_element = NULL;
-                    if (aux)
-                    {
-                        aux->entries.le_next = NULL;
-                        list->last_element = aux;
-                        list->items--;
-                       // printf("elimina b - size %d\n",list->items);
-                    }
-                    list->last_element->entries.le_next = NULL;
-                }
+        {
+            match_data_free(list->last_element->match);
+            if (list->last_element_aux)
+            {
+                free(list->last_element);
+                list->last_element = list->last_element_aux;
+                list->items--;
+            }
+            
+            list->last_element_aux = NULL;
+            list->last_element->entries.le_next = NULL;
+        }
 
         scanlog("Add to list add: %d\n", list->items);
         return true;
@@ -262,10 +296,9 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
         nn->match = new_match;
         LIST_INSERT_AFTER(list->headp.lh_first, nn, entries);
-        return true;
     }
 
-    return false;
+    return true;
 }
 
 void match_list_debug(match_list_t *list)

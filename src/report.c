@@ -328,6 +328,9 @@ char *file_skip_release(char *purl, char *file)
 // }
 bool print_json_component(component_data_t * component)
 {
+	if (!component)
+		return true;
+		
 	scanlog("print component\n");
 	if (engine_flags & DISABLE_BEST_MATCH)
 		printf("{");
@@ -389,6 +392,7 @@ bool print_json_component(component_data_t * component)
 	if (engine_flags & DISABLE_BEST_MATCH)	
 		printf("}");
 	
+	fflush(stdout);
 	return false;
 }
 
@@ -463,5 +467,6 @@ bool print_json_match(struct match_data_t * match)
 	if (engine_flags & DISABLE_BEST_MATCH)
 		printf("}");
 	
+	fflush(stdout);
 	return true;
 }

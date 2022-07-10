@@ -184,17 +184,17 @@ void recurse_directory(char *name)
 		else if (is_file(path))
 		{
 			/* Scan file directly */
-			scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components);
-
 			bool wfp = false;
 			if (extension(path)) if (!strcmp(extension(path), "wfp")) wfp = true;
 		
 			if (wfp)
-				wfp_scan(scan);
+				wfp_scan(path, scan_max_snippets, scan_max_components);
 			else
+			{
+				scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components);
 				ldb_scan(scan);
+			}
 
-			scan_data_free(scan);
 		}
 
 		free(path);
@@ -480,11 +480,9 @@ int main(int argc, char **argv)
 		/* Scan file */
 		else
 		{
-			/* Init scan structure */
-			scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components);
-			
+			/* Init scan structure */			
 			if (ishash) 
-				hash_scan(scan);
+				hash_scan(target, scan_max_snippets, scan_max_components);
 			else
 			{
 				bool wfp_extension = false;
@@ -492,14 +490,18 @@ int main(int argc, char **argv)
 					if (force_wfp) wfp_extension = true;
 
 				/* Scan wfp file */
-				if (wfp_extension) wfp_scan(scan);
+				if (wfp_extension) 
+					wfp_scan(target, scan_max_snippets, scan_max_components);
 
 				/* Scan file directly */
-				else ldb_scan(scan);
+				else 
+				{
+					scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components);
+					ldb_scan(scan);
+				}
 			}
 
-			/* Free scan data */
-			scan_data_free(scan);
+
 		}
 
 		/* Close main report structure */
