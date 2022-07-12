@@ -772,6 +772,7 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 				break;
 			strcpy((char *) url_rec, "9999");
 			ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *) url_rec);
+			printf("%s - %s\n", date, oldest);
 
 			/* Extract date from url_rec */
 			*date = 0;
@@ -810,12 +811,18 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 			}
 		}
 	}
+		uint8_t *best_rec = NULL;
 
-	if (*oldest)
+	if (strcmp(oldest, "9999"))
 	{
-		uint8_t *best_rec = old_rec;
-		scanlog("shortest_paths_check() best_rec = %s\n", best_rec);
-
+		best_rec = old_rec;
+		scanlog("shortest_paths_check() best_rec = %s - %s\n", oldest, best_rec);
+	}
+	else
+	{
+		best_rec = url_rec;
+		scanlog("shortest_paths_check() - no date = %s\n", best_rec);
+	}
 		/* Fetch vendor and component name */
 		char vendor[MAX_ARGLN + 1] = "\0";
 		char component[MAX_ARGLN + 1] = "\0";
@@ -829,8 +836,8 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 		/* Insert winning record and select first and only item */
 		update_component_rank(component_rank, vendor, component, purl, purl_md5, files[path_id].path, files[path_id].url_id, (char *) best_rec);
 		selected = 0;
-	}
-	else scanlog("shortest_paths_check() best_rec not selected\n");
+	
+
 
 	free(url_rec);
 	free(old_rec);

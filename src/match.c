@@ -335,7 +335,7 @@ void add_match(int position, match_data match, match_data *matches)
 {
 
 	/* Verify if metadata is complete */
-	if (!*match.url || !*match.version || !*match.file || !*match.purl[0] || strlen(match.release_date) < 4)
+	if (!*match.url || !*match.version || !*match.file || !*match.purl[0])
 	{
 		scanlog("Metadata is incomplete: %s,%s,%s,%s,%s\n", match.purl[0], match.version, match.url, match.file, match.release_date);
 		return;
