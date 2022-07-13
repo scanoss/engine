@@ -72,7 +72,8 @@ void normalise_version(char *version, char *component)
 	/* Remove trailing ".orig" from version */
 	char *orig = strstr(aux, ".orig");
 	if (orig) *orig = 0;
-	strcpy(version, aux);
+	if (*aux)
+		strcpy(version, aux);
 }
 
 /**
@@ -161,7 +162,7 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
  */
 void update_version_range(component_data_t *component, release_version *release)
 {
-	if (!*release->date || !*release->version) return;
+	if (!*release->date) return;
 
 
 	if (strcmp(release->date, component->release_date) < 0)
