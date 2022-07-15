@@ -75,14 +75,14 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	*/
 void scan_data_free(scan_data_t * scan)
 {
+	for (int i=0; i < scan->multiple_component_list_index; i++)
+		match_list_destroy(scan->matches_secondary[i]);
+	
 	free(scan->file_path);
 	free(scan->file_size);
 	free(scan->hashes);
 	free(scan->lines);
 	free(scan->matchmap);
-
-	for (int i=0; i < scan->multiple_component_list_index; i++)
-		match_list_destroy(scan->matches_secondary[i]);
 	free(scan);
 	scan = NULL;
 }

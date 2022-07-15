@@ -83,7 +83,7 @@ match_list_t * match_list_init(bool autolimit, int max_items, scan_data_t * scan
 
 void match_data_free(match_data_t *data)
 {
-    if (!data)
+    if (!data || !(data->type == MATCH_SNIPPET || data->type == MATCH_FILE))
         return;
 
     free(data->line_ranges);
@@ -92,14 +92,15 @@ void match_data_free(match_data_t *data)
     free(data->crytography_text);
     free(data->quality_text);
     component_list_destroy(&data->component_list);
-
-   // memset(data, 0, sizeof(*data));
     free(data);
     data = NULL;
 }
 
 void match_list_destroy(match_list_t *list)
 {
+    if (!list->items)
+        return;
+
     while (list->headp.lh_first != NULL) /* Delete. */
     {
         match_data_free(list->headp.lh_first->match);
@@ -213,7 +214,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
 
     if (!list->headp.lh_first)
     {
-        struct entry *nn = malloc(sizeof(struct entry)); /* Insert at the head. */
+        struct entry *nn = calloc(1, sizeof(struct entry)); /* Insert at the head. */
         LIST_INSERT_HEAD(&list->headp, nn, entries);
         nn->match = new_match;
         list->last_element = nn;
@@ -230,7 +231,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
             if (!list->autolimit && list->items >= list->max_items)
                 return false;
                 
-            struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
+            struct entry *nn = calloc(1, sizeof(struct entry)); /* Insert after. */
             nn->match = new_match;
             LIST_INSERT_AFTER(list->last_element, nn, entries);
             list->last_element_aux = list->last_element;
@@ -251,7 +252,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
 
             }
 
-            struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
+            struct entry *nn = calloc(1, sizeof(struct entry)); /* Insert after. */
             nn->match = new_match;
             LIST_INSERT_BEFORE(np, nn, entries);
             list->items++;
@@ -304,7 +305,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
     else
     {
         scanlog("Add to list nc\n");
-        struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
+        struct entry *nn = calloc(1,sizeof(struct entry)); /* Insert after. */
         nn->match = new_match;
         LIST_INSERT_AFTER(list->headp.lh_first, nn, entries);
         list->items++;

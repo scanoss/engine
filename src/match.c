@@ -84,7 +84,7 @@ void output_matches_json(scan_data_t *scan)
 
 	/* Open file structure */
 	//json_open_file(scan->file_path);
-
+	uint64_t engine_flags_aux = engine_flags;
 	/* Print matches */
 	if (engine_flags & DISABLE_BEST_MATCH)
 	{
@@ -105,9 +105,9 @@ void output_matches_json(scan_data_t *scan)
 		match_list_t * best_list = match_select_m_component_best(scan);
 		scanlog("<<<best list items: %d>>>\n", best_list->items);
 		match_list_print(best_list, print_json_match, ",");
-		free(best_list);
+		match_list_destroy(best_list);
 	}
-	else if (scan->best_match)
+	else if (scan->best_match && scan->best_match->component_list.items)
 	{
 		printf("\"%s\": [{", scan->file_path);
 		print_json_match(scan->best_match);
@@ -119,6 +119,7 @@ void output_matches_json(scan_data_t *scan)
 	}
 	
 	json_close_file(scan);
+	engine_flags = engine_flags_aux;
 }
 
 /**
