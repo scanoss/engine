@@ -83,26 +83,40 @@ void output_matches_json(scan_data_t *scan)
 	first_file = false;
 
 	/* Open file structure */
-	json_open_file(scan->file_path);
+	//json_open_file(scan->file_path);
 
 	/* Print matches */
-	if (scan->matches.headp.lh_first && (engine_flags & DISABLE_BEST_MATCH))
+	if (engine_flags & DISABLE_BEST_MATCH)
 	{
-		if (scan->max_snippets_to_process > 1)
+		printf("\"%s\": [", scan->file_path);
+		bool first = true;
+		for (int i=0; i < scan->multiple_component_list_index; i++)
 		{
-			match_list_t * best_list = match_select_m_best(scan);
-			scanlog("<<<best list items: %d>>>\n", best_list->items);
-			//match_list_debug(best_list);
-			match_list_print(best_list, print_json_match, ",");
-			free(best_list);
+			if (!first)
+				printf(",");
+			match_list_print(scan->matches_secondary[i], print_json_match, ","); //corregir
+			first = false;
 		}
-		else
-			match_list_print(&scan->matches, print_json_match, ",");
+	}
+	else if (scan->multiple_component_list_index > 1  && scan->max_snippets_to_process > 1)
+	{
+		engine_flags |= DISABLE_BEST_MATCH;
+		printf("\"%s\": {\"matches\":[", scan->file_path);
+		match_list_t * best_list = match_select_m_component_best(scan);
+		scanlog("<<<best list items: %d>>>\n", best_list->items);
+		match_list_print(best_list, print_json_match, ",");
+		free(best_list);
 	}
 	else if (scan->best_match)
+	{
+		printf("\"%s\": [{", scan->file_path);
 		print_json_match(scan->best_match);
+	}
 	else
+	{
+		printf("\"%s\": [{", scan->file_path);
 		print_json_nomatch(scan);
+	}
 	
 	json_close_file(scan);
 }
@@ -293,7 +307,6 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 		/* Extract date from url_rec */
 		char date[MAX_ARGLN]= "0";
 		extract_csv(date, (char *) url_rec , 4, MAX_ARGLN);
-		if (!*date) continue;
 
 		component_data_t * new_comp = calloc(1, sizeof(*new_comp));
 		bool result = fill_component(new_comp, files[path_rank[r].id].url_id, files[path_rank[r].id].path, (uint8_t*) url_rec);
@@ -303,7 +316,6 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 			if (asset_declared(new_comp))
 				new_comp->identified = true;
 			
-		//	add_versions(new_comp,files, records);
 			if (!component_list_add(component_list, new_comp, component_date_comparation, true))
 				component_data_free(new_comp);
 		}
@@ -412,13 +424,11 @@ bool find_oldest(match_data_t * fp1, void * fp2)
 		scan->best_match = fp1;
 	else
 	{
-	//	printf(scan->best_match->component_list.headp.lh_first->component->version);
-	//	printf(fp1->component_list.headp.lh_first->component->release_date);
-	 if (!strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) &&
-			scan->best_match->component_list.headp.lh_first->component->age < fp1->component_list.headp.lh_first->component->age)
-		scan->best_match = fp1;
-	else if (strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) > 0)
-		scan->best_match = fp1;
+		if (!strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) &&
+				scan->best_match->component_list.headp.lh_first->component->age < fp1->component_list.headp.lh_first->component->age)
+			scan->best_match = fp1;
+		else if (strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) > 0)
+			scan->best_match = fp1;
 	}
 
 	return false; 
@@ -426,6 +436,11 @@ bool find_oldest(match_data_t * fp1, void * fp2)
 
 bool find_oldest_match(match_data_t * fp1, match_data_t * fp2)
 {
+	if (!fp1)
+	{
+		return true;
+	}
+
 	if (!fp2->component_list.headp.lh_first || !fp1->component_list.headp.lh_first)
 		return false;
 
@@ -434,20 +449,58 @@ bool find_oldest_match(match_data_t * fp1, match_data_t * fp2)
 
 void match_select_best(scan_data_t * scan)
 {
-	match_list_process(&scan->matches, find_oldest);
-}
+	if (! scan->multiple_component_list_index)
+		return;
 
+	for (int  i = 0; i < scan->multiple_component_list_index; i++)
+	{
+		struct entry * item = NULL;
+		LIST_FOREACH(item, &scan->matches_secondary[i]->headp, entries)
+		{
+			if (find_oldest_match(scan->matches_secondary[i]->best_match, item->match))
+				scan->matches_secondary[i]->best_match = item->match;
+		}
+	}
+
+	int max_hits = 0;
+	int index = 0;
+	for (int  i = 0; i < scan->multiple_component_list_index; i++)
+	{
+		if (!scan->matches_secondary[i]->best_match)
+			continue;
+
+		if (scan->matches_secondary[i]->best_match->hits > max_hits)
+		{
+			max_hits = scan->matches_secondary[i]->best_match->hits;
+			index = i;
+		}
+	}
+
+	scan->best_match = scan->matches_secondary[index]->best_match;
+	
+}
+/*
 match_list_t * match_select_m_best(scan_data_t * scan)
 {
 	scanlog("<<<select_best_match_M: %d>>>>\n", scan->max_snippets_to_process);
-	match_list_t * final = calloc(1, sizeof(*final));
-	match_list_init(final);
-	final->max_items = scan->max_snippets_to_process;
-	final->autolimit = false;
+	match_list_t * final = 	match_list_init(false,  scan->max_snippets_to_process);
 	struct entry * item = NULL;
 	LIST_FOREACH(item, &scan->matches.headp, entries)
 		match_list_add(final, item->match, find_oldest_match, true);
 
+	return final;
+}*/
+
+match_list_t * match_select_m_component_best(scan_data_t * scan)
+{
+	scanlog("<<<select_best_match_M: %d>>>>\n", scan->max_snippets_to_process);
+	match_list_t * final = match_list_init(false, scan->max_snippets_to_process, NULL);
+	
+	for (int  i = 0; i < scan->multiple_component_list_index; i++)
+	{
+		match_list_add(final, scan->matches_secondary[i]->best_match, find_oldest_match, true);
+		scan->matches_secondary[i]->best_match->component_list.max_items = 1; //harcoded to show only fist component in report.
+	}
 	return final;
 
 }
@@ -480,14 +533,15 @@ void compile_matches(scan_data_t *scan)
 	}
 	else
 	{
+		scan->matches_secondary[0] = match_list_init(true, scan->max_snippets_to_process, scan);
+		scan->multiple_component_list_index = 1;
 		match_data_t * match_new = calloc(1, sizeof(match_data_t));
 		match_new->type = scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
 		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);
-		if (!match_list_add(&scan->matches, match_new, NULL, false))
+		if (!match_list_add(scan->matches_secondary[0], match_new, NULL, false))
 		{
 			match_data_free(match_new);
-			//free(match_new);
 		}
 	}
 	
@@ -501,10 +555,10 @@ void compile_matches(scan_data_t *scan)
 
 		if (scan->match_type != MATCH_NONE)
 		{
-			//scanlog("<<<MATCH LIST SIZE: %d- %d / %d>>>>>>\n", scan->matches.items, scan->matches.headp.lh_first->match->hits, scan->matches.last_element->match->hits);
-			match_list_process(&scan->matches, match_process);
-			if (scan->max_snippets_to_process == 1)
-				match_select_best(scan);
 
+			for (int i=0; i < scan->multiple_component_list_index; i++)
+				match_list_process(scan->matches_secondary[i], match_process);
+
+			match_select_best(scan);
 		}
 }

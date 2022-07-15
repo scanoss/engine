@@ -99,7 +99,7 @@ void json_close_file(scan_data_t * scan)
 	if (!(engine_flags & DISABLE_BEST_MATCH))
 		printf("}]");
 	
-	if (engine_flags & DISABLE_BEST_MATCH)
+	if (scan->multiple_component_list_index > 1  && scan->max_snippets_to_process > 1)
 		printf("}");
 
 }
@@ -460,7 +460,12 @@ bool print_json_match(struct match_data_t * match)
 	else
 	{
 		printf(",\"components\":[");
-		component_list_print(&match->component_list, print_json_component, ",");
+		
+		if (match->component_list.max_items > 1)
+			component_list_print(&match->component_list, print_json_component, ",");
+		else
+			print_json_component(match->component_list.headp.lh_first->component);
+
 		printf("]");
 	}
 	

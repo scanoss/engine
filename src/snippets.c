@@ -181,8 +181,13 @@ bool test(match_data_t * a, match_data_t * b)
 	else
 		return false;
 }
+
+
 void biggest_snippet(scan_data_t *scan)
 {
+	for (int i=0; i< scan->multiple_component_list_index; i++)
+		scan->multiple_component_list_indirection_from[i] = -1;
+
 	for (int j = 0; j < scan->matchmap_size; j++)
 	{
 		if (scan->matchmap[j].hits >= min_match_hits)
@@ -192,12 +197,32 @@ void biggest_snippet(scan_data_t *scan)
 			match_new->hits = scan->matchmap[j].hits;
 			match_new->matchmap_reg = scan->matchmap[j].md5;
 			match_new->type = MATCH_SNIPPET;
+			match_new->from = scan->matchmap[j].range->from;
 			strcpy(match_new->source_md5, scan->source_md5);
-			if (!match_list_add(&scan->matches, match_new, test, true))
-				match_data_free(match_new);
+
+			bool found = false;
+			int i = 0;
+			for (; i< scan->multiple_component_list_index; i++)
+			{
+				if(scan->multiple_component_list_indirection_from[i] >-1 && 
+					abs(scan->multiple_component_list_indirection_from[i] - match_new->from) < 15)
+					{	
+						found = true;
+						break;
+					}
+			}
+			if (!found)
+			{
+				scan->multiple_component_list_indirection_from[scan->multiple_component_list_index] = match_new->from;
+				scan->matches_secondary[scan->multiple_component_list_index] = match_list_init(true, 1, scan);
+				i = scan->multiple_component_list_index;
+				scan->multiple_component_list_index++;
+			}
+
+			if (!match_list_add(scan->matches_secondary[i], match_new, test, true))
+				match_data_free(match_new);	
 		}
 	}
-	//match_list_debug(list);
 }
 
 /**

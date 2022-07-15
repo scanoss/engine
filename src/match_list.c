@@ -63,11 +63,22 @@ void component_list_init(component_list_t *comp_list, int max_items)
     comp_list->last_element = NULL;
 }
 
-void match_list_init(match_list_t * list)
+match_list_t * match_list_init(bool autolimit, int max_items, scan_data_t * scan_ref)
 {
+    match_list_t * list =  calloc(1, sizeof(match_list_t));
     LIST_INIT(&list->headp); /* Initialize the list. */
     list->items = 0;
-    list->max_items = 3;
+
+    if (max_items)
+		 list->max_items = max_items;
+    else
+		 list->max_items = 1;
+   
+    list->autolimit = autolimit;
+    list->best_match = NULL;
+    list->scan_ref = scan_ref;
+
+    return list;
 }
 
 void match_data_free(match_data_t *data)
@@ -296,6 +307,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         struct entry *nn = malloc(sizeof(struct entry)); /* Insert after. */
         nn->match = new_match;
         LIST_INSERT_AFTER(list->headp.lh_first, nn, entries);
+        list->items++;
     }
 
     return true;
@@ -344,7 +356,7 @@ void component_list_print(component_list_t *list, bool (*printer)(component_data
         if (printer(np->component))
             break;
 
-        if (separator && np->entries.le_next)
+        if (separator && np->entries.le_next && np->entries.le_next->component)
             printf("%s", separator);
     }
 }

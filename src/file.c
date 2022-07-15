@@ -202,7 +202,7 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	file_recordset *files = ptr;
 
 	memcpy(files[iteration].url_id, raw_data, MD5_LEN);
-	strcpy(files[iteration].path, decrypted);
+	strncpy(files[iteration].path, decrypted, MAX_FILE_PATH);
 	free(decrypted);
 	
 	files[iteration].path_ln = dir_count(files[iteration].path);

@@ -48,18 +48,6 @@
 
 char *ignored_assets = NULL;
 
-/** @brief Calculate and write source wfp md5 in scan->source_md5 
-    @param scan Scan data
-	*/
-static void calc_wfp_md5(scan_data_t *scan, char * target)
-{
-	uint8_t tmp_md5[16];
-	get_file_md5(target, tmp_md5);
-	char *tmp_md5_hex = md5_hex(tmp_md5);
-	strcpy(scan->source_md5, tmp_md5_hex);
-	free(tmp_md5_hex);
-}
-
 /** @brief Init scan structure 
     @param target File to scan
     @return Scan data
@@ -75,21 +63,10 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	scan->matchmap = calloc(MAX_FILES, sizeof(matchmap_entry));
 	scan->match_type = MATCH_NONE;
 	*scan->snippet_ids = 0;
-	match_list_init(&scan->matches);
-	scan->matches.scan_ref = scan;
+
 	scan->max_components_to_process = max_components;
 	scan->max_snippets_to_process = max_snippets;
-
-	if (max_snippets)
-		scan->matches.max_items = max_snippets;
-	else
-		scan->matches.max_items = 1;
 	
-	scan->matches.autolimit = true;
-
-	/* Get wfp MD5 hash */
-	if (extension(target)) if (!strcmp(extension(target), "wfp")) calc_wfp_md5(scan, target);
-
 	return scan;
 }
 
@@ -103,7 +80,9 @@ void scan_data_free(scan_data_t * scan)
 	free(scan->hashes);
 	free(scan->lines);
 	free(scan->matchmap);
-	match_list_destroy(&scan->matches);
+
+	for (int i=0; i < scan->multiple_component_list_index; i++)
+		match_list_destroy(scan->matches_secondary[i]);
 	free(scan);
 	scan = NULL;
 }
@@ -214,7 +193,11 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 		fprintf(stdout, "E017 Cannot open target");
 		return EXIT_FAILURE;
 	}
-	bool read_data = false;
+
+	/* Get wfp MD5 hash */
+	uint8_t tmp_md5[16];
+	get_file_md5(path, tmp_md5);
+	char *tmp_md5_hex = md5_hex(tmp_md5);
 
 	/* Read line by line */
 	while ((lineln = getline(&line, &len, fp)) != -1)
@@ -240,15 +223,15 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			const int tagln = 5; // len of 'file='
 
 			/* Get file MD5 */
-			//char *hexmd5 = calloc(MD5_LEN * 2 + 1, 1);
 			char * hexmd5 = strndup(line + tagln, MD5_LEN * 2);
 
 			/* Extract fields from file record */
 			calloc(LDB_MAX_REC_LN, 1);  
-			//strcpy((char *)rec, line + tagln + (MD5_LEN * 2) + 1);
-			rec = strdup(line + tagln + (MD5_LEN * 2) + 1);
-		
-			scan = scan_data_init(field_n(2, (char *)rec), scan_max_snippets, scan_max_components);
+			
+			rec = (uint8_t*) strdup(line + tagln + (MD5_LEN * 2) + 1);
+			char * target = field_n(2, (char *)rec);
+			scan = scan_data_init(target, scan_max_snippets, scan_max_components);
+			strcpy(scan->source_md5, tmp_md5_hex);
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
 			scan->preload = true;
 			free(rec);
@@ -294,7 +277,8 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 
 	fclose(fp);
 	if (line) free(line);
-
+	
+	free(tmp_md5_hex);
 	return EXIT_SUCCESS;
 }
 
@@ -383,8 +367,8 @@ void ldb_scan(scan_data_t * scan)
 	compile_matches(scan);
 	//match_list_print(matches);
 	
-	if (scan->matches.headp.lh_first && scan->match_type != MATCH_NONE)
-	{
+	//if (scan->matches.headp.lh_first && scan->match_type != MATCH_NONE)
+	//{
 		/* Debug match info */
 	//	scanlog("%d matches compiled:\n", total_matches);
 	//	if (debug_on) for (int i = 0; i < total_matches; i++)
@@ -417,7 +401,7 @@ void ldb_scan(scan_data_t * scan)
 		// 	scanlog("Starting post-scan analysis\n");
 		// 	post_scan(matches);
 		// }
-	}
+	//}
 
 	/* Output matches */
 	scanlog("Match output starts\n");

@@ -79,6 +79,7 @@ typedef struct match_data_t
 	component_list_t component_list;
 	char * quality_text;
 	char * crytography_text;
+	uint16_t from;
 } match_data_t;
 
 LIST_HEAD(listhead, entry) head;
@@ -97,6 +98,7 @@ typedef struct match_list_t
 	scan_data_t * scan_ref;
 	struct entry * last_element;  
 	struct entry * last_element_aux;
+	match_data_t * best_match;
 } match_list_t;
 
 #define MAX_SNIPPET_IDS_RETURNED 10000
@@ -118,6 +120,7 @@ typedef struct matchmap_entry
 	uint8_t lastwfp[WFP_LN];
 } matchmap_entry;
 
+#define MAX_MULTIPLE_COMPONENTS 10
 typedef struct scan_data_t
 {
 	uint8_t md5[MD5_LEN];
@@ -140,18 +143,23 @@ typedef struct scan_data_t
 	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1];
 	char matched_percent[MAX_FIELD_LN];
 	bool identified;
-	match_list_t matches;
+	match_list_t * matches_secondary[MAX_MULTIPLE_COMPONENTS];
+	int multiple_component_list_index;
+	int multiple_component_list_indirection_from[MAX_MULTIPLE_COMPONENTS];
 	match_data_t * best_match;
 	int max_snippets_to_process;
 	int max_components_to_process;
+	int max_snippets_to_show;
+	int max_components_to_show;
 } scan_data_t;
 
+scan_data_t * scan_data_init(char *target, int max_snippets, int max_components);
 
 void match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa), char * separator);
 void match_list_debug(match_list_t * list);
 bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) (match_data_t * a, match_data_t * b), bool remove_a);
 void match_list_destroy(match_list_t * list);
-void match_list_init(match_list_t * list);
+match_list_t * match_list_init(bool autolimit, int max_items, scan_data_t * scan_ref);
 void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa, void * fpb));
 bool match_list_is_empty(match_list_t * list);
 void match_data_free(match_data_t *data);
