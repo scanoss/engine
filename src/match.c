@@ -92,7 +92,7 @@ void output_matches_json(scan_data_t *scan)
 		bool first = true;
 		for (int i=0; i < scan->multiple_component_list_index; i++)
 		{
-			if (!first)
+			if (!first && scan->matches_secondary[i]->items && scan->matches_secondary[i]->best_match->component_list.items)
 				printf(",");
 			match_list_print(scan->matches_secondary[i], print_json_match, ","); //corregir
 			first = false;
@@ -495,13 +495,25 @@ match_list_t * match_select_m_best(scan_data_t * scan)
 match_list_t * match_select_m_component_best(scan_data_t * scan)
 {
 	scanlog("<<<select_best_match_M: %d>>>>\n", scan->max_snippets_to_process);
-	match_list_t * final = match_list_init(false, scan->max_snippets_to_process, NULL);
+	match_list_t * final = match_list_init(false, scan->max_snippets_to_process, scan);
 	
 	for (int  i = 0; i < scan->multiple_component_list_index; i++)
 	{
-		match_list_add(final, scan->matches_secondary[i]->best_match, find_oldest_match, true);
-		scan->matches_secondary[i]->best_match->component_list.max_items = 1; //harcoded to show only fist component in report.
+		if (!scan->matches_secondary[i]->best_match)
+			continue;
+		
+		if (!scan->matches_secondary[i]->best_match->component_list.items)
+			continue;
+
+		match_data_t * dup_match = match_data_copy(scan->matches_secondary[i]->best_match);
+		component_data_t * dup_comp = component_data_copy(scan->matches_secondary[i]->best_match->component_list.headp.lh_first->component);
+		component_list_init(&dup_match->component_list, 1);
+		dup_match->component_list.match_ref = dup_match;
+		component_list_add(&dup_match->component_list, dup_comp, NULL, false);
+		dup_match->component_list.max_items = 1; //harcoded to show only fist component in report.
+		match_list_add(final, dup_match, find_oldest_match, true);
 	}
+
 	return final;
 
 }

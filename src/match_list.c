@@ -7,35 +7,75 @@
 #include "debug.h"
 
 int list_size = 0;
+void free_and_null(void * pr)
+{
+    free(pr);
+    pr = NULL;
+}
 
 void component_data_free(component_data_t *data)
 {
     if (!data)
-    {
         return;
-    }
-    free(data->vendor);
-    free(data->component);
-    free(data->version);
-    free(data->release_date);
-    free(data->latest_release_date);
-    free(data->latest_version);
-    free(data->license);
-    free(data->url);
-    free(data->file);
-    free(data->main_url);
-    free(data->license_text);
-    free(data->dependency_text);
-    free(data->vulnerabilities_text);
-    free(data->copyright_text);
+
+    free_and_null(data->vendor);
+    free_and_null(data->component);
+    free_and_null(data->version);
+    free_and_null(data->release_date);
+    free_and_null(data->latest_release_date);
+    free_and_null(data->latest_version);
+    free_and_null(data->license);
+    free_and_null(data->url);
+    free_and_null(data->file);
+    free_and_null(data->main_url);
+    free_and_null(data->license_text);
+    free_and_null(data->dependency_text);
+    free_and_null(data->vulnerabilities_text);
+    free_and_null(data->copyright_text);
 
     for (int i = 0; i < MAX_PURLS; i++)
     {
-        free(data->purls[i]);
-        free(data->purls_md5[i]);
+        free_and_null(data->purls[i]);
+        free_and_null(data->purls_md5[i]);
     }
-    memset(data, 0, sizeof(*data));
-    free(data);
+    free_and_null(data);
+}
+
+component_data_t * component_data_copy(component_data_t * in)
+{
+    component_data_t * out = calloc(1, sizeof(*out));
+    out->age = in->age;
+    out->component = strdup(in->component);
+    out->vendor = strdup(in->vendor);
+    out->version = strdup(in->version);
+    out->release_date = strdup(in->release_date);
+    out->file = strdup(in->file);
+    out->file_md5_ref = in->file_md5_ref;
+    out->identified = in->identified;
+    out->latest_release_date = strdup(in->latest_release_date);
+    out->latest_version = strdup(in->latest_version);
+    out->license = strdup(in->license);
+    out->url_match = in->url_match;
+    memcpy(out->url_md5, in->url_md5, MD5_LEN);
+    if (in->main_url)
+        out->main_url = strdup(in->main_url);
+    out->url = strdup(in->url);
+    out->path_ln = in->path_ln;
+    for (int i = 0; i < MAX_PURLS; i++)
+    {
+        if (in->purls[i])
+            out->purls[i] = strdup(in->purls[i]);
+        else
+            break;
+
+        if (in->purls_md5[i])
+        {
+            out->purls_md5[i] = malloc(MD5_LEN);
+            memcpy(out->purls_md5[i], in->purls_md5[i], MD5_LEN);
+        }
+    }
+
+    return out;
 }
 
 void component_list_destroy(component_list_t *list)
@@ -46,6 +86,7 @@ void component_list_destroy(component_list_t *list)
         struct comp_entry * aux = list->headp.lh_first;
         LIST_REMOVE(list->headp.lh_first, entries);
         free(aux);
+        aux = NULL;
         list->items--;
     }
 }
@@ -83,17 +124,30 @@ match_list_t * match_list_init(bool autolimit, int max_items, scan_data_t * scan
 
 void match_data_free(match_data_t *data)
 {
-    if (!data || !(data->type == MATCH_SNIPPET || data->type == MATCH_FILE))
+    if (!data)
         return;
 
-    free(data->line_ranges);
-    free(data->oss_ranges);
-    free(data->matched_percent);
-    free(data->crytography_text);
-    free(data->quality_text);
+    free_and_null(data->line_ranges);
+    free_and_null(data->oss_ranges);
+    free_and_null(data->matched_percent);
+    free_and_null(data->crytography_text);
+    free_and_null(data->quality_text);
     component_list_destroy(&data->component_list);
-    free(data);
-    data = NULL;
+    
+    free_and_null(data);
+}
+
+match_data_t * match_data_copy(match_data_t * in)
+{
+    match_data_t * out = calloc(1, sizeof(*out));
+    memcpy(out->file_md5,in->file_md5,MD5_LEN);
+    out->hits = in->hits;
+    out->type = in->type;
+    out->line_ranges = strdup(in->line_ranges);
+    out->oss_ranges = strdup(in->oss_ranges);
+    out->matched_percent = strdup(in->matched_percent);
+    strcpy(out->source_md5, in->source_md5);
+    return out;
 }
 
 void match_list_destroy(match_list_t *list)
@@ -109,6 +163,8 @@ void match_list_destroy(match_list_t *list)
         free(aux);
         list->items--;
     }
+
+   free(list);
 }
 
 bool component_list_add(component_list_t *list, component_data_t *new_comp, bool (*val)(component_data_t *a, component_data_t *b), bool remove_a)
@@ -290,11 +346,15 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
             match_data_free(list->last_element->match);
             if (list->last_element_aux)
             {
+                LIST_REMOVE(list->last_element_aux->entries.le_next, entries);
                 free(list->last_element);
                 list->last_element = list->last_element_aux;
-                list->items--;
             }
-            
+            else
+            {
+                free(list->last_element);
+            }
+            list->items--;
             list->last_element_aux = NULL;
             list->last_element->entries.le_next = NULL;
         }

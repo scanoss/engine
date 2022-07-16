@@ -65,6 +65,7 @@ typedef struct component_list_t
 
 typedef struct match_data_t
 {
+	component_list_t component_list;
 	match_t type;
     int hits;
 	char * line_ranges;
@@ -76,7 +77,6 @@ typedef struct match_data_t
     uint8_t * matchmap_reg;
 	uint8_t * snippet_ids;
 	uint32_t * crclist;
-	component_list_t component_list;
 	char * quality_text;
 	char * crytography_text;
 	uint16_t from;
@@ -159,13 +159,15 @@ void match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa),
 void match_list_debug(match_list_t * list);
 bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) (match_data_t * a, match_data_t * b), bool remove_a);
 void match_list_destroy(match_list_t * list);
+match_data_t * match_data_copy(match_data_t * in);
 match_list_t * match_list_init(bool autolimit, int max_items, scan_data_t * scan_ref);
 void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa, void * fpb));
 bool match_list_is_empty(match_list_t * list);
 void match_data_free(match_data_t *data);
-
+void component_list_init(component_list_t *comp_list, int max_items);
 bool component_list_add(component_list_t * list, component_data_t * new_comp, bool (* val) (component_data_t * a, component_data_t * b), bool remove_a);
 void component_data_free(component_data_t * data);
 void component_list_print(component_list_t * list, bool (*printer) (component_data_t * fpa), char * separator);
 bool component_date_comparation(component_data_t * a, component_data_t * b);
+component_data_t * component_data_copy(component_data_t * in);
 #endif

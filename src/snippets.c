@@ -216,7 +216,8 @@ void biggest_snippet(scan_data_t *scan)
 				scan->multiple_component_list_indirection_from[scan->multiple_component_list_index] = match_new->from;
 				scan->matches_secondary[scan->multiple_component_list_index] = match_list_init(true, 1, scan);
 				i = scan->multiple_component_list_index;
-				scan->multiple_component_list_index++;
+				if (scan->multiple_component_list_index < MAX_MULTIPLE_COMPONENTS - 1)
+					scan->multiple_component_list_index++;
 			}
 
 			if (!match_list_add(scan->matches_secondary[i], match_new, test, true))
