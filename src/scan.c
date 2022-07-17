@@ -60,13 +60,15 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	scan->file_size = malloc(MAX_FILE_SIZE);
 	scan->hashes = malloc(MAX_FILE_SIZE);
 	scan->lines  = malloc(MAX_FILE_SIZE);
-	scan->matchmap = calloc(MAX_FILES, sizeof(matchmap_entry));
 	scan->match_type = MATCH_NONE;
 	*scan->snippet_ids = 0;
 
 	scan->max_components_to_process = max_components;
-	scan->max_snippets_to_process = max_snippets;
 	
+	scan->max_snippets_to_process = max_snippets > MAX_MULTIPLE_COMPONENTS ? MAX_MULTIPLE_COMPONENTS : max_snippets; 
+	scan->max_snippets_to_process = scan->max_snippets_to_process == 0 ? 1 : scan->max_snippets_to_process;
+	matchmap_max_files = scan->max_snippets_to_process * MAX_FILES;
+	scan->matchmap = calloc(matchmap_max_files, sizeof(matchmap_entry));
 	return scan;
 }
 

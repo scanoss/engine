@@ -511,7 +511,8 @@ match_list_t * match_select_m_component_best(scan_data_t * scan)
 		dup_match->component_list.match_ref = dup_match;
 		component_list_add(&dup_match->component_list, dup_comp, NULL, false);
 		dup_match->component_list.max_items = 1; //harcoded to show only fist component in report.
-		match_list_add(final, dup_match, find_oldest_match, true);
+		if (!match_list_add(final, dup_match, find_oldest_match, true))
+			match_data_free(dup_match);
 	}
 
 	return final;

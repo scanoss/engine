@@ -41,6 +41,7 @@
 #include "match_list.h"
 
 int map_rec_len;
+int matchmap_max_files = MAX_FILES;
 
 /**
  * @brief Set map hits to zero for the given match
@@ -181,12 +182,14 @@ bool test(match_data_t * a, match_data_t * b)
 	else
 		return false;
 }
-
+int snippet_definiton = 0;
 
 void biggest_snippet(scan_data_t *scan)
 {
-	for (int i=0; i< scan->multiple_component_list_index; i++)
+	for (int i=0; i< scan->max_snippets_to_process; i++)
 		scan->multiple_component_list_indirection_from[i] = -1;
+
+	snippet_definiton = range_tolerance / scan->max_snippets_to_process + min_match_lines;
 
 	for (int j = 0; j < scan->matchmap_size; j++)
 	{
@@ -199,26 +202,31 @@ void biggest_snippet(scan_data_t *scan)
 			match_new->type = MATCH_SNIPPET;
 			match_new->from = scan->matchmap[j].range->from;
 			strcpy(match_new->source_md5, scan->source_md5);
-
 			bool found = false;
 			int i = 0;
 			for (; i< scan->multiple_component_list_index; i++)
 			{
 				if(scan->multiple_component_list_indirection_from[i] >-1 && 
-					abs(scan->multiple_component_list_indirection_from[i] - match_new->from) < 15)
+					abs(scan->multiple_component_list_indirection_from[i] - match_new->from) < snippet_definiton)
 					{	
 						found = true;
 						break;
 					}
 			}
+
 			if (!found)
 			{
-				scan->multiple_component_list_indirection_from[scan->multiple_component_list_index] = match_new->from;
-				scan->matches_secondary[scan->multiple_component_list_index] = match_list_init(true, 1, scan);
-				i = scan->multiple_component_list_index;
-				if (scan->multiple_component_list_index < MAX_MULTIPLE_COMPONENTS - 1)
+				if (scan->multiple_component_list_index < scan->max_snippets_to_process)
+				{
+					scan->multiple_component_list_indirection_from[scan->multiple_component_list_index] = match_new->from;
+					scan->matches_secondary[scan->multiple_component_list_index] = match_list_init(true, 1, scan);
+					i = scan->multiple_component_list_index;
 					scan->multiple_component_list_index++;
+				}
+				else
+					i = scan->max_snippets_to_process - 1;
 			}
+							
 
 			if (!match_list_add(scan->matches_secondary[i], match_new, test, true))
 				match_data_free(match_new);	
@@ -249,7 +257,7 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 		if (size + datalen + 4 >= MAX_QUERY_RESPONSE) return true;
 
 		/* End recordset fetch if MAX_FILES are reached for the snippet */
-		if ((WFP_REC_LN * MAX_FILES) <= (size + datalen)) return true;
+		if ((WFP_REC_LN * matchmap_max_files) <= (size + datalen)) return true;
 
 		/* Save data and update dataln */
 		memcpy(record + size + 4, data, datalen);
@@ -648,7 +656,7 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 		if (found < 0)
 		{
 			/* Not found. Add MD5 to map */
-			if (scan->matchmap_size >= MAX_FILES) continue;
+			if (scan->matchmap_size >= matchmap_max_files) continue;
 
 			found = scan->matchmap_size;
 

@@ -342,19 +342,20 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
             list->last_element->entries.le_next = NULL;
         }
         else if (list->last_element && !list->autolimit && remove_a && (list->items > list->max_items))
-        {
-            match_data_free(list->last_element->match);
-            if (list->last_element_aux)
+        {           
+            if(!list->last_element_aux)
             {
+                for (list->last_element_aux = list->headp.lh_first; list->last_element_aux->entries.le_next->entries.le_next != NULL; list->last_element_aux = list->last_element_aux->entries.le_next);
+            }
+            
+            if(list->last_element_aux)
+            {
+                match_data_free(list->last_element->match);
                 LIST_REMOVE(list->last_element_aux->entries.le_next, entries);
                 free(list->last_element);
                 list->last_element = list->last_element_aux;
+                list->items--;
             }
-            else
-            {
-                free(list->last_element);
-            }
-            list->items--;
             list->last_element_aux = NULL;
             list->last_element->entries.le_next = NULL;
         }
@@ -393,7 +394,7 @@ void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), ch
 {
     bool first = true;
     int i = 0;
-    for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
+    for (struct entry *np = list->headp.lh_first; np != NULL && i<list->items; np = np->entries.le_next)
     {
         if (!np->match->component_list.items)
             continue;
@@ -404,8 +405,7 @@ void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), ch
         }
         
         printer(np->match);
-        if (i++ > list->max_items && !list->autolimit)
-            break;
+        i++;
         first = false;
     }
 }
