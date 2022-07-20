@@ -47,15 +47,15 @@ static inline void crc32c_intel_probe(void)
 }
 #endif /* ARCH_HAVE_SSE4_2 */
 
-static inline uint32_t calc_crc32c(unsigned char const *buf, unsigned long len)
+static inline uint32_t calc_crc32c(char *buf, unsigned long len)
 {
 	if (crc32c_arm64_available)
-		return crc32c_arm64(buf, len);
+		return crc32c_arm64((unsigned char*) buf, len);
 
 	if (crc32c_intel_available)
-		return crc32c_intel(buf, len);
+		return crc32c_intel((unsigned char *) buf, len);
 
-	return crc32c_sw(buf, len);
+	return crc32c_sw((unsigned char *) buf, len);
 }
 
 #endif
