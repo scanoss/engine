@@ -466,7 +466,7 @@ void ldb_scan(scan_data *scan)
 		strcpy(scan->source_md5, tmp_md5_hex);
 		free(tmp_md5_hex);
 	
-		scan->match_type = ldb_scan_file(scan->md5);
+		scan->match_type = none;//ldb_scan_file(scan->md5);
 		
 
 		/* If no match, scan snippets */
@@ -491,6 +491,7 @@ void ldb_scan(scan_data *scan)
 				/* Determine if file is to skip snippet search */
 				if (!skip_snippets(src, file_size))
 				{	/* Load wfps into scan structure */
+				
 					scan->hash_count = winnowing(src, scan->hashes, scan->lines, MAX_FILE_SIZE);
 					if (scan->hash_count) scan->total_lines = scan->lines[scan->hash_count - 1];
 				}

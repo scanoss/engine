@@ -2,7 +2,7 @@
     #define __UTIL_H
     
 #include <stdint.h>
-#include <stdbool.h>
+//#include <stdbool.h>
 #include <scanoss.h>
 
 /* Reverse an uint32 number  */

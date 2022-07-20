@@ -21,14 +21,14 @@
  */
 
 
-#include <stdbool.h>
+//#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/md5.h>
 #include "crc32c.h"
 #include "winnowing.h"
-
+#include <ldb.h>
 
 uint8_t GRAM  = 30;   /** @brief Winnowing gram size in bytes */
 uint8_t WINDOW = 64;  /** @brief Winnowing window size in bytes */
@@ -116,6 +116,8 @@ static uint32_t add_hash(uint32_t hash, uint32_t line, uint32_t *hashes, uint32_
 		lines  [*counter] = line;
 
 		last = hash;
+		uint8_t *lwfp = &last;
+		fprintf(stderr, "%02x%02x%02x%02x\n", lwfp[0], lwfp[1], lwfp[2], lwfp[3]);
 		(*counter)++;
 	}
 

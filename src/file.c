@@ -90,7 +90,7 @@ uint64_t get_file_size(char *path)
 }
 
 /**
- * @brief read a file and put it into a buffer.
+ * @brief read es a file and put it into a buffer.
  * @param[out] out output buffer.
  * @param path file path.
  * @param maxlen max length to read.
