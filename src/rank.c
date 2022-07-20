@@ -772,7 +772,6 @@ int shortest_paths_check(file_recordset *files, int records, component_name_rank
 				break;
 			strcpy((char *) url_rec, "9999");
 			ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *) url_rec);
-			printf("%s - %s\n", date, oldest);
 
 			/* Extract date from url_rec */
 			*date = 0;

@@ -97,7 +97,6 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		{
 			if (matches[i].selected)
 			{
-			//	printf("aca %d\n", matches[i].type);
 				if (scan->match_type != snippet || hpsm_calc(matches[i].file_md5))
 					print_json_match(scan, matches[i], &match_counter);
 

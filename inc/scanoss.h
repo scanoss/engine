@@ -37,7 +37,7 @@
 #define MAX_FILE_PATH 1024
 #define FETCH_MAX_FILES 20000
 #define MAX_FIELD_LN 1024
-#define MIN_FILE_SIZE 256 // files below this size will be ignored
+#define MIN_FILE_SIZE 128 // files below this size will be ignored
 #define MAX_SNIPPET_IDS_RETURNED 10000
 #define CRC_LIST_LEN 256 // list of crc checksums to avoid metadata duplicates
 #define SNIPPET_LINE_TOLERANCE 10
