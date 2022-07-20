@@ -431,9 +431,10 @@ int wfp_scan(scan_data *scan)
    otherwise, it will be loaded here (scanning a physical file) 
    @param scan //TODO
    */
+	bool skip = false;
+
 void ldb_scan(scan_data *scan)
 {
-	bool skip = false;
 
 	if (unwanted_path(scan->file_path)) skip = true;
 
@@ -457,7 +458,8 @@ void ldb_scan(scan_data *scan)
 		if (ignored_extension(scan->file_path)) skip = true;
 
 	/* Ignore <=1 byte */
-	if (file_size <= MIN_FILE_SIZE) skip = true;
+	if (file_size <= MIN_FILE_SIZE) 
+		skip = true;
 
 	if (!skip)
 	{
@@ -503,6 +505,10 @@ void ldb_scan(scan_data *scan)
 
 			else scanlog("File skipped\n");
 		}
+	}
+	else
+	{
+		scanlog("File skipped: %s\n", scan->file_path);
 	}
 
 	/* Compile matches */
