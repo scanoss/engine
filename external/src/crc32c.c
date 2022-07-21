@@ -389,7 +389,7 @@ uint32_t crc32c(uint32_t crc, const void *buf, size_t len)
     SSE42(sse42);
     return sse42 ? crc32c_hw(crc, buf, len) : crc32c_sw(crc, buf, len);
 #else
-    crc32c_sw(crc, buf, len)
+    return crc32c_sw(crc, buf, len);
 #endif
 }
 
