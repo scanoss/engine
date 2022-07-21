@@ -361,6 +361,7 @@ static uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len)
    cpuid instruction itself, which was introduced on the 486SL in 1992, so this
    will fail on earlier x86 processors.  cpuid works on all Pentium and later
    processors. */
+#ifdef __x86_64__
 #define SSE42(have) \
     do { \
         uint32_t eax, ecx; \
@@ -371,6 +372,7 @@ static uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len)
                 : "%ebx", "%edx"); \
         (have) = (ecx >> 20) & 1; \
     } while (0)
+#endif
 
 /**
  * @brief Compute a CRC-32C.  If the crc32 instruction is available, use the hardware
@@ -383,9 +385,12 @@ static uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len)
 uint32_t crc32c(uint32_t crc, const void *buf, size_t len)
 {
     int sse42;
-
+#ifdef __x86_64__
     SSE42(sse42);
     return sse42 ? crc32c_hw(crc, buf, len) : crc32c_sw(crc, buf, len);
+#else
+    return crc32c_sw(crc, buf, len);
+#endif
 }
 
 

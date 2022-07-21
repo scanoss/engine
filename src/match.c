@@ -97,7 +97,6 @@ void output_matches_json(match_data *matches, scan_data *scan_ptr)
 		{
 			if (matches[i].selected)
 			{
-			//	printf("aca %d\n", matches[i].type);
 				if (scan->match_type != snippet || hpsm_calc(matches[i].file_md5))
 					print_json_match(scan, matches[i], &match_counter);
 
@@ -335,7 +334,7 @@ void add_match(int position, match_data match, match_data *matches)
 {
 
 	/* Verify if metadata is complete */
-	if (!*match.url || !*match.version || !*match.file || !*match.purl[0] || strlen(match.release_date) < 4)
+	if (!*match.url || !*match.version || !*match.file || !*match.purl[0])
 	{
 		scanlog("Metadata is incomplete: %s,%s,%s,%s,%s\n", match.purl[0], match.version, match.url, match.file, match.release_date);
 		return;

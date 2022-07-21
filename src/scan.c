@@ -442,7 +442,7 @@ void ldb_scan(scan_data *scan)
 	scan->timer = microseconds_now();
 
 	/* Get file length */
-	uint64_t file_size;
+	uint64_t file_size = 0;
 	if (!skip)
 	{
 		if (scan->preload) file_size = atoi(scan->file_size);
@@ -457,7 +457,8 @@ void ldb_scan(scan_data *scan)
 		if (ignored_extension(scan->file_path)) skip = true;
 
 	/* Ignore <=1 byte */
-	if (file_size <= MIN_FILE_SIZE) skip = true;
+	if (file_size <= MIN_FILE_SIZE) 
+		skip = true;
 
 	if (!skip)
 	{
@@ -503,6 +504,10 @@ void ldb_scan(scan_data *scan)
 
 			else scanlog("File skipped\n");
 		}
+	}
+	else
+	{
+		scanlog("File skipped: %s\n", scan->file_path);
 	}
 
 	/* Compile matches */
