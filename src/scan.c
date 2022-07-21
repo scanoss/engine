@@ -431,10 +431,9 @@ int wfp_scan(scan_data *scan)
    otherwise, it will be loaded here (scanning a physical file) 
    @param scan //TODO
    */
-	bool skip = false;
-
 void ldb_scan(scan_data *scan)
 {
+	bool skip = false;
 
 	if (unwanted_path(scan->file_path)) skip = true;
 
@@ -443,7 +442,7 @@ void ldb_scan(scan_data *scan)
 	scan->timer = microseconds_now();
 
 	/* Get file length */
-	uint64_t file_size;
+	uint64_t file_size = 0;
 	if (!skip)
 	{
 		if (scan->preload) file_size = atoi(scan->file_size);
