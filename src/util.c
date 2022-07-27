@@ -163,6 +163,8 @@ void string_clean(char *str)
     if (*s < ' ' || *s == '"') *s = ' ';
     else s++;
   }
+
+  json_remove_invalid_char(str);
 }
 
 char * json_remove_invalid_char(char * input)
