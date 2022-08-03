@@ -68,15 +68,20 @@ bool hpsm_lib_load()
 	return false;
 }
 
+void hpsm_ranges_free(struct ranges * r)
+{
+    free(r->local);
+    free(r->matched);
+    free(r->remote);
+    free(hpsm_crc_lines);
+}
+
 void hpsm_lib_close()
 {
     if (hpsm_lib_present)
 	{
 		dlclose(lib_hpsm_handle);
-		free(hpsm_crc_lines);
-        free(hpsm_result.local);
-        free(hpsm_result.matched);
-        free(hpsm_result.remote);
+        hpsm_ranges_free(&hpsm_result);
 	}
 }
 

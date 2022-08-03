@@ -24,6 +24,7 @@ extern struct ranges (*hpsm_process)(unsigned char* data, int length, char* md5)
 
 bool hpsm_lib_load(void);
 void hpsm_lib_close(void);
-
+void hpsm_ranges_free(struct ranges * r);
 bool hpsm_calc(uint8_t * file_md5);
+struct ranges * hpsm_get_result(void);
 #endif
