@@ -409,19 +409,12 @@ bool print_json_match(struct match_data_t * match)
 		printf("{");
 
 	printf("\"id\": \"%s\"", matchtypes[match->type == 1 ? 2 : match->type]);
-//	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
-	if(match->type == MATCH_SNIPPET && hpsm_enabled)
-	{
-	   	printf(",\"lines\": \"%s\"", hpsm_result.local);
-		printf(",\"oss_lines\": \"%s\"", hpsm_result.remote);
-		printf(",\"matched\": \"%s\"", hpsm_result.matched);
-	} 
-	else 
-	{
-		printf(",\"lines\": \"%s\"", match->line_ranges);
-		printf(",\"oss_lines\": \"%s\"", match->oss_ranges);
-		printf(",\"matched\": \"%s\"", match->matched_percent);
-	} 
+	//printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
+	
+	printf(",\"lines\": \"%s\"", match->line_ranges);
+	printf(",\"oss_lines\": \"%s\"", match->oss_ranges);
+	printf(",\"matched\": \"%s\"", match->matched_percent);
+	
 /*	
 	if ((engine_flags & ENABLE_SNIPPET_IDS) && match->type == snippet)
 	{

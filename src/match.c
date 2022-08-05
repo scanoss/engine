@@ -472,20 +472,27 @@ void match_select_best(scan_data_t * scan)
 
 		if (scan->matches_secondary[i]->best_match->hits > max_hits)
 		{
-			if (scan->match_type == MATCH_FILE || hpsm_calc(scan->matches_secondary[i]->best_match->file_md5))
+			static struct ranges r = {NULL, NULL, NULL};
+			bool acept = true;
+			if (scan->match_type == MATCH_SNIPPET && hpsm_enabled)
+			{
+				r = hpsm_calc(scan->matches_secondary[i]->best_match->file_md5);
+				if (hpsm_enabled && !memcmp(r.matched, "0%%", 2))
+					acept = false;
+			}
+
+			if (scan->match_type == MATCH_FILE || acept)
 			{
 				max_hits = scan->matches_secondary[i]->best_match->hits;
 				index = i;
 				if (hpsm_enabled)
 				{
-					struct ranges * r = hpsm_get_result();
 					free(scan->matches_secondary[i]->best_match->line_ranges);
 					free(scan->matches_secondary[i]->best_match->oss_ranges);
 					free(scan->matches_secondary[i]->best_match->matched_percent);
-					scan->matches_secondary[i]->best_match->line_ranges = strdup(r->local);
-					scan->matches_secondary[i]->best_match->oss_ranges = strdup(r->remote);
-					scan->matches_secondary[i]->best_match->matched_percent = strdup(r->matched);
-					//hpsm_ranges_free(r);
+					scan->matches_secondary[i]->best_match->line_ranges = r.local;
+					scan->matches_secondary[i]->best_match->oss_ranges = r.remote;
+					scan->matches_secondary[i]->best_match->matched_percent = r.matched;
 				}
 			}
 		}

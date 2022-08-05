@@ -29,7 +29,6 @@
 
 bool hpsm_lib_present = false;;
 bool hpsm_enabled = false;
-struct ranges hpsm_result;
 /* HPSM - Normalized CRC8 for each line */
 char *hpsm_crc_lines = NULL;
 
@@ -71,9 +70,11 @@ bool hpsm_lib_load()
 void hpsm_ranges_free(struct ranges * r)
 {
     free(r->local);
+    r->local = NULL;
     free(r->matched);
+    r->matched = NULL;
     free(r->remote);
-    free(hpsm_crc_lines);
+    r->remote = NULL;
 }
 
 void hpsm_lib_close()
@@ -81,40 +82,32 @@ void hpsm_lib_close()
     if (hpsm_lib_present)
 	{
 		dlclose(lib_hpsm_handle);
-        hpsm_ranges_free(&hpsm_result);
+        free(hpsm_crc_lines);
 	}
 }
 
-bool hpsm_calc(uint8_t *file_md5)
+struct ranges hpsm_calc(uint8_t *file_md5)
 {
-    
+   struct ranges r = {NULL, NULL, NULL} ;
     if (!hpsm_enabled)
-        return true;
+        return r;
 
     if (!hpsm_lib_present)
     {
         hpsm_enabled = false;
         scanlog("Warning, hpsm header detected in WFP but 'libhpsm.so' is not available, skiping HPSM analisys\n");
-        return true;
+        return r;
     }
     
     if (!hpsm_crc_lines)
     {
         scanlog("Warning, No lines CRC to process, skiping HPSM analisys\n");
-        return false;
+        return r;
     }
     scanlog("Running HPSM\n");
     char *file = md5_hex(file_md5);
-    hpsm_result = hpsm(hpsm_crc_lines, file);
+    struct ranges result = hpsm(hpsm_crc_lines, file);
     free(file);
-
-    if (memcmp(hpsm_result.matched, "0%%", 2))
-        return true;
-
-    return false;
+    return result;
 }
 
-struct ranges * hpsm_get_result()
-{
-    return &hpsm_result;
-}
