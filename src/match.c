@@ -473,15 +473,15 @@ void match_select_best(scan_data_t * scan)
 		if (scan->matches_secondary[i]->best_match->hits > max_hits)
 		{
 			static struct ranges r = {NULL, NULL, NULL};
-			bool acept = true;
+			bool accept = true;
 			if (scan->match_type == MATCH_SNIPPET && hpsm_enabled)
 			{
 				r = hpsm_calc(scan->matches_secondary[i]->best_match->file_md5);
-				if (hpsm_enabled && !memcmp(r.matched, "0%%", 2))
-					acept = false;
+				if (hpsm_enabled && r.matched && !memcmp(r.matched, "0%%", 2))
+					accept = false;
 			}
 
-			if (scan->match_type == MATCH_FILE || acept)
+			if (scan->match_type == MATCH_FILE || accept)
 			{
 				max_hits = scan->matches_secondary[i]->best_match->hits;
 				index = i;
