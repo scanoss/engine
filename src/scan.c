@@ -77,8 +77,8 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	*/
 void scan_data_free(scan_data_t * scan)
 {
-	for (int i=0; i < scan->multiple_component_list_index; i++)
-		match_list_destroy(scan->matches_secondary[i]);
+	for (int i=0; i < scan->matches_list_array_index; i++)
+		match_list_destroy(scan->matches_list_array[i]);
 	
 	free(scan->file_path);
 	free(scan->file_size);
@@ -103,20 +103,24 @@ static bool zero_bytes (uint8_t *md5)
 	return true;
 }
 
-/** @brief Performs component and file comparison 
-    @param fid File ID (md5)
-    @return Match type
-	  */
-static matchtype ldb_scan_file(uint8_t *fid) {
+/**
+ * @brief Scans against file and url tables, looking for a full file match.
+ * If the match is against url table set "url_match" as true.
+ * @param scan scan object being scanned.
+ * @return match_t 
+ */
+static match_t ldb_scan_file(scan_data_t * scan) {
 			
 	scanlog("Checking entire file\n");
 	
-	if (zero_bytes(fid)) return none;
+	if (zero_bytes(scan->md5)) return MATCH_NONE;
 	
-	matchtype match_type = none;
+	match_t match_type = MATCH_NONE;
 
-	if (ldb_key_exists(oss_url, fid)) match_type = url;
-	else if (ldb_key_exists(oss_file, fid)) match_type = file;
+	if (ldb_key_exists(oss_url, scan->md5) || ldb_key_exists(oss_file, scan->md5)) 
+	{
+		match_type = MATCH_FILE;
+	}
 
 	return match_type;
 }
@@ -156,9 +160,9 @@ bool asset_declared(component_data_t * comp)
 
 
 /** @brief Scans a file hash only
-    @param scan Scan data
-    @return Scan result (SUCCESS/FAILURE)
-	*/
+ *   @param scan Scan data
+ *   @return Scan result (SUCCESS/FAILURE)
+|**/
 int hash_scan(char *path, int scan_max_snippets, int scan_max_components)
 {
 	scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components);
@@ -176,10 +180,16 @@ int hash_scan(char *path, int scan_max_snippets, int scan_max_components)
 	return EXIT_SUCCESS;
 }
 
-/** @brief Scans a wfp file with winnowing fingerprints 
-    @param scan Scan data
-    @return Scan result (SUCCESS/FAILURE)
-	*/
+/**
+ * @brief Performs a wfp scan.
+ * Files with wfp extension will be scanned in this mode. 
+ * Remember: wfp = Winnowings Finger Print.
+ * This file could be generated with a client.
+ * @param path wfp file path
+ * @param scan_max_snippets Limit for matches list. Autolimited be default.
+ * @param scan_max_components Limit for component to be displayed. 1 by default.
+ * @return EXIT_SUCCESS
+ */
 int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 {
 	scan_data_t * scan = NULL;
@@ -219,9 +229,11 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 		/* Parse file information with format: file=MD5(32),file_size,file_path */
 		if (is_file)
 		{
+			/* A scan data was fullfilled and is ready to be scanned */
 			if (scan)
 				ldb_scan(scan);
-
+			
+			/* Prepare the next scan */
 			const int tagln = 5; // len of 'file='
 
 			/* Get file MD5 */
@@ -232,6 +244,8 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			
 			rec = (uint8_t*) strdup(line + tagln + (MD5_LEN * 2) + 1);
 			char * target = field_n(2, (char *)rec);
+			
+			/*Init a new scan object for the next file to be scanned */
 			scan = scan_data_init(target, scan_max_snippets, scan_max_components);
 			strcpy(scan->source_md5, tmp_md5_hex);
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
@@ -284,11 +298,13 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 	return EXIT_SUCCESS;
 }
 
-/** @brief Scans a file and returns JSON matches via STDOUT
-   scan structure can be already preloaded (.wfp scan)
-   otherwise, it will be loaded here (scanning a physical file) 
-   @param scan //TODO
-   */
+/**
+ * @brief Scans a file and returns JSON matches via STDOUT.
+ * scan structure can be already preloaded (.wfp scan)
+ * otherwise, it will be loaded here (scanning a physical file) 
+ * 
+ * @param scan 
+ */
 void ldb_scan(scan_data_t * scan)
 {
 	bool skip = false;
@@ -298,7 +314,7 @@ void ldb_scan(scan_data_t * scan)
 	if (unwanted_path(scan->file_path)) skip = true;
 
 	scan->matchmap_size = 0;
-	scan->match_type = none;
+	scan->match_type = MATCH_NONE;
 	scan->timer = microseconds_now();
 
 	/* Get file length */
@@ -326,9 +342,9 @@ void ldb_scan(scan_data_t * scan)
 		strcpy(scan->source_md5, tmp_md5_hex);
 		free(tmp_md5_hex);
 	
+	/* Look for full file match or url match in ldb */
 		scan->match_type = ldb_scan_file(scan->md5);
 		
-
 		/* If no match, scan snippets */
 		if (scan->match_type == MATCH_NONE)
 		{
@@ -339,6 +355,7 @@ void ldb_scan(scan_data_t * scan)
 				char *src = calloc(MAX_FILE_SIZE, 1);
 				if (file_size < MAX_FILE_SIZE) read_file(src, scan->file_path, 0);
 				
+				/* If HPSM is enable calculate the crc8 line hash calling the shared lib */
 				if(hpsm_enabled) 
 				{
 					char *aux = hpsm_hash_file_contents(src);
@@ -367,7 +384,6 @@ void ldb_scan(scan_data_t * scan)
 
 	/* Compile matches */
 	compile_matches(scan);
-	//match_list_print(matches);
 	
 	//if (scan->matches.headp.lh_first && scan->match_type != MATCH_NONE)
 	//{

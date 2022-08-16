@@ -55,73 +55,6 @@ void clear_hits(uint8_t *match)
 }
 
 /**
- * @brief Return the path depth
- * @param path path string
- * @param len path string len
- * @return path len, ie number of '/'
- */
-int path_depth(uint8_t *path, int len)
-{
-	int depth = 0;
-	for (int i = 0; i < len ; i++) if (path[i] == '/') depth++;
-	return depth;
-}
-
-/**
- * @brief Recordset handler function to find shortest path. 
- * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
- * @param key //TODO
- * @param subkey //TODO
- * @param subkey_ln //TODO
- * @param data //TODO
- * @param datalen //TODO
- * @param iteration //TODO
- * @param ptr //TODO
- * @return //TODO
- */
-static bool shortest_path_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
-{
-	int *shortest = (int *) ptr;
-	if (datalen)
-	{
-		char * decrypted = decrypt_data(data, datalen, "file", key, subkey);
-		if (!decrypted)
-			return false;
-
-		int depth = path_depth((uint8_t*) decrypted, strlen(decrypted));
-
-		free(decrypted);
-		
-		if (depth < 1) return false;
-
-		if (!*shortest)
-			*shortest = depth;
-		else if (depth < *shortest)
-			*shortest = depth;
-	}
-	return false;
-}
-
-/**
- * @brief Returns the length of the shortest path among files matching md5
- * @param md5 MD5 pointer
- * @return lenght of shortest path
- */
-int get_shortest_path(uint8_t *md5)
-{
-	/* Direct component match has a top priority */
-	if (ldb_key_exists(oss_url, md5)) return 1;
-
-	int *shortest = calloc(1, sizeof(int));
-	ldb_fetch_recordset(NULL, oss_file, md5, false, shortest_path_handler, (void *) shortest);
-
-	int out = *shortest;
-	free(shortest);
-
-	return out;
-}
-
-/**
  * @brief Returns the number of entries for a md5 into the files table.
  * @param md5 MD5 pointer
  * @return lenght of shortest path
@@ -170,32 +103,38 @@ bool snippet_extension_discard(scan_data_t *scan, uint8_t *md5)
 }
 
 /**
- * @brief If we have snippet matches, select the one with more hits (and shortest file path)
- * @param scan scan data pointer
- * @return pointer to selected match
+ * @brief Compare to matches by hits
+ * 
+ * @param a first match to compare to. 
+ * @param b second match to compare.
+ * @return true 
+ * @return false 
  */
-
-bool test(match_data_t * a, match_data_t * b)
+static bool hit_test(match_data_t * a, match_data_t * b)
 {
 	if (a->hits <= b->hits)
 		return true;
 	else
 		return false;
 }
-int snippet_definiton = 0;
-
+/**
+ * @brief Fill the matches list array based on the matchmap. The possible matches will be sorted by hits number.
+ * 
+ * @param scan 
+ */
 void biggest_snippet(scan_data_t *scan)
 {
+	/*Initialize the auxiliary indirection list */
 	for (int i=0; i< scan->max_snippets_to_process; i++)
-		scan->multiple_component_list_indirection_from[i] = -1;
+		scan-> matches_list_array_indirection[i] = -1;
 
-	snippet_definiton = range_tolerance / scan->max_snippets_to_process + min_match_lines;
-
+	int snippet_tolerance = range_tolerance / scan->max_snippets_to_process + min_match_lines; /* Used to define bounds between two possible snippets */
+	/*Fill the matches list with the files from the matchmap */
 	for (int j = 0; j < scan->matchmap_size; j++)
 	{
-		if (scan->matchmap[j].hits >= min_match_hits)
+		if (scan->matchmap[j].hits >= min_match_hits) /* Only consider file with more than min_match_hits */
 		{
-			match_data_t * match_new = calloc(1,sizeof(match_data_t));
+			match_data_t * match_new = calloc(1,sizeof(match_data_t)); /* Create a match object */
 			memcpy(match_new->file_md5, scan->matchmap[j].md5, MD5_LEN);
 			match_new->hits = scan->matchmap[j].hits;
 			match_new->matchmap_reg = scan->matchmap[j].md5;
@@ -204,32 +143,32 @@ void biggest_snippet(scan_data_t *scan)
 			strcpy(match_new->source_md5, scan->source_md5);
 			bool found = false;
 			int i = 0;
-			for (; i< scan->multiple_component_list_index; i++)
+			for (; i< scan->matches_list_array_index; i++) /*Check if there is already a list for this line ranges */
 			{
-				if(scan->multiple_component_list_indirection_from[i] >-1 && 
-					abs(scan->multiple_component_list_indirection_from[i] - match_new->from) < snippet_definiton)
+				if (scan-> matches_list_array_indirection[i] >-1 && 
+					abs(scan-> matches_list_array_indirection[i] - match_new->from) < snippet_tolerance)
 					{	
 						found = true;
 						break;
 					}
 			}
 
-			if (!found)
+			if (!found) /*If there is no list for the snippet range we have to create a new one */
 			{
-				if (scan->multiple_component_list_index < scan->max_snippets_to_process)
+				if (scan->matches_list_array_index < scan->max_snippets_to_process) /* Check for the list limit */
 				{
-					scan->multiple_component_list_indirection_from[scan->multiple_component_list_index] = match_new->from;
-					scan->matches_secondary[scan->multiple_component_list_index] = match_list_init(true, 1, scan);
-					i = scan->multiple_component_list_index;
-					scan->multiple_component_list_index++;
+					scan-> matches_list_array_indirection[scan->matches_list_array_index] = match_new->from; /*update indirection*/
+					scan->matches_list_array[scan->matches_list_array_index] = match_list_init(true, 1, scan); /*create the list*/
+					i = scan->matches_list_array_index; /* update index*/
+					scan->matches_list_array_index++; 
 				}
 				else
-					i = scan->max_snippets_to_process - 1;
+					i = scan->max_snippets_to_process - 1; /*add in the last available list if there is no more space for new lists*/
 			}
 							
 
-			if (!match_list_add(scan->matches_secondary[i], match_new, test, true))
-				match_data_free(match_new);	
+			if (!match_list_add(scan->matches_list_array[i], match_new, hit_test, true)) /*Add the match in the selected list */
+				match_data_free(match_new);	/* the the memory if the match was not accepted in the list */
 		}
 	}
 }
@@ -723,11 +662,11 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
  * @param scan pointer to scan data to be processed
  * @return match type
  */
-matchtype ldb_scan_snippets(scan_data_t *scan) {
+match_t ldb_scan_snippets(scan_data_t *scan) {
 
-	if (!scan->hash_count) return none;
+	if (!scan->hash_count) return MATCH_NONE;
 
-	if (engine_flags & DISABLE_SNIPPET_MATCHING) return none;
+	if (engine_flags & DISABLE_SNIPPET_MATCHING) return MATCH_NONE;
 
 	if (trace_on) scanlog("Checking snippets. Traced (-qi) matches marked with *\n");
 	else scanlog("Checking snippets\n");
@@ -769,7 +708,7 @@ matchtype ldb_scan_snippets(scan_data_t *scan) {
 		if (md5s_ln > (WFP_POPULARITY_THRESHOLD * WFP_REC_LN))
 		{
 			scanlog("Snippet %02x%02x%02x%02x (line %d) >= WFP_POPULARITY_THRESHOLD\n", wfp[0], wfp[1], wfp[2], wfp[3], line);
-		//	add_popular_snippet_to_matchmap(scan, line, last_line - line);
+			/*Ignore popular snippets*///	add_popular_snippet_to_matchmap(scan, line, last_line - line);
 			continue;
 		}
 
@@ -810,7 +749,7 @@ matchtype ldb_scan_snippets(scan_data_t *scan) {
 
 	free(md5_set);
 
-	if (scan->matchmap_size) return snippet;
+	if (scan->matchmap_size) return MATCH_SNIPPET;
 	scanlog("Snippet scan has no matches\n");
-	return none;
+	return MATCH_NONE;
 }

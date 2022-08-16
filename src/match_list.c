@@ -254,20 +254,33 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
     return false;
 }
 
+/**
+ * @brief Try to add a match in a existing matches list.
+ * 
+ * @param list pointer to match list object.
+ * @param new_match new match to be inserted.
+ * @param val pointer function to evaluate the position in the list.
+ * @param remove_a true to remove the last item in the list if the list is full.
+ * @return true if the new match was added.
+ * @return false if the new match was rejected.
+ */
 bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(match_data_t *a, match_data_t *b), bool remove_a)
 {
+    /*Check if the match is present in another list*/
     if (!new_match->component_list.match_ref)
     {
+        /*Is a new match, we have to initialize the component list */
         component_list_init(&new_match->component_list, list->scan_ref->max_components_to_process);
         new_match->component_list.match_ref = new_match;
     }
-    else
+    else  
     {
+        /*discard incomplete matches*/
         if (!new_match->component_list.headp.lh_first|| !new_match->component_list.headp.lh_first->component->release_date)
             return false;
        // printf("%s - ", new_match->component_list.headp.lh_first->component->release_date);
     }
-
+    /*If the list is empty, add as first element*/
     if (!list->headp.lh_first)
     {
         struct entry *nn = calloc(1, sizeof(struct entry)); /* Insert at the head. */
@@ -278,12 +291,13 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         list->items = 1;
         return true;
     }
-    else if (val)
+    else if (val) /* check is the function pointer is defined */
     {
         bool inserted = false;
-
+        /*evaluate against the last element*/
         if (list->last_element && !val(list->last_element->match, new_match))
         {
+            /* if the list is full reject the new match */
             if (!list->autolimit && list->items >= list->max_items)
                 return false;
                 
@@ -299,6 +313,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         struct entry *np = list->headp.lh_first;
         if (!inserted)
         {
+            /*compare with the elements of the list*/
             for (; np->entries.le_next != NULL; np = np->entries.le_next)
             {
                 if (val(np->match, new_match))
@@ -307,7 +322,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
                 }
 
             }
-
+            /*insert in place */
             struct entry *nn = calloc(1, sizeof(struct entry)); /* Insert after. */
             nn->match = new_match;
             LIST_INSERT_BEFORE(np, nn, entries);
@@ -320,11 +335,12 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
                 list->last_element = np;
             }
         }
-        
+        /* in autolimit mode the list doesnt have a fix size, it will accept all the matchest until a 75% of the fist element (the biggest) */
+        //TODO: this part of the code should be in the function pointer or I need to re-evaluate the archtecture of this function */
         if (list->autolimit && (list->headp.lh_first->match->hits * 0.75 > list->last_element->match->hits))
-        {
-            
+        {    
             np = list->headp.lh_first;
+            /*We have to find and remove the unwanted elements */
             for (; np->entries.le_next != NULL && (list->headp.lh_first->match->hits * 0.75 <= np->match->hits); np = np->entries.le_next)
             {
 
@@ -341,6 +357,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
             }
             list->last_element->entries.le_next = NULL;
         }
+        /*If the list is in fixed size mode we have to remove the last element when the list is full and we add a new one*/
         else if (list->last_element && !list->autolimit && remove_a && (list->items > list->max_items))
         {           
             if(!list->last_element_aux)

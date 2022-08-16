@@ -90,15 +90,15 @@ void output_matches_json(scan_data_t *scan)
 	{
 		printf("\"%s\": [", scan->file_path);
 		bool first = true;
-		for (int i=0; i < scan->multiple_component_list_index; i++)
+		for (int i=0; i < scan->matches_list_array_index; i++)
 		{
-			if (!first && scan->matches_secondary[i]->items && scan->matches_secondary[i]->best_match->component_list.items)
+			if (!first && scan->matches_list_array[i]->items && scan->matches_list_array[i]->best_match->component_list.items)
 				printf(",");
-			match_list_print(scan->matches_secondary[i], print_json_match, ","); //corregir
+			match_list_print(scan->matches_list_array[i], print_json_match, ","); //corregir
 			first = false;
 		}
 	}
-	else if (scan->multiple_component_list_index > 1  && scan->max_snippets_to_process > 1)
+	else if (scan->matches_list_array_index > 1  && scan->max_snippets_to_process > 1)
 	{
 		engine_flags |= DISABLE_BEST_MATCH;
 		printf("\"%s\": {\"matches\":[", scan->file_path);
@@ -450,55 +450,55 @@ bool find_oldest_match(match_data_t * fp1, match_data_t * fp2)
 
 void match_select_best(scan_data_t * scan)
 {
-	if (! scan->multiple_component_list_index)
+	if (! scan->matches_list_array_index)
 		return;
 
-	for (int  i = 0; i < scan->multiple_component_list_index; i++)
+	for (int  i = 0; i < scan->matches_list_array_index; i++)
 	{
 		struct entry * item = NULL;
-		LIST_FOREACH(item, &scan->matches_secondary[i]->headp, entries)
+		LIST_FOREACH(item, &scan->matches_list_array[i]->headp, entries)
 		{
-			if (find_oldest_match(scan->matches_secondary[i]->best_match, item->match))
-				scan->matches_secondary[i]->best_match = item->match;
+			if (find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
+				scan->matches_list_array[i]->best_match = item->match;
 		}
 	}
 
 	int max_hits = 0;
 	int index = 0;
-	for (int  i = 0; i < scan->multiple_component_list_index; i++)
+	for (int  i = 0; i < scan->matches_list_array_index; i++)
 	{
-		if (!scan->matches_secondary[i]->best_match)
+		if (!scan->matches_list_array[i]->best_match)
 			continue;
 
-		if (scan->matches_secondary[i]->best_match->hits > max_hits)
+		if (scan->matches_list_array[i]->best_match->hits > max_hits)
 		{
 			static struct ranges r = {NULL, NULL, NULL};
 			bool accept = true;
 			if (scan->match_type == MATCH_SNIPPET && hpsm_enabled)
 			{
-				r = hpsm_calc(scan->matches_secondary[i]->best_match->file_md5);
+				r = hpsm_calc(scan->matches_list_array[i]->best_match->file_md5);
 				if (hpsm_enabled && r.matched && !memcmp(r.matched, "0%%", 2))
 					accept = false;
 			}
 
 			if (scan->match_type == MATCH_FILE || accept)
 			{
-				max_hits = scan->matches_secondary[i]->best_match->hits;
+				max_hits = scan->matches_list_array[i]->best_match->hits;
 				index = i;
 				if (hpsm_enabled)
 				{
-					free(scan->matches_secondary[i]->best_match->line_ranges);
-					free(scan->matches_secondary[i]->best_match->oss_ranges);
-					free(scan->matches_secondary[i]->best_match->matched_percent);
-					scan->matches_secondary[i]->best_match->line_ranges = r.local;
-					scan->matches_secondary[i]->best_match->oss_ranges = r.remote;
-					scan->matches_secondary[i]->best_match->matched_percent = r.matched;
+					free(scan->matches_list_array[i]->best_match->line_ranges);
+					free(scan->matches_list_array[i]->best_match->oss_ranges);
+					free(scan->matches_list_array[i]->best_match->matched_percent);
+					scan->matches_list_array[i]->best_match->line_ranges = r.local;
+					scan->matches_list_array[i]->best_match->oss_ranges = r.remote;
+					scan->matches_list_array[i]->best_match->matched_percent = r.matched;
 				}
 			}
 		}
 	}
 
-	scan->best_match = scan->matches_secondary[index]->best_match;
+	scan->best_match = scan->matches_list_array[index]->best_match;
 	
 }
 /*
@@ -518,16 +518,16 @@ match_list_t * match_select_m_component_best(scan_data_t * scan)
 	scanlog("<<<select_best_match_M: %d>>>>\n", scan->max_snippets_to_process);
 	match_list_t * final = match_list_init(false, scan->max_snippets_to_process, scan);
 	
-	for (int  i = 0; i < scan->multiple_component_list_index; i++)
+	for (int  i = 0; i < scan->matches_list_array_index; i++)
 	{
-		if (!scan->matches_secondary[i]->best_match)
+		if (!scan->matches_list_array[i]->best_match)
 			continue;
 		
-		if (!scan->matches_secondary[i]->best_match->component_list.items)
+		if (!scan->matches_list_array[i]->best_match->component_list.items)
 			continue;
 
-		match_data_t * dup_match = match_data_copy(scan->matches_secondary[i]->best_match);
-		component_data_t * dup_comp = component_data_copy(scan->matches_secondary[i]->best_match->component_list.headp.lh_first->component);
+		match_data_t * dup_match = match_data_copy(scan->matches_list_array[i]->best_match);
+		component_data_t * dup_comp = component_data_copy(scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component);
 		component_list_init(&dup_match->component_list, 1);
 		dup_match->component_list.match_ref = dup_match;
 		component_list_add(&dup_match->component_list, dup_comp, NULL, false);
@@ -568,13 +568,13 @@ void compile_matches(scan_data_t *scan)
 	}
 	else
 	{
-		scan->matches_secondary[0] = match_list_init(true, scan->max_snippets_to_process, scan);
-		scan->multiple_component_list_index = 1;
+		scan->matches_list_array[0] = match_list_init(true, scan->max_snippets_to_process, scan);
+		scan->matches_list_array_index = 1;
 		match_data_t * match_new = calloc(1, sizeof(match_data_t));
 		match_new->type = scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
 		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);
-		if (!match_list_add(scan->matches_secondary[0], match_new, NULL, false))
+		if (!match_list_add(scan->matches_list_array[0], match_new, NULL, false))
 		{
 			match_data_free(match_new);
 		}
@@ -591,8 +591,8 @@ void compile_matches(scan_data_t *scan)
 		if (scan->match_type != MATCH_NONE)
 		{
 
-			for (int i=0; i < scan->multiple_component_list_index; i++)
-				match_list_process(scan->matches_secondary[i], match_process);
+			for (int i=0; i < scan->matches_list_array_index; i++)
+				match_list_process(scan->matches_list_array[i], match_process);
 
 			match_select_best(scan);
 		}

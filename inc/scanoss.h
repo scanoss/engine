@@ -68,7 +68,6 @@
 
 extern uint64_t engine_flags;
 
-typedef enum {none, url, file, snippet} matchtype;
 extern const char *matchtypes[];
 extern const char *license_sources[];
 extern const char *copyright_sources[];
@@ -144,7 +143,7 @@ extern component_item *declared_components;
 /* Prototype declarations */
 int wfp_scan(char * path, int scan_max_snippets, int scan_max_components);
 void ldb_scan(scan_data_t * scan);
-matchtype ldb_scan_snippets(scan_data_t *scan_ptr);
+match_t ldb_scan_snippets(scan_data_t *scan_ptr);
 bool key_find(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);
 void recurse_directory (char *path);
 
