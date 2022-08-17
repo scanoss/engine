@@ -81,7 +81,7 @@
 #define SCAN_MAX_COMPONENTS_DEFAULT 3
 
 
-typedef enum {MATCH_NONE, MATCH_URL, MATCH_FILE, MATCH_SNIPPET} match_t;
+typedef enum {MATCH_NONE, MATCH_FILE, MATCH_SNIPPET, MATCH_BINARY} match_t;
 typedef struct match_data_t match_data_t; /* Forward declaration */
 typedef struct scan_data_t scan_data_t; /* Forward declaration*/
 

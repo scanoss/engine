@@ -295,6 +295,7 @@ int main(int argc, char **argv)
 	int engine_flags_cmd_line = 0;
 
 	bool force_wfp = false;
+	bool force_bfp = false;
 	
 	microseconds_start = microseconds_now();
 
@@ -307,7 +308,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqH")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqHB")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -375,7 +376,9 @@ int main(int argc, char **argv)
 			case 'w':
 				force_wfp = true;
 				break;
-
+			case 'B':
+				force_bfp = true;
+				break;
 			case 't':
 //				scan_benchmark();
 				exit(EXIT_SUCCESS);
@@ -486,12 +489,19 @@ int main(int argc, char **argv)
 			else
 			{
 				bool wfp_extension = false;
+				bool bfp_extension = false;
 				if (extension(target)) if (!strcmp(extension(target), "wfp")) wfp_extension = true;
 					if (force_wfp) wfp_extension = true;
+				
+				if (extension(target)) if (!strcmp(extension(target), "bfp")) bfp_extension = true;
+					if (force_bfp) bfp_extension = true;
 
 				/* Scan wfp file */
 				if (wfp_extension) 
 					wfp_scan(target, scan_max_snippets, scan_max_components);
+
+				if (bfp_extension) 
+					binary_scan(target, scan_max_snippets, scan_max_components);
 
 				/* Scan file directly */
 				else 

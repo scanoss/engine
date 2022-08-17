@@ -428,7 +428,7 @@ bool print_json_match(struct match_data_t * match)
 	printf(",\"source_hash\": \"%s\"", match->source_md5);
 
 	/* Output file_url (same as url when match type = url) */
-	if (match->type != MATCH_URL)
+	//if (match->type != MATCH_URL)
 	{
 		char *custom_url = getenv("SCANOSS_API_URL");
 		printf(",\"file_url\": \"%s/file_contents/%s\"", custom_url ? custom_url : API_URL, file_id);

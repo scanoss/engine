@@ -138,7 +138,7 @@ void biggest_snippet(scan_data_t *scan)
 			memcpy(match_new->file_md5, scan->matchmap[j].md5, MD5_LEN);
 			match_new->hits = scan->matchmap[j].hits;
 			match_new->matchmap_reg = scan->matchmap[j].md5;
-			match_new->type = MATCH_SNIPPET;
+			match_new->type = scan->match_type;
 			match_new->from = scan->matchmap[j].range->from;
 			strcpy(match_new->source_md5, scan->source_md5);
 			bool found = false;
@@ -626,6 +626,8 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 				scan->matchmap[found].range[t].to = line;
 				scan->matchmap[found].range[t].oss_line = oss_line;
 				scan->matchmap[found].hits++;
+								scanlog("<new file>\n");
+
 				break;
 			}
 
@@ -633,6 +635,7 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 			else if (from == line)
 			{
 				scan->matchmap[found].hits++;
+				scanlog("<<hits++ %d>>\n",scan->matchmap[found].hits);
 				break;
 			}
 

@@ -151,4 +151,5 @@ bool ignored_asset_match(uint8_t *url_record);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
 void scan_data_free (scan_data_t * scan);
 
+int binary_scan(char * path, int scan_max_snippets, int scan_max_components);
 #endif

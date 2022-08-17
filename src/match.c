@@ -46,7 +46,7 @@
 
 
 bool first_file = true;										   /** global first file flag */
-const char *matchtypes[] = {"none", "url", "file", "snippet"}; /** describe the availables kinds of match */
+const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
 bool match_extensions = false;								   /** global match extension flag */
 
 char vendor_hint[MAX_FIELD_LN];
@@ -383,6 +383,12 @@ void load_matches (match_data_t *match, scan_data_t * scan)
 
 		asprintf(&match->matched_percent, "%u%%", matched_percent);
 	}
+	else if (match->type == MATCH_BINARY)
+	{
+		asprintf(&match->line_ranges, "n/a");
+		asprintf(&match->oss_ranges, "n/a");
+		asprintf(&match->matched_percent, "%d functions matched", match->hits);
+	}
 	else
 	{
 		asprintf(&match->line_ranges, "all");
@@ -580,7 +586,7 @@ void compile_matches(scan_data_t *scan)
 	/* Gather and load match metadata */
 	scanlog("Starting match: %s\n", matchtypes[scan->match_type]);
 	/* Search for biggest snippet */
-	if (scan->match_type == MATCH_SNIPPET)
+	if (scan->match_type == MATCH_SNIPPET || scan->match_type == MATCH_BINARY)
 	{
 		/* Dump match map */
 		if (debug_on)
