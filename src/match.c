@@ -286,18 +286,29 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 
 	if (component_hint)
 	{
-		scanlog("Using hint: %s\n", component_hint);
 		/*Check for component hint in purl, select components matching with the hint */
 		if (a->purls[0] && strstr(a->purls[0], component_hint) && !(b->purls[0] && strstr(b->purls[0], component_hint)))
+		{
+			scanlog("Reject component %s by hint: %s\n", b->purls[0], component_hint);
 			return false;
+		}
 		if (b->purls[0] && strstr(b->purls[0], component_hint) && !(a->purls[0] && strstr(a->purls[0], component_hint)))
+		{
+			scanlog("Accept component %s by hint: %s\n", b->purls[0], component_hint);
 			return true;
+		}
 
 		/*Check for component hint in component, select components matching with the hint */ // tODO: this should be deprecated
 		if (a->component && strstr(a->component, component_hint) && !(b->component && strstr(b->purls[0], component_hint)))
+		{
+			scanlog("Reject component %s by hint: %s\n", b->component, component_hint);
 			return false;
+		}
 		if (b->component && strstr(b->component, component_hint) && !(a->component && strstr(a->purls[0], component_hint)))
+		{
+			scanlog("Accept component %s by hint: %s\n",  b->component, component_hint);
 			return true;
+		}
 	}
 	/*if the relese date is the same untie with the component age (purl)*/
 	if (!strcmp(b->release_date, a->release_date) && b->age > a->age)
@@ -330,7 +341,7 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 	qsort(path_rank, SHORTEST_PATHS_QTY, sizeof(len_rank), path_struct_cmp);
 
 	/* Dump rank contents into log */
-	// dump_path_rank(path_rank, files);
+	dump_path_rank(path_rank, files);
 
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
 
@@ -371,7 +382,7 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 		}
 		else
 		{
-			scanlog("incomplete component");
+			scanlog("incomplete component: %s\n", new_comp->component);
 			component_data_free(new_comp);
 		}
 	}
@@ -442,6 +453,7 @@ void load_matches(match_data_t *match, scan_data_t *scan)
 	/*Collect all files from the files table matching with the match md5 being processed */
 	file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
 	records = ldb_fetch_recordset(NULL, oss_file, match->file_md5, false, collect_all_files, (void *)files);
+	scanlog("Found %d file entries\n", records);
 	if (records)
 	{
 		load_components(&match->component_list, files, records);

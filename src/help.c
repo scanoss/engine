@@ -48,6 +48,7 @@ Configuration:\n\
 -w         Treats TARGET as a .wfp file regardless of the actual file extension.\n\
 -H         High Precision Snippet Match mode, 'libhpsm.so' must be present in the system.\n\
 -e         Expect matching extensions to equal the file extension being scanned (default: off).\n\
+-M NUMBER  Looks for NUMBER of different components in a file (MAX 9).\n\
 -s SBOM    Use assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification.\n\
 -b SBOM    Ignore matches to assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format).\n\
 -a SBOM    Displays attribution notices for provided SBOM.json.\n\
