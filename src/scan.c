@@ -197,7 +197,8 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 	size_t len = 0;
 	ssize_t lineln;
 	uint8_t *rec = NULL;
-
+	
+	scanlog("--- WFP SCAN ---\n");
 	/* Open WFP file */
 	FILE *fp = fopen(path, "r");
 	if (fp == NULL)
@@ -251,6 +252,7 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
 			scan->preload = true;
 			free(rec);
+			scanlog("File md5 to be scanned: %s\n", hexmd5);
 			ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
 			free(hexmd5);
 		}
@@ -287,7 +289,6 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			}
 		}
 	}
-
 	/* Scan the last file */
 	ldb_scan(scan);
 
@@ -311,14 +312,18 @@ void ldb_scan(scan_data_t * scan)
 	if (!scan)
 		return;
 
-	if (unwanted_path(scan->file_path)) skip = true;
+	if (unwanted_path(scan->file_path))
+	{
+		skip = true;
+		scanlog("File %s skipped by path", scan->file_path);
+	} 
 
 	scan->matchmap_size = 0;
 	scan->match_type = MATCH_NONE;
 	scan->timer = microseconds_now();
 
 	/* Get file length */
-	uint64_t file_size;
+	uint64_t file_size = 0;
 	if (!skip)
 	{
 		if (scan->preload) file_size = atoi(scan->file_size);
@@ -329,11 +334,18 @@ void ldb_scan(scan_data_t * scan)
 	/* Calculate MD5 hash (if not already preloaded) */
 	if (!skip) if (!scan->preload) get_file_md5(scan->file_path, scan->md5);
 
-	if (!skip) if (extension(scan->file_path))
-		if (ignored_extension(scan->file_path)) skip = true;
+	if (!skip && extension(scan->file_path) && ignored_extension(scan->file_path)) 
+	{
+		skip = true;
+		scanlog("File %s skipped by extension", scan->file_path);
+	}
 
 	/* Ignore <=1 byte */
-	if (file_size <= MIN_FILE_SIZE) skip = true;
+	if (file_size <= MIN_FILE_SIZE) 
+	{
+		skip = true;
+		scanlog("File %s skipped by file size", scan->file_path);
+	}
 
 	if (!skip)
 	{
@@ -343,7 +355,7 @@ void ldb_scan(scan_data_t * scan)
 		free(tmp_md5_hex);
 	
 	/* Look for full file match or url match in ldb */
-		scan->match_type = ldb_scan_file(scan->md5);
+		scan->match_type = ldb_scan_file(scan);
 		
 		/* If no match, scan snippets */
 		if (scan->match_type == MATCH_NONE)
@@ -384,47 +396,13 @@ void ldb_scan(scan_data_t * scan)
 
 	/* Compile matches */
 	compile_matches(scan);
+
+	if (!scan->best_match)
+		scanlog("No best match\n");
 	
-	//if (scan->matches.headp.lh_first && scan->match_type != MATCH_NONE)
-	//{
-		/* Debug match info */
-	//	scanlog("%d matches compiled:\n", total_matches);
-	//	if (debug_on) for (int i = 0; i < total_matches; i++)
-	//		scanlog("#%d %s, %s\n",i,  matches[i].purl, matches[i].file);
-
-		/* Matched asset in SBOM.json? */
-		// for (int i = 0; i < total_matches; i++)
-		// {
-		// 	if (asset_declared(matches[i]))
-		// 	{
-		// 		scanlog("Asset matched\n");
-		// 		if (engine_flags & ENABLE_REPORT_IDENTIFIED)
-		// 		{
-		// 			scan->identified = true;
-		// 		}
-		// 		else
-		// 		{
-		// 			if (matches) free(matches);
-		// 			matches = NULL;
-		// 			scan->match_type = none;
-		// 		}
-		// 		break;
-		// 	}
-		// }
-		
-
-		/* Perform post scan intelligence */
-		// if (scan->match_type != none)
-		// {
-		// 	scanlog("Starting post-scan analysis\n");
-		// 	post_scan(matches);
-		// }
-	//}
-
 	/* Output matches */
 	scanlog("Match output starts\n");
 	output_matches_json(scan);
 
-	//if (matches) free(matches);
 	scan_data_free(scan);
 }

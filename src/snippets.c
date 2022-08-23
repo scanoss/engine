@@ -124,6 +124,7 @@ static bool hit_test(match_data_t * a, match_data_t * b)
  */
 void biggest_snippet(scan_data_t *scan)
 {
+	scanlog("biggest_snippet\n");
 	/*Initialize the auxiliary indirection list */
 	for (int i=0; i< scan->max_snippets_to_process; i++)
 		scan-> matches_list_array_indirection[i] = -1;
@@ -168,8 +169,17 @@ void biggest_snippet(scan_data_t *scan)
 							
 
 			if (!match_list_add(scan->matches_list_array[i], match_new, hit_test, true)) /*Add the match in the selected list */
+			{
+				scanlog("Rejected match with %d hits\n", match_new->hits);
 				match_data_free(match_new);	/* the the memory if the match was not accepted in the list */
+			}
 		}
+	}
+	for (int i = 0; i < scan->matches_list_array_index; i++)
+	{
+		scanlog("Match list N %d, with %d matches. %d <= HITS <= %d \n", i, scan->matches_list_array[i]->items,
+																		scan->matches_list_array[i]->last_element->match->hits,
+																		scan->matches_list_array[i]->headp.lh_first->match->hits);
 	}
 }
 
@@ -626,8 +636,6 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 				scan->matchmap[found].range[t].to = line;
 				scan->matchmap[found].range[t].oss_line = oss_line;
 				scan->matchmap[found].hits++;
-								scanlog("<new file>\n");
-
 				break;
 			}
 
@@ -635,7 +643,6 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 			else if (from == line)
 			{
 				scan->matchmap[found].hits++;
-				scanlog("<<hits++ %d>>\n",scan->matchmap[found].hits);
 				break;
 			}
 
@@ -667,7 +674,12 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
  */
 match_t ldb_scan_snippets(scan_data_t *scan) {
 
-	if (!scan->hash_count) return MATCH_NONE;
+	scanlog("ldb_scan_snippets\n");
+	if (!scan->hash_count) 
+	{
+		scanlog("No hashes return NONE\n");
+		return MATCH_NONE;
+	}
 
 	if (engine_flags & DISABLE_SNIPPET_MATCHING) return MATCH_NONE;
 
@@ -711,7 +723,7 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 		if (md5s_ln > (WFP_POPULARITY_THRESHOLD * WFP_REC_LN))
 		{
 			scanlog("Snippet %02x%02x%02x%02x (line %d) >= WFP_POPULARITY_THRESHOLD\n", wfp[0], wfp[1], wfp[2], wfp[3], line);
-			/*Ignore popular snippets*///	add_popular_snippet_to_matchmap(scan, line, last_line - line);
+		//	add_popular_snippet_to_matchmap(scan, line, last_line - line);
 			continue;
 		}
 
@@ -752,7 +764,8 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 
 	free(md5_set);
 
-	if (scan->matchmap_size) return MATCH_SNIPPET;
+	if (scan->matchmap_size) 
+		return MATCH_SNIPPET;
 	scanlog("Snippet scan has no matches\n");
 	return MATCH_NONE;
 }

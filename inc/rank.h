@@ -16,7 +16,6 @@ typedef struct path_ranking
 } path_ranking;
 
 int get_component_age(uint8_t *md5);
-bool component_hint_matches_path(file_recordset *files, int records, char *component_hint);
 long component_age(char *vendor, char *component);
 len_rank *load_path_rank(file_recordset *files, int records);
 void dump_path_rank(len_rank *path_rank, file_recordset *files);

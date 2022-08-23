@@ -358,6 +358,8 @@ bool print_json_component(component_data_t * component)
 	
 	printf("\"url\": \"%s\",", component->main_url ? component->main_url : component->url);
 
+	printf("\"status\": \"%s\",", component->identified ? "identified" : "pending");
+
 	/* Print (optional download_url */
 	if (engine_flags & ENABLE_DOWNLOAD_URL)
 	printf("\"download_url\": \"%s\",", component->url);
@@ -408,9 +410,7 @@ bool print_json_match(struct match_data_t * match)
 	if (engine_flags & DISABLE_BEST_MATCH)
 		printf("{");
 
-	printf("\"id\": \"%s\"", matchtypes[match->type == 1 ? 2 : match->type]);
-	//printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
-	
+	printf("\"id\": \"%s\"", matchtypes[match->type]);	
 	printf(",\"lines\": \"%s\"", match->line_ranges);
 	printf(",\"oss_lines\": \"%s\"", match->oss_ranges);
 	printf(",\"matched\": \"%s\"", match->matched_percent);

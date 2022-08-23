@@ -299,9 +299,6 @@ int main(int argc, char **argv)
 	
 	microseconds_start = microseconds_now();
 
-	*component_hint = 0;
-	*vendor_hint = 0;
-
 	initialize_ldb_tables(NULL);
 
 	/* Parse arguments */
@@ -332,7 +329,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'c':
-				strcpy(component_hint, optarg);
+				component_hint = strdup(optarg);
 				break;
 
 			case 'k':
@@ -500,12 +497,13 @@ int main(int argc, char **argv)
 				if (wfp_extension) 
 					wfp_scan(target, scan_max_snippets, scan_max_components);
 
-				if (bfp_extension) 
+				else if (bfp_extension) 
 					binary_scan(target, scan_max_snippets, scan_max_components);
 
 				/* Scan file directly */
 				else 
 				{
+					scanlog("Scanning file %s\n", target);
 					scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components);
 					ldb_scan(scan);
 				}
@@ -528,7 +526,7 @@ int main(int argc, char **argv)
 		dlclose(lib_encoder_handle);
 	
 	hpsm_lib_close();
-	
+	free(component_hint);
 
 	return EXIT_SUCCESS;
 }

@@ -22,9 +22,9 @@
 
 /**
   * @file match.c
-  * @date 12 Jul 2020 
+  * @date 12 Jul 2020
   * @brief Contains the functions used for fullyfill the matches list during the scanning
-  
+
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/match.c
   */
@@ -44,13 +44,11 @@
 #include "hpsm.h"
 #include "scan.h"
 
-
-bool first_file = true;										   /** global first file flag */
+bool first_file = true;											  /** global first file flag */
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
-bool match_extensions = false;								   /** global match extension flag */
+bool match_extensions = false;									  /** global match extension flag */
 
-char vendor_hint[MAX_FIELD_LN];
-char component_hint[MAX_FIELD_LN];
+char *component_hint = NULL;
 
 /**
  * @brief This script replaces \ with /
@@ -82,27 +80,31 @@ void output_matches_json(scan_data_t *scan)
 			printf(",");
 	first_file = false;
 
-	/* Open file structure */
-	//json_open_file(scan->file_path);
 	uint64_t engine_flags_aux = engine_flags;
 	/* Print matches */
 	if (engine_flags & DISABLE_BEST_MATCH)
 	{
 		printf("\"%s\": [", scan->file_path);
 		bool first = true;
-		for (int i=0; i < scan->matches_list_array_index; i++)
+		for (int i = 0; i < scan->matches_list_array_index; i++)
 		{
 			if (!first && scan->matches_list_array[i]->items && scan->matches_list_array[i]->best_match->component_list.items)
 				printf(",");
-			match_list_print(scan->matches_list_array[i], print_json_match, ","); //corregir
+			match_list_print(scan->matches_list_array[i], print_json_match, ",");
 			first = false;
 		}
 	}
-	else if (scan->matches_list_array_index > 1  && scan->max_snippets_to_process > 1)
+	/* prinf no match if the scan was evaluated as none */ // TODO must be unified with the "else" clause
+	else if (scan->match_type == MATCH_NONE)
+	{
+		printf("\"%s\": [{", scan->file_path);
+		print_json_nomatch(scan);
+	}
+	else if (scan->matches_list_array_index > 1 && scan->max_snippets_to_process > 1)
 	{
 		engine_flags |= DISABLE_BEST_MATCH;
 		printf("\"%s\": {\"matches\":[", scan->file_path);
-		match_list_t * best_list = match_select_m_component_best(scan);
+		match_list_t *best_list = match_select_m_component_best(scan);
 		scanlog("<<<best list items: %d>>>\n", best_list->items);
 		match_list_print(best_list, print_json_match, ",");
 		match_list_destroy(best_list);
@@ -117,13 +119,13 @@ void output_matches_json(scan_data_t *scan)
 		printf("\"%s\": [{", scan->file_path);
 		print_json_nomatch(scan);
 	}
-	
+
 	json_close_file(scan);
 	engine_flags = engine_flags_aux;
 }
 
 /**
- * @brief Return true if asset is found in ignore_components (-b parameter) 
+ * @brief Return true if asset is found in ignore_components (-b parameter)
  * @param url_record pointer to url record
  */
 bool ignored_asset_match(uint8_t *url_record)
@@ -192,7 +194,7 @@ bool ignored_asset_match(uint8_t *url_record)
  * @param url_record pointer to url record
  * @return match_data fullfilled structure
  */
-bool fill_component(component_data_t * component, uint8_t *url_key, char *file_path, uint8_t *url_record)
+bool fill_component(component_data_t *component, uint8_t *url_key, char *file_path, uint8_t *url_record)
 {
 	char vendor[MAX_FIELD_LN];
 	char comp[MAX_FIELD_LN];
@@ -202,7 +204,7 @@ bool fill_component(component_data_t * component, uint8_t *url_key, char *file_p
 	char license[MAX_FIELD_LN];
 	char url[MAX_FILE_PATH];
 	char purl[MAX_FILE_PATH];
-	//component->path_ln = 0;
+	// component->path_ln = 0;
 	if (!component)
 		return false;
 	/* Extract fields from file record */
@@ -241,7 +243,7 @@ bool fill_component(component_data_t * component, uint8_t *url_key, char *file_p
 	component->component = strdup(comp);
 	component->version = strdup(version);
 	if (strlen(release_date) < 4)
-			component->release_date = strdup("9999-99-99");
+		component->release_date = strdup("9999-99-99");
 	else
 		component->release_date = strdup(release_date);
 	component->license = strdup(license);
@@ -264,12 +266,47 @@ bool fill_component(component_data_t * component, uint8_t *url_key, char *file_p
  * @param b len_rank b
  * @return 1 if a is longer than b, -1 if b is longer than a
  */
-static int path_struct_cmp(const void *a, const void *b) {
-    const len_rank *v1 = (const len_rank *) a;
-    const len_rank *v2 = (const len_rank *) b;
-    if (v1->len > v2->len) return 1;
-    if (v1->len < v2->len) return -1;
+static int path_struct_cmp(const void *a, const void *b)
+{
+	const len_rank *v1 = (const len_rank *)a;
+	const len_rank *v2 = (const len_rank *)b;
+	if (v1->len > v2->len)
+		return 1;
+	if (v1->len < v2->len)
+		return -1;
 	return 0;
+}
+
+static bool component_hint_date_comparation(component_data_t *a, component_data_t *b)
+{
+	if (!*b->release_date)
+		return false;
+	if (!*a->release_date)
+		return true;
+
+	if (component_hint)
+	{
+		scanlog("Using hint: %s\n", component_hint);
+		/*Check for component hint in purl, select components matching with the hint */
+		if (a->purls[0] && strstr(a->purls[0], component_hint) && !(b->purls[0] && strstr(b->purls[0], component_hint)))
+			return false;
+		if (b->purls[0] && strstr(b->purls[0], component_hint) && !(a->purls[0] && strstr(a->purls[0], component_hint)))
+			return true;
+
+		/*Check for component hint in component, select components matching with the hint */ // tODO: this should be deprecated
+		if (a->component && strstr(a->component, component_hint) && !(b->component && strstr(b->purls[0], component_hint)))
+			return false;
+		if (b->component && strstr(b->component, component_hint) && !(a->component && strstr(a->purls[0], component_hint)))
+			return true;
+	}
+	/*if the relese date is the same untie with the component age (purl)*/
+	if (!strcmp(b->release_date, a->release_date) && b->age > a->age)
+		return true;
+	/*select the oldest release date */
+	if (strcmp(b->release_date, a->release_date) < 0)
+		return true;
+
+	return false;
 }
 
 /**
@@ -280,10 +317,10 @@ static int path_struct_cmp(const void *a, const void *b) {
  * @param component_list component list to be filled
  * @param files recodset with candidates to be processed.
  * @param records number of records to be processed.
- * @return true 
- * @return false 
+ * @return true
+ * @return false
  */
-static bool load_components(component_list_t * component_list, file_recordset *files, int records)
+static bool load_components(component_list_t *component_list, file_recordset *files, int records)
 {
 	scanlog("Load components\n");
 	/* Load path rank */
@@ -293,45 +330,43 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 	qsort(path_rank, SHORTEST_PATHS_QTY, sizeof(len_rank), path_struct_cmp);
 
 	/* Dump rank contents into log */
-	//dump_path_rank(path_rank, files);
+	// dump_path_rank(path_rank, files);
 
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
 
 	int min = 999; /* save the min path lenght */
-	
+
 	for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
 	{
 		/*ignore if the path is empty */
 		if (!path_rank[r].len || !*files[path_rank[r].id].path)
 			continue;
-		//scanlog("PATH: %s\n", files[path_rank[r].id].path);
+		// scanlog("PATH: %s\n", files[path_rank[r].id].path);
 
 		if (path_rank[r].len > 1 && path_rank[r].len < min)
 			min = path_rank[r].len; /* update min path lenght */
 
-		/* process until path lenght is bigger than the minimum plus one */	
-		if (path_rank[r].len > min +1) 
+		/* process until path lenght is bigger than the minimum plus one */
+		if (path_rank[r].len > min + 1)
 			break;
 
-		/* Get oldest url for this component */		
-		strcpy((char *) url_rec, "9999");
-		ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *) url_rec);
+		/* Get oldest url for this component */
+		strcpy((char *)url_rec, "9999");
+		ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *)url_rec);
 
 		/* Extract date from url_rec */
-		char date[MAX_ARGLN]= "0";
-		extract_csv(date, (char *) url_rec , 4, MAX_ARGLN);
+		char date[MAX_ARGLN] = "0";
+		extract_csv(date, (char *)url_rec, 4, MAX_ARGLN);
 		/* Create a new component and fill it from the url record */
-		component_data_t * new_comp = calloc(1, sizeof(*new_comp));
-		bool result = fill_component(new_comp, files[path_rank[r].id].url_id, files[path_rank[r].id].path, (uint8_t*) url_rec);
+		component_data_t *new_comp = calloc(1, sizeof(*new_comp));
+		bool result = fill_component(new_comp, files[path_rank[r].id].url_id, files[path_rank[r].id].path, (uint8_t *)url_rec);
 		if (result)
-		{	
+		{
 			new_comp->file_md5_ref = component_list->match_ref->file_md5;
-			if (asset_declared(new_comp))
-				new_comp->identified = true;
 			/* If the component is valid add it to the component list */
 			/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
 			/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
-			if (!component_list_add(component_list, new_comp, component_date_comparation, true))
+			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
 				component_data_free(new_comp); /* Free if the componet was rejected */
 		}
 		else
@@ -350,13 +385,12 @@ static bool load_components(component_list_t * component_list, file_recordset *f
 	return true;
 }
 
-
 /**
  * @brief Fill match field and fill component list.
  * @param scan scan object.
  * @param match Match object.
  */
-void load_matches (match_data_t *match, scan_data_t * scan)
+void load_matches(match_data_t *match, scan_data_t *scan)
 {
 	scanlog("Load matches");
 
@@ -412,7 +446,12 @@ void load_matches (match_data_t *match, scan_data_t * scan)
 	{
 		load_components(&match->component_list, files, records);
 		if (match->component_list.headp.lh_first && match->component_list.headp.lh_first->component)
+		{
 			add_versions(match->component_list.headp.lh_first->component, files, records);
+			/* check if the best component was declared */
+			if (asset_declared(match->component_list.headp.lh_first->component))
+				match->component_list.headp.lh_first->component->identified = true;
+		}
 	}
 
 	free(files);
@@ -421,19 +460,17 @@ void load_matches (match_data_t *match, scan_data_t * scan)
 		scanlog("Match type is 'none' after loading matches\n");
 }
 
-
-
-bool find_oldest(match_data_t * fp1, void * fp2)
+bool find_oldest(match_data_t *fp1, void *fp2)
 {
-	scan_data_t * scan = fp2;
+	scan_data_t *scan = fp2;
 
 	if (!fp1)
 		return false;
 
-	if(!fp1->component_list.headp.lh_first || !fp1->component_list.headp.lh_first->component || !fp1->component_list.headp.lh_first->component->version)
+	if (!fp1->component_list.headp.lh_first || !fp1->component_list.headp.lh_first->component || !fp1->component_list.headp.lh_first->component->version)
 		return false;
-	
-	if(!fp1->component_list.headp.lh_first->component->release_date)
+
+	if (!fp1->component_list.headp.lh_first->component->release_date)
 		fp1->component_list.headp.lh_first->component->release_date = strdup("9999-99-99");
 	else if (!*fp1->component_list.headp.lh_first->component->release_date)
 	{
@@ -441,42 +478,44 @@ bool find_oldest(match_data_t * fp1, void * fp2)
 		fp1->component_list.headp.lh_first->component->release_date = strdup("9999-99-99");
 	}
 
-
 	if (!scan->best_match || !scan->best_match->component_list.headp.lh_first)
 		scan->best_match = fp1;
 	else
 	{
 		if (!strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) &&
-				scan->best_match->component_list.headp.lh_first->component->age < fp1->component_list.headp.lh_first->component->age)
+			scan->best_match->component_list.headp.lh_first->component->age < fp1->component_list.headp.lh_first->component->age)
 			scan->best_match = fp1;
 		else if (strcmp(scan->best_match->component_list.headp.lh_first->component->release_date, fp1->component_list.headp.lh_first->component->release_date) > 0)
 			scan->best_match = fp1;
 	}
 
-	return false; 
+	return false;
 }
 
-bool find_oldest_match(match_data_t * fp1, match_data_t * fp2)
+bool find_oldest_match(match_data_t *fp1, match_data_t *fp2)
 {
 	if (!fp1)
 	{
 		return true;
 	}
 
-	if (!fp2->component_list.headp.lh_first || !fp1->component_list.headp.lh_first)
+	if (!fp2->component_list.headp.lh_first)
 		return false;
+	if (!fp1->component_list.headp.lh_first)
+		return true;
 
 	return component_date_comparation(fp1->component_list.headp.lh_first->component, fp2->component_list.headp.lh_first->component);
 }
 
-void match_select_best(scan_data_t * scan)
+void match_select_best(scan_data_t *scan)
 {
-	if (! scan->matches_list_array_index)
+	scanlog("match_select_best\n");
+	if (!scan->matches_list_array_index)
 		return;
 
-	for (int  i = 0; i < scan->matches_list_array_index; i++)
+	for (int i = 0; i < scan->matches_list_array_index; i++)
 	{
-		struct entry * item = NULL;
+		struct entry *item = NULL;
 		LIST_FOREACH(item, &scan->matches_list_array[i]->headp, entries)
 		{
 			if (find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
@@ -486,7 +525,7 @@ void match_select_best(scan_data_t * scan)
 
 	int max_hits = 0;
 	int index = 0;
-	for (int  i = 0; i < scan->matches_list_array_index; i++)
+	for (int i = 0; i < scan->matches_list_array_index; i++)
 	{
 		if (!scan->matches_list_array[i]->best_match)
 			continue;
@@ -520,7 +559,12 @@ void match_select_best(scan_data_t * scan)
 	}
 
 	scan->best_match = scan->matches_list_array[index]->best_match;
-	
+	/*if the component of the best match was identified in the assets list, return none*/
+	if (!scan->best_match || !scan->best_match->component_list.items || (!(engine_flags & ENABLE_REPORT_IDENTIFIED) && scan->best_match->component_list.headp.lh_first->component->identified))
+	{
+		scan->match_type = MATCH_NONE;
+		scanlog("Match without components or declared in sbom\n");
+	}
 }
 /*
 match_list_t * match_select_m_best(scan_data_t * scan)
@@ -534,31 +578,30 @@ match_list_t * match_select_m_best(scan_data_t * scan)
 	return final;
 }*/
 
-match_list_t * match_select_m_component_best(scan_data_t * scan)
+match_list_t *match_select_m_component_best(scan_data_t *scan)
 {
 	scanlog("<<<select_best_match_M: %d>>>>\n", scan->max_snippets_to_process);
-	match_list_t * final = match_list_init(false, scan->max_snippets_to_process, scan);
-	
-	for (int  i = 0; i < scan->matches_list_array_index; i++)
+	match_list_t *final = match_list_init(false, scan->max_snippets_to_process, scan);
+
+	for (int i = 0; i < scan->matches_list_array_index; i++)
 	{
 		if (!scan->matches_list_array[i]->best_match)
 			continue;
-		
+
 		if (!scan->matches_list_array[i]->best_match->component_list.items)
 			continue;
 
-		match_data_t * dup_match = match_data_copy(scan->matches_list_array[i]->best_match);
-		component_data_t * dup_comp = component_data_copy(scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component);
+		match_data_t *dup_match = match_data_copy(scan->matches_list_array[i]->best_match);
+		component_data_t *dup_comp = component_data_copy(scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component);
 		component_list_init(&dup_match->component_list, 1);
 		dup_match->component_list.match_ref = dup_match;
 		component_list_add(&dup_match->component_list, dup_comp, NULL, false);
-		dup_match->component_list.max_items = 1; //harcoded to show only fist component in report.
+		dup_match->component_list.max_items = 1; // harcoded to show only fist component in report.
 		if (!match_list_add(final, dup_match, find_oldest_match, true))
 			match_data_free(dup_match);
 	}
 
 	return final;
-
 }
 
 /**
@@ -569,9 +612,9 @@ match_list_t * match_select_m_component_best(scan_data_t * scan)
  * @return true: stop processing
  * @return false: continue processing.
  */
-bool match_process(match_data_t * fp1, void * fp2)
+bool match_process(match_data_t *fp1, void *fp2)
 {
-	load_matches(fp1, (scan_data_t*) fp2);
+	load_matches(fp1, (scan_data_t *)fp2);
 	return false;
 }
 /**
@@ -582,7 +625,7 @@ bool match_process(match_data_t * fp1, void * fp2)
 void compile_matches(scan_data_t *scan)
 {
 	scan->match_ptr = scan->md5;
-	
+
 	/* Gather and load match metadata */
 	scanlog("Starting match: %s\n", matchtypes[scan->match_type]);
 	/* Search for biggest snippet */
@@ -599,7 +642,7 @@ void compile_matches(scan_data_t *scan)
 	{
 		scan->matches_list_array[0] = match_list_init(true, scan->max_snippets_to_process, scan);
 		scan->matches_list_array_index = 1;
-		match_data_t * match_new = calloc(1, sizeof(match_data_t));
+		match_data_t *match_new = calloc(1, sizeof(match_data_t));
 		match_new->type = scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
 		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);
@@ -608,21 +651,21 @@ void compile_matches(scan_data_t *scan)
 			match_data_free(match_new);
 		}
 	}
-	
-		/* No match pointer */
-		if (!scan->match_ptr)
-		{
-				scan->match_type = MATCH_NONE;
-				scanlog("No matching file id\n");
-				return;
-		}
+
+	/* No match pointer */
+	if (!scan->match_ptr)
+	{
+		scan->match_type = MATCH_NONE;
+		scanlog("No matching file id\n");
+		return;
+	}
 	/* Post scan processing */
 	if (scan->match_type != MATCH_NONE)
 	{
 		/* Process each possible match filling the components list */
-		for (int i=0; i < scan->matches_list_array_index; i++)
+		for (int i = 0; i < scan->matches_list_array_index; i++)
 			match_list_process(scan->matches_list_array[i], match_process);
-		
+
 		/* Select best match from the universe */
 		match_select_best(scan);
 	}

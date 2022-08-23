@@ -376,8 +376,6 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
             list->last_element_aux = NULL;
             list->last_element->entries.le_next = NULL;
         }
-
-        scanlog("Add to list add: %d\n", list->items);
         return true;
     }
     else
@@ -446,7 +444,10 @@ void match_list_process(match_list_t *list, bool (*funct_p)(match_data_t *fpa, v
         bool result = funct_p(np->match, (void*) list->scan_ref);
 
         if (result)
+        {
+            scanlog("aca");
             break;
+        }
     }
 }
 

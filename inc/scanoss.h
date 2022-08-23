@@ -114,9 +114,8 @@ extern bool match_extensions;
 extern uint8_t trace_id[MD5_LEN];
 extern bool trace_on;
 
-/* Vendor and component hint hold the last component matched/guessed */
-extern char vendor_hint[MAX_FIELD_LN];
-extern char component_hint[MAX_FIELD_LN];
+/*component hint hold the last component matched/guessed */
+extern char * component_hint;
 
 #include "ldb.h"
 

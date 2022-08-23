@@ -64,7 +64,7 @@ static void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5
 			/* Not found. Add MD5 to map */
 			if (scan->matchmap_size >= matchmap_max_files) 
 			{
-			//	scanlog("<<< %d/%d - MAX MACHMAP >>>\n", n, md5s_ln);
+				scanlog("<<< %d/%d - MAX MACHMAP >>>\n", n, md5s_ln);
 				continue;
 			}
 
