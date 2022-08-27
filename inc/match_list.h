@@ -150,6 +150,7 @@ typedef struct component_list_t
  */
 typedef struct match_data_t
 {
+	scan_data_t * scan_ower;
 	component_list_t component_list; /*Component list object */ 
 	match_t type; /*math type (none, snippet, file) */
     int hits; /*match hits number, more hits equal bigger snippet matching*/
@@ -160,7 +161,7 @@ typedef struct match_data_t
 	uint8_t file_md5[MD5_LEN]; /* file md5 */
 	char source_md5[MD5_LEN * 2 + 1]; /*matched file md5 in hex format */
     uint8_t * matchmap_reg; /* pointer to matchmap record */
-	uint8_t * snippet_ids; /*pointer to snippet ids */
+	char * snippet_ids; /* comma separated list of matching snippet ids */
 	uint32_t * crclist; /* pointer to crc list used in for processing */
 	char * quality_text; /* quality string used in json output format */
 	char * crytography_text; /* crytography string used in json output format */
@@ -243,12 +244,7 @@ typedef struct scan_data_t
 	match_t match_type; /* match_t (file, snippet, none), this is replicated in each match in the matches list */
 	matchmap_entry *matchmap; /*matchmap pointer, used in snippet scanning */
 	uint32_t matchmap_size; /*size of the match map */
-//	char line_ranges[MAX_FIELD_LN * 2]; /*array of the line ranges of the snippets in the source file */
-//	char oss_ranges[MAX_FIELD_LN * 2];
 	uint8_t *match_ptr; // pointer to matching record in match_map
-	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1]; /* comma separated list of matching snippet ids */ //TODO this probably will moved to match object.
-//	char matched_percent[MAX_FIELD_LN];
-//	bool identified;
 	match_list_t * matches_list_array[MAX_MULTIPLE_COMPONENTS]; /* array of "match_list_t", each snippet with different "from line" will generate its own matches list */
 	int matches_list_array_index; /* elements in the matches list array*/
 	int  matches_list_array_indirection[MAX_MULTIPLE_COMPONENTS]; /*used to identify different snippets components, this mantain a reference to the snippet "from line" */

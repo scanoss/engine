@@ -127,6 +127,7 @@ void match_data_free(match_data_t *data)
     if (!data)
         return;
 
+    free_and_null(data->snippet_ids);
     free_and_null(data->line_ranges);
     free_and_null(data->oss_ranges);
     free_and_null(data->matched_percent);
@@ -146,6 +147,7 @@ match_data_t * match_data_copy(match_data_t * in)
     out->line_ranges = strdup(in->line_ranges);
     out->oss_ranges = strdup(in->oss_ranges);
     out->matched_percent = strdup(in->matched_percent);
+    out->snippet_ids = strdup(in->snippet_ids);
     strcpy(out->source_md5, in->source_md5);
     return out;
 }

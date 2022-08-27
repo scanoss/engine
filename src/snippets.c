@@ -142,6 +142,7 @@ void biggest_snippet(scan_data_t *scan)
 			match_new->type = scan->match_type;
 			match_new->from = scan->matchmap[j].range->from;
 			strcpy(match_new->source_md5, scan->source_md5);
+			match_new->scan_ower = scan;
 			bool found = false;
 			int i = 0;
 			for (; i< scan->matches_list_array_index; i++) /*Check if there is already a list for this line ranges */
@@ -247,33 +248,33 @@ bool skip_snippets(char *src, uint64_t srcln)
  * @param from snippet start
  * @param to snippet end
  */
-void add_snippet_ids(scan_data_t *scan, long from, long to)
+void add_snippet_ids(match_data_t *match, char * snippet_ids, long from, long to)
 {
 	int maxlen = MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES;
 	bool found = false;
-
 	/* Walk scan->lines array */
-	for (int i = 0; i < scan->hash_count; i++)
+	for (int i = 0; i < match->scan_ower->hash_count; i++)
 	{
-		if (scan->lines[i] > to - 1) break;
+		if (match->scan_ower->lines[i] > to - 1) break;
 
 		/* If line is within from and to, add snippet id to list */
-		if (scan->lines[i] >= from - 1)
+		if (match->scan_ower->lines[i] >= from - 1)
 		{
 			found = true;
 
 			char hex[9] = "\0";
 			hex[8] = 0;
-			uint32_t hash = scan->hashes[i];
+			uint32_t hash = match->scan_ower->hashes[i];
 			uint32_reverse((uint8_t *)&hash);
 			ldb_bin_to_hex((uint8_t *)&hash, WFP_LN, hex);
 
-			if (strlen(scan->snippet_ids) + WFP_LN * 2 + 1 >= maxlen) break;
-			sprintf(scan->snippet_ids + strlen(scan->snippet_ids), "%s", hex);
+			if (strlen(snippet_ids) + WFP_LN * 2 + 1 >= maxlen) break;
+			sprintf(snippet_ids + strlen(snippet_ids), "%s", hex);
 		}
 	}
 
-	if (found) strcat(scan->snippet_ids, ",");
+	if (found) strcat(snippet_ids, ",");
+	scanlog("SNIPPETS ID: %s\n", snippet_ids);
 }
 
 /**
@@ -394,8 +395,7 @@ uint32_t compile_ranges(match_data_t *match) {
 
 	char line_ranges[MAX_FIELD_LN * 2] = "\0";
 	char oss_ranges[MAX_FIELD_LN * 2] = "\0";
-	//char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1] = "\0";
-
+	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1] = "\0"; 
 	if (!match->matchmap_reg)
 	{
 		scanlog("compile ranges fail");
@@ -460,8 +460,10 @@ uint32_t compile_ranges(match_data_t *match) {
 		/* Add range as long as the minimum number of match lines is reached */
 		if ((to - from) >= min_match_lines)
 		{
-		//	add_snippet_ids(scan, from, to); //has to be reformulated
+			if (engine_flags & ENABLE_SNIPPET_IDS)
+				add_snippet_ids(match, snippet_ids, from, to); //has to be reformulated
 
+			//TOLERANCE WAS DISABLED, now we have HPSM
 			// /* Add tolerance to end of last range */
 			// if (!i)
 			// {
@@ -489,6 +491,7 @@ uint32_t compile_ranges(match_data_t *match) {
 	hits = ranges_assemble(ranges, line_ranges, oss_ranges);
 	match->line_ranges = strdup(line_ranges);
 	match->oss_ranges = strdup(oss_ranges);
+	match->snippet_ids = strdup(snippet_ids);
 	free(ranges);
 	return hits;
 }

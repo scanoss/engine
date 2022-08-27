@@ -415,11 +415,11 @@ bool print_json_match(struct match_data_t * match)
 	printf(",\"oss_lines\": \"%s\"", match->oss_ranges);
 	printf(",\"matched\": \"%s\"", match->matched_percent);
 	
-/*	
-	if ((engine_flags & ENABLE_SNIPPET_IDS) && match->type == snippet)
+
+	if ((engine_flags & ENABLE_SNIPPET_IDS) && match->type == MATCH_SNIPPET)
 	{
-		printf("\"snippet_ids\": \"%s\",", scan->snippet_ids);
-	}*/
+		printf("\"snippet_ids\": \"%s\",", match->snippet_ids);
+	}
 
 
 

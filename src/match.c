@@ -461,8 +461,8 @@ void load_matches(match_data_t *match, scan_data_t *scan)
 		{
 			add_versions(match->component_list.headp.lh_first->component, files, records);
 			/* check if the best component was declared */
-			if (asset_declared(match->component_list.headp.lh_first->component))
-				match->component_list.headp.lh_first->component->identified = true;
+			asset_declared(match->component_list.headp.lh_first->component);
+			
 		}
 	}
 
@@ -575,7 +575,7 @@ void match_select_best(scan_data_t *scan)
 	if (!scan->best_match || !scan->best_match->component_list.items || (!(engine_flags & ENABLE_REPORT_IDENTIFIED) && scan->best_match->component_list.headp.lh_first->component->identified))
 	{
 		scan->match_type = MATCH_NONE;
-		scanlog("Match without components or declared in sbom\n");
+		scanlog("Match without components or declared in sbom");
 	}
 }
 /*
@@ -658,6 +658,7 @@ void compile_matches(scan_data_t *scan)
 		match_new->type = scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
 		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);
+		match_new->scan_ower = scan;
 		if (!match_list_add(scan->matches_list_array[0], match_new, NULL, false))
 		{
 			match_data_free(match_new);

@@ -61,7 +61,6 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	scan->hashes = malloc(MAX_FILE_SIZE);
 	scan->lines  = malloc(MAX_FILE_SIZE);
 	scan->match_type = MATCH_NONE;
-	*scan->snippet_ids = 0;
 
 	scan->max_components_to_process = max_components;
 	
@@ -146,13 +145,21 @@ bool asset_declared(component_data_t * comp)
 		/* Compare purl */
 		if (comp->purls[0])
 		{
-			if (!strcmp((const char *) comp->purls[0], (const char *) purl)) return true;
+			if (!strcmp((const char *) comp->purls[0], (const char *) purl)) 
+			{
+				comp->identified = true;
+				return true;
+			}
 		}
 
 		/* Compare vendor and component */
-		else if (comp->vendor && comp->component)
+		if (comp->vendor && comp->component)
 		{
-			if (!strcmp(vendor, comp->vendor) && !strcmp(component, comp->component)) return true;
+			if (!strcmp(vendor, comp->vendor) && !strcmp(component, comp->component)) 
+			{
+				comp->identified = true;
+				return true;
+			}
 		}
 	}
 	return false;
