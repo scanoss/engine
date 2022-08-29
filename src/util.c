@@ -41,6 +41,18 @@
 #include "crc32c.h"
 
 /**
+ * @brief This script replaces \ with /
+ * @param data input/output buffer
+ */
+ void flip_slashes(char *data)
+{
+	int len = strlen(data);
+	for (int i = 0; i < len; i++)
+		if (data[i] == '\\')
+			data[i] = '/';
+}
+
+/**
  * @brief Returns a pointer to field n in data
  * @param n field number
  * @param data data buffer
@@ -302,4 +314,11 @@ char * str_cat_realloc(char **a, char * b)
 	
 	return *a;
 }
+
+void free_and_null(void * pr)
+{
+    free(pr);
+    pr = NULL;
+}
+
 

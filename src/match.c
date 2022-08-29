@@ -31,6 +31,7 @@
 
 #include "match.h"
 #include "query.h"
+#include "parse.h"
 #include "report.h"
 #include "debug.h"
 #include "limits.h"
@@ -43,221 +44,43 @@
 #include "decrypt.h"
 #include "hpsm.h"
 #include "scan.h"
-
+#include "component.h"
+#include "match_list.h"
 bool first_file = true;											  /** global first file flag */
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
 bool match_extensions = false;									  /** global match extension flag */
 
 char *component_hint = NULL;
 
-/**
- * @brief This script replaces \ with /
- * @param data input/output buffer
- */
-void flip_slashes(char *data)
+
+void match_data_free(match_data_t *data)
 {
-	int len = strlen(data);
-	for (int i = 0; i < len; i++)
-		if (data[i] == '\\')
-			data[i] = '/';
+    if (!data)
+        return;
+
+    free_and_null(data->snippet_ids);
+    free_and_null(data->line_ranges);
+    free_and_null(data->oss_ranges);
+    free_and_null(data->matched_percent);
+    free_and_null(data->crytography_text);
+    free_and_null(data->quality_text);
+    component_list_destroy(&data->component_list);
+    
+    free_and_null(data);
 }
 
-/**
- * @brief Output matches in JSON format via STDOUT
- * @param matches pointer to matches list
- * @param scan_ptr scan_data_t pointer, common scan information.
- */
-void output_matches_json(scan_data_t *scan)
+match_data_t * match_data_copy(match_data_t * in)
 {
-	flip_slashes(scan->file_path);
-
-	/* Log slow query, if needed */
-	slow_query_log(scan);
-
-	/* Print comma separator */
-	if (!quiet)
-		if (!first_file)
-			printf(",");
-	first_file = false;
-
-	uint64_t engine_flags_aux = engine_flags;
-	/* Print matches */
-	if (engine_flags & DISABLE_BEST_MATCH)
-	{
-		printf("\"%s\": [", scan->file_path);
-		bool first = true;
-		for (int i = 0; i < scan->matches_list_array_index; i++)
-		{
-			if (!first && scan->matches_list_array[i]->items && scan->matches_list_array[i]->best_match->component_list.items)
-				printf(",");
-			match_list_print(scan->matches_list_array[i], print_json_match, ",");
-			first = false;
-		}
-	}
-	/* prinf no match if the scan was evaluated as none */ // TODO must be unified with the "else" clause
-	else if (scan->match_type == MATCH_NONE)
-	{
-		printf("\"%s\": [{", scan->file_path);
-		print_json_nomatch(scan);
-	}
-	else if (scan->matches_list_array_index > 1 && scan->max_snippets_to_process > 1)
-	{
-		engine_flags |= DISABLE_BEST_MATCH;
-		printf("\"%s\": {\"matches\":[", scan->file_path);
-		match_list_t *best_list = match_select_m_component_best(scan);
-		scanlog("<<<best list items: %d>>>\n", best_list->items);
-		match_list_print(best_list, print_json_match, ",");
-		match_list_destroy(best_list);
-	}
-	else if (scan->best_match && scan->best_match->component_list.items)
-	{
-		printf("\"%s\": [{", scan->file_path);
-		print_json_match(scan->best_match);
-	}
-	else
-	{
-		printf("\"%s\": [{", scan->file_path);
-		print_json_nomatch(scan);
-	}
-
-	json_close_file(scan);
-	engine_flags = engine_flags_aux;
-}
-
-/**
- * @brief Return true if asset is found in ignore_components (-b parameter)
- * @param url_record pointer to url record
- */
-bool ignored_asset_match(uint8_t *url_record)
-{
-	if (!ignore_components)
-		return false;
-
-	/* Extract fields from URL record */
-	char *vendor = calloc(LDB_MAX_REC_LN, 1);
-	char *component = calloc(LDB_MAX_REC_LN, 1);
-	char *purl = calloc(LDB_MAX_REC_LN, 1);
-
-	extract_csv(vendor, (char *)url_record, 1, LDB_MAX_REC_LN);
-	extract_csv(component, (char *)url_record, 2, LDB_MAX_REC_LN);
-	extract_csv(purl, (char *)url_record, 6, LDB_MAX_REC_LN);
-
-	bool found = false;
-
-	/* Travel ignore_components */
-	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
-	{
-		char *dvendor = ignore_components[i].vendor;
-		char *dcomponent = ignore_components[i].component;
-		char *dpurl = ignore_components[i].purl;
-
-		/* Exit if reached the end */
-		if (!*dcomponent && !*dvendor && !*dpurl)
-			break;
-
-		/* Compare purl */
-		if (*dpurl)
-		{
-			if (!strcmp((const char *)purl, (const char *)dpurl))
-			{
-				found = true;
-				break;
-			}
-		}
-
-		/* Compare vendor and component */
-		else
-		{
-			bool vendor_match = !*dvendor || !strcmp(vendor, dvendor);
-			bool component_match = !*dcomponent || !strcmp(component, dcomponent);
-			if (vendor_match && component_match)
-			{
-				found = true;
-				break;
-			}
-		}
-	}
-
-	free(vendor);
-	free(component);
-	free(purl);
-
-	if (found)
-		scanlog("Component ignored: %s\n", url_record);
-	return found;
-}
-
-/**
- * @brief Fill the match structure
- * @param url_key md5 of the match url
- * @param file_path file path
- * @param url_record pointer to url record
- * @return match_data fullfilled structure
- */
-bool fill_component(component_data_t *component, uint8_t *url_key, char *file_path, uint8_t *url_record)
-{
-	char vendor[MAX_FIELD_LN];
-	char comp[MAX_FIELD_LN];
-	char version[MAX_FIELD_LN];
-	char release_date[MAX_FIELD_LN];
-	char latest_version[MAX_FIELD_LN];
-	char license[MAX_FIELD_LN];
-	char url[MAX_FILE_PATH];
-	char purl[MAX_FILE_PATH];
-	// component->path_ln = 0;
-	if (!component)
-		return false;
-	/* Extract fields from file record */
-	if (url_key)
-	{
-		memcpy(component->url_md5, url_key, MD5_LEN);
-		if (file_path)
-		{
-			component->file = strdup(file_path);
-			component->path_ln = strlen(file_path);
-			flip_slashes(component->file);
-		}
-	}
-
-	/* Extract fields from url record */
-	extract_csv(vendor, (char *)url_record, 1, sizeof(vendor));
-	extract_csv(comp, (char *)url_record, 2, sizeof(comp));
-	extract_csv(version, (char *)url_record, 3, sizeof(version));
-	extract_csv(release_date, (char *)url_record, 4, sizeof(release_date));
-	extract_csv(license, (char *)url_record, 5, sizeof(license));
-	extract_csv(purl, (char *)url_record, 6, sizeof(purl));
-	extract_csv(url, (char *)url_record, 7, sizeof(url));
-	strcpy(latest_version, version);
-
-	flip_slashes(vendor);
-	flip_slashes(comp);
-	flip_slashes(version);
-	flip_slashes(url);
-
-	if (!*url || !*version || !*purl)
-	{
-		scanlog("Incomplete metadata for %s\n", file_path);
-		return false;
-	}
-	component->vendor = strdup(vendor);
-	component->component = strdup(comp);
-	component->version = strdup(version);
-	if (strlen(release_date) < 4)
-		component->release_date = strdup("9999-99-99");
-	else
-		component->release_date = strdup(release_date);
-	component->license = strdup(license);
-	component->url = strdup(url);
-	component->latest_version = strdup(latest_version);
-
-	if (*purl)
-	{
-		component->purls[0] = strdup(purl);
-		component->purls_md5[0] = malloc(MD5_LEN);
-		MD5((uint8_t *)purl, strlen(purl), component->purls_md5[0]);
-		component->age = get_component_age(component->purls_md5[0]);
-	}
-	return true;
+    match_data_t * out = calloc(1, sizeof(*out));
+    memcpy(out->file_md5,in->file_md5,MD5_LEN);
+    out->hits = in->hits;
+    out->type = in->type;
+    out->line_ranges = strdup(in->line_ranges);
+    out->oss_ranges = strdup(in->oss_ranges);
+    out->matched_percent = strdup(in->matched_percent);
+    out->snippet_ids = strdup(in->snippet_ids);
+    strcpy(out->source_md5, in->source_md5);
+    return out;
 }
 
 /**
@@ -386,11 +209,7 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 			component_data_free(new_comp);
 		}
 	}
-	/*
-	struct comp_entry * comp = NULL;
-	LIST_FOREACH(comp, &component_list->headp, entries)
-		add_versions(comp->component, files, records);
-	*/
+
 	free(url_rec);
 	free(path_rank);
 	return true;
@@ -401,7 +220,7 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
  * @param scan scan object.
  * @param match Match object.
  */
-void load_matches(match_data_t *match, scan_data_t *scan)
+bool load_matches(match_data_t *match)
 {
 	scanlog("Load matches");
 
@@ -414,7 +233,7 @@ void load_matches(match_data_t *match, scan_data_t *scan)
 	{
 		hits = compile_ranges(match);
 
-		float percent = (hits * 100) / scan->total_lines;
+		float percent = (hits * 100) / match->scan_ower->total_lines;
 		if (hits)
 			matched_percent = floor(percent);
 		if (matched_percent > 99)
@@ -424,7 +243,7 @@ void load_matches(match_data_t *match, scan_data_t *scan)
 
 		scanlog("compile_ranges returns %d hits\n", hits);
 		if (!hits)
-			return;
+			return false;
 
 		asprintf(&match->matched_percent, "%u%%", matched_percent);
 	}
@@ -443,13 +262,10 @@ void load_matches(match_data_t *match, scan_data_t *scan)
 
 	uint32_t records = 0;
 
-	/* Snippet and url match should look for the matching md5 in urls */
-	if (match->type != MATCH_FILE)
-	{
-		/*Query to url table looking for a url match, will add the components to component list */
-		records = ldb_fetch_recordset(NULL, oss_url, match->file_md5, false, handle_url_record, (void *)&match->component_list);
-		scanlog("URL recordset contains %u records\n", records);
-	}
+	/*Query to url table looking for a url match, will add the components to component list */
+	records = ldb_fetch_recordset(NULL, oss_url, match->file_md5, false, handle_url_record, (void *)&match->component_list);
+	scanlog("URL recordset contains %u records\n", records);
+
 	/*Collect all files from the files table matching with the match md5 being processed */
 	file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
 	records = ldb_fetch_recordset(NULL, oss_file, match->file_md5, false, collect_all_files, (void *)files);
@@ -470,6 +286,8 @@ void load_matches(match_data_t *match, scan_data_t *scan)
 
 	if (!records)
 		scanlog("Match type is 'none' after loading matches\n");
+
+	return false;
 }
 
 bool find_oldest(match_data_t *fp1, void *fp2)
@@ -578,22 +396,11 @@ void match_select_best(scan_data_t *scan)
 		scanlog("Match without components or declared in sbom");
 	}
 }
-/*
-match_list_t * match_select_m_best(scan_data_t * scan)
-{
-	scanlog("<<<select_best_match_M: %d>>>>\n", scan->max_snippets_to_process);
-	match_list_t * final = 	match_list_init(false,  scan->max_snippets_to_process);
-	struct entry * item = NULL;
-	LIST_FOREACH(item, &scan->matches.headp, entries)
-		match_list_add(final, item->match, find_oldest_match, true);
-
-	return final;
-}*/
 
 match_list_t *match_select_m_component_best(scan_data_t *scan)
 {
 	scanlog("<<<select_best_match_M: %d>>>>\n", scan->max_snippets_to_process);
-	match_list_t *final = match_list_init(false, scan->max_snippets_to_process, scan);
+	match_list_t *final = match_list_init(false, scan->max_snippets_to_process);
 
 	for (int i = 0; i < scan->matches_list_array_index; i++)
 	{
@@ -616,19 +423,8 @@ match_list_t *match_select_m_component_best(scan_data_t *scan)
 	return final;
 }
 
-/**
- * @brief This function will be called for each match in a match list.
- * This process will fill the different fields for a match and also the component list.
- * @param fp1 Match to be filled.
- * @param fp2 Scan owning the match.
- * @return true: stop processing
- * @return false: continue processing.
- */
-bool match_process(match_data_t *fp1, void *fp2)
-{
-	load_matches(fp1, (scan_data_t *)fp2);
-	return false;
-}
+
+
 /**
  * @brief Compile matches if DISABLE_BEST_MATCH is one
  * @param scan scan data
@@ -652,7 +448,7 @@ void compile_matches(scan_data_t *scan)
 	}
 	else /* Process file match */
 	{
-		scan->matches_list_array[0] = match_list_init(true, scan->max_snippets_to_process, scan);
+		scan->matches_list_array[0] = match_list_init(true, scan->max_snippets_to_process);
 		scan->matches_list_array_index = 1;
 		match_data_t *match_new = calloc(1, sizeof(match_data_t));
 		match_new->type = scan->match_type;
@@ -677,7 +473,7 @@ void compile_matches(scan_data_t *scan)
 	{
 		/* Process each possible match filling the components list */
 		for (int i = 0; i < scan->matches_list_array_index; i++)
-			match_list_process(scan->matches_list_array[i], match_process);
+			match_list_process(scan->matches_list_array[i], load_matches);
 
 		/* Select best match from the universe */
 		match_select_best(scan);

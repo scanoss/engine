@@ -37,7 +37,7 @@
 #include "ldb.h"
 #include "decrypt.h"
 #include "file.h"
-
+#include "match.h"
 #include "match_list.h"
 
 int map_rec_len;
@@ -160,7 +160,7 @@ void biggest_snippet(scan_data_t *scan)
 				if (scan->matches_list_array_index < scan->max_snippets_to_process) /* Check for the list limit */
 				{
 					scan-> matches_list_array_indirection[scan->matches_list_array_index] = match_new->from; /*update indirection*/
-					scan->matches_list_array[scan->matches_list_array_index] = match_list_init(true, 1, scan); /*create the list*/
+					scan->matches_list_array[scan->matches_list_array_index] = match_list_init(true, 1); /*create the list*/
 					i = scan->matches_list_array_index; /* update index*/
 					scan->matches_list_array_index++; 
 				}
@@ -449,11 +449,6 @@ uint32_t compile_ranges(match_data_t *match) {
 		long oss_from = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6 + 4);
 
 		scanlog("compile_ranges #%d = %ld to %ld\n", i, from, to);
-
-		/* Determine if this is the last (first) range */
-		bool first_range = false;
-		if (i == MATCHMAP_RANGES) first_range = true;
-		else if (!uint16_read(match->matchmap_reg + MD5_LEN + 2 + (i + 1) * 6 + 2)) first_range = true;
 
 		if (to < 1) break;
 

@@ -15,7 +15,6 @@ typedef struct path_ranking
 	uint8_t purl_md5[MD5_LEN];
 } path_ranking;
 
-int get_component_age(uint8_t *md5);
 long component_age(char *vendor, char *component);
 len_rank *load_path_rank(file_recordset *files, int records);
 void dump_path_rank(len_rank *path_rank, file_recordset *files);

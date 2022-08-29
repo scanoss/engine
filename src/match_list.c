@@ -5,78 +5,10 @@
 #include "match_list.h"
 #include <ldb.h>
 #include "debug.h"
+#include "match.h"
+#include "component.h"
 
 int list_size = 0;
-void free_and_null(void * pr)
-{
-    free(pr);
-    pr = NULL;
-}
-
-void component_data_free(component_data_t *data)
-{
-    if (!data)
-        return;
-
-    free_and_null(data->vendor);
-    free_and_null(data->component);
-    free_and_null(data->version);
-    free_and_null(data->release_date);
-    free_and_null(data->latest_release_date);
-    free_and_null(data->latest_version);
-    free_and_null(data->license);
-    free_and_null(data->url);
-    free_and_null(data->file);
-    free_and_null(data->main_url);
-    free_and_null(data->license_text);
-    free_and_null(data->dependency_text);
-    free_and_null(data->vulnerabilities_text);
-    free_and_null(data->copyright_text);
-
-    for (int i = 0; i < MAX_PURLS; i++)
-    {
-        free_and_null(data->purls[i]);
-        free_and_null(data->purls_md5[i]);
-    }
-    free_and_null(data);
-}
-
-component_data_t * component_data_copy(component_data_t * in)
-{
-    component_data_t * out = calloc(1, sizeof(*out));
-    out->age = in->age;
-    out->component = strdup(in->component);
-    out->vendor = strdup(in->vendor);
-    out->version = strdup(in->version);
-    out->release_date = strdup(in->release_date);
-    out->file = strdup(in->file);
-    out->file_md5_ref = in->file_md5_ref;
-    out->identified = in->identified;
-    out->latest_release_date = strdup(in->latest_release_date);
-    out->latest_version = strdup(in->latest_version);
-    out->license = strdup(in->license);
-    out->url_match = in->url_match;
-    memcpy(out->url_md5, in->url_md5, MD5_LEN);
-    if (in->main_url)
-        out->main_url = strdup(in->main_url);
-    out->url = strdup(in->url);
-    out->path_ln = in->path_ln;
-    for (int i = 0; i < MAX_PURLS; i++)
-    {
-        if (in->purls[i])
-            out->purls[i] = strdup(in->purls[i]);
-        else
-            break;
-
-        if (in->purls_md5[i])
-        {
-            out->purls_md5[i] = malloc(MD5_LEN);
-            memcpy(out->purls_md5[i], in->purls_md5[i], MD5_LEN);
-        }
-    }
-
-    return out;
-}
 
 void component_list_destroy(component_list_t *list)
 {
@@ -104,7 +36,7 @@ void component_list_init(component_list_t *comp_list, int max_items)
     comp_list->last_element = NULL;
 }
 
-match_list_t * match_list_init(bool autolimit, int max_items, scan_data_t * scan_ref)
+match_list_t * match_list_init(bool autolimit, int max_items)
 {
     match_list_t * list =  calloc(1, sizeof(match_list_t));
     LIST_INIT(&list->headp); /* Initialize the list. */
@@ -117,39 +49,8 @@ match_list_t * match_list_init(bool autolimit, int max_items, scan_data_t * scan
    
     list->autolimit = autolimit;
     list->best_match = NULL;
-    list->scan_ref = scan_ref;
 
     return list;
-}
-
-void match_data_free(match_data_t *data)
-{
-    if (!data)
-        return;
-
-    free_and_null(data->snippet_ids);
-    free_and_null(data->line_ranges);
-    free_and_null(data->oss_ranges);
-    free_and_null(data->matched_percent);
-    free_and_null(data->crytography_text);
-    free_and_null(data->quality_text);
-    component_list_destroy(&data->component_list);
-    
-    free_and_null(data);
-}
-
-match_data_t * match_data_copy(match_data_t * in)
-{
-    match_data_t * out = calloc(1, sizeof(*out));
-    memcpy(out->file_md5,in->file_md5,MD5_LEN);
-    out->hits = in->hits;
-    out->type = in->type;
-    out->line_ranges = strdup(in->line_ranges);
-    out->oss_ranges = strdup(in->oss_ranges);
-    out->matched_percent = strdup(in->matched_percent);
-    out->snippet_ids = strdup(in->snippet_ids);
-    strcpy(out->source_md5, in->source_md5);
-    return out;
 }
 
 void match_list_destroy(match_list_t *list)
@@ -272,7 +173,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
     if (!new_match->component_list.match_ref)
     {
         /*Is a new match, we have to initialize the component list */
-        component_list_init(&new_match->component_list, list->scan_ref->max_components_to_process);
+        component_list_init(&new_match->component_list, new_match->scan_ower->max_components_to_process);
         new_match->component_list.match_ref = new_match;
     }
     else  
@@ -280,7 +181,6 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         /*discard incomplete matches*/
         if (!new_match->component_list.headp.lh_first|| !new_match->component_list.headp.lh_first->component->release_date)
             return false;
-       // printf("%s - ", new_match->component_list.headp.lh_first->component->release_date);
     }
     /*If the list is empty, add as first element*/
     if (!list->headp.lh_first)
@@ -322,7 +222,6 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
                 {
                     break;
                 }
-
             }
             /*insert in place */
             struct entry *nn = calloc(1, sizeof(struct entry)); /* Insert after. */
@@ -339,11 +238,11 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         }
         /* in autolimit mode the list doesnt have a fix size, it will accept all the matchest until a 75% of the fist element (the biggest) */
         //TODO: this part of the code should be in the function pointer or I need to re-evaluate the archtecture of this function */
-        if (list->autolimit && (list->headp.lh_first->match->hits * 0.75 > list->last_element->match->hits))
+        if (list->autolimit && (list->headp.lh_first->match->hits * MATCH_LIST_TOLERANCE > list->last_element->match->hits))
         {    
             np = list->headp.lh_first;
             /*We have to find and remove the unwanted elements */
-            for (; np->entries.le_next != NULL && (list->headp.lh_first->match->hits * 0.75 <= np->match->hits); np = np->entries.le_next)
+            for (; np->entries.le_next != NULL && (list->headp.lh_first->match->hits * MATCH_LIST_TOLERANCE <= np->match->hits); np = np->entries.le_next)
             {
 
             }
@@ -439,17 +338,14 @@ void component_list_print(component_list_t *list, bool (*printer)(component_data
     }
 }
 
-void match_list_process(match_list_t *list, bool (*funct_p)(match_data_t *fpa, void * fpb))
+void match_list_process(match_list_t *list, bool (*funct_p)(match_data_t *fpa))
 {
     for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
-        bool result = funct_p(np->match, (void*) list->scan_ref);
+        bool result = funct_p(np->match);
 
         if (result)
-        {
-            scanlog("aca");
             break;
-        }
     }
 }
 

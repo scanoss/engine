@@ -36,6 +36,7 @@
 #include "winnowing.h"
 #include "hpsm.h"
 #include "match_list.h"
+#include "report.h"
 
 /**
   @file scan.c
@@ -305,6 +306,69 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 	free(tmp_md5_hex);
 	return EXIT_SUCCESS;
 }
+
+/**
+ * @brief Output matches in JSON format via STDOUT
+ * @param matches pointer to matches list
+ * @param scan_ptr scan_data_t pointer, common scan information.
+ */
+void output_matches_json(scan_data_t *scan)
+{
+	flip_slashes(scan->file_path);
+
+	/* Log slow query, if needed */
+	slow_query_log(scan);
+
+	/* Print comma separator */
+	if (!quiet)
+		if (!first_file)
+			printf(",");
+	first_file = false;
+
+	uint64_t engine_flags_aux = engine_flags;
+	/* Print matches */
+	if (engine_flags & DISABLE_BEST_MATCH)
+	{
+		printf("\"%s\": [", scan->file_path);
+		bool first = true;
+		for (int i = 0; i < scan->matches_list_array_index; i++)
+		{
+			if (!first && scan->matches_list_array[i]->items && scan->matches_list_array[i]->best_match->component_list.items)
+				printf(",");
+			match_list_print(scan->matches_list_array[i], print_json_match, ",");
+			first = false;
+		}
+	}
+	/* prinf no match if the scan was evaluated as none */ // TODO must be unified with the "else" clause
+	else if (scan->match_type == MATCH_NONE)
+	{
+		printf("\"%s\": [{", scan->file_path);
+		print_json_nomatch(scan);
+	}
+	else if (scan->matches_list_array_index > 1 && scan->max_snippets_to_process > 1)
+	{
+		engine_flags |= DISABLE_BEST_MATCH;
+		printf("\"%s\": {\"matches\":[", scan->file_path);
+		match_list_t *best_list = match_select_m_component_best(scan);
+		scanlog("<<<best list items: %d>>>\n", best_list->items);
+		match_list_print(best_list, print_json_match, ",");
+		match_list_destroy(best_list);
+	}
+	else if (scan->best_match && scan->best_match->component_list.items)
+	{
+		printf("\"%s\": [{", scan->file_path);
+		print_json_match(scan->best_match);
+	}
+	else
+	{
+		printf("\"%s\": [{", scan->file_path);
+		print_json_nomatch(scan);
+	}
+
+	json_close_file(scan);
+	engine_flags = engine_flags_aux;
+}
+
 
 /**
  * @brief Scans a file and returns JSON matches via STDOUT.

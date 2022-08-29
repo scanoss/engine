@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "scanoss.h"
+#include "scan.h"
 
 extern bool debug_on; //= false; //set debug mode from main.
 extern bool quiet;

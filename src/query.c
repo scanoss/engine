@@ -30,6 +30,7 @@
   */
 
 #include "query.h"
+#include "parse.h"
 #include "util.h"
 #include "time.h"
 #include "limits.h"

@@ -31,13 +31,14 @@
 #include <unistd.h>
 #include "limits.h"
 
-#include "match_list.h"
-
 #define MAX_FILE_PATH 1024
 #define FETCH_MAX_FILES 20000
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
 #define CRC_LIST_LEN 256 // list of crc checksums to avoid metadata duplicates
 #define SNIPPET_LINE_TOLERANCE 10
+
+#define WFP_LN 4
+#define WFP_REC_LN 18
 
 /* Log files */
 #define SCANOSS_VERSION "5.0.0beta"
@@ -66,6 +67,10 @@
 #define MAX_SBOM_ITEMS 100
 #define SHORTEST_PATHS_QTY 4000 // number of shortest path to evaluate
 
+#define MD5_LEN 16
+#define MAX_PURLS 10
+#define MAX_FIELD_LN 1024
+
 extern uint64_t engine_flags;
 
 extern const char *matchtypes[];
@@ -74,6 +79,8 @@ extern const char *copyright_sources[];
 extern const char *vulnerability_sources[];
 extern const char *quality_sources[];
 extern const char *dependency_sources[];
+
+typedef enum {MATCH_NONE, MATCH_FILE, MATCH_SNIPPET, MATCH_BINARY} match_t;
 
 typedef struct keywords
 {
@@ -139,16 +146,14 @@ extern char *ignored_assets;
 extern component_item *ignore_components;
 extern component_item *declared_components;
 
+
 /* Prototype declarations */
-int wfp_scan(char * path, int scan_max_snippets, int scan_max_components);
-void ldb_scan(scan_data_t * scan);
-match_t ldb_scan_snippets(scan_data_t *scan_ptr);
+
 bool key_find(uint8_t *rs, uint32_t rs_len, uint8_t *subkey, uint8_t subkey_ln);
 void recurse_directory (char *path);
 
 bool ignored_asset_match(uint8_t *url_record);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
-void scan_data_free (scan_data_t * scan);
 
 int binary_scan(char * path, int scan_max_snippets, int scan_max_components);
 #endif

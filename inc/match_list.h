@@ -72,51 +72,15 @@
 #include <stdint.h>
 #include <sys/queue.h>
 #include <stdbool.h>
-
-#define MD5_LEN 16
-#define MAX_PURLS 10
-#define MAX_FIELD_LN 1024
+#include "scanoss.h"
+#include "component.h"
 
 #define SCAN_MAX_SNIPPETS_DEFAULT 1
 #define SCAN_MAX_COMPONENTS_DEFAULT 3
 
-
-typedef enum {MATCH_NONE, MATCH_FILE, MATCH_SNIPPET, MATCH_BINARY} match_t;
+#define MATCH_LIST_TOLERANCE 0.75
 typedef struct match_data_t match_data_t; /* Forward declaration */
 typedef struct scan_data_t scan_data_t; /* Forward declaration*/
-
-/**
- * @brief Component object definition.
- * 
- */
-typedef struct component_data_t
-{
-	char * vendor; /* component vendor */
-	char * component; /* component name */
-	char * version; /* component version */
-	char * release_date; /* component release date */
-	char * latest_release_date; /* lastest relese date for this component */
-	char * latest_version; /* lastest version for this component */
-	char * license; /* component declared license */
-	char * url; /* component url */
-	char * file; /* component file path */	
-	char * main_url; /* main file url in the component */
-	bool url_match; /* type of url match*/
-	/* PURL array */
-	char *purls[MAX_PURLS]; /* PURLs array */
-	uint8_t *purls_md5[MAX_PURLS]; /*PURLs md5*/
-	int vulnerabilities; /*component vulnerabilities number */
-	bool identified; /* was this component indentified in a provided SBOM */
-	int path_ln; /* component path lenght: number of subdirectories in the path*/
-	uint8_t url_md5[MD5_LEN]; /*url md5*/
-	int age; /*component age */
-	uint32_t * crclist; /* pointer to crc list used in part of the process */
-	uint8_t * file_md5_ref; /*pointer to the md5 of the matched file */
-	char * copyright_text; /* used in json output generation */
-	char *license_text; /* used in json output generation */
-	char * vulnerabilities_text; /* used in json output generation */
-	char * dependency_text; /* used in json output generation */
-} component_data_t;
 
 /**
  * @brief Define a list of component_data_t
@@ -145,30 +109,6 @@ typedef struct component_list_t
 } component_list_t;
 
 /**
- * @brief  Match object definition.
- * 
- */
-typedef struct match_data_t
-{
-	scan_data_t * scan_ower;
-	component_list_t component_list; /*Component list object */ 
-	match_t type; /*math type (none, snippet, file) */
-    int hits; /*match hits number, more hits equal bigger snippet matching*/
-	char * line_ranges; /*input snippet line ranges */
-	char * oss_ranges; /* kb snippet line ranges */
-	char * matched_percent; /* matched percent */
-	int  path_ln; /*file path lenght*/ //TODO check if this is needed.
-	uint8_t file_md5[MD5_LEN]; /* file md5 */
-	char source_md5[MD5_LEN * 2 + 1]; /*matched file md5 in hex format */
-    uint8_t * matchmap_reg; /* pointer to matchmap record */
-	char * snippet_ids; /* comma separated list of matching snippet ids */
-	uint32_t * crclist; /* pointer to crc list used in for processing */
-	char * quality_text; /* quality string used in json output format */
-	char * crytography_text; /* crytography string used in json output format */
-	uint16_t from;
-} match_data_t;
-
-/**
  * @brief Matches list definition
  * 
  */
@@ -188,90 +128,24 @@ typedef struct match_list_t
 	int items; /*number of items in the list */
 	int max_items; /*list max items*/
 	bool autolimit; /*list autolimited */
-	scan_data_t * scan_ref; /*pointer to scan owning the matches list */
 	struct entry * last_element;  /*list last element */
 	struct entry * last_element_aux; /* element previous to list last element */
 	match_data_t * best_match; /*pointer to best match of the list */
 } match_list_t;
 
-#define MAX_SNIPPET_IDS_RETURNED 10000
-#define WFP_LN 4
-#define WFP_REC_LN 18
-#define MATCHMAP_RANGES 10
-/**
- * @brief Structure used to define the snippet ranges.
- * 
- */
-typedef struct matchmap_range
-{
-	uint16_t from;
-	uint16_t to;
-	uint16_t oss_line;
-} matchmap_range;
-
-/**
- * @brief Structured used to define a matchmap entry used the snippet processing logic.
- * 
- */
-
-typedef struct matchmap_entry
-{
-	uint8_t md5[MD5_LEN];
-	uint16_t hits;
-	matchmap_range range[MATCHMAP_RANGES];
-	uint8_t lastwfp[WFP_LN];
-} matchmap_entry;
-
-#define MAX_MULTIPLE_COMPONENTS 10
-/**
- * @brief Scan object definition.
- * "matches_list_array" is an array of "match_list_t" an it is used for the snippet selection algorithm join to "matches_list_array_indirection"
- * to indentify different component during the snippet scanning.
- * 
- */
-typedef struct scan_data_t
-{
-	uint8_t md5[MD5_LEN]; /* file md5 */
-	char *file_path; /* file path */
-	char *file_size; /* file size */ //TODO remove if it is unused.
-	char source_md5[MD5_LEN * 2 + 1];  /* source file md5 in hex format */
-	uint32_t *hashes; /* pointer to wfp hashes*/
-	uint32_t *lines; /*pointer to line hashes */
-	uint32_t hash_count; /* count of wfp hashes */
-	long timer; /*timer for execution profile*/
-	bool preload; /*used in hash scanning */
-	int total_lines; /* total file lines */
-	match_t match_type; /* match_t (file, snippet, none), this is replicated in each match in the matches list */
-	matchmap_entry *matchmap; /*matchmap pointer, used in snippet scanning */
-	uint32_t matchmap_size; /*size of the match map */
-	uint8_t *match_ptr; // pointer to matching record in match_map
-	match_list_t * matches_list_array[MAX_MULTIPLE_COMPONENTS]; /* array of "match_list_t", each snippet with different "from line" will generate its own matches list */
-	int matches_list_array_index; /* elements in the matches list array*/
-	int  matches_list_array_indirection[MAX_MULTIPLE_COMPONENTS]; /*used to identify different snippets components, this mantain a reference to the snippet "from line" */
-	match_data_t * best_match; /* Pointer to the best match in the scan, will be selected applying the best match selection logic */
-	int max_snippets_to_process; /* Limit to each match list, by default is list is "autolimited"*/
-	int max_components_to_process; /* Max component to retrieve during snippet scanning */
-	int max_snippets_to_show; //TODO
-	int max_components_to_show; //TODO
-} scan_data_t;
 
 /* Public functions declaration */
-
-scan_data_t * scan_data_init(char *target, int max_snippets, int max_components);
 
 void match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa), char * separator);
 void match_list_debug(match_list_t * list);
 bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) (match_data_t * a, match_data_t * b), bool remove_a);
 void match_list_destroy(match_list_t * list);
-match_data_t * match_data_copy(match_data_t * in);
-match_list_t * match_list_init(bool autolimit, int max_items, scan_data_t * scan_ref);
-void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa, void * fpb));
+match_list_t * match_list_init(bool autolimit, int max_items);
+void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa));
 bool match_list_is_empty(match_list_t * list);
-void match_data_free(match_data_t *data);
 void component_list_init(component_list_t *comp_list, int max_items);
 bool component_list_add(component_list_t * list, component_data_t * new_comp, bool (* val) (component_data_t * a, component_data_t * b), bool remove_a);
-void component_data_free(component_data_t * data);
 void component_list_print(component_list_t * list, bool (*printer) (component_data_t * fpa), char * separator);
 bool component_date_comparation(component_data_t * a, component_data_t * b);
-component_data_t * component_data_copy(component_data_t * in);
+void component_list_destroy(component_list_t *list);
 #endif
