@@ -34,6 +34,12 @@
 #include "util.h"
 #include "debug.h"
 #include "query.h"
+
+/**
+ * @brief Free component object
+ * 
+ * @param data pointer to component 
+ */
 void component_data_free(component_data_t *data)
 {
     if (!data)
@@ -61,6 +67,13 @@ void component_data_free(component_data_t *data)
     }
     free_and_null(data);
 }
+
+/**
+ * @brief Copy a component and create a new one
+ * 
+ * @param in Component to be copied
+ * @return component_data_t* pointer to the new compoent
+ */
 
 component_data_t * component_data_copy(component_data_t * in)
 {
@@ -127,11 +140,11 @@ bool ignored_asset_match(uint8_t *url_record)
 		char *dpurl = ignore_components[i].purl;
 
 		/* Exit if reached the end */
-		if (!*dcomponent && !*dvendor && !*dpurl)
+		if (!dcomponent && !dvendor && !dpurl)
 			break;
 
 		/* Compare purl */
-		if (*dpurl)
+		if (dpurl)
 		{
 			if (!strcmp((const char *)purl, (const char *)dpurl))
 			{
@@ -143,8 +156,8 @@ bool ignored_asset_match(uint8_t *url_record)
 		/* Compare vendor and component */
 		else
 		{
-			bool vendor_match = !*dvendor || !strcmp(vendor, dvendor);
-			bool component_match = !*dcomponent || !strcmp(component, dcomponent);
+			bool vendor_match = !dvendor || !strcmp(vendor, dvendor);
+			bool component_match = !dcomponent || !strcmp(component, dcomponent);
 			if (vendor_match && component_match)
 			{
 				found = true;
@@ -236,3 +249,18 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	return true;
 }
 
+/**
+ * @brief Free component_item structure
+ * 
+ * @param comp_item to be freed
+ */
+
+void component_item_free(component_item * comp_item)
+{
+	if (!comp_item)
+		return;
+	free(comp_item->component);
+	free(comp_item->vendor);
+	free(comp_item->purl);
+	free(comp_item->version);
+}

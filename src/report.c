@@ -205,127 +205,7 @@ char *file_skip_release(char *purl, char *file)
 	return file;
 }
 
-/**
- * @brief Return match details
- * @param scan scan data
- * @param match match item
- * @param match_counter[out] pointer to match counter
- */
-// void print_json_match(scan_data_t *scan, match_data match, int *match_counter)
-// {
-// 	if (quiet) return;
 
-// 	char * version_clean = NULL;
-// 	/* Comma separator */
-// 	if ((*match_counter)++) printf(",");
-
-// 	if (scan->match_type == snippet)
-// 		match.type = snippet;
-
-// 	/* Calculate component/vendor md5 for aggregated data queries */
-// 	vendor_component_md5(match.vendor, match.component, match.pair_md5);
-
-// 	/* Fetch related purls */
-// 	fetch_related_purls(&match);
-
-// 	/* Calculate main URL */
-// 	fill_main_url(&match);
-
-// 	printf("{");
-// 	printf("\"id\": \"%s\",", matchtypes[match.type == 1 ? 2 : match.type]);
-// 	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
-// 	if(scan->match_type == snippet && hpsm_enabled)
-// 	{
-// 	   	printf("\"lines\": \"%s\",", hpsm_result.local);
-// 		printf("\"oss_lines\": \"%s\",", hpsm_result.remote);
-// 		printf("\"matched\": \"%s\",", hpsm_result.matched);
-// 	} 
-// 	else 
-// 	{
-// 		printf("\"lines\": \"%s\",", scan->line_ranges);
-// 		printf("\"oss_lines\": \"%s\",", scan->oss_ranges);
-// 		printf("\"matched\": \"%s\",", scan->matched_percent);
-// 	} 
-	
-// 	if ((engine_flags & ENABLE_SNIPPET_IDS) && match.type == snippet)
-// 	{
-// 		printf("\"snippet_ids\": \"%s\",", scan->snippet_ids);
-// 	}
-
-
-// 	print_purl_array(match);
-
-// 	printf("\"vendor\": \"%s\",", match->vendor);
-// 	printf("\"component\": \"%s\",", match->component);
-
-// 	version_clean = version_cleanup(match.version, match.component);
-// 	printf("\"version\": \"%s\",", version_clean);
-// 	free(version_clean);
-
-// 	version_clean = version_cleanup(match.latest_version, match.component);
-// 	printf("\"latest\": \"%s\",", version_clean);
-// 	free(version_clean);
-	
-// 	printf("\"url\": \"%s\",", *match.main_url ? match.main_url : match.url);
-
-// 	/* Print (optional download_url */
-// 	if (engine_flags & ENABLE_DOWNLOAD_URL)
-// 	printf("\"download_url\": \"%s\",", match.url);
-
-// 	printf("\"release_date\": \"%s\",", match.release_date);
-// 	printf("\"file\": \"%s\",", match.type == 1 ? basename(match.url) : file_skip_release(match.purl[0], match.file));
-
-// 	char *url_id = md5_hex(match.url_md5);
-// 	printf("\"url_hash\": \"%s\",", url_id);
-// 	free(url_id);
-
-// 	char *file_id = md5_hex(match.file_md5);
-
-// 	printf("\"file_hash\": \"%s\",", file_id);
-// 	printf("\"source_hash\": \"%s\",", scan->source_md5);
-
-// 	/* Output file_url (same as url when match type = url) */
-// 	if (match.type != url)
-// 	{
-// 		char *custom_url = getenv("SCANOSS_API_URL");
-// 		printf("\"file_url\": \"%s/file_contents/%s\"", custom_url ? custom_url : API_URL, file_id);
-// 	}
-// 	else
-// 		printf("\"file_url\": \"%s\"", match.url);
-
-// 	free(file_id);
-
-// 	print_licenses(match);
-
-// 	if (!(engine_flags & DISABLE_DEPENDENCIES))
-// 	{
-// 		print_dependencies(match);
-// 	}
-
-// 	if (!(engine_flags & DISABLE_COPYRIGHTS))
-// 	{
-// 		print_copyrights(match);
-// 	}
-
-// 	if (!(engine_flags & DISABLE_VULNERABILITIES))
-// 	{
-// 		print_vulnerabilities(match);
-// 	}
-
-// 	if (!(engine_flags & DISABLE_QUALITY))
-// 	{
-// 		print_quality(match);
-// 	}
-
-// 	if (!(engine_flags & DISABLE_CRIPTOGRAPHY))
-// 	{
-// 		print_cryptography(match);
-// 	}
-
-// 	print_server_stats(scan);
-// 	printf("}");
-// 	fflush(stdout);
-// }
 bool print_json_component(component_data_t * component)
 {
 	if (!component)
@@ -428,11 +308,14 @@ bool print_json_match(struct match_data_t * match)
 	printf(",\"source_hash\": \"%s\"", match->source_md5);
 
 	/* Output file_url (same as url when match type = url) */
-	//if (match->type != MATCH_URL)
+	if (!match->component_list.headp.lh_first->component->url_match)
 	{
 		char *custom_url = getenv("SCANOSS_API_URL");
 		printf(",\"file_url\": \"%s/file_contents/%s\"", custom_url ? custom_url : API_URL, file_id);
 	}
+	else
+		printf(",\"file_url\": \"%s\"", match->component_list.headp.lh_first->component->url);
+
 	free(file_id);
 	
 	if (!(engine_flags & DISABLE_QUALITY))

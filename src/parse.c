@@ -112,11 +112,23 @@ static void work_json_object(json_value* value, int depth, component_item *out)
 	component_item *ignore = out;
 	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
 	{
-		if (!*ignore[i].component && !*ignore[i].vendor && !*ignore[i].purl)
+		if (!ignore[i].component && !ignore[i].vendor && !ignore[i].purl)
 		{
-			if (*vendor) strcpy(ignore[i].vendor, vendor);
-			if (*component) strcpy(ignore[i].component, component);
-			if (*purl) strcpy(ignore[i].purl, purl);
+			if (*vendor) 
+				ignore[i].vendor = strdup(vendor);
+			if (*component) 
+				ignore[i].component = strdup(component);
+			if (*purl) 
+			{
+				char * version = strrchr(purl, '@');
+				if (version)
+				{
+					*version = '\0';
+					version++;
+					ignore[i].version = strdup(version);
+				}
+				ignore[i].purl = strdup(purl);
+			}
 			break;
 		}
 	}
@@ -209,8 +221,8 @@ component_item *get_components(char *filepath)
 	component_item *ignore = out;
 	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
 	{
-		if (!*ignore[i].component && !*ignore[i].vendor && !*ignore[i].purl) break;
-		scanlog("#%d %s, %s, %s\n", i, ignore[i].component, ignore[i].vendor, ignore[i].purl);
+		if (!ignore[i].component && !ignore[i].vendor && !ignore[i].purl) break;
+		scanlog("#%d %s, %s, %s, %s\n", i, ignore[i].component, ignore[i].vendor, ignore[i].purl, ignore[i].version);
 	}
 
 	return out;

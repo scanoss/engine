@@ -176,7 +176,7 @@ bool check_purl_attributions(struct ldb_table oss_attributions)
 		char *purl = declared_components[i].purl;
 
 		/* Exit if reached the end */
-		if (!*purl) break;
+		if (!purl) break;
 
 		/* Compare purl */
 		if (*purl)
@@ -210,7 +210,7 @@ void print_purl_attribution_notices(struct ldb_table oss_attributions)
 	{
 		/* Get purl */
 		char *purl = declared_components[i].purl;
-		if (!*purl) break;
+		if (!purl) break;
 
 		/* Get purl md5 */
 		uint8_t md5[16];

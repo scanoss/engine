@@ -23,7 +23,7 @@ typedef struct component_data_t
 	char *purls[MAX_PURLS]; /* PURLs array */
 	uint8_t *purls_md5[MAX_PURLS]; /*PURLs md5*/
 	int vulnerabilities; /*component vulnerabilities number */
-	bool identified; /* was this component indentified in a provided SBOM */
+	int identified; /* was this component indentified in a provided SBOM: 0 = pending, 1 = identified without version, 2= identified with version */
 	int path_ln; /* component path lenght: number of subdirectories in the path*/
 	uint8_t url_md5[MD5_LEN]; /*url md5*/
 	int age; /*component age */
@@ -39,6 +39,7 @@ component_data_t * component_init(void);
 void component_data_free(component_data_t * data);
 bool fill_component(component_data_t * component, uint8_t *url_key, char *file_path, uint8_t *url_record);
 component_data_t * component_data_copy(component_data_t * in);
-bool asset_declared(component_data_t * comp);
+int asset_declared(component_data_t * comp);
+void component_item_free(component_item * comp_item);
 
 #endif

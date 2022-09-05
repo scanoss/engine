@@ -46,6 +46,7 @@
   Long description // TODO
   @see https://github.com/scanoss/engine/blob/master/src/scan.c
  */
+bool first_file = true;											  /** global first file flag */
 
 char *ignored_assets = NULL;
 
@@ -129,9 +130,14 @@ static match_t ldb_scan_file(scan_data_t * scan) {
     @param match Match data
     @return Asset declaration result
     */
-bool asset_declared(component_data_t * comp)
+int asset_declared(component_data_t * comp)
 {
-	if (!declared_components) return false;
+	if (!declared_components)
+		return 0;
+	
+
+	if (comp->identified > 0)
+		return comp->identified;
 
 	/* Travel declared_components */
 	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
@@ -139,31 +145,40 @@ bool asset_declared(component_data_t * comp)
 		char *vendor = declared_components[i].vendor;
 		char *component = declared_components[i].component;
 		char *purl = declared_components[i].purl;
+		char *version = declared_components[i].version;
 
 		/* Exit if reached the end */
-		if (!*component && !*vendor && !*purl) break;
+		if (!component && !vendor && !purl) 
+			break;
 
 		/* Compare purl */
 		if (comp->purls[0])
 		{
-			if (!strcmp((const char *) comp->purls[0], (const char *) purl)) 
+			if (!strcmp((const char *) purl, (const char *) comp->purls[0])) 
 			{
-				comp->identified = true;
-				return true;
+				comp->identified = 1;
+				scanlog("purl found: %s\n",purl);
+				if (version && !strcmp(version, comp->version))
+				{
+					comp->identified = 2;
+					return 2;
+				}
+				return 1;
 			}
 		}
 
 		/* Compare vendor and component */
-		if (comp->vendor && comp->component)
+		if (comp->vendor && comp->component && vendor && component)
 		{
 			if (!strcmp(vendor, comp->vendor) && !strcmp(component, comp->component)) 
 			{
+				scanlog("Vendor %s + comp %s found\n",vendor, component);
 				comp->identified = true;
-				return true;
+				return 1;
 			}
 		}
 	}
-	return false;
+	return 0;
 }
 
 
@@ -473,7 +488,8 @@ void ldb_scan(scan_data_t * scan)
 	
 	/* Output matches */
 	scanlog("Match output starts\n");
-	output_matches_json(scan);
+	if (!debug_on)
+		output_matches_json(scan);
 
 	scan_data_free(scan);
 }

@@ -80,7 +80,7 @@ Alternatively, these value can be written in %s\n\
 |   64 | Disable quality (default: enabled)               |\n\
 |  128 | Disable criptography (defalt: enabled)           |\n\
 |  256 | Disable best match only (default: enabled)       |\n\
-|  512 | Report identified files (default: disabled)      |\n\
+|  512 | Hide identified files (default: disabled)        |\n\
 | 1024 | Enable download_url (default: disabled)          |\n\
 | 2048 | Enable GitHub full path (default: disabled)      |\n\
 | 4096 | Disable extended server stats (default: enabled) |\n\

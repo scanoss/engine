@@ -518,8 +518,20 @@ int main(int argc, char **argv)
 		if (target) free (target);
 	}
 
-	if (ignore_components) free(ignore_components);
-	if (declared_components) free(declared_components);
+	if (ignore_components) 
+	{
+		for (int i = 0; i < MAX_SBOM_ITEMS; i++)
+			component_item_free(&ignore_components[i]);
+		free(ignore_components);
+	}
+
+	if (declared_components) 
+	{
+		for (int i = 0; i < MAX_SBOM_ITEMS; i++)
+			component_item_free(&declared_components[i]);
+		free(declared_components);
+	}
+
 	if (ignored_assets)  free (ignored_assets);
     
 	if (lib_encoder_present)

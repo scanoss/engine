@@ -60,11 +60,11 @@
 #define DISABLE_QUALITY 64
 #define DISABLE_CRIPTOGRAPHY 128
 #define DISABLE_BEST_MATCH 256
-#define ENABLE_REPORT_IDENTIFIED 512
+#define DISABLE_REPORT_IDENTIFIED 512
 #define ENABLE_DOWNLOAD_URL 1024
 #define ENABLE_GITHUB_FULL_PATH 2048
 #define DISABLE_SERVER_INFO 4096
-#define MAX_SBOM_ITEMS 100
+#define MAX_SBOM_ITEMS 2000
 #define SHORTEST_PATHS_QTY 4000 // number of shortest path to evaluate
 
 #define MD5_LEN 16
@@ -105,15 +105,14 @@ typedef struct len_rank
 
 typedef struct component_item
 {
-	char vendor[MAX_FIELD_LN];
-	char component[MAX_FIELD_LN];
-	char purl[MAX_FIELD_LN];
+	char * vendor;
+	char * component;
+	char * purl;
+	char * version;
 } component_item;
 
 
 extern long microseconds_start;
-//unsigned char *linemap;
-//unsigned char *map;
 extern int map_rec_len;
 extern bool match_extensions;
 

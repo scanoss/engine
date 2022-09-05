@@ -251,9 +251,6 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 		len += sprintf(result+len,"\"url\": \"https://spdx.org/licenses/%s.html\"",license);
 		len += sprintf(result+len,"}");
 	}
-	char * test = str_cat_realloc(&comp->license_text, result);
-	scanlog("<<<<<lic result: %s>>>>>\n", test);
-
 
 	free(source);
 	free(license);

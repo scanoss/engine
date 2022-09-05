@@ -46,13 +46,17 @@
 #include "scan.h"
 #include "component.h"
 #include "match_list.h"
-bool first_file = true;											  /** global first file flag */
+
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
 bool match_extensions = false;									  /** global match extension flag */
 
 char *component_hint = NULL;
 
-
+/**
+ * @brief Free match object memory
+ * 
+ * @param data pointer to match structure
+ */
 void match_data_free(match_data_t *data)
 {
     if (!data)
@@ -68,6 +72,13 @@ void match_data_free(match_data_t *data)
     
     free_and_null(data);
 }
+
+/**
+ * @brief Copy a match object into a new one.
+ * 
+ * @param in pointer to match object to be copied
+ * @return match_data_t* new match object
+ */
 
 match_data_t * match_data_copy(match_data_t * in)
 {
@@ -100,39 +111,102 @@ static int path_struct_cmp(const void *a, const void *b)
 	return 0;
 }
 
-static bool component_hint_date_comparation(component_data_t *a, component_data_t *b)
+/**
+ * @brief Fuction to influence the selection logic using a hint.
+ * 
+ * @param a Component from the component list to be compared
+ * @param b New component to be compared
+ * @return int -1 to reject, 1 to accept or 0 if not decide
+ */
+static int hint_eval(component_data_t *a, component_data_t *b)
 {
-	if (!*b->release_date)
-		return false;
-	if (!*a->release_date)
-		return true;
-
-	if (component_hint)
-	{
 		/*Check for component hint in purl, select components matching with the hint */
 		if (a->purls[0] && strstr(a->purls[0], component_hint) && !(b->purls[0] && strstr(b->purls[0], component_hint)))
 		{
 			scanlog("Reject component %s by hint: %s\n", b->purls[0], component_hint);
-			return false;
+			return -1;
 		}
 		if (b->purls[0] && strstr(b->purls[0], component_hint) && !(a->purls[0] && strstr(a->purls[0], component_hint)))
 		{
 			scanlog("Accept component %s by hint: %s\n", b->purls[0], component_hint);
-			return true;
+			return 1;
 		}
 
 		/*Check for component hint in component, select components matching with the hint */ // tODO: this should be deprecated
 		if (a->component && strstr(a->component, component_hint) && !(b->component && strstr(b->purls[0], component_hint)))
 		{
 			scanlog("Reject component %s by hint: %s\n", b->component, component_hint);
-			return false;
+			return -1;
 		}
 		if (b->component && strstr(b->component, component_hint) && !(a->component && strstr(a->purls[0], component_hint)))
 		{
 			scanlog("Accept component %s by hint: %s\n",  b->component, component_hint);
-			return true;
+			return 1;
 		}
+
+		return 0;
+}
+
+/**
+ * @brief Fuction to influence the selection logic using a SBOM previusly ingested
+ * 
+ * @param a Component from the component list to be compared
+ * @param b New component to be compared
+ * @return int -1 to reject, 1 to accept or 0 if not decide.
+ */
+static int asset_eval(component_data_t *a, component_data_t *b)
+{
+		/*Identified can be: 0 (not found in the assets list, 
+		1 match with one element from the aasets list, 
+		2 match purl and version with a elemnent from the asset list.*/
+		if (a->identified > b->identified)
+		{
+			scanlog("Reject component %s by SBOM\n", b->purls[0]);
+			return -1;
+		}
+		
+		if (b->identified > a->identified)
+		{
+			scanlog("Accept component %s by SBOM\n", b->purls[0]);
+			return 1;
+		}
+
+		return 0;
+}
+
+/**
+ * @brief Funtion to be called as pointer when a new compoent has to be loaded in to the list
+ * 
+ * @param a existent component in the list
+ * @param b new component to be added
+ * @return true b has to be included in the list before "a"
+ * @return false "a" wins, compare with the next component.
+ */
+static bool component_hint_date_comparation(component_data_t *a, component_data_t *b)
+{
+	if (!*b->release_date)
+		return false;
+	if (!*a->release_date)
+		return true;
+	
+	if (declared_components)
+	{
+		int result = asset_eval(a,b);
+		if (result > 0)
+			return true;
+		if (result < 0)
+			return false;
 	}
+
+	else if (component_hint)
+	{
+		int result = hint_eval(a,b);
+		if (result > 0)
+			return true;
+		if (result < 0)
+			return false;
+	}
+
 	/*if the relese date is the same untie with the component age (purl)*/
 	if (!strcmp(b->release_date, a->release_date) && b->age > a->age)
 		return true;
@@ -200,6 +274,7 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 			/* If the component is valid add it to the component list */
 			/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
 			/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
+			asset_declared(new_comp);
 			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
 				component_data_free(new_comp); /* Free if the componet was rejected */
 		}
@@ -276,9 +351,6 @@ bool load_matches(match_data_t *match)
 		if (match->component_list.headp.lh_first && match->component_list.headp.lh_first->component)
 		{
 			add_versions(match->component_list.headp.lh_first->component, files, records);
-			/* check if the best component was declared */
-			asset_declared(match->component_list.headp.lh_first->component);
-			
 		}
 	}
 
@@ -322,6 +394,15 @@ bool find_oldest(match_data_t *fp1, void *fp2)
 	return false;
 }
 
+/**
+ * @brief Find the oldest match in the matches list, comparing the first component (the oldest) of each match.
+ * 
+ * @param fp1 first match to be compared
+ * @param fp2 second match to be compared
+ * @return true 
+ * @return false 
+ */
+
 bool find_oldest_match(match_data_t *fp1, match_data_t *fp2)
 {
 	if (!fp1)
@@ -336,7 +417,11 @@ bool find_oldest_match(match_data_t *fp1, match_data_t *fp2)
 
 	return component_date_comparation(fp1->component_list.headp.lh_first->component, fp2->component_list.headp.lh_first->component);
 }
-
+/**
+ * @brief Select the best match from the matches list
+ * 
+ * @param scan scan to be analized
+ */
 void match_select_best(scan_data_t *scan)
 {
 	scanlog("match_select_best\n");
@@ -390,7 +475,7 @@ void match_select_best(scan_data_t *scan)
 
 	scan->best_match = scan->matches_list_array[index]->best_match;
 	/*if the component of the best match was identified in the assets list, return none*/
-	if (!scan->best_match || !scan->best_match->component_list.items || (!(engine_flags & ENABLE_REPORT_IDENTIFIED) && scan->best_match->component_list.headp.lh_first->component->identified))
+	if (!scan->best_match || !scan->best_match->component_list.items || ((engine_flags & DISABLE_REPORT_IDENTIFIED) && scan->best_match->component_list.headp.lh_first->component->identified))
 	{
 		scan->match_type = MATCH_NONE;
 		scanlog("Match without components or declared in sbom");
