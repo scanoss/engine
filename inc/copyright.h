@@ -2,7 +2,6 @@
     #define __COPYRIGHT_H
     
 #include "scanoss.h"
-
-void get_copyright(match_data match, char *copyright);
-void print_copyrights(match_data match);
+#include "component.h"
+void print_copyrights(component_data_t *  comp);
 #endif

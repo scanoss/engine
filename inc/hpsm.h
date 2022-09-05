@@ -14,7 +14,6 @@ struct ranges
 extern bool hpsm_enabled;
 extern bool hpsm_lib_present;
 extern char *hpsm_crc_lines;
-extern struct ranges hpsm_result;
 
 /****** HPSM public functions *******/
 extern struct ranges (*hpsm) (char* data, char* md5);
@@ -24,6 +23,6 @@ extern struct ranges (*hpsm_process)(unsigned char* data, int length, char* md5)
 
 bool hpsm_lib_load(void);
 void hpsm_lib_close(void);
+struct ranges hpsm_calc(uint8_t * file_md5);
 
-bool hpsm_calc(uint8_t * file_md5);
 #endif

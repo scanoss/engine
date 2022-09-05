@@ -66,74 +66,30 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 		return false;
 	}
 
-	match_data *matches = (match_data*) ptr;
-	struct match_data match = match_init();
+	component_list_t * component_list = (component_list_t*) ptr;
+	
+	component_data_t * new_comp = calloc(1, sizeof(*new_comp));
+	bool result = fill_component(new_comp, NULL, NULL, (uint8_t*) data);
 
-	/* Exit if we have enough matches */
-	int total_matches = count_matches(matches);
-	if (total_matches >= scan_limit) return true;
-
-	match = fill_match(NULL, NULL, (uint8_t*) data);
+	if (result)
+	{
+		/* Save match component id */
+		memcpy(new_comp->url_md5, key, LDB_KEY_LN);
+		memcpy(new_comp->url_md5 + LDB_KEY_LN, subkey, subkey_ln);
+		new_comp->url_match = true;
+		new_comp->file = strdup(new_comp->url);
+		new_comp->file_md5_ref = component_list->match_ref->file_md5;
+		component_list_add(component_list, new_comp, component_date_comparation, true);
+	}
+	else
+		component_data_free(new_comp);
+	
 	free(data);
 
-	/* Save match component id */
-	memcpy(match.url_md5, key, LDB_KEY_LN);
-	memcpy(match.url_md5 + LDB_KEY_LN, subkey, subkey_ln);
-	memcpy(match.file_md5, match.url_md5, MD5_LEN);
-
-	match.path_ln = strlen(match.url);
-	match.type = url;
-
-	add_match(0, match, matches);
 	return false;
 }
-/**
- * @brief Clean selected matches field in matches list 
- * @param key //TODO
-**/
-void clean_selected_matches(match_data *matches)
-{
-	for (int i = 0; i < scan_limit; i++)  matches[0].selected = false;
-}
 
-/**
- * @brief Select the purl for a match followin ta schema
- * @param schema propused schema
- * @param matches pointer to matches list
-**/
-bool select_purl_match(char *schema, match_data *matches)
-{
-	clean_selected_matches(matches);
 
-	/* Select first match if no purl schema is provided */
-	if (!schema)
-	{
-		matches[0].selected = 0;
-		return true;
-	}
-
-	for (int i = 0; i < scan_limit && *matches[i].purl; i++)
-	{
-		if (!memcmp(matches[i].purl, schema, strlen(schema)))
-		{
-			matches[i].selected = true;
-			return true;
-		}
-	}
-	return false;
-}
-/**
- * @brief Select preferred URLs based on favorite purl schema
- * @param matches pointer to matches list
-**/
-
-void select_best_url(match_data *matches)
-{
-	if (!select_purl_match("pkg:github",matches))
-		if (!select_purl_match("pkg:gitlab",matches))
-			if (!select_purl_match("pkg:maven",matches))
-				select_purl_match(NULL, matches);
-}
 /**
  * @brief Build a component URL from the provided PURL schema and actual URL
  * @param match pointer to a match
@@ -142,24 +98,32 @@ void select_best_url(match_data *matches)
  * @param fixed none
  * @return true if succed
 **/
-bool build_main_url(match_data *match, char *schema, char *url, bool fixed)
+bool build_main_url(component_data_t *comp, char *schema, char *url, bool fixed)
 {
-	if (starts_with(match->purl[0], schema))
+	if (!comp->purls[0])
+		return false;
+
+	if (starts_with(comp->purls[0], schema))
 	{
-		strcpy(match->main_url, url);
+		char * aux = strdup(url);
 		if (!fixed) 
 		{
-			char * part = strchr(match->purl[0], '/');
+			char * part = strchr(comp->purls[0], '/');
 			/*verify with match url for casing inconsistencies */
-			char * case_test = strcasestr(match->url, part);
+			char * case_test = strcasestr(comp->url, part);
 			if (case_test)
 			{
 				char * partb = strndup(case_test, strlen(part));
-				strcat(match->main_url, partb);
+				asprintf(&comp->main_url,"%s%s", aux, partb);
+				//strcat(match->main_url, partb);
 				free(partb);
 			}
 			else
-				strcat(match->main_url, part);
+			{
+				asprintf(&comp->main_url,"%s%s", aux, part);
+			//	strcat(match->main_url, part);
+			}
+			free(aux);
 		}
 		return true;
 	}
@@ -171,24 +135,24 @@ bool build_main_url(match_data *match, char *schema, char *url, bool fixed)
  * @param match pointer to a match struct
 **/
 
-void fill_main_url(match_data *match)
+void fill_main_url(component_data_t *comp)
 {
 	/* URL translations */
-	if (build_main_url(match, "pkg:github/", "https://github.com", false)) return;
-	if (build_main_url(match, "pkg:npm/", "https://www.npmjs.com/package", false)) return;
-	if (build_main_url(match, "pkg:npm/", "https://www.npmjs.com/package", false)) return;
-	if (build_main_url(match, "pkg:maven/", "https://mvnrepository.com/artifact", false)) return;
-	if (build_main_url(match, "pkg:pypi/", "https://pypi.org/project", false)) return;
-	if (build_main_url(match, "pkg:nuget/", "https://www.nuget.org/packages", false)) return;
-	if (build_main_url(match, "pkg:pypi/", "https://pypi.org/project", false)) return;
-	if (build_main_url(match, "pkg:sourceforge/", "https://sourceforge.net/projects", false)) return;
-	if (build_main_url(match, "pkg:gem/", "https://rubygems.org/gems", false)) return;
-	if (build_main_url(match, "pkg:gitee/", "https://gitee.com", false)) return;
-	if (build_main_url(match, "pkg:gitlab/", "https://gitlab.com", false)) return;
+	if (build_main_url(comp, "pkg:github/", "https://github.com", false)) return;
+	if (build_main_url(comp, "pkg:npm/", "https://www.npmjs.com/package", false)) return;
+	if (build_main_url(comp, "pkg:npm/", "https://www.npmjs.com/package", false)) return;
+	if (build_main_url(comp, "pkg:maven/", "https://mvnrepository.com/artifact", false)) return;
+	if (build_main_url(comp, "pkg:pypi/", "https://pypi.org/project", false)) return;
+	if (build_main_url(comp, "pkg:nuget/", "https://www.nuget.org/packages", false)) return;
+	if (build_main_url(comp, "pkg:pypi/", "https://pypi.org/project", false)) return;
+	if (build_main_url(comp, "pkg:sourceforge/", "https://sourceforge.net/projects", false)) return;
+	if (build_main_url(comp, "pkg:gem/", "https://rubygems.org/gems", false)) return;
+	if (build_main_url(comp, "pkg:gitee/", "https://gitee.com", false)) return;
+	if (build_main_url(comp, "pkg:gitlab/", "https://gitlab.com", false)) return;
 
 	/* Fixed, direct replacements */
-	if (build_main_url(match, "pkg:kernel/", "https://www.kernel.org", true)) return;
-	if (build_main_url(match, "pkg:angular/", "https://angular.io", true)) return;
+	if (build_main_url(comp, "pkg:kernel/", "https://www.kernel.org", true)) return;
+	if (build_main_url(comp, "pkg:angular/", "https://angular.io", true)) return;
 }
 /**
  * @brief Compare two purls
@@ -199,7 +163,7 @@ void fill_main_url(match_data *match)
 
 bool purl_type_matches(char *purl1, char *purl2)
 {
-	if (!*purl1 || !*purl2) return false;
+	if (!purl1 || !purl2) return false;
 	int len = strlen(purl1);
 	for (int i = 0; i < len; i++)
 	{
@@ -215,7 +179,7 @@ bool purl_type_matches(char *purl1, char *purl2)
 
 bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	match_data *match = (match_data *) ptr;
+	component_data_t *component = (component_data_t *) ptr;
 
 	char * purl = decrypt_data(data, datalen, "purl", key, subkey);
 
@@ -233,18 +197,19 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
 		/* Skip purl with existing type */
-		if (purl_type_matches(match->purl[i], purl)) break;
+		if (purl_type_matches(component->purls[i], purl)) break;
 
 		/* Add to end of list */
-		if (!*match->purl[i])
+		if (!component->purls[i])
 		{
 			scanlog("Related PURL: %s\n", purl);
-			strcpy(match->purl[i], purl);
-			MD5((uint8_t *)purl, strlen(purl), match->purl_md5[i]);
-			break;
+			component->purls[i] = purl;
+			component->purls_md5[i] = malloc(MD5_LEN);
+			MD5((uint8_t *)purl, strlen(purl), component->purls_md5[i]);
+			return false;
 		}
 		/* Already exists, exit */
-		if (!strcmp(match->purl[i], purl)) break;
+		else if (!strcmp(component->purls[i], purl)) break;
 	}
 
 	free(purl);
@@ -256,7 +221,7 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 **/
 
 /* Fetch related purls */
-void fetch_related_purls(match_data *match)
+void fetch_related_purls(component_data_t *component)
 {
 	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
 		return;
@@ -264,12 +229,12 @@ void fetch_related_purls(match_data *match)
 	/* Fill purls */
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
-		if (!*match->purl[i]) break;
-		int purls = ldb_fetch_recordset(NULL, oss_purl, match->purl_md5[i], false, handle_purl_record, match);
+		if (!component->purls[i]) break;
+		int purls = ldb_fetch_recordset(NULL, oss_purl, component->purls_md5[i], false, handle_purl_record, component);
 		if (purls)
-			scanlog("Finding related PURLs for %s returned %d matches\n", match->purl[i], purls);
+			scanlog("Finding related PURLs for %s returned %d matches\n", component->purls[i], purls);
 		else
-			scanlog("Finding related PURLs for %s returned no matches\n", match->purl[i]);
+			scanlog("Finding related PURLs for %s returned no matches\n", component->purls[i]);
 	}
 }
 
@@ -347,7 +312,7 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		/* If it is older, then we copy to oldest */
 		if (!*oldest || (*release_date && (strcmp(release_date, oldest) < 0)))
 		{
-			scanlog("get_oldest_url() %s, %s\n", release_date, url);
+			//scanlog("get_oldest_url() %s, %s\n", release_date, url);
 			memcpy((uint8_t *) ptr, url, datalen + 1);
 		}
 	}

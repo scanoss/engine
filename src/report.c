@@ -61,7 +61,10 @@ void json_open()
  */
 void json_close()
 {
-	if (!quiet) printf("}");
+	if (quiet) 
+		return;
+		
+	printf("}");
 	printf("\n");
 }
 
@@ -71,15 +74,34 @@ void json_close()
  */
 void json_open_file(char *filename)
 {
-	if (!quiet) printf("\"%s\": [", filename);
+	if (quiet) 
+		return;
+	
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("\"%s\": {\"matches\":[", filename);
+	else
+		printf("\"%s\": [{", filename);
 }
 
 /**
  * @brief Close file section
  */
-void json_close_file()
+void json_close_file(scan_data_t * scan)
 {
-	if (!quiet) printf("]");
+	if (quiet) 
+		return;
+	
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("]");
+	
+	print_server_stats(scan);
+
+	if (!(engine_flags & DISABLE_BEST_MATCH))
+		printf("}]");
+	
+	if (scan->matches_list_array_index > 1  && scan->max_snippets_to_process > 1)
+		printf("}");
+
 }
 
 void kb_version_get(void)
@@ -113,7 +135,7 @@ void kb_version_get(void)
  * @brief Add server statistics to JSON
  * @param scan scan data pointer
  */
-void print_server_stats(scan_data *scan)
+void print_server_stats(scan_data_t *scan)
 {
 	char hostname[MAX_ARGLN + 1];
 	printf(",\"server\": {");
@@ -138,14 +160,16 @@ void print_server_stats(scan_data *scan)
  * @brief Return a match=none result
  * @param scan scan data pointer
  */
-void print_json_nomatch(scan_data *scan)
+void print_json_nomatch(scan_data_t *scan)
 {
-	if (quiet) return;
-
-	printf("{");
+	if (quiet) 
+		return;
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("{");
 	printf("\"id\": \"none\"");
-	print_server_stats(scan);
-	printf("}");
+	//print_server_stats(scan);
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("}");
 	fflush(stdout);
 }
 
@@ -153,14 +177,14 @@ void print_json_nomatch(scan_data *scan)
  * @brief Print purl array for a match
  * @param match match item
  */
-void print_purl_array(match_data match)
+void print_purl_array(component_data_t * component)
 {
 	printf("\"purl\": [");
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
-		if (*match.purl[i]) {
-			printf("\"%s\"", match.purl[i]);
-			if (i < (MAX_PURLS - 1)) if (*match.purl[i + 1]) printf(",");
+		if (component->purls[i]) {
+			printf("\"%s\"", component->purls[i]);
+			if (i < (MAX_PURLS - 1)) if (component->purls[i + 1]) printf(",");
 		} else break;
 	}
 	printf("],");
@@ -181,124 +205,149 @@ char *file_skip_release(char *purl, char *file)
 	return file;
 }
 
-/**
- * @brief Return match details
- * @param scan scan data
- * @param match match item
- * @param match_counter[out] pointer to match counter
- */
-void print_json_match(scan_data *scan, match_data match, int *match_counter)
+
+bool print_json_component(component_data_t * component)
 {
-	if (quiet) return;
-
-	char * version_clean = NULL;
-	/* Comma separator */
-	if ((*match_counter)++) printf(",");
-
-	if (scan->match_type == snippet)
-		match.type = snippet;
-
-	/* Calculate component/vendor md5 for aggregated data queries */
-	vendor_component_md5(match.vendor, match.component, match.pair_md5);
-
-	/* Fetch related purls */
-	fetch_related_purls(&match);
+	if (!component)
+		return true;
+		
+	scanlog("print component\n");
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("{");
+	else
+		printf(",");
+/* Fetch related purls */
+	fetch_related_purls(component);
 
 	/* Calculate main URL */
-	fill_main_url(&match);
+	fill_main_url(component);
 
-	printf("{");
-	printf("\"id\": \"%s\",", matchtypes[match.type == 1 ? 2 : match.type]);
-	printf("\"status\": \"%s\",", scan->identified ? "identified" : "pending");
-	if(scan->match_type == snippet && hpsm_enabled)
-	{
-	   	printf("\"lines\": \"%s\",", hpsm_result.local);
-		printf("\"oss_lines\": \"%s\",", hpsm_result.remote);
-		printf("\"matched\": \"%s\",", hpsm_result.matched);
-	} 
-	else 
-	{
-		printf("\"lines\": \"%s\",", scan->line_ranges);
-		printf("\"oss_lines\": \"%s\",", scan->oss_ranges);
-		printf("\"matched\": \"%s\",", scan->matched_percent);
-	} 
+	print_purl_array(component);
+
+	printf("\"vendor\": \"%s\",", component->vendor);
+	printf("\"component\": \"%s\",", component->component);
 	
-	if ((engine_flags & ENABLE_SNIPPET_IDS) && match.type == snippet)
-	{
-		printf("\"snippet_ids\": \"%s\",", scan->snippet_ids);
-	}
-
-
-	print_purl_array(match);
-
-	printf("\"vendor\": \"%s\",", match.vendor);
-	printf("\"component\": \"%s\",", match.component);
-
-	version_clean = version_cleanup(match.version, match.component);
-	printf("\"version\": \"%s\",", version_clean);
+	char * version_clean = NULL;
+	version_clean = version_cleanup(component->version, component->component);
+	printf("\"version\": \"%s\",", version_clean ? version_clean : "");
 	free(version_clean);
 
-	version_clean = version_cleanup(match.latest_version, match.component);
-	printf("\"latest\": \"%s\",", version_clean);
+	version_clean = version_cleanup(component->latest_version, component->component);
+	printf("\"latest\": \"%s\",", version_clean ? version_clean : "");
 	free(version_clean);
 	
-	printf("\"url\": \"%s\",", *match.main_url ? match.main_url : match.url);
+	printf("\"url\": \"%s\",", component->main_url ? component->main_url : component->url);
+
+	printf("\"status\": \"%s\",", component->identified ? "identified" : "pending");
 
 	/* Print (optional download_url */
 	if (engine_flags & ENABLE_DOWNLOAD_URL)
-	printf("\"download_url\": \"%s\",", match.url);
+	printf("\"download_url\": \"%s\",", component->url);
 
-	printf("\"release_date\": \"%s\",", match.release_date);
-	printf("\"file\": \"%s\",", match.type == 1 ? basename(match.url) : file_skip_release(match.purl[0], match.file));
+	printf("\"release_date\": \"%s\",", component->release_date);
+	printf("\"file\": \"%s\",", component->url_match == true ? basename(component->url) : file_skip_release(component->purls[0], component->file));
 
-	char *url_id = md5_hex(match.url_md5);
-	printf("\"url_hash\": \"%s\",", url_id);
+	char *url_id = md5_hex(component->url_md5);
+	printf("\"url_hash\": \"%s\"", url_id);
 	free(url_id);
 
-	char *file_id = md5_hex(match.file_md5);
-
-	printf("\"file_hash\": \"%s\",", file_id);
-	printf("\"source_hash\": \"%s\",", scan->source_md5);
-
-	/* Output file_url (same as url when match type = url) */
-	if (match.type != url)
-	{
-		char *custom_url = getenv("SCANOSS_API_URL");
-		printf("\"file_url\": \"%s/file_contents/%s\"", custom_url ? custom_url : API_URL, file_id);
-	}
-	else
-		printf("\"file_url\": \"%s\"", match.url);
-
-	free(file_id);
-
-	print_licenses(match);
+	print_licenses(component);
+	printf(",%s", component->license_text);
 
 	if (!(engine_flags & DISABLE_DEPENDENCIES))
 	{
-		print_dependencies(match);
+		print_dependencies(component);
+		printf(",%s", component->dependency_text);
 	}
 
 	if (!(engine_flags & DISABLE_COPYRIGHTS))
 	{
-		print_copyrights(match);
+		print_copyrights(component);
+		printf(",%s", component->copyright_text);
 	}
 
 	if (!(engine_flags & DISABLE_VULNERABILITIES))
 	{
-		print_vulnerabilities(match);
+		print_vulnerabilities(component);
+		printf(",%s", component->vulnerabilities_text);
+	}
+	if (engine_flags & DISABLE_BEST_MATCH)	
+		printf("}");
+	
+	fflush(stdout);
+	return false;
+}
+
+bool print_json_match(struct match_data_t * match)
+{
+	if (!match->component_list.headp.lh_first)
+	{
+		scanlog("Match with no components ignored: %s", match->source_md5);
+		return false;
+	}
+	char *file_id = md5_hex(match->file_md5);
+
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("{");
+
+	printf("\"id\": \"%s\"", matchtypes[match->type]);	
+	printf(",\"lines\": \"%s\"", match->line_ranges);
+	printf(",\"oss_lines\": \"%s\"", match->oss_ranges);
+	printf(",\"matched\": \"%s\"", match->matched_percent);
+	
+
+	if ((engine_flags & ENABLE_SNIPPET_IDS) && match->type == MATCH_SNIPPET)
+	{
+		printf("\"snippet_ids\": \"%s\",", match->snippet_ids);
 	}
 
+
+
+
+	printf(",\"file_hash\": \"%s\"", file_id);
+	printf(",\"source_hash\": \"%s\"", match->source_md5);
+
+	/* Output file_url (same as url when match type = url) */
+	if (!match->component_list.headp.lh_first->component->url_match)
+	{
+		char *custom_url = getenv("SCANOSS_API_URL");
+		printf(",\"file_url\": \"%s/file_contents/%s\"", custom_url ? custom_url : API_URL, file_id);
+	}
+	else
+		printf(",\"file_url\": \"%s\"", match->component_list.headp.lh_first->component->url);
+
+	free(file_id);
+	
 	if (!(engine_flags & DISABLE_QUALITY))
 	{
 		print_quality(match);
+		printf(",%s", match->quality_text);
 	}
 
 	if (!(engine_flags & DISABLE_CRIPTOGRAPHY))
 	{
 		print_cryptography(match);
+		printf(",%s", match->crytography_text);
 	}
+	if (!(engine_flags & DISABLE_BEST_MATCH))
+	{
+		print_json_component(match->component_list.headp.lh_first->component);
+	}
+	else
+	{
+		printf(",\"components\":[");
+		
+		if (match->component_list.max_items > 1)
+			component_list_print(&match->component_list, print_json_component, ",");
+		else
+			print_json_component(match->component_list.headp.lh_first->component);
 
-	print_server_stats(scan);
-	printf("}");
+		printf("]");
+	}
+	
+	if (engine_flags & DISABLE_BEST_MATCH)
+		printf("}");
+	
 	fflush(stdout);
+	return true;
 }
