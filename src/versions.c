@@ -215,6 +215,12 @@ void add_versions(component_data_t *component, file_recordset *files, uint32_t r
 	if (!component)
 		return;
 		
+	if (component->identified == IDENTIFIED_PURL_VERSION)	
+	{
+		free(component->latest_version);
+		component->latest_version = strdup(component->version);
+		return;
+	}
 	release_version release = {"\0", "\0", "\0"};;
 
 	*release.version = 0;

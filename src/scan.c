@@ -134,11 +134,10 @@ int asset_declared(component_data_t * comp)
 {
 	if (!declared_components)
 		return 0;
-	
 
 	if (comp->identified > 0)
 		return comp->identified;
-
+	
 	/* Travel declared_components */
 	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
 	{
@@ -156,14 +155,15 @@ int asset_declared(component_data_t * comp)
 		{
 			if (!strcmp((const char *) purl, (const char *) comp->purls[0])) 
 			{
-				comp->identified = 1;
-				scanlog("purl found: %s\n",purl);
 				if (version && !strcmp(version, comp->version))
 				{
-					comp->identified = 2;
-					return 2;
+					scanlog("version found: %s\n",version);
+					comp->identified = IDENTIFIED_PURL_VERSION;
+					return IDENTIFIED_PURL_VERSION;
 				}
-				return 1;
+				comp->identified = IDENTIFIED_PURL;
+				scanlog("purl found: %s\n",purl);
+				return IDENTIFIED_PURL;
 			}
 		}
 
@@ -173,12 +173,12 @@ int asset_declared(component_data_t * comp)
 			if (!strcmp(vendor, comp->vendor) && !strcmp(component, comp->component)) 
 			{
 				scanlog("Vendor %s + comp %s found\n",vendor, component);
-				comp->identified = true;
-				return 1;
+				comp->identified = 1;
+				return IDENTIFIED_PURL;
 			}
 		}
 	}
-	return 0;
+	return IDENTIFIED_NONE;
 }
 
 

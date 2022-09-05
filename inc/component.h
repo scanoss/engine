@@ -6,6 +6,12 @@
  * @brief Component object definition.
  * 
  */
+enum {
+	IDENTIFIED_NONE = 0,
+	IDENTIFIED_PURL,
+	IDENTIFIED_PURL_VERSION
+};
+
 typedef struct component_data_t
 {
 	char * vendor; /* component vendor */

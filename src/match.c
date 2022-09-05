@@ -147,32 +147,6 @@ static int hint_eval(component_data_t *a, component_data_t *b)
 		return 0;
 }
 
-/**
- * @brief Fuction to influence the selection logic using a SBOM previusly ingested
- * 
- * @param a Component from the component list to be compared
- * @param b New component to be compared
- * @return int -1 to reject, 1 to accept or 0 if not decide.
- */
-static int asset_eval(component_data_t *a, component_data_t *b)
-{
-		/*Identified can be: 0 (not found in the assets list, 
-		1 match with one element from the aasets list, 
-		2 match purl and version with a elemnent from the asset list.*/
-		if (a->identified > b->identified)
-		{
-			scanlog("Reject component %s by SBOM\n", b->purls[0]);
-			return -1;
-		}
-		
-		if (b->identified > a->identified)
-		{
-			scanlog("Accept component %s by SBOM\n", b->purls[0]);
-			return 1;
-		}
-
-		return 0;
-}
 
 /**
  * @brief Funtion to be called as pointer when a new compoent has to be loaded in to the list
@@ -184,18 +158,20 @@ static int asset_eval(component_data_t *a, component_data_t *b)
  */
 static bool component_hint_date_comparation(component_data_t *a, component_data_t *b)
 {
-	if (!*b->release_date)
-		return false;
-	if (!*a->release_date)
-		return true;
-	
 	if (declared_components)
 	{
-		int result = asset_eval(a,b);
-		if (result > 0)
-			return true;
-		if (result < 0)
+		scanlog("ASSETS eval\n");
+		if (a->identified > b->identified)
+		{
+			scanlog("Reject component %s@%s by SBOM\n", b->purls[0], b->version);
 			return false;
+		}
+		
+		if (b->identified > a->identified)
+		{
+			scanlog("Accept component %s@%s by SBOM\n", b->purls[0], b->version);
+			return true;
+		}
 	}
 
 	else if (component_hint)
@@ -207,12 +183,20 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			return false;
 	}
 
+	if (!*b->release_date)
+		return false;
+	if (!*a->release_date)
+		return true;
 	/*if the relese date is the same untie with the component age (purl)*/
 	if (!strcmp(b->release_date, a->release_date) && b->age > a->age)
+	{
 		return true;
+	}
 	/*select the oldest release date */
 	if (strcmp(b->release_date, a->release_date) < 0)
+	{
 		return true;
+	}
 
 	return false;
 }
@@ -274,9 +258,12 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 			/* If the component is valid add it to the component list */
 			/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
 			/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
+			new_comp->identified = IDENTIFIED_NONE;
 			asset_declared(new_comp);
 			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
+			{
 				component_data_free(new_comp); /* Free if the componet was rejected */
+			}
 		}
 		else
 		{
