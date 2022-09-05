@@ -41,6 +41,18 @@
 #include "crc32c.h"
 
 /**
+ * @brief This script replaces \ with /
+ * @param data input/output buffer
+ */
+ void flip_slashes(char *data)
+{
+	int len = strlen(data);
+	for (int i = 0; i < len; i++)
+		if (data[i] == '\\')
+			data[i] = '/';
+}
+
+/**
  * @brief Returns a pointer to field n in data
  * @param n field number
  * @param data data buffer
@@ -240,6 +252,9 @@ uint32_t string_crc32c(char *str)
  */
 bool add_CRC(uint32_t *list, uint32_t crc)
 {
+	if (!list)
+		return false;
+		
 	for (int i = 0; i < CRC_LIST_LEN; i++)
 	{
 		if (list[i] == 0)
@@ -262,7 +277,10 @@ bool strn_icmp(char *a, char *b, int len)
 /* Check if a string starts with the given start string */
 bool starts_with(char *str, char *start)
 {
-    int len = strlen(start);
+    if (!str)
+		return false;
+		
+	int len = strlen(start);
     if (strn_icmp(str, start, len)) return true;
     return false;
 }
@@ -282,8 +300,27 @@ bool valid_md5(char *str)
 	return true;
 }
 
-/* Erase match.crclist */
-void clean_crclist(match_data *match)
+char * str_cat_realloc(char **a, char * b)
 {
-	for (int i = 0; i < CRC_LIST_LEN; i++) match->crclist[i] = 0;
+	char * aux = *a;
+	if (!aux)
+	{
+		asprintf(a,"%s", b);	
+	}
+	else
+	{
+		*a = NULL;
+		asprintf(a,"%s%s", aux, b);
+		free(aux);
+	}
+	
+	return *a;
 }
+
+void free_and_null(void * pr)
+{
+    free(pr);
+    pr = NULL;
+}
+
+

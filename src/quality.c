@@ -56,6 +56,7 @@ const char *quality_sources[] = {"best_practices"};
 bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	
+	match_data_t * match  = (match_data_t*) ptr;
 	char *CSV = decrypt_data(data, datalen, "quality", key, subkey);
 	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *quality = calloc(MAX_JSON_VALUE_LEN, 1);
@@ -72,18 +73,25 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 
 	bool reported = false;
 
+	char result[MAX_FIELD_LN] = "\0";
+	int len = 0;
+
 	if (*quality && (src < (sizeof(quality_sources) / sizeof(quality_sources[0]))))
 	{
-		if (iteration) printf(",");
-		printf("{");
+		if (iteration) len += sprintf(result+len,",");
+		len += sprintf(result+len,"{");
 		if (!src) 
-			printf("\"score\": \"%s/5\",", quality);
+			len += sprintf(result+len,"\"score\": \"%s/5\",", quality);
 		else
-			printf("\"score\": \"%s\",", quality);
-		printf("\"source\": \"%s\"", quality_sources[atoi(source)]);
-		printf("}");
+			len += sprintf(result+len,"\"score\": \"%s\",", quality);
+		len += sprintf(result+len,"\"source\": \"%s\"", quality_sources[atoi(source)]);
+		len += sprintf(result+len,"}");
 		reported = true;
+		match->quality_text = strdup(result);
+
 	}
+
+	//str_cat_realloc(&match->quality_text, result);
 
 	free(source);
 	free(quality);
@@ -95,15 +103,23 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
  * @brief Query LDB for the quality item from a match
  * @param match input match
  */
-void print_quality(match_data match)
+void print_quality(match_data_t * match)
 {
 	if (!ldb_table_exists(oss_quality.db, oss_quality.table)) //skip purl if the table is not present
 		return;
 	
-	printf(",\"quality\": ");
-	printf("[");
+	char result[MAX_FIELD_LN] = "\0";
+	match->quality_text = NULL;
 
-	ldb_fetch_recordset(NULL, oss_quality, match.file_md5, false, print_quality_item, NULL);
-	printf("]");
+	sprintf(result,"\"quality\": [");
+
+
+	ldb_fetch_recordset(NULL, oss_quality, match->file_md5, false, print_quality_item, match);	
+	
+	char * aux = NULL;
+	asprintf(&aux, "%s%s]", result, match->quality_text ? match->quality_text : "");
+	free(match->quality_text);	
+	match->quality_text = aux;
+
 }
 

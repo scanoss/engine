@@ -2,7 +2,7 @@
     #define __DEPENDENCY_H
 
 #include "scanoss.h"
-
-void print_dependencies(match_data match);
+#include "component.h"
+void print_dependencies(component_data_t * comp);
 
 #endif

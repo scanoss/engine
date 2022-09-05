@@ -57,7 +57,7 @@ const char *dependency_sources[] = {"component_declared"};
 bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	char *CSV = decrypt_data(data, datalen, "dependency", key, subkey);
-
+	component_data_t * comp = (component_data_t *) ptr;
 	scanlog("Dependency: %s\n", CSV);
 
 	char *source = calloc(MAX_JSON_VALUE_LEN, 1);
@@ -77,17 +77,20 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	string_clean(component);
 	string_clean(version);
 
+	char result[MAX_FIELD_LN] = "\0";
+	int len = 0;
 	if (*vendor && *component)
 	{
-		if (iteration) printf(",");
-		printf("{");
-		printf("\"vendor\": \"%s\",", vendor);
-		printf("\"component\": \"%s\",", component);
-		printf("\"version\": \"%s\",", json_remove_invalid_char(version));
-		printf("\"source\": \"%s\"", dependency_sources[src]);
-		printf("}");
+		if (comp->dependency_text) len += sprintf(result+len,",");
+		len += sprintf(result+len,"{");
+		len += sprintf(result+len,"\"vendor\": \"%s\",", vendor);
+		len += sprintf(result+len,"\"component\": \"%s\",", component);
+		len += sprintf(result+len,"\"version\": \"%s\",", json_remove_invalid_char(version));
+		len += sprintf(result+len,"\"source\": \"%s\"", dependency_sources[src]);
+		len += sprintf(result+len,"}");
 	}
 
+	str_cat_realloc(&comp->dependency_text, result);
 	free(source);
 	free(vendor);
 	free(component);
@@ -99,18 +102,20 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
  * @brief Print dependencies in stdout of a given match
  * @param match input match
  */
-void print_dependencies(match_data match)
+void print_dependencies(component_data_t * comp)
 {
 	if (!ldb_table_exists(oss_dependency.db, oss_dependency.table)) //skip dependencies if the table is not present
 		return;
 	
-	printf(",\"dependencies\": ");	
-	printf("[");
+	char result[MAX_FIELD_LN] = "\0";
+	int len = 0;
+	comp->dependency_text = NULL;
+	len += sprintf(result+len,"\"dependencies\": [");	
 
 	uint32_t records = 0;
 
 	/* Pull URL dependencies */
-	records = ldb_fetch_recordset(NULL, oss_dependency, match.url_md5, false, print_dependencies_item, NULL);
+	records = ldb_fetch_recordset(NULL, oss_dependency, comp->url_md5, false, print_dependencies_item, NULL);
 	if (records)
 		scanlog("Dependency matches (%d) reported for url_hash\n", records);
 	else
@@ -118,36 +123,43 @@ void print_dependencies(match_data match)
 
 	/* Pull purl@version dependencies */
 	if (!records)
-		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
+		for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
 		{
 			uint8_t md5[MD5_LEN];
-			purl_version_md5(md5, match.purl[i], match.version);
+			purl_version_md5(md5, comp->purls[i], comp->version);
 
-			records = ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, &match);
+			records = ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, comp);
 			if (records)
 			{
-				scanlog("Dependency matches (%d) reported for %s@%s\n", records, match.purl[i],match.version);
+				scanlog("Dependency matches (%d) reported for %s@%s\n", records, comp->purls[i],comp->version);
 				break;
 			}
-			else scanlog("No dependency matches reported for %s@%s\n", match.purl[i],match.version);
+			else scanlog("No dependency matches reported for %s@%s\n", comp->purls[i], comp->version);
 		}
 
 	/* Pull purl@last_version dependencies */
 	if (!records)
-		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
+		for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
 		{
 			uint8_t md5[MD5_LEN];
-			purl_version_md5(md5, match.purl[i], match.latest_version);
+			purl_version_md5(md5, comp->purls[i], comp->latest_version);
 
-			records = ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, &match);
+			records = ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, comp);
 			if (records)
 			{
-				scanlog("Dependency matches (%d) reported for %s@%s\n", records, match.purl[i],match.latest_version);
+				scanlog("Dependency matches (%d) reported for %s@%s\n", records, comp->purls[i],comp->latest_version);
 				break;
 			}
-			else scanlog("No dependency matches reported for %s@%s\n", match.purl[i],match.latest_version);
+			else scanlog("No dependency matches reported for %s@%s\n", comp->purls[i],comp->latest_version);
 		}
 
-	printf("]");
+	char * aux = NULL;
+	if (comp->dependency_text && *comp->dependency_text)
+		asprintf(&aux, "%s%s]", result, comp->dependency_text);
+	else
+		asprintf(&aux, "%s]", result);
+
+	free(comp->dependency_text);	
+	comp->dependency_text = aux;
 }
 

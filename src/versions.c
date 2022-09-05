@@ -38,12 +38,12 @@
 #include "util.h"
 #include "parse.h"
 #include "debug.h"
-#include "psi.h"
 #include "limits.h"
 #include "ignorelist.h"
 #include "winnowing.h"
 #include "ldb.h"
 #include "decrypt.h"
+#include "versions.h"
 
 /**
  * @brief Normalize component version
@@ -52,35 +52,50 @@
  */
 void normalise_version(char *version, char *component)
 {
+	if (!version)
+		return;
+
+	char aux[MAX_FIELD_LN] = "\0";
 	/* Remove leading component name from version */
-	if (stristart(version, component))
-		memmove(version, version + strlen(component), strlen(version + strlen(component)) + 1);
+	if ((version && component) && stristart(version, component))
+	{
+		int compt_len = strlen(component);
+		sprintf(aux, "%s",version + compt_len+1);
+	}
 
 	/* Remove unwanted leading characters from the version */
-	if (((*version == 'v' || *version =='r') && isdigit(version[1]))\
-		|| !isalnum(*version)) memmove(version, version + 1, strlen(version) + 1);
+	if (version && (((*version == 'v' || *version =='r') && isdigit(version[1])) || !isalnum(*version)))
+	{
+		sprintf(aux, "%s",version + 1);
+	} 
 
 	/* Remove trailing ".orig" from version */
-	char *orig = strstr(version, ".orig");
+	char *orig = strstr(aux, ".orig");
 	if (orig) *orig = 0;
+	if (*aux)
+		strcpy(version, aux);
 }
 
 /**
  * @brief Normalize versions for a match
  * @param match match to be processed
  */
-void clean_versions(match_data *match)
+void clean_versions(component_data_t *component)
 {
-	normalise_version(match->version, match->component);
-	normalise_version(match->latest_version, match->component);
+	normalise_version(component->version, component->component);
+	normalise_version(component->latest_version, component->component);
 }
 
 char * version_cleanup(char *  version, char * component)
 {
-	char * cleaned = strdup(version);
+	if (!version)
+		return NULL;
+		
+	char cleaned[MAX_FIELD_LN] = "\0";
+	strcpy(cleaned, version);
 	normalise_version(cleaned, component);
 
-	return cleaned;
+	return strdup(cleaned);
 }
 
 /**
@@ -145,23 +160,29 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
  * @param match pointer to match to br processed
  * @param release pointer to release version structure
  */
-void update_version_range(match_data *match, release_version *release)
+void update_version_range(component_data_t *component, release_version *release)
 {
 	if (!*release->date) return;
 
-	if (strcmp(release->date, match->release_date) < 0)
-	{
-		scanlog("update_version_range() %s < %s, %s <- %s\n", release->date, match->release_date, match->version, release->version);
-		strcpy(match->version, release->version);
-		strcpy(match->release_date, release->date);
-		memcpy(match->url_md5, release->url_id, MD5_LEN);
-	}
 
-	if (strcmp(release->date, match->latest_release_date) > 0)
+	if (strcmp(release->date, component->release_date) < 0)
 	{
-		scanlog("update_version_range() %s > %s, %s <- %s\n", release->date, match->release_date, match->version, release->version);
-		strcpy(match->latest_release_date, release->date);
-		strcpy(match->latest_version, release->version);
+		scanlog("update_version_range() %s < %s, %s <- %s\n", release->date, component->release_date, component->version, release->version);
+		free(component->version);
+		component->version = strdup(release->version);
+		free(component->release_date);
+		component->release_date = strdup(release->date);
+		memcpy(component->url_md5, release->url_id, MD5_LEN);
+	}
+	
+
+	if (!component->latest_release_date || strcmp(release->date, component->latest_release_date) > 0)
+	{
+		scanlog("update_version_range() %s > %s, %s <- %s\n", release->date, component->release_date, component->version, release->version);
+		free(component->latest_version);
+		component->latest_version = strdup(release->version);
+		free(component->latest_release_date);
+		component->latest_release_date = strdup(release->date);
 	}
 }
 
@@ -189,18 +210,28 @@ void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
  * @param files pointer to files recordset list
  * @param records records number
  */
-void add_versions(scan_data *scan, match_data *matches, file_recordset *files, uint32_t records)
+void add_versions(component_data_t *component, file_recordset *files, uint32_t records)
 {
-	release_version *release = calloc(sizeof(release_version), 1);
+	if (!component)
+		return;
+		
+	if (component->identified == IDENTIFIED_PURL_VERSION)	
+	{
+		free(component->latest_version);
+		component->latest_version = strdup(component->version);
+		return;
+	}
+	release_version release = {"\0", "\0", "\0"};;
 
-	/* Recurse each record */
+	*release.version = 0;
+	*release.date = 0;
 	for (int n = 0; n < records; n++)
 	{
-		*release->version = 0;
-		*release->date = 0;
-		if (!files[n].external) get_purl_version(release, matches[0].purl[0], files[n].url_id);
-		if (*release->version) update_version_range(matches, release);
+		if (!files[n].external) 
+			get_purl_version(&release, component->purls[0], files[n].url_id);
+			
+		if (*release.version) 
+			update_version_range(component, &release);
 	}
-
-	free(release);
+	
 }

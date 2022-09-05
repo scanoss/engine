@@ -87,7 +87,7 @@ static void clean_copyright(char *out, char *copyright)
  */
 static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	match_data *match = ptr;
+	component_data_t * comp = ptr;
 
 	char * CSV = decrypt_data(data, datalen, "copyright", key, subkey);
 
@@ -101,18 +101,21 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 
 	/* Calculate CRC to avoid duplicates */
 	uint32_t CRC = string_crc32c(source) + string_crc32c(copyright);
-	bool dup = add_CRC(match->crclist, CRC);
+	bool dup = add_CRC(comp->crclist, CRC);
 
 	int src = atoi(source);
 
+	char result[MAX_FIELD_LN] = "\0";
+	int len = 0;
+
 	if (!dup && (*copyright) && (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0]))))
 	{
-		if (iteration) printf(",");
-		printf("{");
-		printf("\"name\": \"%s\",", copyright);
-		printf("\"source\": \"%s\"", copyright_sources[atoi(source)]);
-		printf("}");
+		if (iteration) len += sprintf(result+len,",");
+		len += sprintf(result+len,"{\"name\": \"%s\",", copyright);
+		len += sprintf(result+len,"\"source\": \"%s\"}", copyright_sources[atoi(source)]);
 	}
+
+	str_cat_realloc(&comp->copyright_text, result);
 
 	free(source);
 	free(copyright);
@@ -120,41 +123,42 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 	return false;
 }
 
-/**
- * @brief Query the copyright of a match to oss_copyright table using LDB.
- * @param match input match.
- * @param copyright output char buffer.
- */
-void get_copyright(match_data match, char *copyright)
-{
-	if (!ldb_table_exists(oss_copyright.db, oss_copyright.table)) //skip purl if the table is not present
-		return;
-
-	ldb_fetch_recordset(NULL, oss_copyright, match.file_md5, false, get_first_copyright, copyright);
-}
 
 /**
  * @brief Print the copyrights items for a match throught stdout
  * @param match //TODO
  */
-void print_copyrights(match_data match)
+void print_copyrights(component_data_t * comp)
 {
 	if (!ldb_table_exists(oss_copyright.db, oss_copyright.table)) //skip purl if the table is not present
 		return;
-	printf(",\"copyrights\": ");
-	printf("[");
 
-	/* Clean crc list (used to avoid duplicates) */
-	for (int i = 0; i < CRC_LIST_LEN; i++) match.crclist[i] = 0;
+	char result[MAX_FIELD_LN] = "\0";
+	int len = 0;
 
+	comp->copyright_text = NULL;
+	
+	len += sprintf(result+len,"\"copyrights\": [");
+
+	uint32_t crclist[CRC_LIST_LEN];
+	memset(crclist, 0, sizeof(crclist));
+	comp->crclist = crclist;
+	
 	uint32_t records = 0;
 
-	records = ldb_fetch_recordset(NULL, oss_copyright, match.file_md5, false, print_copyrights_item, &match);
+	records = ldb_fetch_recordset(NULL, oss_copyright, comp->file_md5_ref, false, print_copyrights_item, comp);
 	if (!records)
-		records = ldb_fetch_recordset(NULL, oss_copyright, match.url_md5, false, print_copyrights_item, &match);
+		records = ldb_fetch_recordset(NULL, oss_copyright, comp->url_md5, false, print_copyrights_item, comp);
 	if (!records)
-		for (int i = 0; i < MAX_PURLS && *match.purl[i]; i++)
-			if (ldb_fetch_recordset(NULL, oss_copyright, match.purl_md5[i], false, print_copyrights_item, &match)) break;
+		for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
+			if (ldb_fetch_recordset(NULL, oss_copyright, comp->purls_md5[i], false, print_copyrights_item, comp)) break;
 
-	printf("]");
+	char * aux = NULL;
+	if (comp->copyright_text && *comp->copyright_text)
+		asprintf(&aux, "%s%s]", result, comp->copyright_text);
+	else
+		asprintf(&aux, "%s]", result);
+
+	free(comp->copyright_text);	
+	comp->copyright_text = aux;
 }
