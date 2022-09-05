@@ -65,6 +65,7 @@ component_item *declared_components;
 uint8_t trace_id[MD5_LEN];
 bool trace_on;
 
+
 /* Initialize tables for the DB name indicated (defaults to oss) */
 void initialize_ldb_tables(char *name)
 {
@@ -158,6 +159,9 @@ void initialize_ldb_tables(char *name)
  * @brief  Read a direactory recursively
  * @param name path of the directory to be read
  */
+int scan_max_snippets = SCAN_MAX_SNIPPETS_DEFAULT;
+int scan_max_components = SCAN_MAX_COMPONENTS_DEFAULT;
+
 void recurse_directory(char *name)
 {
 	DIR *dir;
@@ -179,19 +183,18 @@ void recurse_directory(char *name)
 
 		else if (is_file(path))
 		{
-
 			/* Scan file directly */
-			scan_data scan = scan_data_init(path);
-
 			bool wfp = false;
 			if (extension(path)) if (!strcmp(extension(path), "wfp")) wfp = true;
 		
 			if (wfp)
-				wfp_scan(&scan);
+				wfp_scan(path, scan_max_snippets, scan_max_components);
 			else
-				ldb_scan(&scan);
+			{
+				scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components);
+				ldb_scan(scan);
+			}
 
-			scan_data_free(scan);
 		}
 
 		free(path);
@@ -292,11 +295,9 @@ int main(int argc, char **argv)
 	int engine_flags_cmd_line = 0;
 
 	bool force_wfp = false;
+	bool force_bfp = false;
 	
 	microseconds_start = microseconds_now();
-
-	*component_hint = 0;
-	*vendor_hint = 0;
 
 	initialize_ldb_tables(NULL);
 
@@ -304,7 +305,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:wtvhedqH")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqHB")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -328,7 +329,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'c':
-				strcpy(component_hint, optarg);
+				component_hint = strdup(optarg);
 				break;
 
 			case 'k':
@@ -354,7 +355,12 @@ int main(int argc, char **argv)
 			case 'n':
 				initialize_ldb_tables(optarg);
 				break;
-
+			case 'M':
+				scan_max_snippets = atol(optarg);
+				break;
+			case 'N':
+				scan_max_components = atol(optarg);
+				break;
 			case 'i':
 				if (strlen(optarg) == (MD5_LEN * 2))
 				{
@@ -367,9 +373,11 @@ int main(int argc, char **argv)
 			case 'w':
 				force_wfp = true;
 				break;
-
+			case 'B':
+				force_bfp = true;
+				break;
 			case 't':
-				scan_benchmark();
+//				scan_benchmark();
 				exit(EXIT_SUCCESS);
 				break;
 
@@ -462,8 +470,6 @@ int main(int argc, char **argv)
 		strcpy (target, argv[argc-1]);
 		for (int i=strlen(target)-1; i>=0; i--) if (target[i]=='/') target[i]=0; else break;
 
-		/* Init scan structure */
-		scan_data scan = scan_data_init(target);
 
 		/* Open main report structure */
 		json_open();
@@ -471,43 +477,68 @@ int main(int argc, char **argv)
 		/* Scan directory */
 		if (isdir) recurse_directory(target);
 
-		/* Scan hash */
-		else if (ishash) hash_scan(&scan);
-	
 		/* Scan file */
 		else
 		{
+			/* Init scan structure */			
+			if (ishash) 
+				hash_scan(target, scan_max_snippets, scan_max_components);
+			else
+			{
+				bool wfp_extension = false;
+				bool bfp_extension = false;
+				if (extension(target)) if (!strcmp(extension(target), "wfp")) wfp_extension = true;
+					if (force_wfp) wfp_extension = true;
+				
+				if (extension(target)) if (!strcmp(extension(target), "bfp")) bfp_extension = true;
+					if (force_bfp) bfp_extension = true;
 
-			bool wfp_extension = false;
-			if (extension(target)) if (!strcmp(extension(target), "wfp")) wfp_extension = true;
-				if (force_wfp) wfp_extension = true;
+				/* Scan wfp file */
+				if (wfp_extension) 
+					wfp_scan(target, scan_max_snippets, scan_max_components);
 
-			/* Scan wfp file */
-			if (wfp_extension) wfp_scan(&scan);
+				else if (bfp_extension) 
+					binary_scan(target, scan_max_snippets, scan_max_components);
 
-			/* Scan file directly */
-			else ldb_scan(&scan);
+				/* Scan file directly */
+				else 
+				{
+					scanlog("Scanning file %s\n", target);
+					scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components);
+					ldb_scan(scan);
+				}
+			}
+
 
 		}
 
 		/* Close main report structure */
 		json_close();
 
-		/* Free scan data */
-		scan_data_free(scan);
-
 		if (target) free (target);
 	}
 
-	if (ignore_components) free(ignore_components);
-	if (declared_components) free(declared_components);
+	if (ignore_components) 
+	{
+		for (int i = 0; i < MAX_SBOM_ITEMS; i++)
+			component_item_free(&ignore_components[i]);
+		free(ignore_components);
+	}
+
+	if (declared_components) 
+	{
+		for (int i = 0; i < MAX_SBOM_ITEMS; i++)
+			component_item_free(&declared_components[i]);
+		free(declared_components);
+	}
+
 	if (ignored_assets)  free (ignored_assets);
     
 	if (lib_encoder_present)
 		dlclose(lib_encoder_handle);
 	
 	hpsm_lib_close();
-	
+	free(component_hint);
 
 	return EXIT_SUCCESS;
 }

@@ -2,7 +2,9 @@
     #define __QUALITY_H
     
 #include "scanoss.h"
+#include "match.h"
+void print_quality(match_data_t * match);
 
-void print_quality(match_data match);
+
 
 #endif

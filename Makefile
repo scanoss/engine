@@ -1,31 +1,27 @@
 ifeq ($(origin CC),default)
 CC = gcc
 endif
-CFLAGS ?= -O -lz -Wall -g -Iinc -Iexternal/inc -D_LARGEFILE64_SOURCE -D_GNU_SOURCE
-OBJ = bin/main.o bin/decrypt.o bin/ignorelist.o bin/ignored_extensions.o bin/snippets.o bin/scan.o bin/psi.o bin/keywords.o bin/match.o bin/report.o bin/copyright.o bin/vulnerability.o bin/quality.o bin/license.o bin/dependency.o bin/file.o bin/parse.o bin/query.o bin/debug.o bin/help.o bin/winnowing.o bin/crc32c.o bin/util.o bin/limits.o bin/json.o bin/rank.o bin/mz.o bin/attributions.o bin/cryptography.o bin/versions.o bin/url.o bin/semver.o bin/hpsm.o
- 
- bin/%.o: src/%.c
-	@echo Building deps
-	$(CC) $(CFLAGS) -c -o $@ $<
-	
- bin/%.o: external/src/%.c
-	@echo Building external deps
-	$(CC) $(CFLAGS) -c -o $@ $<
+CCFLAGS ?= -O -lz -Wall -g -Iinc -Iexternal/inc -D_LARGEFILE64_SOURCE -D_GNU_SOURCE
+LDFLAGS+= -lldb -lm -lpthread -lcrypto -ldl
+SOURCES=$(wildcard src/*.c) $(wildcard src/**/*.c)  $(wildcard external/*.c) $(wildcard external/**/*.c)
+OBJECTS=$(SOURCES:.c=.o) 
+TARGET=scanoss
+$(TARGET): $(OBJECTS)
+	$(CC) -g -o $(TARGET) $^ $(LDFLAGS)
 
-scanoss: $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ -lldb -lm -lpthread -lcrypto -ldl
-	@echo Scanoss built
-clean:
-	@echo Cleaning...
-	@rm -f bin/*.o
-	@rm -f scanoss *.o
+.PHONY: scanoss
+
+%.o: %.c
+	$(CC) $(CCFLAGS) -o $@ -c $<
+
+clean_build:
+	rm -rf src/*.o src/**/*.o external/src/*.o external/src/**/*.o
+
+clean: clean_build
+	rm -rf $(TARGET)
 
 distclean: clean
 
 install:
 	@cp scanoss /usr/bin
-
-uninstall:
-	@rm libldb.so /usr/lib
-	@rm scanoss /usr/bin
 
