@@ -219,19 +219,28 @@ void add_versions(component_data_t *component, file_recordset *files, uint32_t r
 	{
 		free(component->latest_version);
 		component->latest_version = strdup(component->version);
-		return;
 	}
-	release_version release = {"\0", "\0", "\0"};;
-
-	*release.version = 0;
-	*release.date = 0;
-	for (int n = 0; n < records; n++)
+	else
 	{
-		if (!files[n].external) 
-			get_purl_version(&release, component->purls[0], files[n].url_id);
-			
-		if (*release.version) 
-			update_version_range(component, &release);
+		release_version release = {"\0", "\0", "\0"};;
+
+		*release.version = 0;
+		*release.date = 0;
+		for (int n = 0; n < records; n++)
+		{
+			if (!files[n].external) 
+				get_purl_version(&release, component->purls[0], files[n].url_id);
+				
+			if (*release.version) 
+				update_version_range(component, &release);
+		}
 	}
-	
+
+	if (!strcmp(component->version, component->latest_version))
+	{
+		char * new_purl = NULL;
+		asprintf(&new_purl, "%s@%s", component->purls[0], component->version);
+		free(component->purls[0]);
+		component->purls[0] = new_purl;
+	}
 }
