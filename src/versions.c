@@ -235,12 +235,4 @@ void add_versions(component_data_t *component, file_recordset *files, uint32_t r
 				update_version_range(component, &release);
 		}
 	}
-
-	if (!strcmp(component->version, component->latest_version))
-	{
-		char * new_purl = NULL;
-		asprintf(&new_purl, "%s@%s", component->purls[0], component->version);
-		free(component->purls[0]);
-		component->purls[0] = new_purl;
-	}
 }
