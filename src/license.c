@@ -250,8 +250,9 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 		len += sprintf(result+len,"\"source\": \"%s\",", license_sources[atoi(source)]);
 		len += sprintf(result+len,"\"url\": \"https://spdx.org/licenses/%s.html\"",license);
 		len += sprintf(result+len,"}");
-	}
+		str_cat_realloc(&comp->license_text, result);
 
+	}
 	free(source);
 	free(license);
 
@@ -296,7 +297,7 @@ void print_licenses(component_data_t * comp)
 		normalize_license(comp->license);
 		len += sprintf(result+len,"{");
 		len += sprintf(result+len,"\"name\": \"%s\",", comp->license);
-		//osadl_print_license(comp->license, true);
+		len += osadl_print_license(result+len, comp->license, true);
 		len += sprintf(result+len,"\"source\": \"%s\"", license_sources[0]);
 		len += sprintf(result+len,"}");
 		scanlog("License present in URL table");

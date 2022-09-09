@@ -222,7 +222,7 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 	qsort(path_rank, SHORTEST_PATHS_QTY, sizeof(len_rank), path_struct_cmp);
 
 	/* Dump rank contents into log */
-	dump_path_rank(path_rank, files);
+	//dump_path_rank(path_rank, files);
 
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
 

@@ -88,7 +88,7 @@ static void clean_copyright(char *out, char *copyright)
 static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	component_data_t * comp = ptr;
-
+	scanlog("Print copytight: %s\n");
 	char * CSV = decrypt_data(data, datalen, "copyright", key, subkey);
 
 	char *source  = calloc(MAX_JSON_VALUE_LEN + 1, 1);
@@ -98,7 +98,7 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 
 	clean_copyright(copyright, skip_first_comma((char *) CSV));
 	free(CSV);
-
+	scanlog("Found copytight: %s\n",copyright);
 	/* Calculate CRC to avoid duplicates */
 	uint32_t CRC = string_crc32c(source) + string_crc32c(copyright);
 	bool dup = add_CRC(comp->crclist, CRC);
@@ -132,7 +132,7 @@ void print_copyrights(component_data_t * comp)
 {
 	if (!ldb_table_exists(oss_copyright.db, oss_copyright.table)) //skip purl if the table is not present
 		return;
-
+	scanlog("Process copyrights\n");
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
 
@@ -147,8 +147,13 @@ void print_copyrights(component_data_t * comp)
 	uint32_t records = 0;
 
 	records = ldb_fetch_recordset(NULL, oss_copyright, comp->file_md5_ref, false, print_copyrights_item, comp);
+	scanlog("File md5 copyright records %d\n", records);
 	if (!records)
+	{
 		records = ldb_fetch_recordset(NULL, oss_copyright, comp->url_md5, false, print_copyrights_item, comp);
+		scanlog("URL md5 copyright records %d\n", records);
+
+	}
 	if (!records)
 		for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
 			if (ldb_fetch_recordset(NULL, oss_copyright, comp->purls_md5[i], false, print_copyrights_item, comp)) break;
