@@ -450,6 +450,11 @@ uint32_t compile_ranges(match_data_t *match) {
 
 		scanlog("compile_ranges #%d = %ld to %ld\n", i, from, to);
 
+		/* Determine if this is the last (first) range */
+		bool first_range = false;
+		if (i == MATCHMAP_RANGES) first_range = true;
+		else if (!uint16_read(match->scan_ower->match_ptr + MD5_LEN + 2 + (i + 1) * 6 + 2)) first_range = true;
+
 		if (to < 1) break;
 
 		/* Add range as long as the minimum number of match lines is reached */
@@ -458,20 +463,19 @@ uint32_t compile_ranges(match_data_t *match) {
 			if (engine_flags & ENABLE_SNIPPET_IDS)
 				add_snippet_ids(match, snippet_ids, from, to); //has to be reformulated
 
-			//TOLERANCE WAS DISABLED, now we have HPSM
-			// /* Add tolerance to end of last range */
-			// if (!i)
-			// {
-			// 	to += range_tolerance;
-			// 	if (to > scan->total_lines) to = scan->total_lines;
-			// }
+			/* Add tolerance to end of last range */
+			if (!i)
+			{
+				to += range_tolerance;
+				if (to > match->scan_ower->total_lines) to =  match->scan_ower->total_lines;
+			}
 
-			// /* Add tolerance to start of first range */
-			// if (first_range)
-			// {
-			// 	from -= range_tolerance;
-			// 	if (from < 1) from = 1;
-			// }
+			/* Add tolerance to start of first range */
+			if (first_range)
+			{
+				from -= range_tolerance;
+				if (from < 1) from = 1;
+			}
 
 			ranges[i].from = from;
 			ranges[i].to= to;
@@ -480,7 +484,7 @@ uint32_t compile_ranges(match_data_t *match) {
 	}
 
 	/* Add tolerances and assemble line ranges */
-	//ranges_add_tolerance(ranges, scan);
+	ranges_add_tolerance(ranges, match->scan_ower);
 	ranges_remove_empty(ranges);
 	ranges_join_overlapping(ranges);
 	hits = ranges_assemble(ranges, line_ranges, oss_ranges);
