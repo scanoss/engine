@@ -102,10 +102,10 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
  * @brief Print dependencies in stdout of a given match
  * @param match input match
  */
-void print_dependencies(component_data_t * comp)
+int print_dependencies(component_data_t * comp)
 {
 	if (!ldb_table_exists(oss_dependency.db, oss_dependency.table)) //skip dependencies if the table is not present
-		return;
+		return 0;
 	
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
@@ -161,5 +161,6 @@ void print_dependencies(component_data_t * comp)
 
 	free(comp->dependency_text);	
 	comp->dependency_text = aux;
+	return records;
 }
 

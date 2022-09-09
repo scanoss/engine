@@ -3,6 +3,6 @@
 
 #include "scanoss.h"
 #include "component.h"
-void print_dependencies(component_data_t * comp);
+int print_dependencies(component_data_t * comp);
 
 #endif

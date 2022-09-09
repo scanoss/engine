@@ -265,7 +265,8 @@ bool print_json_component(component_data_t * component)
 
 	if (!(engine_flags & DISABLE_DEPENDENCIES))
 	{
-		print_dependencies(component);
+		if (!component->dependency_text)
+			print_dependencies(component);
 		printf(",%s", component->dependency_text);
 	}
 

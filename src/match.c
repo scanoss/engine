@@ -46,6 +46,7 @@
 #include "scan.h"
 #include "component.h"
 #include "match_list.h"
+#include "dependency.h"
 
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
 bool match_extensions = false;									  /** global match extension flag */
@@ -339,6 +340,41 @@ bool load_matches(match_data_t *match)
 		if (match->component_list.headp.lh_first && match->component_list.headp.lh_first->component)
 		{
 			add_versions(match->component_list.headp.lh_first->component, files, records);
+		}
+	}
+
+	/* Final optimization based on the available information for a component */
+	/* If two components have the date date, select the one with more available information */
+	
+	if (match->component_list.items > 1)
+	{
+		struct comp_entry *item = NULL;
+		LIST_FOREACH(item, &match->component_list.headp, entries)
+		{
+			scanlog("Dependency tiebreak\n");
+			if (!item->entries.le_next)
+				break;
+			/* if the date of two components it's the same */
+			if(!strcmp(item->component->release_date, item->entries.le_next->component->release_date))
+			{
+				/* If item has no dependencies or depencencies are empty I must check the next one */
+				if(!item->component->dependency_text || strlen(item->component->dependency_text) < 4)
+				{
+					/* if item has dependencies, stop */
+					if(print_dependencies(item->component))
+						break;
+					/*if the next component has dependencies, permute */
+					else if (print_dependencies(item->entries.le_next->component))
+					{
+						struct comp_entry *aux = item->entries.le_next->entries.le_next;
+						LIST_INSERT_HEAD(&match->component_list.headp, item->entries.le_next, entries);
+						item->entries.le_next = aux;
+						break;
+					}
+				}
+			}
+			else
+				break;
 		}
 	}
 
