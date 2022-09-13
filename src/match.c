@@ -189,9 +189,13 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	if (!*a->release_date)
 		return true;
 	/*if the relese date is the same untie with the component age (purl)*/
-	if (!strcmp(b->release_date, a->release_date) && b->age > a->age)
+	if (!strcmp(b->release_date, a->release_date))
 	{
-		return true;
+		if (b->age > a->age)
+			return true;
+
+		if (b->age == a->age && !strcmp(a->component, b->component) &&	strcmp(a->version, b->version) > 0)
+			return true;
 	}
 	/*select the oldest release date */
 	if (strcmp(b->release_date, a->release_date) < 0)
@@ -337,10 +341,6 @@ bool load_matches(match_data_t *match)
 	if (records)
 	{
 		load_components(&match->component_list, files, records);
-		if (match->component_list.headp.lh_first && match->component_list.headp.lh_first->component)
-		{
-			add_versions(match->component_list.headp.lh_first->component, files, records);
-		}
 	}
 
 	/* Final optimization based on the available information for a component */
@@ -376,6 +376,11 @@ bool load_matches(match_data_t *match)
 			else
 				break;
 		}
+	}
+
+	if (match->component_list.items && match->component_list.headp.lh_first->component)
+	{
+		add_versions(match->component_list.headp.lh_first->component, files, records);
 	}
 
 	free(files);
