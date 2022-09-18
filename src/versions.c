@@ -117,7 +117,7 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
 	if (!datalen) 
 		return false;
 
-	char *CSV = decrypt_data(data, datalen, "url", key, subkey);
+	char *CSV = decrypt_data(data, datalen, oss_url, key, subkey);
 
 	if (!CSV)
 		return false;

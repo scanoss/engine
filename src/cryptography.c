@@ -55,7 +55,7 @@ bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
 	match_data_t *match = ptr;
 
 	if (!datalen) return false;
-	char * CSV = decrypt_data(data, datalen, "cryptography", key, subkey);
+	char * CSV = decrypt_data(data, datalen, oss_cryptography, key, subkey);
 
 	char *algorithm = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *strength = calloc(MAX_JSON_VALUE_LEN, 1);

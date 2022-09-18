@@ -50,7 +50,7 @@ const char *copyright_sources[] = {"component_declared", "file_header", "license
  */
 static bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char * result = decrypt_data(data, datalen, "copyright", key, subkey);
+	char * result = decrypt_data(data, datalen, oss_copyright, key, subkey);
 	if (result)
 		strncpy(ptr, skip_first_comma((char *) result), MAX_COPYRIGHT);
 	
@@ -89,7 +89,7 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 {
 	component_data_t * comp = ptr;
 	scanlog("Print copytight: %s\n");
-	char * CSV = decrypt_data(data, datalen, "copyright", key, subkey);
+	char * CSV = decrypt_data(data, datalen, oss_copyright, key, subkey);
 
 	char *source  = calloc(MAX_JSON_VALUE_LEN + 1, 1);
 	char *copyright = calloc(MAX_COPYRIGHT + 1, 1);

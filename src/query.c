@@ -62,7 +62,7 @@ char *get_filename(char *md5)
 	record[recln] = 0;
 
 	/* Decrypt data */
-	char *  decrypted = decrypt_data(record, recln, "file", md5bin, md5bin + LDB_KEY_LN);
+	char *  decrypted = decrypt_data(record, recln, oss_file, md5bin, md5bin + LDB_KEY_LN);
 	free (record);
 
 
@@ -82,7 +82,7 @@ char *get_filename(char *md5)
  */
 bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char * decrypted = decrypt_data(data, datalen, "url", key, subkey);
+	char * decrypted = decrypt_data(data, datalen, oss_url, key, subkey);
 
 	char *record = (char *) ptr;
 
@@ -128,7 +128,7 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	long *age = (long *) ptr;
 
-	char * decrypted = decrypt_data(data, datalen, "purl", key, subkey);
+	char * decrypted = decrypt_data(data, datalen, oss_purl, key, subkey);
 
 	/* Expect at least a date*/
 	if (strlen(decrypted) < 9) 

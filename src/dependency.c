@@ -56,7 +56,7 @@ const char *dependency_sources[] = {"component_declared"};
  */
 bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char *CSV = decrypt_data(data, datalen, "dependency", key, subkey);
+	char *CSV = decrypt_data(data, datalen, oss_dependency, key, subkey);
 	component_data_t * comp = (component_data_t *) ptr;
 	scanlog("Dependency: %s\n", CSV);
 

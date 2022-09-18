@@ -55,7 +55,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 {
 	if (!datalen && datalen >= MAX_PATH) return false;
 
-	char * data = decrypt_data(raw_data, datalen, "url", key, subkey);
+	char * data = decrypt_data(raw_data, datalen, oss_url, key, subkey);
 
 	if (!data)
 		return false;
@@ -181,7 +181,7 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 {
 	component_data_t *component = (component_data_t *) ptr;
 
-	char * purl = decrypt_data(data, datalen, "purl", key, subkey);
+	char * purl = decrypt_data(data, datalen, oss_purl, key, subkey);
 
 	if (!purl)
 		return false;
@@ -247,7 +247,7 @@ bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 {
 	if (!datalen) return false;
 
-	char * purl = decrypt_data(data, datalen, "purl", key, subkey);
+	char * purl = decrypt_data(data, datalen, oss_purl, key, subkey);
 	uint8_t *oldest = (uint8_t *) ptr;
 
 	if (!purl)
@@ -291,7 +291,7 @@ void purl_release_date(char *purl, char *date)
 **/
 bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char * url = decrypt_data(data, datalen, "url", key, subkey);
+	char * url = decrypt_data(data, datalen, oss_url, key, subkey);
 	if (!url) 
 		return false;
 

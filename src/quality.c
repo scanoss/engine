@@ -57,7 +57,7 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 {
 	
 	match_data_t * match  = (match_data_t*) ptr;
-	char *CSV = decrypt_data(data, datalen, "quality", key, subkey);
+	char *CSV = decrypt_data(data, datalen, oss_quality, key, subkey);
 	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *quality = calloc(MAX_JSON_VALUE_LEN, 1);
 

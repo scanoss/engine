@@ -195,7 +195,7 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
 
 	/* Decrypt data */
-	char * decrypted = decrypt_data(raw_data, datalen, "file", key, subkey);
+	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
 	if (!decrypted)
 		return NULL;
 	/* Copy data to memory */
@@ -265,7 +265,7 @@ bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 {
 	if (!datalen) return false;
 
-	char * file_data = decrypt_data(data, datalen, "file", key, subkey);
+	char * file_data = decrypt_data(data, datalen, oss_file, key, subkey);
 	
 	if (!file_data || !*file_data) 
 		return false;

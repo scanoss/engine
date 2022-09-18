@@ -187,7 +187,7 @@ void print_osadl_license_data(char *license)
  */
 bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char * CSV = decrypt_data(data, datalen, "license", key, subkey);
+	char * CSV = decrypt_data(data, datalen, oss_license, key, subkey);
 	if (!CSV)
 		return false;
 	extract_csv(ptr, CSV, 2, MAX_JSON_VALUE_LEN);
@@ -213,7 +213,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 	if (!datalen) return false;
 	
-	char * CSV = decrypt_data(data, datalen, "license", key, subkey);
+	char * CSV = decrypt_data(data, datalen, oss_license, key, subkey);
 
 	if (!CSV)
 		return false;
