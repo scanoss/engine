@@ -63,12 +63,24 @@ static bool is_vendor(char *str)
 }
 
 /**
+ * @brief Check if a string is a license
+ * @param str input string
+ * @return true if it is a vendor
+ */
+static bool is_license(char *str)
+{
+	if (!strcmp(str, "license")) return true;
+	if (!strcmp(str, "expression")) return true;
+	return false;
+}
+
+/**
  * @brief Work over a json value
  * @param value pointer to json structure
  * @param depth depth into the strcuture
  * @param out[out] processed component
  */
-static void work_json_value(json_value* value, int depth, component_item *out);
+static void work_json_value(int * index, json_value* value, int depth, component_item *out);
 
 /**
  * @brief Work over a json object
@@ -76,16 +88,13 @@ static void work_json_value(json_value* value, int depth, component_item *out);
  * @param depth depth into the strcuture
  * @param out[out] processed component
  */
-static void work_json_object(json_value* value, int depth, component_item *out)
+static void work_json_object(int * index, json_value* value, int depth, component_item *out)
 {
 	int length, x;
 	if (value == NULL) return;
 
-	char vendor[MAX_ARGLN] = "\0";
-	char component[MAX_ARGLN] = "\0";
-	char purl[MAX_PATH] = "\0";
-
 	length = value->u.object.length;
+	bool start_deep = false;
 	for (x = 0; x < length; x++)
 	{
 		json_value *data = value->u.object.values[x].value;
@@ -94,44 +103,61 @@ static void work_json_object(json_value* value, int depth, component_item *out)
 		if (!strcmp(value->u.object.values[x].name, "Document") ||
 				(!strcmp(value->u.object.values[x].name, "components")) ||
 				(!strcmp(value->u.object.values[x].name, "purl")) ||
-				(!strcmp(value->u.object.values[x].name, "packages")))
+				(!strcmp(value->u.object.values[x].name, "packages")) ||
+				(!strcmp(value->u.object.values[x].name, "licenses")))
 		{
-			work_json_value(value->u.object.values[x].value, depth+1, out);
+			work_json_value(index, value->u.object.values[x].value, depth+1, out);
 		}
 		if (data->type == json_string)
 		{
-			if (is_vendor(name)) strcpy(vendor, data->u.string.ptr);
-			if (is_component(name)) strcpy(component, data->u.string.ptr);
-			if (!strcmp(name, "purl")) strcpy(purl, data->u.string.ptr);
-		}
-	}
-
-	if (!*component && !*vendor && !*purl) return;
-
-	/* Load values into structure */
-	component_item *ignore = out;
-	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
-	{
-		if (!ignore[i].component && !ignore[i].vendor && !ignore[i].purl)
-		{
-			if (*vendor) 
-				ignore[i].vendor = strdup(vendor);
-			if (*component) 
-				ignore[i].component = strdup(component);
-			if (*purl) 
+			if (is_vendor(name))
 			{
+				if (!start_deep)
+				{
+					start_deep = true;
+					(*index)++;
+				}
+				out[*index].vendor = strdup(data->u.string.ptr);
+			}
+
+			if (is_component(name))
+			{
+				if (!start_deep)
+				{
+					start_deep = true;
+					(*index)++;
+				}
+				out[*index].component = strdup(data->u.string.ptr);
+			}
+
+			if (!strcmp(name, "purl"))
+			{
+				if (!start_deep)
+				{
+					start_deep = true;
+					(*index)++;
+				}
+
+				char * purl = data->u.string.ptr;
 				char * version = strrchr(purl, '@');
 				if (version)
 				{
 					*version = '\0';
 					version++;
-					ignore[i].version = strdup(version);
+					out[*index].version = strdup(version);
 				}
-				ignore[i].purl = strdup(purl);
+				out[*index].purl = strdup(purl);
 			}
-			break;
+
+			if (is_license(name) && !out[*index].license) 
+			{
+				out[*index].license = strdup(data->u.string.ptr);	
+			}
 		}
 	}
+
+	if (!out[*index].vendor && !out[*index].component &&  !out[*index].purl) 
+		return;
 }
 
 /**
@@ -140,14 +166,14 @@ static void work_json_object(json_value* value, int depth, component_item *out)
  * @param depth depth into the strcuture
  * @param out[out] processed component
  */
-static void work_json_array(json_value* value, int depth, component_item *out)
+static void work_json_array(int * index, json_value* value, int depth, component_item *out)
 {
 	int length, x;
 	if (value == NULL) return;
 
 	length = value->u.array.length;
 	for (x = 0; x < length; x++) {
-		work_json_value(value->u.array.values[x], depth, out);
+		work_json_value(index, value->u.array.values[x], depth, out);
 	}
 }
 
@@ -157,18 +183,18 @@ static void work_json_array(json_value* value, int depth, component_item *out)
  * @param depth depth into the strcuture
  * @param out[out] processed component
  */
-static void work_json_value(json_value* value, int depth, component_item *out)
+static void work_json_value(int * index, json_value* value, int depth, component_item *out)
 {
 	if (value == NULL) return;
 
 	switch (value->type)
 	{
 		case json_object:
-			work_json_object(value, depth+1, out);
+			work_json_object(index, value, depth+1, out);
 			break;
 
 		case json_array:
-			work_json_array(value, depth+1, out);
+			work_json_array(index, value, depth+1, out);
 			break;
 
 		default:
@@ -212,7 +238,8 @@ component_item *get_components(char *filepath)
 	}
 
 	component_item *out = calloc(MAX_SBOM_ITEMS * sizeof(component_item), 1);
-	work_json_value(value, 0, out);
+	int component_index = -1;
+	work_json_value(&component_index, value, 0, out);
 
 	json_value_free(value);
 	free(buffer);
@@ -222,7 +249,7 @@ component_item *get_components(char *filepath)
 	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
 	{
 		if (!ignore[i].component && !ignore[i].vendor && !ignore[i].purl) break;
-		scanlog("#%d %s, %s, %s, %s\n", i, ignore[i].component, ignore[i].vendor, ignore[i].purl, ignore[i].version);
+		scanlog("#%d %s, %s, %s, %s, %s\n", i, ignore[i].component, ignore[i].vendor, ignore[i].purl, ignore[i].version, ignore[i].license);
 	}
 
 	return out;

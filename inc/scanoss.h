@@ -109,6 +109,7 @@ typedef struct component_item
 	char * component;
 	char * purl;
 	char * version;
+	char * license;
 } component_item;
 
 

@@ -161,15 +161,72 @@ bool print_notices(struct ldb_table oss_attribution, uint8_t *key, char *compone
 }
 
 /**
+ * @brief Load OSADL license metadata from json file
+ */
+static char * notices_load_file(void)
+{
+	char * path = NULL;
+	asprintf(&path,"/var/lib/ldb/%s/licenses.json",oss_url.db);
+	uint64_t size = 0;
+	char * licenses_json = (char*) file_read(path, &size);
+	
+	if (!size)
+		scanlog("Warning: Cannot find license.json definition. Please check that %s is present\n", path);
+	
+	free(path);
+	return licenses_json;
+}
+
+static char * license_search_on_licenses_json(const char * license, const char * licenses_json)
+{
+	char * key = NULL;
+	asprintf(&key,"\"rf_shortname\" : \"%s\"", license);
+
+	char * content = strstr(licenses_json, key);
+	free(key);
+	
+	return content;
+}
+
+static char * notice_look_for_verbatim_at_license_json(const char * license, const char * licenses_json) 
+{
+	char * content = license_search_on_licenses_json(license, licenses_json);
+	
+	if (!content)
+		return NULL;
+	const char notice_key[] = "\"rf_text\" :";
+	content = strstr(content, notice_key);
+	char * end = NULL;
+	if (content)
+	{
+		content += strlen(notice_key);
+		end = strstr(content, "\"rf_url\"");
+		if (end)
+		{
+			end -=4;
+		}
+		else
+		{
+			scanlog("Failed to find content end\n");
+		}
+	}
+	
+	int key_len = end - content;
+	char * notices = strndup(content, key_len);
+	return notices;
+}
+
+/**
  * @brief Return true if purl attributions are in the KB.
  * @param oss_attribution LDB attributions table.
  * @return Return true if purl attributions are in the KB.
  */
-bool check_purl_attributions(struct ldb_table oss_attributions)
+bool check_purl_attributions(struct ldb_table oss_attributions, char * licenses_json)
 {
 	bool valid = true;
 	if (!declared_components) return false;
 
+	char * novalid_components = NULL;
 	/* Travel declared_components */
 	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
 	{
@@ -184,17 +241,25 @@ bool check_purl_attributions(struct ldb_table oss_attributions)
 			/* Get purl md5 */
 			uint8_t md5[16];
 			MD5((uint8_t *)purl, strlen(purl), md5);
-			if (!ldb_key_exists(oss_attributions, md5))
+			if (declared_components[i].license && licenses_json && 
+				license_search_on_licenses_json(declared_components[i].license, licenses_json))
 			{
-				printf("No attribution notices for %s\n", purl);
-				valid = false;
+				continue;
 			}
-			else if (!purl_notices_exist(oss_attributions, md5))
+			else if (!ldb_key_exists(oss_attributions, md5) || !purl_notices_exist(oss_attributions, md5))
 			{
-				printf("Missing notices for %s\n", purl);
-				valid = false;
+					scanlog("No attribution notices or notices for %s\n", purl);
+					char aux[strlen(purl) + 2];
+					sprintf(aux,"%s\n", purl);
+					str_cat_realloc(&novalid_components, aux);
+					valid = false;
 			}
 		}
+	}
+	if (!valid)
+	{
+		printf("Attribution notice could not be found for this purls:\n%s\nIncomple notices will not be printed\n", novalid_components);
+		free(novalid_components);
 	}
 	return valid;
 }
@@ -203,7 +268,7 @@ bool check_purl_attributions(struct ldb_table oss_attributions)
  * @brief Print the attribution notices for a given purl in stdout
  * @param oss_attribution LDB attributions table.
  */
-void print_purl_attribution_notices(struct ldb_table oss_attributions)
+void print_purl_attribution_notices(struct ldb_table oss_attributions, char * licenses_json)
 {
 	/* Travel declared_components */
 	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
@@ -212,12 +277,25 @@ void print_purl_attribution_notices(struct ldb_table oss_attributions)
 		char *purl = declared_components[i].purl;
 		if (!purl) break;
 
-		/* Get purl md5 */
-		uint8_t md5[16];
-		MD5((uint8_t *)purl, strlen(purl), md5);
-		print_notices(oss_attributions, md5, purl);
-  }
+		if (licenses_json && declared_components[i].license)
+		{
+			char * license_notice = notice_look_for_verbatim_at_license_json(declared_components[i].license, licenses_json);
+			if (license_notice)
+				printf("%s\n",license_notice);
+			
+			free(license_notice);
+		}
+		else
+		{
+			/* Get purl md5 */
+			uint8_t md5[16];
+			MD5((uint8_t *)purl, strlen(purl), md5);
+			print_notices(oss_attributions, md5, purl);
+		}
+  	}
+  	free(licenses_json);
 }
+
 
 /**
  * @brief //Validate the declared SBOM and print the attribution noticies in stdout
@@ -225,12 +303,12 @@ void print_purl_attribution_notices(struct ldb_table oss_attributions)
  */
 int attribution_notices()
 {
+	char * licenses_json = notices_load_file();
 	/* Validate SBOM */
 	declared_components = get_components(optarg);
-	if (!check_purl_attributions(oss_attribution)) exit(EXIT_FAILURE);
-
-	/* Print attribution notices */
-	print_purl_attribution_notices(oss_attribution);
+	if (check_purl_attributions(oss_attribution, licenses_json) && !debug_on)
+		/* Print attribution notices */
+		print_purl_attribution_notices(oss_attribution, licenses_json);
 
 	if (declared_components) free(declared_components);
 	return EXIT_SUCCESS;
