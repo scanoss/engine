@@ -296,6 +296,7 @@ int main(int argc, char **argv)
 
 	bool force_wfp = false;
 	bool force_bfp = false;
+	bool stream_mode = false;
 	
 	microseconds_start = microseconds_now();
 
@@ -305,7 +306,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqHB")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqHBS")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -319,6 +320,9 @@ int main(int argc, char **argv)
 
 		switch (option)
 		{
+			case 'S':
+				stream_mode = true;
+				break;
 			case 's':
 				if (declared_components) printf("Cannot combine -s and -a\n");
 				declared_components = get_components(optarg);
@@ -441,6 +445,16 @@ int main(int argc, char **argv)
 	{
 		printf("Error parsing arguments\n");
 		exit(EXIT_FAILURE);
+	}
+	
+	if (stream_mode)
+	{
+		fprintf(stderr,"STREAMING MODE: waiting fo WFP - CTRL d or EOF to exit\n");
+		/* Open main report structure */
+		json_open();
+ 		wfp_scan(NULL, 0, 0);
+		/* Close main report structure */
+		json_close();
 	}
 
 	/* Perform scan */

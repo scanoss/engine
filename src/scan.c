@@ -220,20 +220,25 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 	size_t len = 0;
 	ssize_t lineln;
 	uint8_t *rec = NULL;
-	
+	FILE *fp = stdin;
+	char *tmp_md5_hex = NULL;
 	scanlog("--- WFP SCAN ---\n");
 	/* Open WFP file */
-	FILE *fp = fopen(path, "r");
-	if (fp == NULL)
+	if (path)
 	{
-		fprintf(stdout, "E017 Cannot open target");
-		return EXIT_FAILURE;
+		fp = fopen(path, "r");
+		if (fp == NULL)
+		{
+			fprintf(stdout, "E017 Cannot open target");
+			return EXIT_FAILURE;
+		}
+		/* Get wfp MD5 hash */
+		uint8_t tmp_md5[16];
+		get_file_md5(path, tmp_md5);
+		tmp_md5_hex = md5_hex(tmp_md5);
 	}
-
-	/* Get wfp MD5 hash */
-	uint8_t tmp_md5[16];
-	get_file_md5(path, tmp_md5);
-	char *tmp_md5_hex = md5_hex(tmp_md5);
+	
+	
 
 	/* Read line by line */
 	while ((lineln = getline(&line, &len, fp)) != -1)
@@ -271,7 +276,8 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			
 			/*Init a new scan object for the next file to be scanned */
 			scan = scan_data_init(target, scan_max_snippets, scan_max_components);
-			strcpy(scan->source_md5, tmp_md5_hex);
+			if(tmp_md5_hex)
+				strcpy(scan->source_md5, tmp_md5_hex);
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
 			scan->preload = true;
 			free(rec);
