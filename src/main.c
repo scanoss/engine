@@ -377,7 +377,7 @@ int main(int argc, char **argv)
 				force_bfp = true;
 				break;
 			case 't':
-//				scan_benchmark();
+				scan_benchmark();
 				exit(EXIT_SUCCESS);
 				break;
 
@@ -535,7 +535,10 @@ int main(int argc, char **argv)
 	if (ignored_assets)  free (ignored_assets);
     
 	if (lib_encoder_present)
+	{
 		dlclose(lib_encoder_handle);
+		free(lib_encoder_handle);
+	}
 	
 	hpsm_lib_close();
 	free(component_hint);
