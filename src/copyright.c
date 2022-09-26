@@ -34,7 +34,7 @@
 #include "parse.h"
 #include "util.h"
 #include "decrypt.h"
-
+#include "debug.h"
 const char *copyright_sources[] = {"component_declared", "file_header", "license_file", "scancode"};
 
 /**
