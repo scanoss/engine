@@ -261,13 +261,13 @@ bool print_json_component(component_data_t * component)
 	free(url_id);
 
 	print_licenses(component);
-	printf(",%s", component->license_text);
+	printf(",%s", json_remove_invalid_char(component->license_text));
 
 	if (!(engine_flags & DISABLE_DEPENDENCIES))
 	{
 		if (!component->dependency_text)
 			print_dependencies(component);
-		printf(",%s", component->dependency_text);
+		printf(",%s", json_remove_invalid_char(component->dependency_text));
 	}
 
 	if (!(engine_flags & DISABLE_COPYRIGHTS))
@@ -279,7 +279,7 @@ bool print_json_component(component_data_t * component)
 	if (!(engine_flags & DISABLE_VULNERABILITIES))
 	{
 		print_vulnerabilities(component);
-		printf(",%s", component->vulnerabilities_text);
+		printf(",%s", json_remove_invalid_char(component->vulnerabilities_text));
 	}
 	if (engine_flags & DISABLE_BEST_MATCH)	
 		printf("}");
@@ -327,13 +327,13 @@ bool print_json_match(struct match_data_t * match)
 	if (!(engine_flags & DISABLE_QUALITY))
 	{
 		print_quality(match);
-		printf(",%s", match->quality_text);
+		printf(",%s", json_remove_invalid_char(match->quality_text));
 	}
 
 	if (!(engine_flags & DISABLE_CRIPTOGRAPHY))
 	{
 		print_cryptography(match);
-		printf(",%s", match->crytography_text);
+		printf(",%s", json_remove_invalid_char(match->crytography_text));
 	}
 	if (!(engine_flags & DISABLE_BEST_MATCH))
 	{
