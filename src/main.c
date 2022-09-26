@@ -537,7 +537,6 @@ int main(int argc, char **argv)
 	if (lib_encoder_present)
 	{
 		dlclose(lib_encoder_handle);
-		free(lib_encoder_handle);
 	}
 	
 	hpsm_lib_close();
