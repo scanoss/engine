@@ -46,6 +46,7 @@
 #include "decrypt.h"
 #include "hpsm.h"
 #include <dlfcn.h>
+#include <sys/select.h>
 
 struct ldb_table oss_url;
 struct ldb_table oss_file;
@@ -188,7 +189,7 @@ void recurse_directory(char *name)
 			if (extension(path)) if (!strcmp(extension(path), "wfp")) wfp = true;
 		
 			if (wfp)
-				wfp_scan(path, scan_max_snippets, scan_max_components);
+				wfp_scan(path, false, scan_max_snippets, scan_max_components);
 			else
 			{
 				scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components);
@@ -449,12 +450,28 @@ int main(int argc, char **argv)
 	
 	if (stream_mode)
 	{
-		fprintf(stderr,"STREAMING MODE: waiting fo WFP - CTRL d or EOF to exit\n");
+		fd_set rfds;
+        int retval;
+		FD_ZERO(&rfds);
+		FD_SET(STDIN_FILENO, &rfds);
+		struct timeval timeout;
+    	timeout.tv_sec = 0;
+    	timeout.tv_usec = 0;
+		fd_set savefds = rfds;
+		fprintf(stderr,"STREAMING MODE: waiting fo WFP - CTRL d or EOF to finish one scan, ctrl-c to exit\n");
 		/* Open main report structure */
-		json_open();
- 		wfp_scan(NULL, 0, 0);
-		/* Close main report structure */
-		json_close();
+		while(1)
+		{
+        	//retval = select(1, &rfds, NULL, NULL,  NULL);
+			//if (retval)
+			{
+			//	json_open();
+				wfp_scan(NULL, true, 0, 0);
+				/* Close main report structure */
+			//	json_close();
+			}
+		//	sleep(1);
+		}
 	}
 
 	/* Perform scan */
@@ -509,7 +526,7 @@ int main(int argc, char **argv)
 
 				/* Scan wfp file */
 				if (wfp_extension) 
-					wfp_scan(target, scan_max_snippets, scan_max_components);
+					wfp_scan(target, false, scan_max_snippets, scan_max_components);
 
 				else if (bfp_extension) 
 					binary_scan(target, scan_max_snippets, scan_max_components);

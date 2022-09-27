@@ -213,7 +213,8 @@ int hash_scan(char *path, int scan_max_snippets, int scan_max_components)
  * @param scan_max_components Limit for component to be displayed. 1 by default.
  * @return EXIT_SUCCESS
  */
-int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
+#define FRAGMENT_SYMBOL '#'
+int wfp_scan(char * path, bool mode_stream, int scan_max_snippets, int scan_max_components)
 {
 	scan_data_t * scan = NULL;
 	char * line = NULL;
@@ -238,16 +239,25 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 		tmp_md5_hex = md5_hex(tmp_md5);
 	}
 	
-	
+	bool is_end = true;
 
 	/* Read line by line */
-	while ((lineln = getline(&line, &len, fp)) != -1)
+	while ((lineln = getline(&line, &len, fp)) != -1 || mode_stream)
 	{
+		if (lineln < 0)
+			continue;
+
 		trim(line);
 
 		bool is_file = (memcmp(line, "file=", 5) == 0);
 		bool is_hpsm = (memcmp(line, "hpsm=", 5) == 0);
-		bool is_wfp = (!is_file && !is_hpsm);
+		
+		if (is_end && mode_stream)
+			printf("{");
+		
+		is_end = (memcmp(line, "#", 1) == 0);
+
+		bool is_wfp = (!is_file && !is_hpsm && !is_end);
 
 		if (is_hpsm) 
 		{
@@ -285,6 +295,14 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
 			free(hexmd5);
 		}
+		else if (is_end && mode_stream)
+		{
+			if (scan)
+				ldb_scan(scan);
+			scan = NULL;
+			printf("}");
+			continue;
+		}
 
 		/* Save hash/es to memory. Parse file information with format:
 			 linenr=wfp(6)[,wfp(6)]+ */
@@ -320,8 +338,9 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 	}
 	/* Scan the last file */
 	ldb_scan(scan);
-
-	fclose(fp);
+	if (path)
+		fclose(fp);
+		
 	if (line) free(line);
 	
 	free(tmp_md5_hex);
