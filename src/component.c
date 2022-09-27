@@ -188,7 +188,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	char vendor[MAX_FIELD_LN];
 	char comp[MAX_FIELD_LN];
 	char version[MAX_FIELD_LN];
-	char release_date[MAX_FIELD_LN];
+	char release_date[MAX_FIELD_LN] = "\0";
 	char latest_version[MAX_FIELD_LN];
 	char license[MAX_FIELD_LN];
 	char url[MAX_FILE_PATH];

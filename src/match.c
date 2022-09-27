@@ -352,7 +352,7 @@ bool load_matches(match_data_t *match)
 		LIST_FOREACH(item, &match->component_list.headp, entries)
 		{
 			scanlog("Dependency tiebreak\n");
-			if (!item->entries.le_next)
+			if (!item->entries.le_next || !item->entries.le_next->component)
 				break;
 			/* if the date of two components it's the same */
 			if(!strcmp(item->component->release_date, item->entries.le_next->component->release_date))

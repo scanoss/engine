@@ -239,7 +239,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
 
-	if (!dup && *license && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
+	if (!dup && strlen(license) > 2 && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
 	{
 		if (comp->license_text && *comp->license_text) 
 			len += sprintf(result+len,","); 
@@ -292,7 +292,7 @@ void print_licenses(component_data_t * comp)
 	comp->license_text = NULL;
 	/* Print URL license */
 	
-	if (comp->license && *comp->license)
+	if (comp->license && strlen(comp->license) > 2)
 	{
 		normalize_license(comp->license);
 		len += sprintf(result+len,"{");
