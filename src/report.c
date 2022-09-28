@@ -188,9 +188,10 @@ void print_purl_array(component_data_t * component)
 	{
 		if (component->purls[i]) 
 		{
-			if (purl_with_version)
+			//Disabled do to clients compatibility
+			/*if (purl_with_version)
 				printf("\"%s@%s\"", component->purls[i], component->version);
-			else
+			else*/
 				printf("\"%s\"", component->purls[i]);
 			if (i < (MAX_PURLS - 1)) if (component->purls[i + 1]) printf(",");
 		} 
