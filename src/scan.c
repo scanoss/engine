@@ -401,8 +401,11 @@ int wfp_scan(char * path, bool mode_stream, int scan_max_snippets, int scan_max_
 	bool is_end = true;
 
 	/* Read line by line */
-	while ((lineln = getline(&line, &len, fp)) != -1 || mode_stream)
+	while ((lineln = getline(&line, &len, fp)) != -1 || mode_stream || mode_stream)
 	{
+		if (lineln < 0)
+			continue;
+
 		if (lineln < 0)
 			continue;
 
@@ -416,7 +419,13 @@ int wfp_scan(char * path, bool mode_stream, int scan_max_snippets, int scan_max_
 		
 		is_end = (memcmp(line, "#", 1) == 0);
 
-		bool is_wfp = (!is_file && !is_hpsm && !is_end);
+		
+		if (is_end && mode_stream)
+			printf("{");
+		
+		is_end = (memcmp(line, "#", 1) == 0);
+
+		bool is_wfp = (!is_file && !is_hpsm && !is_end && !is_end);
 
 		if (is_hpsm) 
 		{
@@ -450,6 +459,7 @@ int wfp_scan(char * path, bool mode_stream, int scan_max_snippets, int scan_max_
 			/*Init a new scan object for the next file to be scanned */
 			scan = scan_data_init(target, scan_max_snippets, scan_max_components);
 			if(tmp_md5_hex)
+				if(tmp_md5_hex)
 				strcpy(scan->source_md5, tmp_md5_hex);
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
 			scan->preload = true;
@@ -457,6 +467,14 @@ int wfp_scan(char * path, bool mode_stream, int scan_max_snippets, int scan_max_
 			scanlog("File md5 to be scanned: %s\n", hexmd5);
 			ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
 			free(hexmd5);
+		}
+		else if (is_end && mode_stream)
+		{
+			if (scan)
+				ldb_scan(scan);
+			scan = NULL;
+			printf("}");
+			continue;
 		}
 		else if (is_end && mode_stream)
 		{

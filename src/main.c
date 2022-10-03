@@ -47,6 +47,7 @@
 #include "hpsm.h"
 #include <dlfcn.h>
 #include <sys/select.h>
+#include <sys/select.h>
 
 struct ldb_table oss_url;
 struct ldb_table oss_file;
@@ -309,7 +310,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqHBS")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqHBSS")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
