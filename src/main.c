@@ -193,7 +193,9 @@ void recurse_directory(char *name)
 			else
 			{
 				scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components);
-				ldb_scan(scan);
+				char * report = ldb_scan(scan);
+				printf("%s", report);
+				free(report);
 			}
 
 		}
@@ -450,28 +452,19 @@ int main(int argc, char **argv)
 	
 	if (stream_mode)
 	{
-		fd_set rfds;
-        int retval;
-		FD_ZERO(&rfds);
-		FD_SET(STDIN_FILENO, &rfds);
-		struct timeval timeout;
-    	timeout.tv_sec = 0;
-    	timeout.tv_usec = 0;
-		fd_set savefds = rfds;
 		fprintf(stderr,"STREAMING MODE: waiting fo WFP - CTRL d or EOF to finish one scan, ctrl-c to exit\n");
 		/* Open main report structure */
-		while(1)
-		{
-        	//retval = select(1, &rfds, NULL, NULL,  NULL);
-			//if (retval)
-			{
-			//	json_open();
-				wfp_scan(NULL, true, 0, 0);
-				/* Close main report structure */
-			//	json_close();
-			}
-		//	sleep(1);
-		}
+		// while(1)
+		// {
+		// 	{
+		// 	//	json_open();
+		// 		wfp_scan(NULL, true, 0, 0);
+		// 		/* Close main report structure */
+		// 	//	json_close();
+		// 	}
+		// }
+		wfp_mq_scan(0, 0);
+
 	}
 
 	/* Perform scan */
@@ -503,7 +496,7 @@ int main(int argc, char **argv)
 
 
 		/* Open main report structure */
-		json_open();
+		//json_open();
 
 		/* Scan directory */
 		if (isdir) recurse_directory(target);
@@ -536,7 +529,8 @@ int main(int argc, char **argv)
 				{
 					scanlog("Scanning file %s\n", target);
 					scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components);
-					ldb_scan(scan);
+					char * report = ldb_scan(scan);
+					printf("%s", report);
 				}
 			}
 
@@ -544,7 +538,7 @@ int main(int argc, char **argv)
 		}
 
 		/* Close main report structure */
-		json_close();
+		//json_close();
 
 		if (target) free (target);
 	}

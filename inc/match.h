@@ -30,7 +30,7 @@ typedef struct match_data_t
 match_data_t * match_data_copy(match_data_t * in);
 void match_data_free(match_data_t *data);
 
-void output_matches_json(scan_data_t *scan);
+void output_matches_json(scan_data_t *scan, char * report);
 void compile_matches(scan_data_t *scan);
 match_list_t * match_select_m_best(scan_data_t * scan);
 match_list_t * match_select_m_component_best(scan_data_t * scan);

@@ -136,7 +136,7 @@ typedef struct match_list_t
 
 /* Public functions declaration */
 
-void match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa), char * separator);
+void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa, char * report),char * report, char *separator);
 void match_list_debug(match_list_t * list);
 bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) (match_data_t * a, match_data_t * b), bool remove_a);
 void match_list_destroy(match_list_t * list);
@@ -145,7 +145,7 @@ void match_list_process(match_list_t * list, bool (*funct_p) (match_data_t * fpa
 bool match_list_is_empty(match_list_t * list);
 void component_list_init(component_list_t *comp_list, int max_items);
 bool component_list_add(component_list_t * list, component_data_t * new_comp, bool (* val) (component_data_t * a, component_data_t * b), bool remove_a);
-void component_list_print(component_list_t * list, bool (*printer) (component_data_t * fpa), char * separator);
+void component_list_print(component_list_t * list, bool (*printer) (component_data_t * fpa, char * report), char * report, char * separator);
 bool component_date_comparation(component_data_t * a, component_data_t * b);
 void component_list_destroy(component_list_t *list);
 #endif

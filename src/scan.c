@@ -38,6 +38,12 @@
 #include "match_list.h"
 #include "report.h"
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <mqueue.h>
+
+
+
 /**
   @file scan.c
   @date 12 Jul 2020
@@ -198,10 +204,163 @@ int hash_scan(char *path, int scan_max_snippets, int scan_max_components)
 	strcpy(scan->file_size, "999");
 
 	/* Scan the last file */
-	ldb_scan(scan);
+	char * report = ldb_scan(scan);
+	printf("%s", report);
+	free(report);
 
 	return EXIT_SUCCESS;
 }
+
+
+#define SERVER_QUEUE_NAME   "/scanoss-api"
+#define CLIENT_QUEUE_NAME   "/scanoss-engine"
+#define QUEUE_PERMISSIONS 0660
+#define MAX_MESSAGES 5
+#define MAX_MSG_SIZE 1024 * 64
+#define MSG_BUFFER_SIZE MAX_MSG_SIZE + 10
+
+int wfp_mq_scan(int scan_max_snippets, int scan_max_components)
+{
+    mqd_t qd_server, qd_client;   // queue descriptors
+
+    struct mq_attr attr;
+	
+	scan_data_t * scan = NULL;
+	uint8_t * rec = NULL;
+
+    attr.mq_flags = 0;
+    attr.mq_maxmsg = MAX_MESSAGES;
+    attr.mq_msgsize = MAX_MSG_SIZE;
+    attr.mq_curmsgs = 0;
+
+    if ((qd_client = mq_open (CLIENT_QUEUE_NAME, O_RDONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) {
+        perror ("Client: mq_open (client)");
+		 if (mq_unlink (CLIENT_QUEUE_NAME) == -1) {
+        perror ("Client: mq_unlink");
+        exit (1);
+    }
+        exit (1);
+    }
+
+    if ((qd_server = mq_open (SERVER_QUEUE_NAME, O_WRONLY)) == -1) {
+        perror ("Client: mq_open (server)");
+        exit (1);
+    }
+
+    char in_buffer [MSG_BUFFER_SIZE];
+
+    printf ("Ask for a token (Press <ENTER>): ");
+
+	while(1)
+	{
+		ssize_t result = mq_receive (qd_client, in_buffer, MSG_BUFFER_SIZE, NULL);
+		if (result == -1) 
+		{
+            perror ("Client: mq_receive");
+            exit (1);
+        }
+		else if (result >= 0)
+		{
+			printf("Rec: %s", in_buffer);
+			  /* get the first token */
+			char * line = in_buffer;
+			
+			/* walk through other tokens */
+			while(line != NULL) 
+			{
+				trim(line);
+				bool is_file = (memcmp(line, "file=", 5) == 0);
+				bool is_hpsm = (memcmp(line, "hpsm=", 5) == 0);
+				bool is_wfp = (!is_file && !is_hpsm);
+
+				if (is_hpsm) 
+				{
+					hpsm_enabled = hpsm_lib_load();
+					hpsm_crc_lines = strdup(&line[5]);
+				}
+
+				if (is_file)
+				{
+						/* Prepare the next scan */
+					const int tagln = 5; // len of 'file='
+
+					/* Get file MD5 */
+					char * hexmd5 = strndup(line + tagln, MD5_LEN * 2);
+
+					/* Extract fields from file record */
+					calloc(LDB_MAX_REC_LN, 1);  
+					
+					rec = (uint8_t*) strdup(line + tagln + (MD5_LEN * 2) + 1);
+					char * target = field_n(2, (char *)rec);
+					
+					/*Init a new scan object for the next file to be scanned */
+					scan = scan_data_init(target, scan_max_snippets, scan_max_components);
+					extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
+					scan->preload = true;
+					free(rec);
+					scanlog("File md5 to be scanned: %s\n", hexmd5);
+					ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
+					free(hexmd5);
+				}
+
+				if (is_wfp && scan && (scan->hash_count < MAX_HASHES_READ))
+				{
+					/* Split string by the equal and commas */
+					int line_ln = strlen(line);
+					for (int e = 0; e < line_ln; e++) if (line[e]=='=' || line[e]==',') line[e] = 0;
+
+					/* Extract line number */
+					int line_nr = atoi(line);
+
+					/* Move pointer to the first hash */
+					char *hexhash = line + strlen(line) + 1;
+
+					/* Save all hashes in the present line */
+					while (*hexhash) 
+					{
+
+						/* Convert hash to binary */
+						ldb_hex_to_bin(hexhash, 8, (uint8_t *)&scan->hashes[scan->hash_count]);
+						uint32_reverse((uint8_t *)&scan->hashes[scan->hash_count]);
+
+						/* Save line number */
+						scan->lines[scan->hash_count] = line_nr;
+
+						/* Move pointer to the next hash */
+						hexhash += strlen(hexhash) + 1;
+
+						scan->hash_count++;
+					}
+				}
+						
+				line = strchr(line, '\n');
+				if (line)
+					line++;
+			}
+			char * report = ldb_scan(scan);
+			printf("%s", report);
+			free(report);
+		}
+	}
+
+
+    if (mq_close (qd_client) == -1) {
+        perror ("Client: mq_close");
+        exit (1);
+    }
+
+    if (mq_unlink (CLIENT_QUEUE_NAME) == -1) {
+        perror ("Client: mq_unlink");
+        exit (1);
+    }
+    printf ("Client: bye\n");
+
+    exit (0);
+}
+
+
+
+
 
 /**
  * @brief Performs a wfp scan.
@@ -270,7 +429,11 @@ int wfp_scan(char * path, bool mode_stream, int scan_max_snippets, int scan_max_
 		{
 			/* A scan data was fullfilled and is ready to be scanned */
 			if (scan)
-				ldb_scan(scan);
+			{
+				char * report = ldb_scan(scan);
+				printf("%s", report);
+				free(report);
+			}
 			
 			/* Prepare the next scan */
 			const int tagln = 5; // len of 'file='
@@ -337,7 +500,10 @@ int wfp_scan(char * path, bool mode_stream, int scan_max_snippets, int scan_max_
 		}
 	}
 	/* Scan the last file */
-	ldb_scan(scan);
+	char * report = ldb_scan(scan);
+	printf("%s", report);
+	free(report);
+
 	if (path)
 		fclose(fp);
 		
@@ -352,60 +518,62 @@ int wfp_scan(char * path, bool mode_stream, int scan_max_snippets, int scan_max_
  * @param matches pointer to matches list
  * @param scan_ptr scan_data_t pointer, common scan information.
  */
-void output_matches_json(scan_data_t *scan)
+char * report1 = NULL;
+void output_matches_json(scan_data_t *scan, char * report)
 {
 	flip_slashes(scan->file_path);
-
+	report1 = report;
 	/* Log slow query, if needed */
 	slow_query_log(scan);
 
 	/* Print comma separator */
-	if (!quiet)
-		if (!first_file)
-			printf(",");
+	if (!first_file)
+		strcat(report, ",");
+	
 	first_file = false;
 
 	uint64_t engine_flags_aux = engine_flags;
+	int len = 0;
 	/* Print matches */
 	if (engine_flags & DISABLE_BEST_MATCH)
 	{
-		printf("\"%s\": [", scan->file_path);
+		len += sprintf(report+len,"\"%s\": [", scan->file_path);
 		bool first = true;
 		for (int i = 0; i < scan->matches_list_array_index; i++)
 		{
 			if (!first && scan->matches_list_array[i]->items && scan->matches_list_array[i]->best_match->component_list.items)
-				printf(",");
-			match_list_print(scan->matches_list_array[i], print_json_match, ",");
+				len += sprintf(report+len,",");
+			match_list_print(scan->matches_list_array[i], print_json_match, report, ",");
 			first = false;
 		}
 	}
 	/* prinf no match if the scan was evaluated as none */ // TODO must be unified with the "else" clause
 	else if (scan->match_type == MATCH_NONE)
 	{
-		printf("\"%s\": [{", scan->file_path);
-		print_json_nomatch(scan);
+		len += sprintf(report+len,"\"%s\": [{", scan->file_path);
+		print_json_nomatch(scan, report);
 	}
 	else if (scan->matches_list_array_index > 1 && scan->max_snippets_to_process > 1)
 	{
 		engine_flags |= DISABLE_BEST_MATCH;
-		printf("\"%s\": {\"matches\":[", scan->file_path);
+		len += sprintf(report+len,"\"%s\": {\"matches\":[", scan->file_path);
 		match_list_t *best_list = match_select_m_component_best(scan);
 		scanlog("<<<best list items: %d>>>\n", best_list->items);
-		match_list_print(best_list, print_json_match, ",");
+		match_list_print(best_list, print_json_match, report, ",");
 		match_list_destroy(best_list);
 	}
 	else if (scan->best_match && scan->best_match->component_list.items)
 	{
-		printf("\"%s\": [{", scan->file_path);
-		print_json_match(scan->best_match);
+		len += sprintf(report+len,"\"%s\": [{", scan->file_path);
+		print_json_match(scan->best_match, report);
 	}
 	else
 	{
-		printf("\"%s\": [{", scan->file_path);
-		print_json_nomatch(scan);
+		len += sprintf(report+len,"\"%s\": [{", scan->file_path);
+		print_json_nomatch(scan, report);
 	}
 
-	json_close_file(scan);
+	json_close_file(scan, report);
 	engine_flags = engine_flags_aux;
 }
 
@@ -417,11 +585,11 @@ void output_matches_json(scan_data_t *scan)
  * 
  * @param scan 
  */
-void ldb_scan(scan_data_t * scan)
+char * ldb_scan(scan_data_t * scan)
 {
 	bool skip = false;
 	if (!scan)
-		return;
+		return NULL;
 
 	if (unwanted_path(scan->file_path))
 	{
@@ -513,8 +681,8 @@ void ldb_scan(scan_data_t * scan)
 	
 	/* Output matches */
 	scanlog("Match output starts\n");
-	if (!debug_on)
-		output_matches_json(scan);
-
+	char * report = calloc(MAX_FILE_SIZE, 1);
+	output_matches_json(scan, report);
 	scan_data_free(scan);
+	return report;
 }

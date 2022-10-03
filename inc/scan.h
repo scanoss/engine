@@ -65,9 +65,9 @@ typedef struct scan_data_t
 scan_data_t * scan_data_init(char *target, int max_snippets, int max_components);
 void scan_data_free (scan_data_t * scan);
 
-void ldb_scan(scan_data_t * scan);
+char * ldb_scan(scan_data_t * scan);
 match_t ldb_scan_snippets(scan_data_t *scan_ptr);
 int wfp_scan(char * path, bool mode_stream, int scan_max_snippets, int scan_max_components);
 int hash_scan(char *path, int scan_max_snippets, int scan_max_components);
-
+int wfp_mq_scan(int scan_max_snippets, int scan_max_components);
 #endif

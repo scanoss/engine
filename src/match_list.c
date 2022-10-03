@@ -306,7 +306,7 @@ void match_list_debug(match_list_t *list)
     }
 }
 
-void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), char *separator)
+void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa, char * report),char * report, char *separator)
 {
     bool first = true;
     int i = 0;
@@ -317,24 +317,24 @@ void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), ch
         
         if (separator && !first)
         {
-            printf("%s", separator);
+            strcat(report, separator);
         }
         
-        printer(np->match);
+        printer(np->match, report);
         i++;
         first = false;
     }
 }
 
-void component_list_print(component_list_t *list, bool (*printer)(component_data_t *fpa), char *separator)
+void component_list_print(component_list_t *list, bool (*printer)(component_data_t *fpa, char * report), char * report, char *separator)
 {
     for (struct comp_entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
-        if (printer(np->component))
+        if (printer(np->component, report))
             break;
 
         if (separator && np->entries.le_next && np->entries.le_next->component)
-            printf("%s", separator);
+            strcat(report, separator);
     }
 }
 

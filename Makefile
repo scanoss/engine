@@ -2,7 +2,7 @@ ifeq ($(origin CC),default)
 CC = gcc
 endif
 CCFLAGS ?= -O -lz -Wall -g -Iinc -Iexternal/inc -D_LARGEFILE64_SOURCE -D_GNU_SOURCE
-LDFLAGS+= -lldb -lm -lpthread -lcrypto -ldl
+LDFLAGS+= -lldb -lm -lpthread -lcrypto -ldl -lrt
 SOURCES=$(wildcard src/*.c) $(wildcard src/**/*.c)  $(wildcard external/*.c) $(wildcard external/**/*.c)
 OBJECTS=$(SOURCES:.c=.o) 
 TARGET=scanoss

@@ -6,13 +6,13 @@
 
 extern char kb_version[];
 
-void json_open_file(char *filename);    
-void json_close_file(scan_data_t * scan);
-void report_open(scan_data_t *scan);
-bool print_json_match(match_data_t * match);
-void print_json_nomatch(scan_data_t *scan);
-void print_server_stats(scan_data_t *scan);
-void json_open();
-void json_close(void);
+void json_open_file(char *filename, char* report);    
+void json_close_file(scan_data_t * scan, char * report);
+void report_open(scan_data_t *scan, char * report);
+bool print_json_match(match_data_t * match, char *report);
+void print_json_nomatch(scan_data_t *scan, char * report);
+void print_server_stats(scan_data_t *scan, char * report);
+void json_open(char * report);
+void json_close(char * report);
 void kb_version_get(void);
 #endif
