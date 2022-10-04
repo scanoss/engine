@@ -301,6 +301,7 @@ int main(int argc, char **argv)
 	bool force_wfp = false;
 	bool force_bfp = false;
 	bool stream_mode = false;
+	bool queue_mode = false;
 	
 	microseconds_start = microseconds_now();
 
@@ -310,7 +311,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqHBSS")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqHBSQ")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -326,6 +327,9 @@ int main(int argc, char **argv)
 		{
 			case 'S':
 				stream_mode = true;
+				break;
+			case 'Q':
+				queue_mode = true;
 				break;
 			case 's':
 				if (declared_components) printf("Cannot combine -s and -a\n");
@@ -453,19 +457,13 @@ int main(int argc, char **argv)
 	
 	if (stream_mode)
 	{
-		fprintf(stderr,"STREAMING MODE: waiting fo WFP - CTRL d or EOF to finish one scan, ctrl-c to exit\n");
-		/* Open main report structure */
-		// while(1)
-		// {
-		// 	{
-		// 	//	json_open();
-		// 		wfp_scan(NULL, true, 0, 0);
-		// 		/* Close main report structure */
-		// 	//	json_close();
-		// 	}
-		// }
+		fprintf(stderr,"STREAMING MODE: waiting fo WFP - # to finish one scan, CTRL d or EOF to finish and exit\n");
+		wfp_scan(NULL, true, 0, 0);
+	}
+	else if (queue_mode)
+	{
+		fprintf(stderr,"MQ MODE: waiting fo WFP, CTRL-c to exit\n");
 		wfp_mq_scan(0, 0);
-
 	}
 
 	/* Perform scan */

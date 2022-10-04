@@ -233,27 +233,28 @@ int wfp_mq_scan(int scan_max_snippets, int scan_max_components)
     attr.mq_msgsize = MAX_MSG_SIZE;
     attr.mq_curmsgs = 0;
 
-    if ((qd_client = mq_open (CLIENT_QUEUE_NAME, O_RDONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) {
+    if ((qd_client = mq_open (CLIENT_QUEUE_NAME, O_RDONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) 
+	{
         perror ("Client: mq_open (client)");
-		 if (mq_unlink (CLIENT_QUEUE_NAME) == -1) {
-        perror ("Client: mq_unlink");
-        exit (1);
-    }
-        exit (1);
+		if (mq_unlink (CLIENT_QUEUE_NAME) == -1) 
+		{
+        	perror ("Client: mq_unlink");
+        	exit (1);
+    	}
+        
+		exit (1);
     }
 
-    if ((qd_server = mq_open (SERVER_QUEUE_NAME, O_WRONLY)) == -1) {
+    if ((qd_server = mq_open (SERVER_QUEUE_NAME, O_WRONLY | O_CREAT)) == -1) {
         perror ("Client: mq_open (server)");
         exit (1);
     }
 
     char in_buffer [MSG_BUFFER_SIZE];
 
-    printf ("Ask for a token (Press <ENTER>): ");
-
 	while(1)
 	{
-		ssize_t result = mq_receive (qd_client, in_buffer, MSG_BUFFER_SIZE, NULL);
+		ssize_t result = mq_receive (qd_client, in_buffer, MAX_MSG_SIZE, NULL);
 		if (result == -1) 
 		{
             perror ("Client: mq_receive");
@@ -261,9 +262,9 @@ int wfp_mq_scan(int scan_max_snippets, int scan_max_components)
         }
 		else if (result >= 0)
 		{
-			printf("Rec: %s", in_buffer);
+			//scanlog("Received: %s", in_buffer);
 			  /* get the first token */
-			char * line = in_buffer;
+			char * line = strtok(in_buffer, "\n");
 			
 			/* walk through other tokens */
 			while(line != NULL) 
@@ -333,12 +334,17 @@ int wfp_mq_scan(int scan_max_snippets, int scan_max_components)
 					}
 				}
 						
-				line = strchr(line, '\n');
+				line = strtok(NULL, "\n");
 				if (line)
 					line++;
 			}
+
 			char * report = ldb_scan(scan);
-			printf("%s", report);
+			if (mq_send (qd_server, report, strlen(report) + 1, 0) == -1) 
+			{
+            	perror ("Server: Not able to send message to client");
+        	}
+			fprintf(stderr,"%s", report);
 			free(report);
 		}
 	}

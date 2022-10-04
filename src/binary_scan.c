@@ -226,7 +226,11 @@ int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
 	scan->match_type = MATCH_BINARY;
 	compile_matches(scan);
 	scanlog("Match output starts\n");
-	output_matches_json(scan);
+	char * report = calloc(MAX_FILE_SIZE, 1);
+	output_matches_json(scan, report);
+	scan_data_free(scan);
+	printf("%s",report);
+	free(report);
 
 	//if (matches) free(matches);
 	scan_data_free(scan);
