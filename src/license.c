@@ -62,7 +62,7 @@ void clean_license(char *license)
 	while (*c)
 	{
 		*byte = *c;
-		if (!isalnum(*byte) && !strstr("-+;:. ", byte))
+		if (!isalnum(*byte) && !strstr("/-+;:. ", byte))
 			memmove(c, c + 1, strlen(c));
 		else c++;
 	}
@@ -174,6 +174,60 @@ void print_osadl_license_data(char *license)
 	printf("{\"%s\": {%s}}", license, output);
 }
 
+static char * json_from_license(uint32_t * crclist, char * buffer, char * license, int src, bool * first_record)
+{
+	
+	/* Calculate CRC to avoid duplicates */
+	uint32_t CRC = src + string_crc32c(license);
+	bool dup = add_CRC(crclist, CRC);
+	
+	if (dup)
+		return buffer;
+
+	clean_license(license);
+	normalize_license(license);
+	string_clean(license);
+	int len = 0;
+	
+	if (first_record && !*first_record)
+		len += sprintf(buffer+len,",");
+	else if (first_record)
+		*first_record = false;
+	
+	len += sprintf(buffer+len,"{");
+	len += sprintf(buffer+len,"\"name\": \"%s\",", license);
+	len += osadl_print_license(buffer+len, license, true);
+	len += sprintf(buffer+len,"\"source\": \"%s\"", license_sources[src]);
+	if (!strstr(license, "LicenseRef"))
+		len += sprintf(buffer+len,",\"url\": \"https://spdx.org/licenses/%s.html\"",license);
+	len += sprintf(buffer+len,"}");
+	return (buffer+len);
+}
+
+static char * split_in_json_array(uint32_t * crclist, char * buffer, char * license, int src, bool * first_record)
+{
+	/* get the first token */
+	char * lic = strtok(license, "/");
+	char * r = buffer;
+	/* walk through other tokens */
+	while( lic != NULL ) 
+   	{
+		r = json_from_license(crclist, r, lic, src, first_record);
+		lic = strtok(NULL, "/");
+	}
+
+	return buffer;
+}
+
+void license_to_json(uint32_t * crclist, char * buffer, char * license, int src, bool * first_record)
+{
+	if (!strchr(license, '/'))
+		json_from_license(crclist, buffer, license, src, first_record);
+	else
+		split_in_json_array(crclist, buffer,  license, src, first_record);
+}
+
+
 /**
  * @brief get first license function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
@@ -225,31 +279,17 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	extract_csv(license, CSV, 2, MAX_JSON_VALUE_LEN);
 	free(CSV);
 
-	clean_license(license);
-	normalize_license(license);
-
 	int src = atoi(source);
 
-	/* Calculate CRC to avoid duplicates */
-	uint32_t CRC = src + string_crc32c(license);
-	bool dup = add_CRC(comp->crclist, CRC);
-
 	scanlog("Fetched license %s\n", license);
-	string_clean(license);
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
 
-	if (!dup && strlen(license) > 2 && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
+	if (strlen(license) > 2 && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
 	{
-		if (comp->license_text && *comp->license_text) 
-			len += sprintf(result+len,","); 
-
-		len += sprintf(result+len,"{");
-		len += sprintf(result+len,"\"name\": \"%s\",", license);
-		len += osadl_print_license(result+len,license, true);
-		len += sprintf(result+len,"\"source\": \"%s\",", license_sources[atoi(source)]);
-		len += sprintf(result+len,"\"url\": \"https://spdx.org/licenses/%s.html\"",license);
-		len += sprintf(result+len,"}");
+		bool first_record = !(comp->license_text && *comp->license_text);
+		
+		license_to_json(comp->crclist, result+len, license, src, &first_record);
 		str_cat_realloc(&comp->license_text, result);
 
 	}
@@ -294,15 +334,9 @@ void print_licenses(component_data_t * comp)
 	
 	if (comp->license && strlen(comp->license) > 2)
 	{
-		normalize_license(comp->license);
-		len += sprintf(result+len,"{");
-		len += sprintf(result+len,"\"name\": \"%s\",", comp->license);
-		len += osadl_print_license(result+len, comp->license, true);
-		len += sprintf(result+len,"\"source\": \"%s\"", license_sources[0]);
-		len += sprintf(result+len,"}");
+	
+		license_to_json(crclist, result+len, comp->license, 0, &first_record);
 		scanlog("License present in URL table");
-		first_record = false;
-
 		/* Add license to CRC list (to avoid duplicates) */
 		add_CRC(crclist, string_crc32c(comp->license));
 	}

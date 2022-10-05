@@ -488,7 +488,7 @@ void ldb_scan(scan_data_t * scan)
 	
 	/* Output matches */
 	scanlog("Match output starts\n");
-	if (!debug_on)
+	if (!quiet)
 		output_matches_json(scan);
 
 	scan_data_free(scan);
