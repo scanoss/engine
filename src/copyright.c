@@ -88,7 +88,6 @@ static void clean_copyright(char *out, char *copyright)
 static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	component_data_t * comp = ptr;
-	scanlog("Print copytight: %s\n");
 	char * CSV = decrypt_data(data, datalen, oss_copyright, key, subkey);
 
 	char *source  = calloc(MAX_JSON_VALUE_LEN + 1, 1);
