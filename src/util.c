@@ -172,7 +172,8 @@ void string_clean(char *str)
   char *s = str;
   while (*s)
   {
-    if (*s < ' ' || *s == '"') *s = ' ';
+    if (*s < ' ' || *s == '"' || *s > 128) 
+		memmove(s, s + 1, strlen(s + 1) + 1);
     else s++;
   }
 
