@@ -305,16 +305,34 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 
 		/* Extract date */
 		char release_date[MAX_ARGLN + 1] = "\0";
-		char purl[MAX_ARGLN + 1] = "\0";
-		extract_csv(purl, (char *) url , 6, MAX_ARGLN);
-		purl_release_date(purl, release_date);
-
+		extract_csv(release_date, (char *) url , 4, MAX_ARGLN);
+		
+		
+		bool replace = false;
 		/* If it is older, then we copy to oldest */
-		if (!*oldest || (*release_date && (strcmp(release_date, oldest) > 0)))
+		if ((!*oldest && *release_date) || (*release_date && (strcmp(release_date, oldest) < 0)))
+			replace = true;
+		else if (*release_date && strcmp(release_date, oldest) == 0)
 		{
-			scanlog("get_oldest_url() %s, %s\n", release_date, url);
+			char purl_oldest[MAX_ARGLN];
+			char purl_new[MAX_ARGLN];
+			char purl_date_oldest[MAX_ARGLN];
+			char purl_date_new[MAX_ARGLN];
+			extract_csv(purl_new, (char *) url , 6, MAX_ARGLN);
+			extract_csv(purl_oldest, (char *) url , 6, MAX_ARGLN);
+			purl_release_date(purl_new, purl_date_new);
+			purl_release_date(purl_oldest, purl_date_oldest);
+
+			if (!*purl_date_oldest || (*purl_date_new && strcmp(purl_date_new, purl_date_oldest) < 0))
+				replace = true;
+		}
+
+		if (replace)
+		{
+			scanlog("get_oldest_url() %s\n", url);
 			memcpy((uint8_t *) ptr, url, datalen + 1);
 		}
+
 	}
 	free(url);
 	return false;
