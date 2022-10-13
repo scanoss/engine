@@ -128,20 +128,23 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
         }
         list->items++;
 
-        if (remove_a && list->items > list->max_items)
-        {
-            component_data_free(list->last_element->component);
-            list->last_element->component = NULL;
-            if (list->last_element_aux)
+        if (list->last_element && !list->autolimit && remove_a && (list->items > list->max_items))
+        {           
+            if(!list->last_element_aux)
             {
-                free(list->last_element);
-                list->last_element_aux->entries.le_next = NULL;
-                list->last_element = list->last_element_aux;
-                list->last_element_aux = NULL;
+                for (list->last_element_aux = list->headp.lh_first; list->last_element_aux->entries.le_next->entries.le_next != NULL; list->last_element_aux = list->last_element_aux->entries.le_next);
             }
-         
+            
+            if(list->last_element_aux)
+            {
+                component_data_free(list->last_element->component);
+                LIST_REMOVE(list->last_element_aux->entries.le_next, entries);
+                free(list->last_element);
+                list->last_element = list->last_element_aux;
+                list->items--;
+            }
+            list->last_element_aux = NULL;
             list->last_element->entries.le_next = NULL;
-            list->items--;
         }
          return true;
     }

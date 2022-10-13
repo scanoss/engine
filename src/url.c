@@ -310,9 +310,9 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		purl_release_date(purl, release_date);
 
 		/* If it is older, then we copy to oldest */
-		if (!*oldest || (*release_date && (strcmp(release_date, oldest) < 0)))
+		if (!*oldest || (*release_date && (strcmp(release_date, oldest) > 0)))
 		{
-			//scanlog("get_oldest_url() %s, %s\n", release_date, url);
+			scanlog("get_oldest_url() %s, %s\n", release_date, url);
 			memcpy((uint8_t *) ptr, url, datalen + 1);
 		}
 	}

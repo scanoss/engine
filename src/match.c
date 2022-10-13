@@ -267,6 +267,7 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 			asset_declared(new_comp);
 			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
 			{
+				scanlog("component rejected by date: %s\n",new_comp->purls[0]);
 				component_data_free(new_comp); /* Free if the componet was rejected */
 			}
 		}
