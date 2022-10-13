@@ -318,7 +318,7 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 			char purl_date_oldest[MAX_ARGLN];
 			char purl_date_new[MAX_ARGLN];
 			extract_csv(purl_new, (char *) url , 6, MAX_ARGLN);
-			extract_csv(purl_oldest, (char *) oldest , 6, MAX_ARGLN);
+			extract_csv(purl_oldest, (char *) ptr , 6, MAX_ARGLN);
 			purl_release_date(purl_new, purl_date_new);
 			purl_release_date(purl_oldest, purl_date_oldest);
 			if ((!*purl_date_oldest && *purl_date_new)|| (*purl_date_new && strcmp(purl_date_new, purl_date_oldest) < 0))
