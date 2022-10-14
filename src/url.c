@@ -192,24 +192,26 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 		free(purl);
 		return false;
 	}
-
-	/* Copy purl record to match */
-	for (int i = 0; i < MAX_PURLS; i++)
+	uint32_t CRC = string_crc32c(purl);
+	bool dup = add_CRC(component->crclist, CRC);
+	if (!dup)
 	{
-		/* Skip purl with existing type */
-		if (purl_type_matches(component->purls[i], purl)) break;
-
-		/* Add to end of list */
-		if (!component->purls[i])
+		/* Copy purl record to match */
+		for (int i = 0; i < MAX_PURLS; i++)
 		{
-			scanlog("Related PURL: %s\n", purl);
-			component->purls[i] = purl;
-			component->purls_md5[i] = malloc(MD5_LEN);
-			MD5((uint8_t *)purl, strlen(purl), component->purls_md5[i]);
-			return false;
+			/* Skip purl with existing type */
+			/* Add to end of list */
+			if (!component->purls[i])
+			{
+				scanlog("Related PURL: %s\n", purl);
+				component->purls[i] = purl;
+				component->purls_md5[i] = malloc(MD5_LEN);
+				MD5((uint8_t *)purl, strlen(purl), component->purls_md5[i]);
+				return false;
+			}
+			/* Already exists, exit */
+			else if (!strcmp(component->purls[i], purl)) break;
 		}
-		/* Already exists, exit */
-		else if (!strcmp(component->purls[i], purl)) break;
 	}
 
 	free(purl);
@@ -226,6 +228,8 @@ void fetch_related_purls(component_data_t *component)
 	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
 		return;
 	
+	uint32_t crclist[CRC_LIST_LEN];
+	component->crclist = crclist;
 	/* add main purl md5 if it is not ready */
 	if (!component->purls_md5[0] && component->purls[0])
 	{

@@ -541,6 +541,7 @@ match_list_t *match_select_m_component_best(scan_data_t *scan)
 
 		match_data_t *dup_match = match_data_copy(scan->matches_list_array[i]->best_match);
 		component_data_t *dup_comp = component_data_copy(scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component);
+
 		component_list_init(&dup_match->component_list, 1);
 		dup_match->component_list.match_ref = dup_match;
 		component_list_add(&dup_match->component_list, dup_comp, NULL, false);
