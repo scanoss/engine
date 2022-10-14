@@ -225,6 +225,13 @@ void fetch_related_purls(component_data_t *component)
 {
 	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
 		return;
+	
+	/* add main purl md5 if it is not ready */
+	if (!component->purls_md5[0] && component->purls[0])
+	{
+		component->purls_md5[0] = malloc(MD5_LEN);
+		MD5((uint8_t *)component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
+	}
 
 	/* Fill purls */
 	for (int i = 0; i < MAX_PURLS; i++)
@@ -324,13 +331,12 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 			if ((!*purl_date_oldest && *purl_date_new)|| (*purl_date_new && strcmp(purl_date_new, purl_date_oldest) < 0))
 			{
 				replace = true;
-				scanlog("<< win by purl date, %s - %s / %s -%s>>\n", purl_new, purl_date_new, purl_oldest ,purl_date_oldest);
+				scanlog("<<URL wins by purl date, %s - %s / %s -%s>>\n", purl_new, purl_date_new, purl_oldest ,purl_date_oldest);
 			}
 		}
 
 		if (replace)
 		{
-			scanlog("get_oldest_url() %s\n", url);
 			memcpy((uint8_t *) ptr, url, datalen + 1);
 		}
 

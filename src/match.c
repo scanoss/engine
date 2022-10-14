@@ -191,7 +191,21 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	/*if the relese date is the same untie with the component age (purl)*/
 	if (!strcmp(b->release_date, a->release_date))
 	{
-		if (b->age > a->age)
+		if (!a->purls_md5[0] && a->purls[0])
+		{
+			a->purls_md5[0] = malloc(MD5_LEN);
+			MD5((uint8_t *)a->purls[0], strlen(a->purls[0]), a->purls_md5[0]);
+			a->age = get_component_age(a->purls_md5[0]);
+		}
+		
+		if (!b->purls_md5[0] && b->purls[0])
+		{
+			b->purls_md5[0] = malloc(MD5_LEN);
+			MD5((uint8_t *)b->purls[0], strlen(b->purls[0]), b->purls_md5[0]);
+			b->age = get_component_age(b->purls_md5[0]);
+		}
+		
+		if ((!a->age && b->age) || b->age > a->age)
 			return true;
 
 		if (b->age == a->age && !strcmp(a->component, b->component) &&	strcmp(a->version, b->version) > 0)

@@ -146,6 +146,5 @@ bool match_list_is_empty(match_list_t * list);
 void component_list_init(component_list_t *comp_list, int max_items);
 bool component_list_add(component_list_t * list, component_data_t * new_comp, bool (* val) (component_data_t * a, component_data_t * b), bool remove_a);
 void component_list_print(component_list_t * list, bool (*printer) (component_data_t * fpa), char * separator);
-bool component_date_comparation(component_data_t * a, component_data_t * b);
 void component_list_destroy(component_list_t *list);
 #endif

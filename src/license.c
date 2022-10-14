@@ -177,13 +177,7 @@ void print_osadl_license_data(char *license)
 static char * json_from_license(uint32_t * crclist, char * buffer, char * license, int src, bool * first_record)
 {
 	scanlog("proc license %s - %d\n", license, *license);
-	/* Calculate CRC to avoid duplicates */
-	uint32_t CRC = src + string_crc32c(license);
-	bool dup = add_CRC(crclist, CRC);
 	
-	if (dup)
-		return buffer;
-
 	clean_license(license);
 	normalize_license(license);
 	string_clean(license);
@@ -191,7 +185,12 @@ static char * json_from_license(uint32_t * crclist, char * buffer, char * licens
 
 	if (strlen(license) < 2)
 		return buffer;
+	/* Calculate CRC to avoid duplicates */
+	uint32_t CRC = src + string_crc32c(license);
+	bool dup = add_CRC(crclist, CRC);
 
+	if (dup)
+		return buffer;
 	
 	if (first_record && !*first_record)
 		len += sprintf(buffer+len,",");
