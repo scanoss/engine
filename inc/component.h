@@ -39,6 +39,7 @@ typedef struct component_data_t
 	char *license_text; /* used in json output generation */
 	char * vulnerabilities_text; /* used in json output generation */
 	char * dependency_text; /* used in json output generation */
+	char * health_text; /* used in json output generation */
 } component_data_t;
 
 component_data_t * component_init(void);
