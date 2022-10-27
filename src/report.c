@@ -271,7 +271,7 @@ bool print_json_component(component_data_t * component)
 	{
 		print_health(component);
 		if(component->health_text!=NULL)
-			printf(",%s", component->health_text);
+			printf(",%s", json_remove_invalid_char(component->health_text));
 	}	
 
 

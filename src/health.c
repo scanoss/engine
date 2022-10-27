@@ -70,6 +70,7 @@ bool print_health_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
     char watchers_count[MAX_FIELD_LN] = "\0";
     char issues_count[MAX_FIELD_LN] = "\0";
     char forks_count[MAX_FIELD_LN] = "\0";
+	char provenance[MAX_FIELD_LN] = "\0";
        
 	extract_csv(creation_date, decrypted, 1, MAX_FIELD_LN);
     extract_csv(last_update, decrypted, 2, MAX_FIELD_LN);
@@ -77,18 +78,20 @@ bool print_health_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
     extract_csv(watchers_count, decrypted, 4, MAX_FIELD_LN);
     extract_csv(issues_count, decrypted, 5, MAX_FIELD_LN);
     extract_csv(forks_count, decrypted, 6, MAX_FIELD_LN);
-	
-   	char result[MAX_FIELD_LN] = "\0";
+	extract_csv(provenance, decrypted, 7, MAX_FIELD_LN);
+
+   	char result[MAX_FIELD_LN * 7] = "\0";
 	
 	int len = 0;
 
-	len += sprintf(&result[len]," \"health\":{\"creation_date\":\"%s\", ",creation_date);
-	len += sprintf(&result[len],"\"last_update\":\"%s\", ",last_update);
-	len += sprintf(&result[len],"\"last_push\":\"%s\", ",last_push);
-	len += sprintf(&result[len],"\"watchers\":%s, ",watchers_count);
-	len += sprintf(&result[len],"\"issues\":%s} ",issues_count);
+	len += sprintf(&result[len]," \"health\":{\"creation_date\":\"%s\", ", creation_date);
+	len += sprintf(&result[len],"\"last_update\":\"%s\", ", last_update);
+	len += sprintf(&result[len],"\"last_push\":\"%s\", ", last_push);
+	len += sprintf(&result[len],"\"watchers\":%s, ", *watchers_count ? watchers_count : "null");
+	len += sprintf(&result[len],"\"issues\":%s} ", *issues_count ? issues_count : "null");
+	len += sprintf(&result[len],",\"provenance\":\"%s\"",provenance);
 
-	str_cat_realloc(&match->health_text, result);
+	match->health_text = strdup(result);
 
     free(decrypted);
 

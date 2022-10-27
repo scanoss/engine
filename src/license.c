@@ -213,7 +213,7 @@ static char * split_in_json_array(uint32_t * crclist, char * buffer, char * lice
 	char * lic = strtok(license, "/");
 	char * r = buffer;
 	/* walk through other tokens */
-	while(lic && *lic >= ' ') 
+	while(lic && isalpha(*lic)) 
    	{
 		r = json_from_license(crclist, r, lic, src, first_record);
 		lic = strtok(NULL, "/");

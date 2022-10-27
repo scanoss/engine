@@ -42,30 +42,31 @@
  */
 void component_data_free(component_data_t *data)
 {
-	if (!data)
-		return;
+    if (!data)
+        return;
 
-	free_and_null(data->vendor);
-	free_and_null(data->component);
-	free_and_null(data->version);
-	free_and_null(data->release_date);
-	free_and_null(data->latest_release_date);
-	free_and_null(data->latest_version);
-	free_and_null(data->license);
-	free_and_null(data->url);
-	free_and_null(data->file);
-	free_and_null(data->main_url);
-	free_and_null(data->license_text);
-	free_and_null(data->dependency_text);
-	free_and_null(data->vulnerabilities_text);
-	free_and_null(data->copyright_text);
+    free_and_null(data->vendor);
+    free_and_null(data->component);
+    free_and_null(data->version);
+    free_and_null(data->release_date);
+    free_and_null(data->latest_release_date);
+    free_and_null(data->latest_version);
+    free_and_null(data->license);
+    free_and_null(data->url);
+    free_and_null(data->file);
+    free_and_null(data->main_url);
+    free_and_null(data->license_text);
+    free_and_null(data->dependency_text);
+    free_and_null(data->vulnerabilities_text);
+    free_and_null(data->copyright_text);
+    free_and_null(data->health_text);
 
-	for (int i = 0; i < MAX_PURLS; i++)
-	{
-		free_and_null(data->purls[i]);
-		free_and_null(data->purls_md5[i]);
-	}
-	free_and_null(data);
+    for (int i = 0; i < MAX_PURLS; i++)
+    {
+        free_and_null(data->purls[i]);
+        free_and_null(data->purls_md5[i]);
+    }
+    free_and_null(data);
 }
 
 /**
@@ -77,39 +78,40 @@ void component_data_free(component_data_t *data)
 
 component_data_t *component_data_copy(component_data_t *in)
 {
-	component_data_t *out = calloc(1, sizeof(*out));
-	out->age = in->age;
-	out->component = strdup(in->component);
-	out->vendor = strdup(in->vendor);
-	out->version = strdup(in->version);
-	out->release_date = strdup(in->release_date);
-	out->file = strdup(in->file);
-	out->file_md5_ref = in->file_md5_ref;
-	out->identified = in->identified;
-	out->latest_release_date = strdup(in->latest_release_date);
-	out->latest_version = strdup(in->latest_version);
-	out->license = strdup(in->license);
-	out->url_match = in->url_match;
-	memcpy(out->url_md5, in->url_md5, MD5_LEN);
-	if (in->main_url)
-		out->main_url = strdup(in->main_url);
-	out->url = strdup(in->url);
-	out->path_ln = in->path_ln;
-	for (int i = 0; i < MAX_PURLS; i++)
-	{
-		if (in->purls[i])
-			out->purls[i] = strdup(in->purls[i]);
-		else
-			break;
+    component_data_t * out = calloc(1, sizeof(*out));
+    out->age = in->age;
+    out->component = strdup(in->component);
+    out->vendor = strdup(in->vendor);
+    out->version = strdup(in->version);
+    out->release_date = strdup(in->release_date);
+    out->file = strdup(in->file);
+    out->file_md5_ref = in->file_md5_ref;
+    out->identified = in->identified;
+    out->latest_release_date = strdup(in->latest_release_date);
+    out->latest_version = strdup(in->latest_version);
+    out->license = strdup(in->license);
+	out->health_text = strdup(in->health_text);
+    out->url_match = in->url_match;
+    memcpy(out->url_md5, in->url_md5, MD5_LEN);
+    if (in->main_url)
+        out->main_url = strdup(in->main_url);
+    out->url = strdup(in->url);
+    out->path_ln = in->path_ln;
+    for (int i = 0; i < MAX_PURLS; i++)
+    {
+        if (in->purls[i])
+            out->purls[i] = strdup(in->purls[i]);
+        else
+            break;
 
-		if (in->purls_md5[i])
-		{
-			out->purls_md5[i] = malloc(MD5_LEN);
-			memcpy(out->purls_md5[i], in->purls_md5[i], MD5_LEN);
-		}
-	}
+        if (in->purls_md5[i])
+        {
+            out->purls_md5[i] = malloc(MD5_LEN);
+            memcpy(out->purls_md5[i], in->purls_md5[i], MD5_LEN);
+        }
+    }
 
-	return out;
+    return out;
 }
 
 /**
