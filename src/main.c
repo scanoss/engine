@@ -400,6 +400,8 @@ int main(int argc, char **argv)
 				debug_on = true;
 				quiet = true;
 				scanlog("Quiet mode enabled. Displaying only debugging info via STDERR.\n");
+				if (lib_encoder_present)
+					scanlog("Lib encoder present.\n");
 				break;
 
 			case 'd':

@@ -39,11 +39,13 @@ typedef struct component_data_t
 	char *license_text; /* used in json output generation */
 	char * vulnerabilities_text; /* used in json output generation */
 	char * dependency_text; /* used in json output generation */
+	char * health_text; /* used in json output generation */
 } component_data_t;
 
 component_data_t * component_init(void);
 void component_data_free(component_data_t * data);
 bool fill_component(component_data_t * component, uint8_t *url_key, char *file_path, uint8_t *url_record);
+bool component_date_comparation(component_data_t * a, component_data_t * b);
 component_data_t * component_data_copy(component_data_t * in);
 int asset_declared(component_data_t * comp);
 void component_item_free(component_item * comp_item);

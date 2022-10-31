@@ -177,13 +177,7 @@ void print_osadl_license_data(char *license)
 static char * json_from_license(uint32_t * crclist, char * buffer, char * license, int src, bool * first_record)
 {
 	scanlog("proc license %s - %d\n", license, *license);
-	/* Calculate CRC to avoid duplicates */
-	uint32_t CRC = src + string_crc32c(license);
-	bool dup = add_CRC(crclist, CRC);
 	
-	if (dup)
-		return buffer;
-
 	clean_license(license);
 	normalize_license(license);
 	string_clean(license);
@@ -191,7 +185,12 @@ static char * json_from_license(uint32_t * crclist, char * buffer, char * licens
 
 	if (strlen(license) < 2)
 		return buffer;
+	/* Calculate CRC to avoid duplicates */
+	uint32_t CRC = src + string_crc32c(license);
+	bool dup = add_CRC(crclist, CRC);
 
+	if (dup)
+		return buffer;
 	
 	if (first_record && !*first_record)
 		len += sprintf(buffer+len,",");
@@ -214,7 +213,7 @@ static char * split_in_json_array(uint32_t * crclist, char * buffer, char * lice
 	char * lic = strtok(license, "/");
 	char * r = buffer;
 	/* walk through other tokens */
-	while(lic && *lic >= ' ') 
+	while(lic && isalpha(*lic)) 
    	{
 		r = json_from_license(crclist, r, lic, src, first_record);
 		lic = strtok(NULL, "/");
@@ -325,10 +324,8 @@ void print_licenses(component_data_t * comp)
 	len += sprintf(result+len,"\"licenses\": ");
 	len += sprintf(result+len,"[");
 
-	/* Clean crc list (used to avoid duplicates) */
+	/* CRC list (used to avoid duplicates) */
 	uint32_t crclist[CRC_LIST_LEN];
-	memset(crclist, 0, sizeof(crclist));
-
 	comp->crclist = crclist;
 	uint32_t records = 0;
 	bool first_record = true;

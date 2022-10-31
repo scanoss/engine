@@ -35,28 +35,8 @@
 #include <string.h>
 #include "decrypt.h"
 #include <ldb.h>
+#include "debug.h"
 
-/**
- * @brief Handler for MZ cat operation
- * 
- * @param job pointer to input mz job
- * @return true to finish
- * @return false to continue
- */
-static bool mz_cat_handler(struct mz_job *job)
-{
-	if (!memcmp(job->id, job->key + 2, MZ_MD5))
-	{
-		/* Decompress */
-		mz_deflate(job);
-
-		job->data[job->data_ln] = 0;
-		printf("%s", job->data);
-
-		return false;
-	}
-	return true;
-}
 /**
  * @brief Find a key and print the result
  * 
@@ -71,7 +51,7 @@ static void mz_get_key(struct mz_job *job, char *key)
 	memcpy(mz_file_id, key, 4);
 
 	sprintf(mz_path, "%s/%s.mz", job->path, mz_file_id);
-
+	scanlog("MZ path: %s \n", mz_path);
 	/* Save path and key on job */
 	job->key = calloc(MD5_LEN, 1);
 	ldb_hex_to_bin(key, MD5_LEN * 2, job->key);	
@@ -119,8 +99,6 @@ static void mz_get_key(struct mz_job *job, char *key)
 			exit(EXIT_FAILURE);
 		}
 	}
-	mz_parse(job, mz_cat_handler);
-
 	free(job->key);
 	free(job->mz);
 }

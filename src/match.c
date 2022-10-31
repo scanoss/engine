@@ -191,7 +191,21 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	/*if the relese date is the same untie with the component age (purl)*/
 	if (!strcmp(b->release_date, a->release_date))
 	{
-		if (b->age > a->age)
+		if (!a->purls_md5[0] && a->purls[0])
+		{
+			a->purls_md5[0] = malloc(MD5_LEN);
+			MD5((uint8_t *)a->purls[0], strlen(a->purls[0]), a->purls_md5[0]);
+			a->age = get_component_age(a->purls_md5[0]);
+		}
+		
+		if (!b->purls_md5[0] && b->purls[0])
+		{
+			b->purls_md5[0] = malloc(MD5_LEN);
+			MD5((uint8_t *)b->purls[0], strlen(b->purls[0]), b->purls_md5[0]);
+			b->age = get_component_age(b->purls_md5[0]);
+		}
+		
+		if ((!a->age && b->age) || b->age > a->age)
 			return true;
 
 		if (b->age == a->age && !strcmp(a->component, b->component) &&	strcmp(a->version, b->version) > 0)
@@ -267,6 +281,7 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 			asset_declared(new_comp);
 			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
 			{
+				scanlog("component rejected by date: %s\n",new_comp->purls[0]);
 				component_data_free(new_comp); /* Free if the componet was rejected */
 			}
 		}
@@ -526,6 +541,7 @@ match_list_t *match_select_m_component_best(scan_data_t *scan)
 
 		match_data_t *dup_match = match_data_copy(scan->matches_list_array[i]->best_match);
 		component_data_t *dup_comp = component_data_copy(scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component);
+
 		component_list_init(&dup_match->component_list, 1);
 		dup_match->component_list.match_ref = dup_match;
 		component_list_add(&dup_match->component_list, dup_comp, NULL, false);

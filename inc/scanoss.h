@@ -64,6 +64,8 @@
 #define ENABLE_DOWNLOAD_URL 1024
 #define ENABLE_GITHUB_FULL_PATH 2048
 #define DISABLE_SERVER_INFO 4096
+#define DISABLE_HEALTH 8192
+
 #define MAX_SBOM_ITEMS 2000
 #define SHORTEST_PATHS_QTY 4000 // number of shortest path to evaluate
 
@@ -138,6 +140,7 @@ extern struct ldb_table oss_dependency;
 extern struct ldb_table oss_license;
 extern struct ldb_table oss_attribution;
 extern struct ldb_table oss_cryptography;
+
 
 extern bool first_file;
 extern int max_vulnerabilities;

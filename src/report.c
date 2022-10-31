@@ -33,6 +33,7 @@
 #include "report.h"
 #include "quality.h"
 #include "cryptography.h"
+#include "health.h"
 #include "vulnerability.h"
 #include "util.h"
 #include "dependency.h"
@@ -263,6 +264,16 @@ bool print_json_component(component_data_t * component)
 
 	print_licenses(component);
 	printf(",%s", json_remove_invalid_char(component->license_text));
+
+
+
+	if (!(engine_flags & DISABLE_HEALTH))
+	{
+		print_health(component);
+		if(component->health_text!=NULL)
+			printf(",%s", json_remove_invalid_char(component->health_text));
+	}	
+
 
 	if (!(engine_flags & DISABLE_DEPENDENCIES))
 	{

@@ -192,24 +192,26 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 		free(purl);
 		return false;
 	}
-
-	/* Copy purl record to match */
-	for (int i = 0; i < MAX_PURLS; i++)
+	uint32_t CRC = string_crc32c(purl);
+	bool dup = add_CRC(component->crclist, CRC);
+	if (!dup)
 	{
-		/* Skip purl with existing type */
-		if (purl_type_matches(component->purls[i], purl)) break;
-
-		/* Add to end of list */
-		if (!component->purls[i])
+		/* Copy purl record to match */
+		for (int i = 0; i < MAX_PURLS; i++)
 		{
-			scanlog("Related PURL: %s\n", purl);
-			component->purls[i] = purl;
-			component->purls_md5[i] = malloc(MD5_LEN);
-			MD5((uint8_t *)purl, strlen(purl), component->purls_md5[i]);
-			return false;
+			/* Skip purl with existing type */
+			/* Add to end of list */
+			if (!component->purls[i])
+			{
+				scanlog("Related PURL: %s\n", purl);
+				component->purls[i] = purl;
+				component->purls_md5[i] = malloc(MD5_LEN);
+				MD5((uint8_t *)purl, strlen(purl), component->purls_md5[i]);
+				return false;
+			}
+			/* Already exists, exit */
+			else if (!strcmp(component->purls[i], purl)) break;
 		}
-		/* Already exists, exit */
-		else if (!strcmp(component->purls[i], purl)) break;
 	}
 
 	free(purl);
@@ -225,6 +227,15 @@ void fetch_related_purls(component_data_t *component)
 {
 	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
 		return;
+	
+	uint32_t crclist[CRC_LIST_LEN];
+	component->crclist = crclist;
+	/* add main purl md5 if it is not ready */
+	if (!component->purls_md5[0] && component->purls[0])
+	{
+		component->purls_md5[0] = malloc(MD5_LEN);
+		MD5((uint8_t *)component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
+	}
 
 	/* Fill purls */
 	for (int i = 0; i < MAX_PURLS; i++)
@@ -305,16 +316,34 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 
 		/* Extract date */
 		char release_date[MAX_ARGLN + 1] = "\0";
-		char purl[MAX_ARGLN + 1] = "\0";
-		extract_csv(purl, (char *) url , 6, MAX_ARGLN);
-		purl_release_date(purl, release_date);
-
+		extract_csv(release_date, (char *) url , 4, MAX_ARGLN);
+		
+		bool replace = false;
 		/* If it is older, then we copy to oldest */
-		if (!*oldest || (*release_date && (strcmp(release_date, oldest) < 0)))
+		if ((!*oldest && *release_date) || (*release_date && (strcmp(release_date, oldest) < 0)))
+			replace = true;
+		else if (*release_date && strcmp(release_date, oldest) == 0)
 		{
-			//scanlog("get_oldest_url() %s, %s\n", release_date, url);
+			char purl_oldest[MAX_ARGLN];
+			char purl_new[MAX_ARGLN];
+			char purl_date_oldest[MAX_ARGLN];
+			char purl_date_new[MAX_ARGLN];
+			extract_csv(purl_new, (char *) url , 6, MAX_ARGLN);
+			extract_csv(purl_oldest, (char *) ptr , 6, MAX_ARGLN);
+			purl_release_date(purl_new, purl_date_new);
+			purl_release_date(purl_oldest, purl_date_oldest);
+			if ((!*purl_date_oldest && *purl_date_new)|| (*purl_date_new && strcmp(purl_date_new, purl_date_oldest) < 0))
+			{
+				replace = true;
+				scanlog("<<URL wins by purl date, %s - %s / %s -%s>>\n", purl_new, purl_date_new, purl_oldest ,purl_date_oldest);
+			}
+		}
+
+		if (replace)
+		{
 			memcpy((uint8_t *) ptr, url, datalen + 1);
 		}
+
 	}
 	free(url);
 	return false;

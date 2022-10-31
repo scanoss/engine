@@ -37,8 +37,8 @@
 
 /**
  * @brief Free component object
- * 
- * @param data pointer to component 
+ *
+ * @param data pointer to component
  */
 void component_data_free(component_data_t *data)
 {
@@ -59,6 +59,7 @@ void component_data_free(component_data_t *data)
     free_and_null(data->dependency_text);
     free_and_null(data->vulnerabilities_text);
     free_and_null(data->copyright_text);
+    free_and_null(data->health_text);
 
     for (int i = 0; i < MAX_PURLS; i++)
     {
@@ -70,12 +71,12 @@ void component_data_free(component_data_t *data)
 
 /**
  * @brief Copy a component and create a new one
- * 
+ *
  * @param in Component to be copied
  * @return component_data_t* pointer to the new compoent
  */
 
-component_data_t * component_data_copy(component_data_t * in)
+component_data_t *component_data_copy(component_data_t *in)
 {
     component_data_t * out = calloc(1, sizeof(*out));
     out->age = in->age;
@@ -89,6 +90,7 @@ component_data_t * component_data_copy(component_data_t * in)
     out->latest_release_date = strdup(in->latest_release_date);
     out->latest_version = strdup(in->latest_version);
     out->license = strdup(in->license);
+	out->health_text = strdup(in->health_text);
     out->url_match = in->url_match;
     memcpy(out->url_md5, in->url_md5, MD5_LEN);
     if (in->main_url)
@@ -175,7 +177,6 @@ bool ignored_asset_match(uint8_t *url_record)
 	return found;
 }
 
-
 /**
  * @brief Fill the match structure
  * @param url_key md5 of the match url
@@ -242,20 +243,48 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	if (*purl)
 	{
 		component->purls[0] = strdup(purl);
-		component->purls_md5[0] = malloc(MD5_LEN);
-		MD5((uint8_t *)purl, strlen(purl), component->purls_md5[0]);
-		component->age = get_component_age(component->purls_md5[0]);
 	}
+	component->age = -1;
 	return true;
 }
 
+bool component_date_comparation(component_data_t *a, component_data_t *b)
+{
+	if (!*b->release_date)
+		return false;
+	if (!*a->release_date)
+		return true;
+
+	if (!a->purls_md5[0] && a->purls[0])
+	{
+		a->purls_md5[0] = malloc(MD5_LEN);
+		MD5((uint8_t *)a->purls[0], strlen(a->purls[0]), a->purls_md5[0]);
+		a->age = get_component_age(a->purls_md5[0]);
+	}
+
+	if (!b->purls_md5[0] && b->purls[0])
+	{
+		b->purls_md5[0] = malloc(MD5_LEN);
+		MD5((uint8_t *)b->purls[0], strlen(b->purls[0]), b->purls_md5[0]);
+		b->age = get_component_age(b->purls_md5[0]);
+	}
+
+	/*if the relese date is the same untie with the component age (purl)*/
+	if (!strcmp(b->release_date, a->release_date) && b->age > a->age)
+		return true;
+	/*select the oldest release date */
+	if (strcmp(b->release_date, a->release_date) < 0)
+		return true;
+
+	return false;
+}
 /**
  * @brief Free component_item structure
- * 
+ *
  * @param comp_item to be freed
  */
 
-void component_item_free(component_item * comp_item)
+void component_item_free(component_item *comp_item)
 {
 	if (!comp_item)
 		return;

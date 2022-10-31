@@ -128,20 +128,23 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
         }
         list->items++;
 
-        if (remove_a && list->items > list->max_items)
-        {
-            component_data_free(list->last_element->component);
-            list->last_element->component = NULL;
-            if (list->last_element_aux)
+        if (list->last_element && !list->autolimit && remove_a && (list->items > list->max_items))
+        {           
+            if(!list->last_element_aux)
             {
-                free(list->last_element);
-                list->last_element_aux->entries.le_next = NULL;
-                list->last_element = list->last_element_aux;
-                list->last_element_aux = NULL;
+                for (list->last_element_aux = list->headp.lh_first; list->last_element_aux->entries.le_next->entries.le_next != NULL; list->last_element_aux = list->last_element_aux->entries.le_next);
             }
-         
+            
+            if(list->last_element_aux)
+            {
+                component_data_free(list->last_element->component);
+                LIST_REMOVE(list->last_element_aux->entries.le_next, entries);
+                free(list->last_element);
+                list->last_element = list->last_element_aux;
+                list->items--;
+            }
+            list->last_element_aux = NULL;
             list->last_element->entries.le_next = NULL;
-            list->items--;
         }
          return true;
     }
@@ -354,19 +357,5 @@ bool match_list_is_empty(match_list_t *list)
     return (list->headp.lh_first != NULL);
 }
 
-bool component_date_comparation(component_data_t * a, component_data_t * b)
-{
-    if (!*b->release_date)
-        return false;
-    if (!*a->release_date)
-        return true;
-    /*if the relese date is the same untie with the component age (purl)*/
-    if (!strcmp(b->release_date, a->release_date) && b->age > a->age)
-        return true;
-    /*select the oldest release date */
-    if (strcmp(b->release_date, a->release_date) < 0)
-		return true;
-    
-    return false;
-}
+
 
