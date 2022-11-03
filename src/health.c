@@ -87,8 +87,8 @@ bool print_health_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
 	len += sprintf(&result[len]," \"health\":{\"creation_date\":\"%s\", ", creation_date);
 	len += sprintf(&result[len],"\"last_update\":\"%s\", ", last_update);
 	len += sprintf(&result[len],"\"last_push\":\"%s\", ", last_push);
-	len += sprintf(&result[len],"\"watchers\":%s, ", *watchers_count ? watchers_count : "null");
-	len += sprintf(&result[len],"\"issues\":%s} ", *issues_count ? issues_count : "null");
+	len += sprintf(&result[len],"\"watchers\":%s, ", isdigit(*watchers_count) ? watchers_count : "null");
+	len += sprintf(&result[len],"\"issues\":%s} ", isdigit(*issues_count) ? issues_count : "null");
 	len += sprintf(&result[len],",\"provenance\":\"%s\"",provenance);
 
 	match->health_text = strdup(result);
