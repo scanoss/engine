@@ -161,7 +161,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 {
 	if (declared_components)
 	{
-		scanlog("ASSETS eval\n");
+		scanlog("ASSETS eval- %d / %d\n", a->identified,  b->identified);
 		if (a->identified > b->identified)
 		{
 			scanlog("Reject component %s@%s by SBOM\n", b->purls[0], b->version);
@@ -241,7 +241,7 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 	qsort(path_rank, SHORTEST_PATHS_QTY, sizeof(len_rank), path_struct_cmp);
 
 	/* Dump rank contents into log */
-	//dump_path_rank(path_rank, files);
+	dump_path_rank(path_rank, files);
 
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
 
@@ -258,7 +258,7 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 			min = path_rank[r].len; /* update min path lenght */
 
 		/* process until path lenght is bigger than the minimum plus one */
-		if (path_rank[r].len > min + 1)
+		if (path_rank[r].len > min * 3)
 			break;
 
 		/* Get oldest url for this component */
