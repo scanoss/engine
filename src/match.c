@@ -40,7 +40,6 @@
 #include "versions.h"
 #include "url.h"
 #include "file.h"
-#include "rank.h"
 #include "decrypt.h"
 #include "hpsm.h"
 #include "scan.h"
@@ -93,23 +92,6 @@ match_data_t * match_data_copy(match_data_t * in)
     out->snippet_ids = strdup(in->snippet_ids);
     strcpy(out->source_md5, in->source_md5);
     return out;
-}
-
-/**
- * @brief Sort len_rank
- * @param a len_rank a
- * @param b len_rank b
- * @return 1 if a is longer than b, -1 if b is longer than a
- */
-static int path_struct_cmp(const void *a, const void *b)
-{
-	const len_rank *v1 = (const len_rank *)a;
-	const len_rank *v2 = (const len_rank *)b;
-	if (v1->len > v2->len)
-		return 1;
-	if (v1->len < v2->len)
-		return -1;
-	return 0;
 }
 
 /**
@@ -219,60 +201,21 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 
 	return false;
 }
-
-/**
- * @brief Load componentes for a match processing the file recordset list.
- * For each file in the recordset we will query for the oldest url in the url table.
- * The component information will be exacted from the url record.
- * The component will be inserted in the component list for the match.
- * @param component_list component list to be filled
- * @param files recodset with candidates to be processed.
- * @param records number of records to be processed.
- * @return true
- * @return false
- */
-static bool load_components(component_list_t *component_list, file_recordset *files, int records)
+	
+bool add_component_from_urlid(component_list_t  * component_list, uint8_t* url_id, char * path)
 {
-	scanlog("Load components\n");
-	/* Load path rank */
-	len_rank *path_rank = load_path_rank(files, records);
-
-	/* Sort path_rank array from shortest to largest path */
-	qsort(path_rank, SHORTEST_PATHS_QTY, sizeof(len_rank), path_struct_cmp);
-
-	/* Dump rank contents into log */
-	dump_path_rank(path_rank, files);
-
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
-
-	int min = 999; /* save the min path lenght */
-
-	for (int r = 0; r < SHORTEST_PATHS_QTY; r++)
-	{
-		/*ignore if the path is empty */
-		if (!path_rank[r].len || !*files[path_rank[r].id].path)
-			continue;
-		// scanlog("PATH: %s\n", files[path_rank[r].id].path);
-
-		if (path_rank[r].len > 1 && path_rank[r].len < min)
-			min = path_rank[r].len; /* update min path lenght */
-
-		/* process until path lenght is bigger than the minimum plus one */
-		if (path_rank[r].len > min * 3)
-			break;
-
-		/* Get oldest url for this component */
-		strcpy((char *)url_rec, "9999");
-		ldb_fetch_recordset(NULL, oss_url, files[path_rank[r].id].url_id, false, get_oldest_url, (void *)url_rec);
+	
+	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)url_rec);
 
 		/* Extract date from url_rec */
 		char date[MAX_ARGLN] = "0";
 		extract_csv(date, (char *)url_rec, 4, MAX_ARGLN);
 		/* Create a new component and fill it from the url record */
 		component_data_t *new_comp = calloc(1, sizeof(*new_comp));
-		bool result = fill_component(new_comp, files[path_rank[r].id].url_id, files[path_rank[r].id].path, (uint8_t *)url_rec);
+		bool result = fill_component(new_comp, url_id, path, (uint8_t *)url_rec);
 		if (result)
-		{
+		{	
 			new_comp->file_md5_ref = component_list->match_ref->file_md5;
 			/* If the component is valid add it to the component list */
 			/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
@@ -290,13 +233,54 @@ static bool load_components(component_list_t *component_list, file_recordset *fi
 			scanlog("incomplete component: %s\n", new_comp->component);
 			component_data_free(new_comp);
 		}
-	}
-
-	free(url_rec);
-	free(path_rank);
+		free(url_rec);
 	return true;
 }
 
+/**
+ * @brief Load componentes for a match processing the file recordset list.
+ * For each file in the recordset we will query for the oldest url in the url table.
+ * The component information will be exacted from the url record.
+ * The component will be inserted in the component list for the match.
+ * @param component_list component list to be filled
+ * @param files recodset with candidates to be processed.
+ * @param records number of records to be processed.
+ * @return true
+ * @return false
+ */
+
+file_recordset *files = NULL;
+
+bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+{
+
+	/* Leave if FETCH_MAX_FILES is reached */
+	if (iteration < FETCH_MAX_FILES)
+	{
+		memcpy(files[iteration].url_id, raw_data, MD5_LEN);
+	} 
+
+	/* Ignore path lengths over the limit */
+	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+
+	/* Decrypt data */
+	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
+	if (!decrypted)
+		return NULL;
+	
+	component_list_t * component_list = (component_list_t*) ptr;
+	/* Copy data to memory */
+	uint8_t url_id[MD5_LEN];
+	memcpy(url_id, raw_data, MD5_LEN);
+	char path[MAX_FILE_PATH+1];
+	strncpy(path, decrypted, MAX_FILE_PATH);
+	add_component_from_urlid(component_list, url_id, path);
+
+	free(decrypted);
+	
+	//scanlog("#%d File %s\n", iteration, files[iteration].path);
+	return false;
+}
 
 /**
  * @brief Fill match field and fill component list.
@@ -350,13 +334,9 @@ bool load_matches(match_data_t *match)
 	scanlog("URL recordset contains %u records\n", records);
 
 	/*Collect all files from the files table matching with the match md5 being processed */
-	file_recordset *files = calloc(2 * FETCH_MAX_FILES, sizeof(file_recordset));
-	records = ldb_fetch_recordset(NULL, oss_file, match->file_md5, false, collect_all_files, (void *)files);
+	files = calloc(FETCH_MAX_FILES, sizeof(file_recordset));
+	records = ldb_fetch_recordset(NULL, oss_file, match->file_md5, false, component_from_file,(void *)&match->component_list);
 	scanlog("Found %d file entries\n", records);
-	if (records)
-	{
-		load_components(&match->component_list, files, records);
-	}
 
 	/* Final optimization based on the available information for a component */
 	/* If two components have the date date, select the one with more available information */
@@ -393,7 +373,16 @@ bool load_matches(match_data_t *match)
 		}
 	}
 
-	if (match->component_list.items && match->component_list.headp.lh_first->component)
+	if (engine_flags && DISABLE_BEST_MATCH)
+	{
+		struct comp_entry *item = NULL;
+		LIST_FOREACH(item, &match->component_list.headp, entries)
+		{
+			add_versions(item->component, files, records);
+		}
+	}
+
+	else if (match->component_list.items && match->component_list.headp.lh_first->component)
 	{
 		add_versions(match->component_list.headp.lh_first->component, files, records);
 	}

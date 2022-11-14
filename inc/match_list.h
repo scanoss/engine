@@ -106,6 +106,8 @@ typedef struct component_list_t
 	match_data_t * match_ref;
 	struct comp_entry * last_element;
 	struct comp_entry * last_element_aux;
+	char lastest_release_date[16];
+	char lastest_version[16];
 } component_list_t;
 
 /**

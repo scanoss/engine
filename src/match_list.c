@@ -34,6 +34,7 @@ void component_list_init(component_list_t *comp_list, int max_items)
         comp_list->autolimit = true;
 
     comp_list->last_element = NULL;
+    memset(comp_list->lastest_release_date,0,sizeof(comp_list->lastest_release_date));
 }
 
 match_list_t * match_list_init(bool autolimit, int max_items)

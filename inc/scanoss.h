@@ -32,7 +32,7 @@
 #include "limits.h"
 
 #define MAX_FILE_PATH 1024
-#define FETCH_MAX_FILES 20000
+#define FETCH_MAX_FILES 200000
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
 #define CRC_LIST_LEN 256 // list of crc checksums to avoid metadata duplicates
 #define SNIPPET_LINE_TOLERANCE 10
@@ -41,7 +41,7 @@
 #define WFP_REC_LN 18
 
 /* Log files */
-#define SCANOSS_VERSION "5.0.4"
+#define SCANOSS_VERSION "5.1.0"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"

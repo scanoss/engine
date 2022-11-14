@@ -28,7 +28,6 @@
 #include "match.h"
 #include "parse.h"
 #include "query.h"
-#include "rank.h"
 #include "scan.h"
 #include "snippets.h"
 #include "util.h"
@@ -431,7 +430,7 @@ void ldb_scan(scan_data_t * scan)
 	if (file_size <= MIN_FILE_SIZE) 
 	{
 		skip = true;
-		scanlog("File %s skipped by file size", scan->file_path);
+		scanlog("File %s skipped by file size < %d\n", scan->file_path, MIN_FILE_SIZE);
 	}
 
 	if (!skip)

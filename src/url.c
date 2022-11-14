@@ -70,7 +70,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	
 	component_data_t * new_comp = calloc(1, sizeof(*new_comp));
 	bool result = fill_component(new_comp, NULL, NULL, (uint8_t*) data);
-
+	scanlog("URL MATCH: %s\n", data);
 	if (result)
 	{
 		/* Save match component id */
@@ -228,7 +228,7 @@ void fetch_related_purls(component_data_t *component)
 	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
 		return;
 	
-	uint32_t crclist[CRC_LIST_LEN];
+	uint32_t crclist[CRC_LIST_LEN] = {0};
 	component->crclist = crclist;
 	/* add main purl md5 if it is not ready */
 	if (!component->purls_md5[0] && component->purls[0])
