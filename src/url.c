@@ -70,7 +70,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	
 	component_data_t * new_comp = calloc(1, sizeof(*new_comp));
 	bool result = fill_component(new_comp, NULL, NULL, (uint8_t*) data);
-
+	scanlog("URL MATCH: %s\n", data);
 	if (result)
 	{
 		/* Save match component id */
