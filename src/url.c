@@ -229,6 +229,7 @@ void fetch_related_purls(component_data_t *component)
 		return;
 	
 	uint32_t crclist[CRC_LIST_LEN];
+	memset(crclist,0, sizeof(crclist));
 	component->crclist = crclist;
 	/* add main purl md5 if it is not ready */
 	if (!component->purls_md5[0] && component->purls[0])

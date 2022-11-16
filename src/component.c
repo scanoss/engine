@@ -90,7 +90,6 @@ component_data_t *component_data_copy(component_data_t *in)
     out->latest_release_date = strdup(in->latest_release_date);
     out->latest_version = strdup(in->latest_version);
     out->license = strdup(in->license);
-	out->health_text = strdup(in->health_text);
     out->url_match = in->url_match;
     memcpy(out->url_md5, in->url_md5, MD5_LEN);
     if (in->main_url)

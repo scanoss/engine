@@ -326,6 +326,7 @@ void print_licenses(component_data_t * comp)
 
 	/* CRC list (used to avoid duplicates) */
 	uint32_t crclist[CRC_LIST_LEN];
+	memset(crclist,0, sizeof(crclist));
 	comp->crclist = crclist;
 	uint32_t records = 0;
 	bool first_record = true;
