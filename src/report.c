@@ -265,12 +265,10 @@ bool print_json_component(component_data_t * component)
 	print_licenses(component);
 	printf(",%s", json_remove_invalid_char(component->license_text));
 
-
-
 	if (!(engine_flags & DISABLE_HEALTH))
 	{
 		print_health(component);
-		if(component->health_text!=NULL)
+		if (component->health_text)
 			printf(",%s", json_remove_invalid_char(component->health_text));
 	}	
 
@@ -279,19 +277,22 @@ bool print_json_component(component_data_t * component)
 	{
 		if (!component->dependency_text)
 			print_dependencies(component);
-		printf(",%s", json_remove_invalid_char(component->dependency_text));
+		if (component->dependency_text)	
+			printf(",%s", json_remove_invalid_char(component->dependency_text));
 	}
 
 	if (!(engine_flags & DISABLE_COPYRIGHTS))
 	{
 		print_copyrights(component);
-		printf(",%s", component->copyright_text);
+		if (component->copyright_text)
+			printf(",%s", component->copyright_text);
 	}
 
 	if (!(engine_flags & DISABLE_VULNERABILITIES))
 	{
 		print_vulnerabilities(component);
-		printf(",%s", json_remove_invalid_char(component->vulnerabilities_text));
+		if (component->vulnerabilities_text)
+			printf(",%s", json_remove_invalid_char(component->vulnerabilities_text));
 	}
 	if (engine_flags & DISABLE_BEST_MATCH)	
 		printf("}");

@@ -183,6 +183,9 @@ void string_clean(char *str)
 char * json_remove_invalid_char(char * input)
 {
 	const char unwanted[] = "\\";
+	
+	if (!input)
+		return NULL;
 
 	for (int i = 0; i < strlen(unwanted); i++)
 	{
