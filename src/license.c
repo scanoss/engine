@@ -210,14 +210,26 @@ static char * json_from_license(uint32_t * crclist, char * buffer, char * licens
 static char * split_in_json_array(uint32_t * crclist, char * buffer, char * license, int src, bool * first_record)
 {
 	/* get the first token */
-	char * lic = strtok(license, "/");
 	char * r = buffer;
+	char * lic = license;
+	char * next_lic = NULL;
 	/* walk through other tokens */
-	while(lic && isalpha(*lic)) 
+	do
    	{
-		r = json_from_license(crclist, r, lic, src, first_record);
-		lic = strtok(NULL, "/");
-	}
+		next_lic = strchr(license, '/');
+		char lic_aux[MAX_FIELD_LN] = "\0";
+		if (next_lic)
+		{
+			strncpy(lic_aux,  lic, next_lic - lic);
+			*next_lic = 0;
+		}
+		else
+			strcpy(lic_aux, lic);
+
+		r = json_from_license(crclist, r, lic_aux, src, first_record);
+		lic = next_lic + 1;
+		
+	} while (next_lic);
 
 	return buffer;
 }
