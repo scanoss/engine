@@ -38,7 +38,7 @@
 #include "limits.h"
 #include "parse.h"
 #include "util.h"
-
+#include "mz.h"
 
 /**
  * @brief Notices LDB function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
@@ -81,7 +81,8 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 	printf("[%s]\n\n", component);
 
 	/* Print attribution notice */
-	mz_cat(&job, hexkey);
+	//mz_cat(&job, hexkey);
+	mz_get_key(&job,hexkey);
 	printf("\n");
 
 	free(src);
@@ -168,11 +169,13 @@ static char * notices_load_file(void)
 	char * path = NULL;
 	asprintf(&path,"/var/lib/ldb/%s/licenses.json",oss_url.db);
 	uint64_t size = 0;
-	char * licenses_json = (char*) file_read(path, &size);
-	
-	if (!size)
+	if (access(path, F_OK) != 0)
+	{
 		scanlog("Warning: Cannot find license.json definition. Please check that %s is present\n", path);
-	
+		free(path);
+		return NULL;
+	}
+	char * licenses_json = (char*) file_read(path, &size);
 	free(path);
 	return licenses_json;
 }
