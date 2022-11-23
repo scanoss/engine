@@ -255,7 +255,7 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 {
 
 	/* Leave if FETCH_MAX_FILES is reached */
-	if (iteration < FETCH_MAX_FILES)
+	if (iteration < FETCH_MAX_FILES && files)
 	{
 		memcpy(files[iteration].url_id, raw_data, MD5_LEN);
 	} 

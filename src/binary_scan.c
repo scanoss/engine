@@ -35,6 +35,87 @@
 #include "file.h"
 #include "util.h"
 #include "match.h"
+#include "url.h"
+#include "decrypt.h"
+#include "report.h"
+
+component_data_t comp_max_hits = {.hits=-1};
+static bool component_hits_comparation(component_data_t *a, component_data_t *b)
+{
+	if (!strcmp(a->purls[0], b->purls[0]))
+	{
+		a->hits++;
+		return true;;
+	}
+	return false;
+}
+
+static bool sort_by_hits(component_data_t *a, component_data_t *b)
+{
+	if (b->hits > a->hits)
+	{
+		return true;;
+	}
+
+	return false;
+}
+
+
+static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+{
+
+	if (iteration > 20000)
+		return true;
+	/* Ignore path lengths over the limit */
+	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+
+	/* Decrypt data */
+	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
+	if (!decrypted)
+		return NULL;
+	
+	component_list_t * component_list = (component_list_t*) ptr;
+	/* Copy data to memory */
+	uint8_t url_id[MD5_LEN];
+	memcpy(url_id, raw_data, MD5_LEN);
+	char path[MAX_FILE_PATH+1];
+	strncpy(path, decrypted, MAX_FILE_PATH);
+
+	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
+	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)url_rec);
+
+	/* Create a new component and fill it from the url record */
+	component_data_t *new_comp = calloc(1, sizeof(*new_comp));
+	bool result = fill_component(new_comp, url_id, path, (uint8_t *)url_rec);
+	if (result)
+	{	
+		//new_comp->file_md5_ref = component_list->match_ref->file_md5;
+		if (!component_list_add_binary(component_list, new_comp, component_hits_comparation, true))
+		{
+			scanlog("Purl found %s, hits:%d\n",new_comp->purls[0], new_comp->hits);
+			if (new_comp->hits > comp_max_hits.hits)
+			{
+				memcpy(&comp_max_hits, new_comp, sizeof(component_data_t));
+				printf("<<NEW MAX %s - %d>>\n", comp_max_hits.purls[0], comp_max_hits.hits);
+			}
+			component_data_free(new_comp); /* Free if the componet was rejected */
+		}
+		scanlog("<list size: %d>\n", component_list->items);
+	}
+	else
+	{
+		scanlog("incomplete component: %s\n", new_comp->component);
+		component_data_free(new_comp);
+	}
+	
+	free(url_rec);
+	free(decrypted);
+	
+	if (component_list->items > 10)
+		return true;
+	//scanlog("#%d File %s\n", iteration, files[iteration].path);
+	return false;
+}
 /**
  * @brief Handler function to collect all file ids.
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
@@ -49,80 +130,34 @@
  */
 static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	uint8_t *record = (uint8_t *) ptr;
+	//component_list_t * comp_list = (component_list_t *) ptr;
+	file_recordset * files = (file_recordset *) ptr;
 	if (datalen)
 	{
-		uint32_t size = uint32_read(record);
+		if (iteration < 1000)
+		{
+			memcpy(files[iteration].url_id, data, MD5_LEN);
+			return false;
+		} 
+		return true;
+		//uint32_t size = uint32_read(record);
 
 		/* End recordset fetch if MAX_QUERY_RESPONSE is reached */
-		if (size + datalen + 4 >= MAX_QUERY_RESPONSE) return true;
+		//if (size + datalen + 4 >= MAX_QUERY_RESPONSE) return true;
 
 		/* End recordset fetch if MAX_FILES are reached for the snippet */
-		if ((WFP_REC_LN * matchmap_max_files) <= (size + datalen)) return true;
+		//if ((WFP_REC_LN * matchmap_max_files) <= (size + datalen)) return true;
 
 		/* Save data and update dataln */
-		memcpy(record + size + 4, data, datalen);
-		uint32_write(record, size + datalen);
+		//memcpy(record + size + 4, data, datalen);
+		//uint32_write(record, size + datalen);
+
 	}
+	
 	return false;
 }
 
 
-static void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, uint8_t *wfp)
-{
-	long map_rec_len = sizeof(matchmap_entry);
-	scanlog("<<< %d - md5eln >>>\n", md5s_ln);
-	/* Recurse each record from the wfp table */
-	for (int n = 0; n < md5s_ln; n += WFP_REC_LN)
-	{
-		/* Retrieve an MD5 from the recordset */
-		memcpy(scan->md5, md5s + n, MD5_LEN);
-
-		/* Check if md5 already exists in map */
-		long found = -1;
-		for (long t = 0; t < scan->matchmap_size; t++)
-		{
-			if (md5cmp(scan->matchmap[t].md5, scan->md5))
-			{
-				found = t;
-				break;
-			}
-		}
-
-		if (found < 0)
-		{
-			/* Not found. Add MD5 to map */
-			if (scan->matchmap_size >= matchmap_max_files) 
-			{
-				scanlog("<<< %d/%d - MAX MACHMAP >>>\n", n, md5s_ln);
-				continue;
-			}
-
-			found = scan->matchmap_size;
-
-			/* Clear row */
-			memset(scan->matchmap[found].md5, 0, map_rec_len);
-
-			/* Write MD5 */
-			memcpy(scan->matchmap[found].md5, scan->md5, MD5_LEN);
-		}
-
-		/* Search for the right range */
-		uint8_t *lastwfp = scan->matchmap[found].lastwfp;
-
-		/* Skip if we are hitting the same wfp again for this file) */
-		if (!memcmp(wfp, lastwfp, 4)) continue;
-		
-		scan->matchmap[found].hits++;
-		if (scan->matchmap[found].hits > 1)
-			scanlog("<<hits++ %d>>\n",scan->matchmap[found].hits);
-	
-		/* Update last wfp */
-		memcpy(lastwfp, wfp, 4);
-
-		if (found == scan->matchmap_size) scan->matchmap_size++;
-	}
-}
 
 /**
  * @brief Performs a wfp scan.
@@ -136,7 +171,7 @@ static void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5
  */
 int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
 {
-	struct ldb_table oss_fhash = {.db = "test", .table = "fhashes", .key_ln = 16, .rec_ln = 0, .ts_ln = 2, .tmp = false};
+	struct ldb_table oss_fhash = {.db = "oss", .table = "fhashes", .key_ln = 16, .rec_ln = 0, .ts_ln = 2, .tmp = false};
 	scan_data_t * scan = NULL;
 	char * line = NULL;
 	size_t len = 0;
@@ -158,7 +193,9 @@ int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
 
 	/*Init a new scan object for the next file to be scanned */
 	scan = scan_data_init(path, 1, scan_max_components);
-
+//	scan->matches_list_array[0] = match_list_init(false, scan->max_snippets_to_process);
+	component_list_t * comp_list = calloc(1, sizeof(component_list_t));
+	component_list_init(comp_list, 0);
 	/* Read line by line */
 	while ((lineln = getline(&line, &len, fp)) != -1)
 	{
@@ -204,29 +241,55 @@ int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
 			hash_count++;
 			/* Get all file IDs for given wfp */
 			uint32_write(md5_set, 0);
-			ldb_fetch_recordset(NULL, oss_fhash, fhash, false, get_all_file_ids, (void *) md5_set);
+			file_recordset *files = calloc(1001, sizeof(file_recordset));;
+			int records = ldb_fetch_recordset(NULL, oss_fhash, fhash, false, get_all_file_ids, (void *) files);
+			if (records < 5)
+			{
+				for (int i = 0; i < records; i++)
+				{
+					ldb_fetch_recordset(NULL, oss_file, files[i].url_id, false, add_purl_from_urlid,(void *)comp_list);
+				}
+			}
+			free(files);
 			/* md5_set starts with a 32-bit item count, followed by all 16-byte records */
-			uint32_t md5s_ln = uint32_read(md5_set);
-			uint8_t *md5s = md5_set + 4;
+			//uint32_t md5s_ln = uint32_read(md5_set);
+			//uint8_t *md5s = md5_set + 4;
 
 			//	scanlog("Snippet %02x%02x%02x%02x (line %d) -> %u hits %s\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln / WFP_REC_LN, traced ? "*" : "");
-			if (md5s_ln && md5s_ln < 10000)
-				add_files_to_matchmap(scan, md5s, md5s_ln, fhash);
+			//if (md5s_ln && md5s_ln < 10000)
+			//	add_files_to_matchmap(scan, md5s, md5s_ln, fhash);
 		}
+		printf("\n----------------------%s-------------------------\n", line);
 	}
 	free(md5_set);
 	fclose(fp);
 	if (line) free(line);
+
+	component_list_t * comp_list_sorted = calloc(1, sizeof(component_list_t));
+	component_list_init(comp_list_sorted, 10);
+	struct comp_entry *item = NULL;
+	LIST_FOREACH(item, &comp_list->headp, entries)
+	{
+		component_list_add(comp_list_sorted,item->component, sort_by_hits, false);
+	}
+	
+	item = NULL;
+	LIST_FOREACH(item, &comp_list_sorted->headp, entries)
+	{
+		printf("%s - %d\n",item->component->purls[0], item->component->hits);
+	}
 	
 	free(tmp_md5_hex);
-	if (debug_on)
-		map_dump(scan);
+	//if (debug_on)
+	//	map_dump(scan);
 
 		/* Scan the last file */
 	scan->match_type = MATCH_BINARY;
-	compile_matches(scan);
+	
+	component_list_destroy(comp_list);
+	//compile_matches(scan);
 	scanlog("Match output starts\n");
-	output_matches_json(scan);
+	//output_matches_json(scan);
 
 	//if (matches) free(matches);
 	scan_data_free(scan);

@@ -161,6 +161,58 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
     return false;
 }
 
+bool component_list_add_binary(component_list_t *list, component_data_t *new_comp, bool (*val)(component_data_t *a, component_data_t *b), bool remove_a)
+{
+    if (!new_comp->url)
+    {
+        scanlog("Incomple component\n");
+        component_data_free(new_comp);
+        return false;
+    }
+
+    if (!list->headp.lh_first)
+    {
+        scanlog("first component in list\n");
+        struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert at the head. */
+        LIST_INSERT_HEAD(&list->headp, nn, entries);
+        nn->component = new_comp;
+        list->items++;
+        list->last_element = nn;
+        list->last_element_aux = NULL;
+        return true;
+    }
+    else if (val)
+    {
+        struct comp_entry *np = list->headp.lh_first;
+        for (; np->entries.le_next != NULL; np = np->entries.le_next)
+        {
+            if (!np->entries.le_next->entries.le_next)
+                list->last_element_aux = np;
+
+            if (val(np->component, new_comp))
+            {
+                new_comp->hits = np->component->hits;
+                return false;
+            }
+        }
+
+        struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert after. */
+        nn->component = new_comp; 
+        LIST_INSERT_BEFORE(np, nn, entries);
+       
+        if (!np->entries.le_next)
+        {
+            list->last_element = np;
+            list->last_element_aux = nn;
+        }
+        list->items++;
+        return true;
+    }
+
+    return false;
+}
+
+
 /**
  * @brief Try to add a match in a existing matches list.
  * 
