@@ -500,7 +500,7 @@ int main(int argc, char **argv)
 					wfp_scan(target, scan_max_snippets, scan_max_components);
 
 				else if (bfp_extension) 
-					binary_scan(target, scan_max_snippets, scan_max_components);
+					binary_scan(target);
 
 				/* Scan file directly */
 				else 

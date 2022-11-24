@@ -60,11 +60,12 @@ static bool sort_by_hits(component_data_t *a, component_data_t *b)
 	return false;
 }
 
+#define MAX_URLS 100
 
 static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 
-	if (iteration > 20000)
+	if (iteration > MAX_URLS)
 		return true;
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
@@ -111,11 +112,12 @@ static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, ui
 	free(url_rec);
 	free(decrypted);
 	
-	if (component_list->items > 10)
-		return true;
 	//scanlog("#%d File %s\n", iteration, files[iteration].path);
 	return false;
 }
+
+
+int max_files_to_process = 4;
 /**
  * @brief Handler function to collect all file ids.
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
@@ -134,7 +136,7 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	file_recordset * files = (file_recordset *) ptr;
 	if (datalen)
 	{
-		if (iteration < 1000)
+		if (iteration < max_files_to_process * 2)
 		{
 			memcpy(files[iteration].url_id, data, MD5_LEN);
 			return false;
@@ -169,10 +171,9 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
  * @param scan_max_components Limit for component to be displayed. 1 by default.
  * @return EXIT_SUCCESS
  */
-int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
+static component_list_t *  binary_scan_run(char * path, int sensibility)
 {
 	struct ldb_table oss_fhash = {.db = "oss", .table = "fhashes", .key_ln = 16, .rec_ln = 0, .ts_ln = 2, .tmp = false};
-	scan_data_t * scan = NULL;
 	char * line = NULL;
 	size_t len = 0;
 	ssize_t lineln;
@@ -182,9 +183,12 @@ int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
 	if (fp == NULL)
 	{
 		fprintf(stdout, "E017 Cannot open target");
-		return EXIT_FAILURE;
+		return NULL;
 	}
-	scanlog("<<< Binary scan>>>>\n");
+
+	if (sensibility > 0)
+		max_files_to_process = sensibility;
+	scanlog("<<< Binary scan: %d>>>>\n", max_files_to_process);
 	/* Get wfp MD5 hash */
 	uint8_t tmp_md5[16];
 	get_file_md5(path, tmp_md5);
@@ -192,8 +196,6 @@ int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
 	uint8_t *md5_set = calloc(1, MAX_QUERY_RESPONSE);
 
 	/*Init a new scan object for the next file to be scanned */
-	scan = scan_data_init(path, 1, scan_max_components);
-//	scan->matches_list_array[0] = match_list_init(false, scan->max_snippets_to_process);
 	component_list_t * comp_list = calloc(1, sizeof(component_list_t));
 	component_list_init(comp_list, 0);
 	/* Read line by line */
@@ -243,7 +245,7 @@ int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
 			uint32_write(md5_set, 0);
 			file_recordset *files = calloc(1001, sizeof(file_recordset));;
 			int records = ldb_fetch_recordset(NULL, oss_fhash, fhash, false, get_all_file_ids, (void *) files);
-			if (records < 5)
+			if (records < max_files_to_process)
 			{
 				for (int i = 0; i < records; i++)
 				{
@@ -265,10 +267,35 @@ int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
 	fclose(fp);
 	if (line) free(line);
 
+	free(tmp_md5_hex);	
+	
+	//compile_matches(scan);
+	scanlog("Match output starts\n");
+	//output_matches_json(scan);
+
+	//if (matches) free(matches);
+	return comp_list;
+}
+
+int binary_scan(char * path)
+{
+	component_list_t * result = NULL;
+	int sensibility = 1;
+	while (sensibility < 100)
+	{
+		result = binary_scan_run(path, sensibility);
+		if (!result)
+			return -1;
+		if (result->items > 1)
+			break;
+		component_list_destroy(result);
+		sensibility++;
+	};
+
 	component_list_t * comp_list_sorted = calloc(1, sizeof(component_list_t));
 	component_list_init(comp_list_sorted, 10);
 	struct comp_entry *item = NULL;
-	LIST_FOREACH(item, &comp_list->headp, entries)
+	LIST_FOREACH(item, &result->headp, entries)
 	{
 		component_list_add(comp_list_sorted,item->component, sort_by_hits, false);
 	}
@@ -278,20 +305,10 @@ int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
 	{
 		printf("%s - %d\n",item->component->purls[0], item->component->hits);
 	}
-	
-	free(tmp_md5_hex);
-	//if (debug_on)
-	//	map_dump(scan);
 
-		/* Scan the last file */
-	scan->match_type = MATCH_BINARY;
-	
-	component_list_destroy(comp_list);
-	//compile_matches(scan);
-	scanlog("Match output starts\n");
-	//output_matches_json(scan);
+	component_list_destroy(result);
+	free(comp_list_sorted);
 
-	//if (matches) free(matches);
-	scan_data_free(scan);
-	return EXIT_SUCCESS;
+	return 0;
+	
 }
