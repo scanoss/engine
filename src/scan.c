@@ -262,9 +262,6 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 
 			/* Get file MD5 */
 			char * hexmd5 = strndup(line + tagln, MD5_LEN * 2);
-
-			/* Extract fields from file record */
-			calloc(LDB_MAX_REC_LN, 1);  
 			
 			rec = (uint8_t*) strdup(line + tagln + (MD5_LEN * 2) + 1);
 			char * target = field_n(2, (char *)rec);

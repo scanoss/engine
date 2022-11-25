@@ -136,7 +136,7 @@ void slow_query_log(scan_data_t *scan)
 			 return;
 		}
 		
-		fprintf(log, data);
+		fprintf(log, "%s", data);
 		fclose(log);
 	}
 }

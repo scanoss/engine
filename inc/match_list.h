@@ -86,8 +86,7 @@ typedef struct scan_data_t scan_data_t; /* Forward declaration*/
  * @brief Define a list of component_data_t
  * 
  */
-LIST_HEAD(comp_listhead, comp_entry) comp_head;
-struct comp_listhead *cheadp;                 /* List head. */
+LIST_HEAD(comp_listhead, comp_entry);
 struct comp_entry {
     LIST_ENTRY(comp_entry) entries;          /* List. */
     component_data_t * component;
@@ -112,8 +111,7 @@ typedef struct component_list_t
  * @brief Matches list definition
  * 
  */
-LIST_HEAD(listhead, entry) head;
-struct listhead *headp;                 /* List head. */
+LIST_HEAD(listhead, entry);
 struct entry {
     LIST_ENTRY(entry) entries;          /* List. */
     match_data_t * match;

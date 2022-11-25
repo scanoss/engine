@@ -48,7 +48,7 @@ const char *copyright_sources[] = {"component_declared", "file_header", "license
  * @param ptr output pointer, returns the fisrt copyright obtained from the database
  * @return //TODO
  */
-static bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+/* static bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	char * result = decrypt_data(data, datalen, oss_copyright, key, subkey);
 	if (result)
@@ -56,7 +56,7 @@ static bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, ui
 	
 	free(result);
 	return true;
-}
+}*/
 
 /**
  * @brief //Remove undesired characteres from a copyright
