@@ -270,7 +270,12 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	
 	component_list_t * component_list = (component_list_t*) ptr;
 	/* Copy data to memory */
-	uint8_t url_id[MD5_LEN];
+
+	uint8_t url_id[MD5_LEN] = {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
+	
+	if (!memcmp(raw_data,url_id, MD5_LEN)) //the md5 key of an empty string must be skipped.
+		return false;
+
 	memcpy(url_id, raw_data, MD5_LEN);
 	char path[MAX_FILE_PATH+1];
 	strncpy(path, decrypted, MAX_FILE_PATH);
