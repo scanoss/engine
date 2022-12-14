@@ -181,6 +181,13 @@ void biggest_snippet(scan_data_t *scan)
 		scanlog("Match list N %d, with %d matches. %d <= HITS <= %d \n", i, scan->matches_list_array[i]->items,
 																		scan->matches_list_array[i]->last_element->match->hits,
 																		scan->matches_list_array[i]->headp.lh_first->match->hits);
+		struct entry *item = NULL;
+		LIST_FOREACH(item, &scan->matches_list_array[i]->headp, entries)
+		{
+			char md5_hex[MD5_LEN * 2 +1];
+			ldb_bin_to_hex(item->match->file_md5, MD5_LEN, md5_hex);
+			scanlog("%s\n", md5_hex);
+		}
 	}
 }
 
