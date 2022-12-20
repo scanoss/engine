@@ -244,89 +244,53 @@ static binary_match_t  binary_scan_run(char * bfp, int sensibility)
     token = strtok(NULL, s);
    }
 
-
-	// /* Read line by line */
-	// while ((lineln = getline(&line, &len, fp)) != -1)
-	// {
-	// 	trim(line);
-
-	// 	bool is_file = (memcmp(line, "file=", 5) == 0);
-
-	// 	/* Parse file information with format: file=MD5(32),file_size,file_path */
-	// 	if (is_file)
-	// 	{
-	// 		// /* A scan data was fullfilled and is ready to be scanned */
-	// 		// if (scan)
-	// 		// 	ldb_scan(scan);
-			
-	// 		// /* Prepare the next scan */
-	// 		// const int tagln = 5; // len of 'file='
-
-	// 		// /* Get file MD5 */
-	// 		// char * hexmd5 = strndup(line + tagln, MD5_LEN * 2);
-
-	// 		// /* Extract fields from file record */
-	// 		// calloc(LDB_MAX_REC_LN, 1);  
-			
-	// 		// rec = (uint8_t*) strdup(line + tagln + (MD5_LEN * 2) + 1);
-	// 		// char * target = field_n(2, (char *)rec);
-			
-	// 		// /*Init a new scan object for the next file to be scanned */
-	// 		// scan = scan_data_init(target, scan_max_snippets, scan_max_components);
-	// 		// strcpy(scan->source_md5, tmp_md5_hex);
-	// 		// extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
-	// 		// scan->preload = true;
-	// 		// free(rec);
-	// 		// ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
-	// 		// free(hexmd5);
-	// 	} 
-
-	// 	else 
-	// 	{
-	// 		//scanlog("Processing FHASH: %s\n", line);
-	// 		/* Convert hash to binary */
-	// 		uint8_t fhash[16]; 
-	// 		ldb_hex_to_bin(line, 32, fhash);
-	// 		hash_count++;
-	// 		/* Get all file IDs for given wfp */
-	// 		uint32_write(md5_set, 0);
-	// 		file_recordset *files = calloc(1001, sizeof(file_recordset));;
-	// 		int records = ldb_fetch_recordset(NULL, oss_fhash, fhash, false, get_all_file_ids, (void *) files);
-	// 		if (records < max_files_to_process)
-	// 		{
-	// 			for (int i = 0; i < records; i++)
-	// 			{
-	// 				ldb_fetch_recordset(NULL, oss_file, files[i].url_id, false, add_purl_from_urlid,(void *)comp_list);
-	// 			}
-	// 		}
-	// 		free(files);
-	// 		/* md5_set starts with a 32-bit item count, followed by all 16-byte records */
-	// 		//uint32_t md5s_ln = uint32_read(md5_set);
-	// 		//uint8_t *md5s = md5_set + 4;
-
-	// 		//	scanlog("Snippet %02x%02x%02x%02x (line %d) -> %u hits %s\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln / WFP_REC_LN, traced ? "*" : "");
-	// 		//if (md5s_ln && md5s_ln < 10000)
-	// 		//	add_files_to_matchmap(scan, md5s, md5s_ln, fhash);
-	// 	}
-	// 	scanlog("\n----------------------%s-------------------------\n", line);
-	// }
-	// free(md5_set);
-	// fclose(fp);
-	// if (line) free(line);
-
-	// free(tmp_md5_hex);	
-	
-	// //compile_matches(scan);
-	// scanlog("Match output starts\n");
-	// //output_matches_json(scan);
-
-	//if (matches) free(matches);
 	return result;
 }
 
 extern bool first_file;
 int binary_scan(char * input)
 {
+	/* Get file MD5 */
+	char * hexmd5 = strndup(input, MD5_LEN * 2);
+	scanlog("Bin File md5 to be scanned: %s\n", hexmd5);
+	uint8_t bin_md5[MD5_LEN];
+	ldb_hex_to_bin(hexmd5, MD5_LEN * 2, bin_md5);
+	free(hexmd5);
+
+	uint8_t zero_md5[MD5_LEN] = {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
+	
+	if (!memcmp(zero_md5,bin_md5, MD5_LEN)) //the md5 key of an empty string must be skipped.
+		return -1;
+	
+	if (ldb_key_exists(oss_file, bin_md5))
+	{
+		scanlog("bin file md5 match\n");
+		char  * file_name = field_n(3,input);
+		int target_len = strchr(file_name,',') - file_name;
+		char * target = strndup(file_name, target_len);
+		scan_data_t * scan =  scan_data_init(target, 1, 1);
+		free(target);
+		memcpy(scan->md5, bin_md5, MD5_LEN);
+		scan->match_type = MATCH_FILE;
+		compile_matches(scan);
+
+		if (scan->best_match)
+		{
+			scanlog("Match output starts\n");
+			if (!quiet)
+				output_matches_json(scan);
+			
+			scan_data_free(scan);
+			return 0;
+		}
+		else
+		{
+			scanlog("No best match, scanning binary\n");
+		}
+
+		scan_data_free(scan);
+	}
+	
 	binary_match_t result = {NULL, NULL, NULL};
 	int sensibility = 1;
 	while (sensibility < 100)
@@ -357,7 +321,7 @@ int binary_scan(char * input)
 			printf(",");
 	first_file = false;
 	item = NULL;
-	printf("\"%s\":{\"hash\":\"%s\",\"matched\":[", result.file, result.md5);
+	printf("\"%s\":{\"hash\":\"%s\",\"id\":\"bin_snippet\",\"matched\":[", result.file, result.md5);
 	LIST_FOREACH(item, &comp_list_sorted->headp, entries)
 	{
 		printf("{\"purl\":\"%s\", \"hits\": %d}",item->component->purls[0], item->component->hits);
