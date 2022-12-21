@@ -32,7 +32,7 @@
 #include "limits.h"
 
 #define MAX_FILE_PATH 1024
-#define FETCH_MAX_FILES 200000
+#define FETCH_MAX_FILES 10000
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
 #define CRC_LIST_LEN 256 // list of crc checksums to avoid metadata duplicates
 #define SNIPPET_LINE_TOLERANCE 10
