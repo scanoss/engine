@@ -259,6 +259,8 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	{
 		memcpy(files[iteration].url_id, raw_data, MD5_LEN);
 	} 
+	if (iteration > FETCH_MAX_FILES * 2)
+		return true;
 
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
@@ -266,7 +268,7 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	/* Decrypt data */
 	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
 	if (!decrypted)
-		return NULL;
+		return false;
 	
 	component_list_t * component_list = (component_list_t*) ptr;
 	/* Copy data to memory */
