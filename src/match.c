@@ -383,16 +383,17 @@ bool load_matches(match_data_t *match)
 		struct comp_entry *item = NULL;
 		LIST_FOREACH(item, &match->component_list.headp, entries)
 		{
-			add_versions(item->component, files, records);
+			add_versions(item->component, files, records < FETCH_MAX_FILES ? records : FETCH_MAX_FILES);
 		}
 	}
 
 	else if (match->component_list.items && match->component_list.headp.lh_first->component)
 	{
-		add_versions(match->component_list.headp.lh_first->component, files, records);
+		add_versions(match->component_list.headp.lh_first->component, files, records < FETCH_MAX_FILES ? records : FETCH_MAX_FILES);
 	}
 
 	free(files);
+	files = NULL;
 
 	if (!records)
 		scanlog("Match type is 'none' after loading matches\n");
