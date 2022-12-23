@@ -322,6 +322,7 @@ int main(int argc, char **argv)
 			case 's':
 				if (declared_components) printf("Cannot combine -s and -a\n");
 				declared_components = get_components(optarg);
+				engine_flags|= ENABLE_HIGH_ACCURACY; //high accuracy is necessary in this mode
 				break;
 
 			case 'b':

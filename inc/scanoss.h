@@ -65,6 +65,7 @@
 #define ENABLE_GITHUB_FULL_PATH 2048
 #define DISABLE_SERVER_INFO 4096
 #define DISABLE_HEALTH 8192
+#define ENABLE_HIGH_ACCURACY 16384
 
 #define MAX_SBOM_ITEMS 2000
 #define SHORTEST_PATHS_QTY 4000 // number of shortest path to evaluate

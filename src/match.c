@@ -46,6 +46,7 @@
 #include "component.h"
 #include "match_list.h"
 #include "dependency.h"
+#include "scanoss.h"
 
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
 bool match_extensions = false;									  /** global match extension flag */
@@ -253,13 +254,15 @@ file_recordset *files = NULL;
 
 bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
-
+	/*Iterations must be doubled if high accuracy is enabled*/
+	int iteration_max = ((engine_flags && ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 2 : FETCH_MAX_FILES);
 	/* Leave if FETCH_MAX_FILES is reached */
-	if (iteration < FETCH_MAX_FILES && files)
+	if (iteration < iteration_max && files)
 	{
 		memcpy(files[iteration].url_id, raw_data, MD5_LEN);
 	} 
-	if (iteration > FETCH_MAX_FILES * 2)
+	/*Return we high accuracy it is not enabled*/
+	if (iteration > iteration_max * 2 && !(engine_flags && ENABLE_HIGH_ACCURACY))
 		return true;
 
 	/* Ignore path lengths over the limit */
@@ -341,7 +344,8 @@ bool load_matches(match_data_t *match)
 	scanlog("URL recordset contains %u records\n", records);
 
 	/*Collect all files from the files table matching with the match md5 being processed */
-	files = calloc(FETCH_MAX_FILES, sizeof(file_recordset));
+	int files_records_max = ((engine_flags && ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 2 : FETCH_MAX_FILES);
+	files = calloc(files_records_max, sizeof(file_recordset));
 	records = ldb_fetch_recordset(NULL, oss_file, match->file_md5, false, component_from_file,(void *)&match->component_list);
 	scanlog("Found %d file entries\n", records);
 
@@ -385,13 +389,13 @@ bool load_matches(match_data_t *match)
 		struct comp_entry *item = NULL;
 		LIST_FOREACH(item, &match->component_list.headp, entries)
 		{
-			add_versions(item->component, files, records < FETCH_MAX_FILES ? records : FETCH_MAX_FILES);
+			add_versions(item->component, files, records < files_records_max ? records : files_records_max);
 		}
 	}
 
 	else if (match->component_list.items && match->component_list.headp.lh_first->component)
 	{
-		add_versions(match->component_list.headp.lh_first->component, files, records < FETCH_MAX_FILES ? records : FETCH_MAX_FILES);
+		add_versions(match->component_list.headp.lh_first->component, files, records < files_records_max ? records : files_records_max);
 	}
 
 	free(files);
