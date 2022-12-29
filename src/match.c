@@ -46,7 +46,6 @@
 #include "component.h"
 #include "match_list.h"
 #include "dependency.h"
-#include "scanoss.h"
 
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
 bool match_extensions = false;									  /** global match extension flag */

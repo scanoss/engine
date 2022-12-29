@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "match_list.h"
 #include <ldb.h>
+#include "match_list.h"
 #include "debug.h"
 #include "match.h"
 #include "component.h"
@@ -25,7 +25,6 @@ void component_list_destroy(component_list_t *list)
 
 void component_list_init(component_list_t *comp_list, int max_items)
 {
-    //scanlog("Init component list\n");
     LIST_INIT(&comp_list->headp); /* Initialize the list. */
     comp_list->items = 0;
     if (max_items)
@@ -34,7 +33,6 @@ void component_list_init(component_list_t *comp_list, int max_items)
         comp_list->autolimit = true;
 
     comp_list->last_element = NULL;
-    memset(comp_list->lastest_release_date,0,sizeof(comp_list->lastest_release_date));
 }
 
 match_list_t * match_list_init(bool autolimit, int max_items)
