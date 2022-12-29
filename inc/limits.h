@@ -47,7 +47,6 @@
 
 /* During snippet scanning, when a wfp (with more than consecutive_threshold wfps) produces a score higher 
    than consecutive_score by consecutive_hits in a row, the scan will skip consecutive_jump snippets */
-extern int scan_limit;
 extern int consecutive_score;
 extern int consecutive_hits;
 extern int consecutive_jump;
@@ -56,7 +55,5 @@ extern int consecutive_threshold;
 extern int range_tolerance;  // A maximum number of non-matched lines tolerated inside a matching range
 extern int min_match_lines; // Minimum number of lines matched for a match range to be acepted
 extern int min_match_hits;  // Minimum number of snippet ID hits to produce a snippet match
-
-extern const int rank_items;
 
 #endif

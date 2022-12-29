@@ -35,6 +35,89 @@
 #include "file.h"
 #include "util.h"
 #include "match.h"
+#include "url.h"
+#include "decrypt.h"
+#include "report.h"
+
+component_data_t comp_max_hits = {.hits=-1};
+static bool component_hits_comparation(component_data_t *a, component_data_t *b)
+{
+	if (!strcmp(a->purls[0], b->purls[0]))
+	{
+		a->hits++;
+		return true;;
+	}
+	return false;
+}
+
+static bool sort_by_hits(component_data_t *a, component_data_t *b)
+{
+	if (b->hits > a->hits)
+	{
+		return true;;
+	}
+
+	return false;
+}
+
+#define MAX_URLS 100
+
+static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+{
+
+	if (iteration > MAX_URLS)
+		return true;
+	/* Ignore path lengths over the limit */
+	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+
+	/* Decrypt data */
+	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
+	if (!decrypted)
+		return NULL;
+	
+	component_list_t * component_list = (component_list_t*) ptr;
+	/* Copy data to memory */
+	uint8_t url_id[MD5_LEN];
+	memcpy(url_id, raw_data, MD5_LEN);
+	char path[MAX_FILE_PATH+1];
+	strncpy(path, decrypted, MAX_FILE_PATH);
+
+	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
+	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)url_rec);
+
+	/* Create a new component and fill it from the url record */
+	component_data_t *new_comp = calloc(1, sizeof(*new_comp));
+	bool result = fill_component(new_comp, url_id, path, (uint8_t *)url_rec);
+	if (result)
+	{	
+		//new_comp->file_md5_ref = component_list->match_ref->file_md5;
+		if (!component_list_add_binary(component_list, new_comp, component_hits_comparation, true))
+		{
+			scanlog("Purl found %s, hits:%d\n",new_comp->purls[0], new_comp->hits);
+			if (new_comp->hits > comp_max_hits.hits)
+			{
+				memcpy(&comp_max_hits, new_comp, sizeof(component_data_t));
+				scanlog("<<NEW MAX %s - %d>>\n", comp_max_hits.purls[0], comp_max_hits.hits);
+			}
+			component_data_free(new_comp); /* Free if the componet was rejected */
+		}
+		scanlog("<list size: %d>\n", component_list->items);
+	}
+	else
+	{
+		scanlog("incomplete component: %s\n", new_comp->component);
+		component_data_free(new_comp);
+	}
+	
+	free(url_rec);
+	free(decrypted);
+	
+	//scanlog("#%d File %s\n", iteration, files[iteration].path);
+	return false;
+}
+
+
+int max_files_to_process = 4;
 /**
  * @brief Handler function to collect all file ids.
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
@@ -49,80 +132,58 @@
  */
 static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	uint8_t *record = (uint8_t *) ptr;
+	//component_list_t * comp_list = (component_list_t *) ptr;
+	file_recordset * files = (file_recordset *) ptr;
 	if (datalen)
 	{
-		uint32_t size = uint32_read(record);
+		if (iteration < max_files_to_process * 2)
+		{
+			memcpy(files[iteration].url_id, data, MD5_LEN);
+			return false;
+		} 
+		return true;
+		//uint32_t size = uint32_read(record);
 
 		/* End recordset fetch if MAX_QUERY_RESPONSE is reached */
-		if (size + datalen + 4 >= MAX_QUERY_RESPONSE) return true;
+		//if (size + datalen + 4 >= MAX_QUERY_RESPONSE) return true;
 
 		/* End recordset fetch if MAX_FILES are reached for the snippet */
-		if ((WFP_REC_LN * matchmap_max_files) <= (size + datalen)) return true;
+		//if ((WFP_REC_LN * matchmap_max_files) <= (size + datalen)) return true;
 
 		/* Save data and update dataln */
-		memcpy(record + size + 4, data, datalen);
-		uint32_write(record, size + datalen);
+		//memcpy(record + size + 4, data, datalen);
+		//uint32_write(record, size + datalen);
+
 	}
+	
 	return false;
 }
 
-
-static void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, uint8_t *wfp)
+static void fhash_process(char * hash, component_list_t * comp_list)
 {
-	long map_rec_len = sizeof(matchmap_entry);
-	scanlog("<<< %d - md5eln >>>\n", md5s_ln);
-	/* Recurse each record from the wfp table */
-	for (int n = 0; n < md5s_ln; n += WFP_REC_LN)
+	struct ldb_table oss_fhash = {.db = "oss", .table = "fhashes", .key_ln = 16, .rec_ln = 0, .ts_ln = 2, .tmp = false};
+	uint8_t fhash[16]; 
+	ldb_hex_to_bin(hash, 32, fhash);
+	/* Get all file IDs for given wfp */
+	file_recordset *files = calloc(1001, sizeof(file_recordset));;
+	int records = ldb_fetch_recordset(NULL, oss_fhash, fhash, false, get_all_file_ids, (void *) files);
+	if (records < max_files_to_process)
 	{
-		/* Retrieve an MD5 from the recordset */
-		memcpy(scan->md5, md5s + n, MD5_LEN);
-
-		/* Check if md5 already exists in map */
-		long found = -1;
-		for (long t = 0; t < scan->matchmap_size; t++)
+		for (int i = 0; i < records; i++)
 		{
-			if (md5cmp(scan->matchmap[t].md5, scan->md5))
-			{
-				found = t;
-				break;
-			}
+			ldb_fetch_recordset(NULL, oss_file, files[i].url_id, false, add_purl_from_urlid,(void *)comp_list);
 		}
-
-		if (found < 0)
-		{
-			/* Not found. Add MD5 to map */
-			if (scan->matchmap_size >= matchmap_max_files) 
-			{
-				scanlog("<<< %d/%d - MAX MACHMAP >>>\n", n, md5s_ln);
-				continue;
-			}
-
-			found = scan->matchmap_size;
-
-			/* Clear row */
-			memset(scan->matchmap[found].md5, 0, map_rec_len);
-
-			/* Write MD5 */
-			memcpy(scan->matchmap[found].md5, scan->md5, MD5_LEN);
-		}
-
-		/* Search for the right range */
-		uint8_t *lastwfp = scan->matchmap[found].lastwfp;
-
-		/* Skip if we are hitting the same wfp again for this file) */
-		if (!memcmp(wfp, lastwfp, 4)) continue;
-		
-		scan->matchmap[found].hits++;
-		if (scan->matchmap[found].hits > 1)
-			scanlog("<<hits++ %d>>\n",scan->matchmap[found].hits);
-	
-		/* Update last wfp */
-		memcpy(lastwfp, wfp, 4);
-
-		if (found == scan->matchmap_size) scan->matchmap_size++;
 	}
+	free(files);
 }
+
+
+typedef struct binary_match_t
+{
+	char * file;
+	char * md5;
+	component_list_t * components;
+} binary_match_t;
 
 /**
  * @brief Performs a wfp scan.
@@ -134,101 +195,145 @@ static void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5
  * @param scan_max_components Limit for component to be displayed. 1 by default.
  * @return EXIT_SUCCESS
  */
-int binary_scan(char * path, int scan_max_snippets, int scan_max_components)
+static binary_match_t  binary_scan_run(char * bfp, int sensibility)
 {
-	struct ldb_table oss_fhash = {.db = "test", .table = "fhashes", .key_ln = 16, .rec_ln = 0, .ts_ln = 2, .tmp = false};
-	scan_data_t * scan = NULL;
-	char * line = NULL;
-	size_t len = 0;
-	ssize_t lineln;
-    int hash_count = 0;
-	/* Open WFP file */
-	FILE *fp = fopen(path, "r");
-	if (fp == NULL)
-	{
-		fprintf(stdout, "E017 Cannot open target");
-		return EXIT_FAILURE;
-	}
-	scanlog("<<< Binary scan>>>>\n");
-	/* Get wfp MD5 hash */
-	uint8_t tmp_md5[16];
-	get_file_md5(path, tmp_md5);
-	char *tmp_md5_hex = md5_hex(tmp_md5);
-	uint8_t *md5_set = calloc(1, MAX_QUERY_RESPONSE);
+	
+//	char * line = NULL;
+	//size_t len = 0;
+	//ssize_t lineln;
+   // int hash_count = 0;
+	binary_match_t result = {NULL, NULL, NULL};
+
+	if (sensibility > 0)
+		max_files_to_process = sensibility;
+	scanlog("<<< Binary scan: %d>>>>\n", max_files_to_process);
+
 
 	/*Init a new scan object for the next file to be scanned */
-	scan = scan_data_init(path, 1, scan_max_components);
-
-	/* Read line by line */
-	while ((lineln = getline(&line, &len, fp)) != -1)
-	{
-		trim(line);
-
-		bool is_file = (memcmp(line, "file=", 5) == 0);
-
-		/* Parse file information with format: file=MD5(32),file_size,file_path */
-		if (is_file)
-		{
-			// /* A scan data was fullfilled and is ready to be scanned */
-			// if (scan)
-			// 	ldb_scan(scan);
-			
-			// /* Prepare the next scan */
-			// const int tagln = 5; // len of 'file='
-
-			// /* Get file MD5 */
-			// char * hexmd5 = strndup(line + tagln, MD5_LEN * 2);
-
-			// /* Extract fields from file record */
-			// calloc(LDB_MAX_REC_LN, 1);  
-			
-			// rec = (uint8_t*) strdup(line + tagln + (MD5_LEN * 2) + 1);
-			// char * target = field_n(2, (char *)rec);
-			
-			// /*Init a new scan object for the next file to be scanned */
-			// scan = scan_data_init(target, scan_max_snippets, scan_max_components);
-			// strcpy(scan->source_md5, tmp_md5_hex);
-			// extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
-			// scan->preload = true;
-			// free(rec);
-			// ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
-			// free(hexmd5);
-		} 
-
-		else 
-		{
-			//scanlog("Processing FHASH: %s\n", line);
-			/* Convert hash to binary */
-			uint8_t fhash[16]; 
-			ldb_hex_to_bin(line, 32, fhash);
-			hash_count++;
-			/* Get all file IDs for given wfp */
-			uint32_write(md5_set, 0);
-			ldb_fetch_recordset(NULL, oss_fhash, fhash, false, get_all_file_ids, (void *) md5_set);
-			/* md5_set starts with a 32-bit item count, followed by all 16-byte records */
-			uint32_t md5s_ln = uint32_read(md5_set);
-			uint8_t *md5s = md5_set + 4;
-
-			//	scanlog("Snippet %02x%02x%02x%02x (line %d) -> %u hits %s\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln / WFP_REC_LN, traced ? "*" : "");
-			if (md5s_ln && md5s_ln < 10000)
-				add_files_to_matchmap(scan, md5s, md5s_ln, fhash);
-		}
-	}
-	free(md5_set);
-	fclose(fp);
-	if (line) free(line);
+	result.components = calloc(1, sizeof(component_list_t));
+	component_list_init(result.components, 0);
 	
-	free(tmp_md5_hex);
-	if (debug_on)
-		map_dump(scan);
+	const char s[2] = ",";
+	char *token;
+   /* get the first token */
+	token = strtok(bfp, s);
+	int field = 0;
+   /* walk through other tokens */
+   while( token != NULL ) 
+   {
+      if (field == 0)
+	  {
+		result.md5 = strdup(token);
+	  }
+	  else if (field == 1)
+	  {
+		
+	  }
+	  else if (field == 2)
+	  {
+		result.file = strdup(token);
+	  }
+	  else
+	  {
+		fhash_process(token, result.components);
+	  }
 
-		/* Scan the last file */
-	scan->match_type = MATCH_BINARY;
-	compile_matches(scan);
-	scanlog("Match output starts\n");
-	output_matches_json(scan);
+	  field++;
+	//printf( "%d - %s\n", field, token );
+    
+    token = strtok(NULL, s);
+   }
 
-	//if (matches) free(matches);
-	scan_data_free(scan);
-	return EXIT_SUCCESS;
+	return result;
+}
+
+extern bool first_file;
+int binary_scan(char * input)
+{
+	/* Get file MD5 */
+	char * hexmd5 = strndup(input, MD5_LEN * 2);
+	scanlog("Bin File md5 to be scanned: %s\n", hexmd5);
+	uint8_t bin_md5[MD5_LEN];
+	ldb_hex_to_bin(hexmd5, MD5_LEN * 2, bin_md5);
+	free(hexmd5);
+
+	uint8_t zero_md5[MD5_LEN] = {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
+	
+	if (!memcmp(zero_md5,bin_md5, MD5_LEN)) //the md5 key of an empty string must be skipped.
+		return -1;
+	
+	if (ldb_key_exists(oss_file, bin_md5))
+	{
+		scanlog("bin file md5 match\n");
+		char  * file_name = field_n(3,input);
+		int target_len = strchr(file_name,',') - file_name;
+		char * target = strndup(file_name, target_len);
+		scan_data_t * scan =  scan_data_init(target, 1, 1);
+		free(target);
+		memcpy(scan->md5, bin_md5, MD5_LEN);
+		scan->match_type = MATCH_FILE;
+		compile_matches(scan);
+
+		if (scan->best_match)
+		{
+			scanlog("Match output starts\n");
+			if (!quiet)
+				output_matches_json(scan);
+			
+			scan_data_free(scan);
+			return 0;
+		}
+		else
+		{
+			scanlog("No best match, scanning binary\n");
+		}
+
+		scan_data_free(scan);
+	}
+	
+	binary_match_t result = {NULL, NULL, NULL};
+	int sensibility = 1;
+	while (sensibility < 100)
+	{
+		char * bfp = strdup(input);
+		result = binary_scan_run(bfp, sensibility);
+		free(bfp);
+		if (!result.components)
+			return -1;
+		if (result.components->items > 1 && result.components->headp.lh_first->component->hits > 0)
+			break;
+		component_list_destroy(result.components);
+		free(result.file);
+		free(result.md5);
+		sensibility++;
+	};
+
+	component_list_t * comp_list_sorted = calloc(1, sizeof(component_list_t));
+	component_list_init(comp_list_sorted, 10);
+	struct comp_entry *item = NULL;
+	LIST_FOREACH(item, &result.components->headp, entries)
+	{
+		component_list_add(comp_list_sorted,item->component, sort_by_hits, false);
+	}
+	
+	if (!quiet)
+		if (!first_file)
+			printf(",");
+	first_file = false;
+	item = NULL;
+	printf("\"%s\":{\"hash\":\"%s\",\"id\":\"bin_snippet\",\"matched\":[", result.file, result.md5);
+	LIST_FOREACH(item, &comp_list_sorted->headp, entries)
+	{
+		printf("{\"purl\":\"%s\", \"hits\": %d}",item->component->purls[0], item->component->hits);
+		if (item->entries.le_next)
+			printf(",");
+	}
+	printf("]}");
+	component_list_destroy(result.components);
+	free(result.file);
+	free(result.md5);
+	free(comp_list_sorted);
+
+	return 0;
+	
 }

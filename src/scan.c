@@ -28,7 +28,6 @@
 #include "match.h"
 #include "parse.h"
 #include "query.h"
-#include "rank.h"
 #include "scan.h"
 #include "snippets.h"
 #include "util.h"
@@ -153,6 +152,7 @@ int asset_declared(component_data_t * comp)
 		/* Compare purl */
 		if (comp->purls[0])
 		{
+			scanlog("check	assets with %s\n", purl);
 			if (!strcmp((const char *) purl, (const char *) comp->purls[0])) 
 			{
 				if (version && !strcmp(version, comp->version))
@@ -242,13 +242,17 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 
 		bool is_file = (memcmp(line, "file=", 5) == 0);
 		bool is_hpsm = (memcmp(line, "hpsm=", 5) == 0);
-		bool is_wfp = (!is_file && !is_hpsm);
+		bool is_bin = (memcmp(line, "bin=", 4) == 0);
+		bool is_wfp = (!is_file && !is_hpsm && !is_bin);
 
 		if (is_hpsm) 
 		{
 			hpsm_enabled = hpsm_lib_load();
 			hpsm_crc_lines = strdup(&line[5]);
 		}
+
+		if (is_bin)
+			binary_scan(&line[4]);
 
 		/* Parse file information with format: file=MD5(32),file_size,file_path */
 		if (is_file)
@@ -427,7 +431,7 @@ void ldb_scan(scan_data_t * scan)
 	if (file_size <= MIN_FILE_SIZE) 
 	{
 		skip = true;
-		scanlog("File %s skipped by file size", scan->file_path);
+		scanlog("File %s skipped by file size < %d\n", scan->file_path, MIN_FILE_SIZE);
 	}
 
 	if (!skip)

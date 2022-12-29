@@ -176,8 +176,6 @@ void print_osadl_license_data(char *license)
 
 static char * json_from_license(uint32_t * crclist, char * buffer, char * license, int src, bool * first_record)
 {
-	scanlog("proc license %s - %d\n", license, *license);
-	
 	clean_license(license);
 	normalize_license(license);
 	string_clean(license);
@@ -297,7 +295,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	int src = atoi(source);
 
 	scanlog("Fetched license %s\n", license);
-	char result[MAX_FIELD_LN * 5] = "\0";
+	char result[MAX_FIELD_LN * 10] = "\0";
 	int len = 0;
 
 	if (strlen(license) > 2 && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
@@ -330,7 +328,7 @@ void print_licenses(component_data_t * comp)
 	}
 
 	/* Open licenses structure */
-	char result[MAX_FIELD_LN * 5] = "\0";
+	char result[MAX_FIELD_LN * 10] = "\0";
 	int len = 0;
 
 	len += sprintf(result+len,"\"licenses\": ");

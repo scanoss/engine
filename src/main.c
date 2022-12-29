@@ -322,6 +322,7 @@ int main(int argc, char **argv)
 			case 's':
 				if (declared_components) printf("Cannot combine -s and -a\n");
 				declared_components = get_components(optarg);
+				engine_flags|= ENABLE_HIGH_ACCURACY; //high accuracy is necessary in this mode
 				break;
 
 			case 'b':
@@ -500,7 +501,7 @@ int main(int argc, char **argv)
 					wfp_scan(target, scan_max_snippets, scan_max_components);
 
 				else if (bfp_extension) 
-					binary_scan(target, scan_max_snippets, scan_max_components);
+					binary_scan(target);
 
 				/* Scan file directly */
 				else 

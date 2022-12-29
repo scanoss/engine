@@ -32,7 +32,7 @@
 #include "limits.h"
 
 #define MAX_FILE_PATH 1024
-#define FETCH_MAX_FILES 20000
+#define FETCH_MAX_FILES 10000
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
 #define CRC_LIST_LEN 256 // list of crc checksums to avoid metadata duplicates
 #define SNIPPET_LINE_TOLERANCE 10
@@ -41,7 +41,7 @@
 #define WFP_REC_LN 18
 
 /* Log files */
-#define SCANOSS_VERSION "5.0.9"
+#define SCANOSS_VERSION "5.1.1"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
@@ -65,6 +65,7 @@
 #define ENABLE_GITHUB_FULL_PATH 2048
 #define DISABLE_SERVER_INFO 4096
 #define DISABLE_HEALTH 8192
+#define ENABLE_HIGH_ACCURACY 16384
 
 #define MAX_SBOM_ITEMS 2000
 #define SHORTEST_PATHS_QTY 4000 // number of shortest path to evaluate
@@ -158,5 +159,5 @@ void recurse_directory (char *path);
 bool ignored_asset_match(uint8_t *url_record);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
 
-int binary_scan(char * path, int scan_max_snippets, int scan_max_components);
+int binary_scan(char * bfp);
 #endif

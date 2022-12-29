@@ -145,4 +145,6 @@ void component_list_init(component_list_t *comp_list, int max_items);
 bool component_list_add(component_list_t * list, component_data_t * new_comp, bool (* val) (component_data_t * a, component_data_t * b), bool remove_a);
 void component_list_print(component_list_t * list, bool (*printer) (component_data_t * fpa), char * separator);
 void component_list_destroy(component_list_t *list);
+bool component_list_add_binary(component_list_t *list, component_data_t *new_comp, bool (*val)(component_data_t *a, component_data_t *b), bool remove_a);
+
 #endif

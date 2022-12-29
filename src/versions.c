@@ -30,7 +30,6 @@
  */
 
 #include "scan.h"
-#include "rank.h"
 #include "snippets.h"
 #include "match.h"
 #include "query.h"

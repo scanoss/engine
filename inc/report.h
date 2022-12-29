@@ -15,4 +15,5 @@ void print_server_stats(scan_data_t *scan);
 void json_open();
 void json_close(void);
 void kb_version_get(void);
+bool print_json_component(component_data_t * component);
 #endif

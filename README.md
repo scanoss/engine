@@ -83,14 +83,13 @@ Often, the SCANOSS engine finds files that are present in different components a
 
 The scanning client can optionally pass a a component hint (context). The context is the name of the last component detected. This context will influence results and the scanning engine will favour the files belonging to a component matching the provided context.
 
-## Component hint calculation
+## First component released
 
-If a component hint is not provided, the engine will try to attempt detection of a component hint by:
+If no hint is provided, the SCANOSS engine will look for the oldest component in the KB which matches the scanned file. In case of a tie between two components with the same release date, other available information will be used to select the best match.
 
-* Attempt to detect the component name by looking at the path. For example, looking after /vendor/ or /external/ in the file path, and looking for this component in the URLs that the file points to.
-* Otherwise, attempt to detect a component name in the start of the path (i.e. linux-2.1/src), and comparing this component hint with the components in the URLs that the file points to.
-* Otherwise, look for the shortest file path and search for the respective component name in the file path.
-* Last, ignore the component hint and select the first file from the results list.
+## SBOM Ingestion
+
+The user can use the "-s'' optional argument plus a sbom.json. The engine will prioritize the declared components during the analysis. If a file can not be matched against any declared component, then the logic previously explained will be applied.
 
 # License
 
