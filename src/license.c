@@ -214,7 +214,7 @@ static char * split_in_json_array(uint32_t * crclist, char * buffer, char * lice
 	/* walk through other tokens */
 	do
    	{
-		next_lic = strchr(license, '/');
+		next_lic = strchr(lic, '/');
 		char lic_aux[MAX_FIELD_LN] = "\0";
 		if (next_lic)
 		{
