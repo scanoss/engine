@@ -203,9 +203,11 @@ void biggest_snippet(scan_data_t *scan)
  * @param ptr //TODO
  * @return //TODO
  */
+
 static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *) ptr;
+
 	if (datalen)
 	{
 		uint32_t size = uint32_read(record);
@@ -220,6 +222,7 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 		memcpy(record + size + 4, data, datalen);
 		uint32_write(record, size + datalen);
 	}
+
 	return false;
 }
 
@@ -465,7 +468,7 @@ uint32_t compile_ranges(match_data_t *match) {
 		if (to < 1) break;
 
 		/* Add range as long as the minimum number of match lines is reached */
-		if ((to - from) >= min_match_lines)
+		if ((to - from) >= 0)//min_match_lines)
 		{
 			if (engine_flags & ENABLE_SNIPPET_IDS)
 				add_snippet_ids(match, snippet_ids, from, to); //has to be reformulated
@@ -590,9 +593,17 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 	uint32_t from = 0;
 	uint32_t to = 0;
 	long map_rec_len = sizeof(matchmap_entry);
+	int popularity_limit = (md5s_ln*scan->total_lines) / WFP_REC_LN / (min_tolerance+1);
+	int jump = 1;
+	if (popularity_limit > MAX_FILES)
+	{
+		//max_len = MAX_FILES/2;
+		jump = 1 + (popularity_limit / MAX_FILES) / 4;
+		scanlog("limiting %d - jump into %d\n", popularity_limit, jump);
+	}
 
 	/* Recurse each record from the wfp table */
-	for (int n = 0; n < md5s_ln; n += WFP_REC_LN)
+	for (int n = 0; n < md5s_ln; n += WFP_REC_LN * jump)
 	{
 		/* Retrieve an MD5 from the recordset */
 		memcpy(scan->md5, md5s + n, MD5_LEN);
@@ -701,7 +712,8 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 	uint8_t wfp[4];
 	int consecutive = 0;
 	uint32_t line = 0;
-	uint32_t last_line = 0;
+	uint32_t last_line_j = 0;
+	uint32_t last_line_k = 0;
 	bool traced = false;
 	int jump_lines = 0;
 
@@ -713,12 +725,27 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 		scan_from = scan->hash_count - MAX_SNIPPETS_SCANNED;
 	}
 
+	int j = 0;
+	int k = 0;
 	/* Compare each wfp, from last to first */
-	for (long i = scan_to; i >= scan_from; i--)
+	//for (long i = scan_to; i >= scan_from; i--)
+	long entry_point = scan->hash_count / 2;
+	for (long i = 0; i < scan->hash_count * 2; i++)
 	{
+
+		if (i % 2 == 0 && k < scan->hash_count)
+		{
+			wfp_invert(scan->hashes[entry_point + k], wfp);
+			line = scan->lines[scan_to - k];
+			k++;
+		}
+		else if (j < entry_point)
+		{
+			wfp_invert(scan->hashes[entry_point - j], wfp);
+			line = scan->lines[entry_point - j];
+			j++;
+		}
 		/* Read line number and wfp */
-		line = scan->lines[i];
-		wfp_invert(scan->hashes[i], wfp);
 
 		/* Get all file IDs for given wfp */
 		uint32_write(md5_set, 0);
@@ -729,9 +756,9 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 		uint8_t *md5s = md5_set + 4;
 
 		/* If popularity is exceeded, matches for this snippet are added to all files */
-		if (md5s_ln > (WFP_POPULARITY_THRESHOLD * WFP_REC_LN))
+		if (md5s_ln > (2500 * WFP_REC_LN))
 		{
-			scanlog("Snippet %02x%02x%02x%02x (line %d) >= WFP_POPULARITY_THRESHOLD\n", wfp[0], wfp[1], wfp[2], wfp[3], line);
+			scanlog("Snippet %02x%02x%02x%02x (line %d - %d) >= WFP_POPULARITY_THRESHOLD\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln);
 		//	add_popular_snippet_to_matchmap(scan, line, last_line - line);
 			continue;
 		}
@@ -747,28 +774,37 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 
 
 		/* If a snippet brings more than "score" result by "hits" times in a row, we skip "jump" snippets */
-		jump_lines = jump_lines / 2;
-		if (scan->hash_count > consecutive_threshold)
-		{
-			if (md5s_ln > consecutive_score)
-			{
-				if (++consecutive >= consecutive_hits)
-				{
-					i -= consecutive_jump;
-					consecutive = 0;
-					if (i >= scan_from)
-					{
-						jump_lines = line - scan->lines[i];
-						scanlog("Skipping %d snippets after %d consecutive_hits, raising tolerance by %d\n", consecutive_jump, consecutive_hits, jump_lines);
-					}
-				}
-			}
-		}
+		//jump_lines = jump_lines / 2;
+		// if (scan->hash_count > consecutive_threshold)
+		// {
+		// 	if (md5s_ln > consecutive_score)
+		// 	{
+		// 		if (++consecutive >= consecutive_hits)
+		// 		{
+		// 			//i -= consecutive_jump;
+		// 			consecutive = 0;
+		// 			if (i >= scan_from)
+		// 			{
+		// 				//jump_lines = line - scan->lines[i];
+		// 				scanlog("Skipping %d snippets after %d consecutive_hits, raising tolerance by %d\n", consecutive_jump, consecutive_hits, jump_lines);
+		// 			}
+		// 		}
+		// 	}
+		// }
 
 		/* Add snippet records to matchmap */
-		if (jump_lines) scanlog("Tolerance increased by jump_lines = %d\n", jump_lines);
-		add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line, jump_lines + last_line - line);
-		last_line = line;
+		//if (jump_lines) scanlog("Tolerance increased by jump_lines = %d\n", jump_lines);
+		//add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line, jump_lines + last_line - line);
+		if (i % 2 == 0)
+		{
+			add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line, abs(line - last_line_k));
+			last_line_k = line;
+		}
+		else
+		{
+			add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line, abs(line - last_line_j));
+			last_line_j = line;
+		}
 	}
 
 	free(md5_set);
