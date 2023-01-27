@@ -460,6 +460,13 @@ uint32_t compile_ranges(match_data_t *match) {
 
 		scanlog("compile_ranges #%d = %ld to %ld\n", i, from, to);
 
+		if (to - from < 0)
+		{
+			long aux = from;
+			from = to;
+			to = aux;
+		}
+
 		/* Determine if this is the last (first) range */
 		bool first_range = false;
 		if (i == MATCHMAP_RANGES) first_range = true;
@@ -593,13 +600,19 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 	uint32_t from = 0;
 	uint32_t to = 0;
 	long map_rec_len = sizeof(matchmap_entry);
-	int popularity_limit = (md5s_ln*scan->total_lines) / WFP_REC_LN / (min_tolerance+1);
-	int jump = 1;
-	if (popularity_limit > MAX_FILES)
+	int popularity_limit = (md5s_ln / WFP_REC_LN)  * (scan->total_lines /  (min_tolerance+1));
+	long jump = 1;
+	//if (popularity_limit > MAX_FILES/2)
 	{
 		//max_len = MAX_FILES/2;
-		jump = 1 + (popularity_limit / MAX_FILES) / 4;
-		scanlog("limiting %d - jump into %d\n", popularity_limit, jump);
+		int aux = (popularity_limit / ((-1) * (scan->matchmap_size - MAX_FILES))) + 1;
+		//if (popularity_limit > 5)
+		//	popularity_limit = 5;
+
+		jump = aux;//(pow(2,popularity_limit) * 30000) /(MAX_FILES);//popularity_limit *  (MAX_FILES/(MAX_FILES-9000));//sqrt(popularity_limit / (MAX_FILES/2));//(popularity_limit / MAX_FILES)/2;
+		if (jump <= 0)
+			jump=1;
+		scanlog("aux %d, limiting %d - jump into %d\n",aux, popularity_limit, jump);
 	}
 
 	/* Recurse each record from the wfp table */
@@ -730,19 +743,19 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 	/* Compare each wfp, from last to first */
 	//for (long i = scan_to; i >= scan_from; i--)
 	long entry_point = scan->hash_count / 2;
-	for (long i = 0; i < scan->hash_count * 2; i++)
+	for (long i = 0; i < scan->hash_count; i++)
 	{
 
 		if (i % 2 == 0 && k < scan->hash_count)
 		{
-			wfp_invert(scan->hashes[entry_point + k], wfp);
-			line = scan->lines[scan_to - k];
+			wfp_invert(scan->hashes[k], wfp);
+			line = scan->lines[k];
 			k++;
 		}
 		else if (j < entry_point)
 		{
-			wfp_invert(scan->hashes[entry_point - j], wfp);
-			line = scan->lines[entry_point - j];
+			wfp_invert(scan->hashes[scan_to - j], wfp);
+			line = scan->lines[scan_to - j];
 			j++;
 		}
 		/* Read line number and wfp */
@@ -756,7 +769,7 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 		uint8_t *md5s = md5_set + 4;
 
 		/* If popularity is exceeded, matches for this snippet are added to all files */
-		if (md5s_ln > (2500 * WFP_REC_LN))
+		if (md5s_ln > (WFP_POPULARITY_THRESHOLD * WFP_REC_LN))
 		{
 			scanlog("Snippet %02x%02x%02x%02x (line %d - %d) >= WFP_POPULARITY_THRESHOLD\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln);
 		//	add_popular_snippet_to_matchmap(scan, line, last_line - line);
@@ -770,7 +783,7 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 				if (!memcmp(md5s + j, trace_id, MD5_LEN)) traced = true;
 		}
 
-		scanlog("Snippet %02x%02x%02x%02x (line %d) -> %u hits %s\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln / WFP_REC_LN, traced ? "*" : "");
+		scanlog("%d-%d-%dSnippet %02x%02x%02x%02x (line %d) -> %u hits %s\n",entry_point ,j,k, wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln / WFP_REC_LN, traced ? "*" : "");
 
 
 		/* If a snippet brings more than "score" result by "hits" times in a row, we skip "jump" snippets */
