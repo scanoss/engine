@@ -42,7 +42,7 @@ char *IGNORED_EXTENSIONS[] = {
 	".dtd", ".dts", ".dtsi", ".dump", ".eot", ".eps", ".geojson", ".gdoc", ".gif",
 	".gitignore", ".glif", ".gmo", ".gradle", ".guess", ".hex", ".htm", ".html",
 	".ico", ".in", ".inc", ".info", ".ini", ".ipynb", ".jpeg", ".jpg", ".json",
-	".jsonld", ".log", ".m4", ".map", ".markdown", ".md", ".md5", ".meta", ".mk",
+	".jsonld", ".log",".lock", ".m4", ".map", ".markdown", ".md", ".md5", ".meta", ".mk",
 	".mxml", ".o", ".otf", ".out", ".pbtxt", ".pdf", ".pem", ".phtml", ".plist",
 	".png", ".po", ".ppt", ".prefs", ".properties", ".pyc", ".qdoc", ".result",
 	".rgb",".rst", ".rtf", ".scss", ".sha", ".sha1", ".sha2", ".sha256", ".sln",

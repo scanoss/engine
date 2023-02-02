@@ -405,7 +405,14 @@ void ldb_scan(scan_data_t * scan)
 	{
 		skip = true;
 		scanlog("File %s skipped by path", scan->file_path);
-	} 
+	}
+	/* LDB must be available to proceed with the scan*/
+	if (!ldb_table_exists(oss_file.db, oss_file.table) || !ldb_table_exists(oss_url.db, oss_url.table)) 
+	{
+		printf("Error: file and url tables must be present in %s KB in order to proceed with the scan\n", oss_file.db);
+		free(scan);
+		exit(EXIT_FAILURE);
+	}
 
 	scan->matchmap_size = 0;
 	scan->match_type = MATCH_NONE;

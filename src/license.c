@@ -48,7 +48,8 @@
 	 1 = Declared in file with SPDX-License-Identifier
 	 2 = Detected in header
 	 3 = Declared in LICENSE file
-	 4 = Scancode detection */
+	 4 = Scancode detection 
+	 5 = Scancode detection at mining time*/
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header", "license_file", "scancode", "scancode"};
 
 /**
