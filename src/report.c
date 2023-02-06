@@ -272,8 +272,11 @@ bool print_json_component(component_data_t * component)
 	printf("\"url_hash\": \"%s\"", url_id);
 	free(url_id);
 
-	print_licenses(component);
-	printf(",%s", json_remove_invalid_char(component->license_text));
+	if (!(engine_flags & DISABLE_LICENSES))
+	{
+		print_licenses(component);
+		printf(",%s", json_remove_invalid_char(component->license_text));
+	}
 
 	if (!(engine_flags & DISABLE_HEALTH))
 	{

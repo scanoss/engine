@@ -68,6 +68,8 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	scan->max_snippets_to_process = max_snippets > MAX_MULTIPLE_COMPONENTS ? MAX_MULTIPLE_COMPONENTS : max_snippets; 
 	scan->max_snippets_to_process = scan->max_snippets_to_process == 0 ? 1 : scan->max_snippets_to_process;
 	matchmap_max_files = scan->max_snippets_to_process * MAX_FILES;
+	if (engine_flags & ENABLE_HIGH_ACCURACY)
+		matchmap_max_files *=5;
 	scan->matchmap = calloc(matchmap_max_files, sizeof(matchmap_entry));
 	return scan;
 }
@@ -403,7 +405,14 @@ void ldb_scan(scan_data_t * scan)
 	{
 		skip = true;
 		scanlog("File %s skipped by path", scan->file_path);
-	} 
+	}
+	/* LDB must be available to proceed with the scan*/
+	if (!ldb_table_exists(oss_file.db, oss_file.table) || !ldb_table_exists(oss_url.db, oss_url.table)) 
+	{
+		printf("Error: file and url tables must be present in %s KB in order to proceed with the scan\n", oss_file.db);
+		free(scan);
+		exit(EXIT_FAILURE);
+	}
 
 	scan->matchmap_size = 0;
 	scan->match_type = MATCH_NONE;

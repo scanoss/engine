@@ -282,7 +282,7 @@ bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 }
 /**
  * @brief Get the extension of a given file into a ldb table.
- * @param md5 input mdz
+ * @param md5 input md5
  * @return string with the extension
  */
 char *get_file_extension(uint8_t *md5)

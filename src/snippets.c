@@ -24,7 +24,7 @@
   @file snippets.c
   @date 30 Dec 2020
   @brief Contains the functions used for  snippets processing
- 
+
   Long description // TODO
   @see https://github.com/scanoss/engine/blob/master/src/scan.c
  */
@@ -39,64 +39,42 @@
 #include "file.h"
 #include "match.h"
 #include "match_list.h"
-
+#include "stdlib.h"
 int map_rec_len;
 int matchmap_max_files = MAX_FILES;
 
 /**
- * @brief Set map hits to zero for the given match
- * @param match pointer to match
- */
-void clear_hits(uint8_t *match)
-{
-	if (!match) return;
-	match[MD5_LEN] = 0;
-	match[MD5_LEN + 1] = 0;
-}
-
-/**
- * @brief Returns the number of entries for a md5 into the files table.
- * @param md5 MD5 pointer
- * @return lenght of shortest path
- */
-int get_match_popularity(uint8_t *md5)
-{
-	/* Direct component match has a top priority */
-	if (!ldb_key_exists(oss_file, md5)) 
-		return 0;
-
-	int set = 0;
-	ldb_fetch_recordset(NULL, oss_file, md5, false, count_all_files, (void *) &set);
-
-	return set;
-}
-
-/**
  * @brief If the extension of the matched file does not match the extension of the scanned file
  *	and the matched file is not among known source code extensions, the match will be discarded
- * 
+ *
  * @param scan scan data pointer
  * @param md5 match md5
- * @return true 
- * @return false 
+ * @return true
+ * @return false
  */
-bool snippet_extension_discard(scan_data_t *scan, uint8_t *md5)
+bool snippet_extension_discard(match_data_t * match)
 {
 	bool discard = false;
 
-	char *ext1 = extension(scan->file_path);
-	char *ext2 = get_file_extension(md5);
+	char *ext1 = extension(match->scan_ower->file_path);
+	char *ext2 = get_file_extension(match->file_md5);
 
-	if (!ext1) return false;
-	if (!ext2) return false;
+	if (!ext1)
+		return false;
+	if (!ext2)
+		return false;
 
-	if (!*ext1) return false;
-	if (!*ext2) return false;
+	if (!*ext1)
+		return false;
+	if (!*ext2)
+		return false;
 
 	if (strcmp(ext1, ext2))
-		if (!known_src_extension(ext2)) discard = true;
+		if (!known_src_extension(ext2))
+			discard = true;
 
-	if (discard) scanlog("Discarding matched extension %s for %s\n", ext2, scan->file_path);
+	if (discard)
+		scanlog("Discarding matched extension %s for %s\n", ext2, ext1);
 
 	free(ext2);
 	return discard;
@@ -104,13 +82,13 @@ bool snippet_extension_discard(scan_data_t *scan, uint8_t *md5)
 
 /**
  * @brief Compare to matches by hits
- * 
- * @param a first match to compare to. 
+ *
+ * @param a first match to compare to.
  * @param b second match to compare.
- * @return true 
- * @return false 
+ * @return true
+ * @return false
  */
-static bool hit_test(match_data_t * a, match_data_t * b)
+static bool hit_test(match_data_t *a, match_data_t *b)
 {
 	if (a->hits <= b->hits)
 		return true;
@@ -119,15 +97,15 @@ static bool hit_test(match_data_t * a, match_data_t * b)
 }
 /**
  * @brief Fill the matches list array based on the matchmap. The possible matches will be sorted by hits number.
- * 
- * @param scan 
+ *
+ * @param scan
  */
 void biggest_snippet(scan_data_t *scan)
 {
 	scanlog("biggest_snippet\n");
 	/*Initialize the auxiliary indirection list */
-	for (int i=0; i< scan->max_snippets_to_process; i++)
-		scan-> matches_list_array_indirection[i] = -1;
+	for (int i = 0; i < scan->max_snippets_to_process; i++)
+		scan->matches_list_array_indirection[i] = -1;
 
 	int snippet_tolerance = range_tolerance / scan->max_snippets_to_process + min_match_lines; /* Used to define bounds between two possible snippets */
 	/*Fill the matches list with the files from the matchmap */
@@ -135,7 +113,7 @@ void biggest_snippet(scan_data_t *scan)
 	{
 		if (scan->matchmap[j].hits >= min_match_hits) /* Only consider file with more than min_match_hits */
 		{
-			match_data_t * match_new = calloc(1,sizeof(match_data_t)); /* Create a match object */
+			match_data_t *match_new = calloc(1, sizeof(match_data_t)); /* Create a match object */
 			memcpy(match_new->file_md5, scan->matchmap[j].md5, MD5_LEN);
 			match_new->hits = scan->matchmap[j].hits;
 			match_new->matchmap_reg = scan->matchmap[j].md5;
@@ -145,48 +123,51 @@ void biggest_snippet(scan_data_t *scan)
 			match_new->scan_ower = scan;
 			bool found = false;
 			int i = 0;
-			for (; i< scan->matches_list_array_index; i++) /*Check if there is already a list for this line ranges */
+			for (; i < scan->matches_list_array_index; i++) /*Check if there is already a list for this line ranges */
 			{
-				if (scan-> matches_list_array_indirection[i] >-1 && 
-					abs(scan-> matches_list_array_indirection[i] - match_new->from) < snippet_tolerance)
-					{	
-						found = true;
-						break;
-					}
+				if (scan->matches_list_array_indirection[i] > -1 &&
+					abs(scan->matches_list_array_indirection[i] - match_new->from) < snippet_tolerance)
+				{
+					found = true;
+					break;
+				}
 			}
 
 			if (!found) /*If there is no list for the snippet range we have to create a new one */
 			{
 				if (scan->matches_list_array_index < scan->max_snippets_to_process) /* Check for the list limit */
 				{
-					scan-> matches_list_array_indirection[scan->matches_list_array_index] = match_new->from; /*update indirection*/
-					scan->matches_list_array[scan->matches_list_array_index] = match_list_init(true, 1); /*create the list*/
-					i = scan->matches_list_array_index; /* update index*/
-					scan->matches_list_array_index++; 
+					scan->matches_list_array_indirection[scan->matches_list_array_index] = match_new->from; /*update indirection*/
+					scan->matches_list_array[scan->matches_list_array_index] = match_list_init(true, 1);	/*create the list*/
+					i = scan->matches_list_array_index;														/* update index*/
+					scan->matches_list_array_index++;
 				}
 				else
 					i = scan->max_snippets_to_process - 1; /*add in the last available list if there is no more space for new lists*/
 			}
-							
 
-			if (!match_list_add(scan->matches_list_array[i], match_new, hit_test, true)) /*Add the match in the selected list */
+			if (snippet_extension_discard(match_new) || !match_list_add(scan->matches_list_array[i], match_new, hit_test, true)) /*Add the match in the selected list */
 			{
 				scanlog("Rejected match with %d hits\n", match_new->hits);
-				match_data_free(match_new);	/* the the memory if the match was not accepted in the list */
+				match_data_free(match_new); /* the the memory if the match was not accepted in the list */
 			}
 		}
 	}
-	for (int i = 0; i < scan->matches_list_array_index; i++)
+	/*just for loging*/
+	if (debug_on)
 	{
-		scanlog("Match list N %d, with %d matches. %d <= HITS <= %d \n", i, scan->matches_list_array[i]->items,
-																		scan->matches_list_array[i]->last_element->match->hits,
-																		scan->matches_list_array[i]->headp.lh_first->match->hits);
-		struct entry *item = NULL;
-		LIST_FOREACH(item, &scan->matches_list_array[i]->headp, entries)
+		for (int i = 0; i < scan->matches_list_array_index; i++)
 		{
-			char md5_hex[MD5_LEN * 2 +1];
-			ldb_bin_to_hex(item->match->file_md5, MD5_LEN, md5_hex);
-			scanlog("%s\n", md5_hex);
+			scanlog("Match list N %d, with %d matches. %d <= HITS <= %d \n", i, scan->matches_list_array[i]->items,
+					scan->matches_list_array[i]->last_element->match->hits,
+					scan->matches_list_array[i]->headp.lh_first->match->hits);
+			struct entry *item = NULL;
+			LIST_FOREACH(item, &scan->matches_list_array[i]->headp, entries)
+			{
+				char md5_hex[MD5_LEN * 2 + 1];
+				ldb_bin_to_hex(item->match->file_md5, MD5_LEN, md5_hex);
+				scanlog("%s\n", md5_hex);
+			}
 		}
 	}
 }
@@ -203,23 +184,28 @@ void biggest_snippet(scan_data_t *scan)
  * @param ptr //TODO
  * @return //TODO
  */
+
 static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	uint8_t *record = (uint8_t *) ptr;
+	uint8_t *record = (uint8_t *)ptr;
+
 	if (datalen)
 	{
 		uint32_t size = uint32_read(record);
 
 		/* End recordset fetch if MAX_QUERY_RESPONSE is reached */
-		if (size + datalen + 4 >= MAX_QUERY_RESPONSE) return true;
+		if (size + datalen + 4 >= MAX_QUERY_RESPONSE)
+			return true;
 
 		/* End recordset fetch if MAX_FILES are reached for the snippet */
-		if ((WFP_REC_LN * matchmap_max_files) <= (size + datalen)) return true;
+		if ((WFP_REC_LN * matchmap_max_files) <= (size + datalen))
+			return true;
 
 		/* Save data and update dataln */
 		memcpy(record + size + 4, data, datalen);
 		uint32_write(record, size + datalen);
 	}
+
 	return false;
 }
 
@@ -255,14 +241,15 @@ bool skip_snippets(char *src, uint64_t srcln)
  * @param from snippet start
  * @param to snippet end
  */
-void add_snippet_ids(match_data_t *match, char * snippet_ids, long from, long to)
+void add_snippet_ids(match_data_t *match, char *snippet_ids, long from, long to)
 {
 	int maxlen = MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES;
 	bool found = false;
 	/* Walk scan->lines array */
 	for (int i = 0; i < match->scan_ower->hash_count; i++)
 	{
-		if (match->scan_ower->lines[i] > to - 1) break;
+		if (match->scan_ower->lines[i] > to - 1)
+			break;
 
 		/* If line is within from and to, add snippet id to list */
 		if (match->scan_ower->lines[i] >= from - 1)
@@ -275,12 +262,14 @@ void add_snippet_ids(match_data_t *match, char * snippet_ids, long from, long to
 			uint32_reverse((uint8_t *)&hash);
 			ldb_bin_to_hex((uint8_t *)&hash, WFP_LN, hex);
 
-			if (strlen(snippet_ids) + WFP_LN * 2 + 1 >= maxlen) break;
+			if (strlen(snippet_ids) + WFP_LN * 2 + 1 >= maxlen)
+				break;
 			sprintf(snippet_ids + strlen(snippet_ids), "%s", hex);
 		}
 	}
 
-	if (found) strcat(snippet_ids, ",");
+	if (found)
+		strcat(snippet_ids, ",");
 	scanlog("SNIPPETS ID: %s\n", snippet_ids);
 }
 
@@ -290,25 +279,29 @@ void add_snippet_ids(match_data_t *match, char * snippet_ids, long from, long to
  * @param scan[out] pointer to scan data
  * @return hits
  */
-int ranges_assemble(matchmap_range *ranges, char * line_ranges, char * oss_ranges)
+int ranges_assemble(matchmap_range *ranges, char *line_ranges, char *oss_ranges)
 {
 	int out = 0;
-
 	/* Walk ranges */
-	for (int i = MATCHMAP_RANGES - 1; i >= 0; i--)
+	for (int i = 0; i < MATCHMAP_RANGES; i++)
 	{
 		int to = ranges[i].to;
 		int from = ranges[i].from;
 		int oss = ranges[i].oss_line;
-		if (from && to && oss)
+
+		if (!from && !to)
+			break;
+		else if (oss)
 		{
 			/* Add commas unless it is the first range */
-			if (*line_ranges) strcat(line_ranges, ",");
-			if (*oss_ranges) strcat(oss_ranges, ",");
+			if (*line_ranges)
+				strcat(line_ranges, ",");
+			if (*oss_ranges)
+				strcat(oss_ranges, ",");
 
 			/* Add from-to values */
-			sprintf (line_ranges + strlen(line_ranges), "%d-%d", from, to);
-			sprintf (oss_ranges + strlen(oss_ranges), "%d-%d", oss, to - from + oss);
+			sprintf(line_ranges + strlen(line_ranges), "%d-%d", from, to);
+			sprintf(oss_ranges + strlen(oss_ranges), "%d-%d", oss, oss + (to - from));
 
 			/* Increment hits */
 			out += (to - from);
@@ -317,52 +310,47 @@ int ranges_assemble(matchmap_range *ranges, char * line_ranges, char * oss_range
 	return out;
 }
 
+int range_comp(const void *a, const void *b)
+{
+	matchmap_range *ra = (matchmap_range *)a;
+	matchmap_range *rb = (matchmap_range *)b;
+	if (ra->from == rb->from)
+		return (rb->to - ra->to);
+	return (rb->from - ra->from);
+}
 /**
- * @brief Join overlapping ranges 
+ * @brief Join overlapping ranges
  * @param ranges ranges list to process
  */
 void ranges_join_overlapping(matchmap_range *ranges)
 {
-	/* Walk ranges MATCHMAP_RANGES times */
-	for (int a = 0; a < MATCHMAP_RANGES; a++)
-	for (int i = 0; i < MATCHMAP_RANGES - 1; i++)
+
+	for (int i = MATCHMAP_RANGES - 1; i > 0; i--)
 	{
 		/* Join range */
-		if (ranges[i].from && ranges[i + 1].to >= ranges[i].from)
+		if (ranges[i].from && ranges[i].to >= ranges[i - 1].from - range_tolerance)
 		{
-			ranges[i].from = ranges[i + 1].from;
-			ranges[i + 1].from = 0;
-			ranges[i + 1].to = 0;
+			ranges[i - 1].from = ranges[i].from;
+			ranges[i - 1].oss_line = ranges[i].oss_line;
+			ranges[i].from = 0;
+			ranges[i].to = 0;
 		}
 	}
 }
 
 /**
- * @brief Remove empty ranges, shifting remaining ranges 
- * 
+ * @brief Remove empty ranges, shifting remaining ranges
+ *
  * @param ranges ranges list to process
  */
-void ranges_remove_empty(matchmap_range *ranges)
+void ranges_sort(matchmap_range *ranges)
 {
-	/* Walk ranges MATCHMAP_RANGES times */
-	for (int a = 0; a < MATCHMAP_RANGES; a++)
-	for (int i = 0; i < MATCHMAP_RANGES - 1; i++)
-	{
-		if (!ranges[i].from && ranges[i+1].from)
-		{
-			ranges[i].from = ranges[i + 1].from;
-			ranges[i + 1].from = 0;
-			ranges[i].to = ranges[i + 1].to;
-			ranges[i + 1].to = 0;
-			ranges[i].oss_line = ranges[i + 1].oss_line;
-			ranges[i + 1].oss_line = 0;
-		}
-	}
+	qsort(ranges, MATCHMAP_RANGES, sizeof(matchmap_range), range_comp);
 }
 
 /**
  * @brief Add SNIPPET_LINE_TOLERANCE to ranges
- * 
+ *
  * @param ranges ranges list to process
  * @param scan scan data pointer
  */
@@ -376,33 +364,41 @@ void ranges_add_tolerance(matchmap_range *ranges, scan_data_t *scan)
 		int oss = ranges[i].oss_line;
 		if (from && to && oss)
 		{
-			from -= SNIPPET_LINE_TOLERANCE;
-			oss -= SNIPPET_LINE_TOLERANCE;
-			to += SNIPPET_LINE_TOLERANCE;
+			from -= range_tolerance;
+			oss -= range_tolerance;
+			to += range_tolerance;
 
 			/* Check bounds */
-			if (from < 1) from = 1;
-			if (oss < 1) oss = 1;
-			if (to > scan->total_lines) to = scan->total_lines;
+			if (from < 1)
+				from = 1;
+
+			if (oss < 1)
+				oss = 1;
+
+			if (to > scan->total_lines)
+				to = scan->total_lines;
 
 			ranges[i].to = to;
 			ranges[i].from = from;
 			ranges[i].oss_line = oss;
 		}
+		else if (!from && !to && !oss)
+			break;
 	}
 }
 
 /**
  * @brief Compiles list of line ranges, returning total number of hits (lines matched)
- * 
+ *
  * @param scan point to scan data to process
  * @return uint32_t snippet hits
  */
-uint32_t compile_ranges(match_data_t *match) {
+uint32_t compile_ranges(match_data_t *match)
+{
 
 	char line_ranges[MAX_FIELD_LN * 2] = "\0";
 	char oss_ranges[MAX_FIELD_LN * 2] = "\0";
-	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1] = "\0"; 
+	char snippet_ids[MAX_SNIPPET_IDS_RETURNED * WFP_LN * 2 + MATCHMAP_RANGES + 1] = "\0";
 	if (!match->matchmap_reg)
 	{
 		scanlog("compile ranges fail");
@@ -410,7 +406,8 @@ uint32_t compile_ranges(match_data_t *match) {
 	}
 
 	uint16_t reported_hits = uint16_read(match->matchmap_reg + MD5_LEN);
-	if (reported_hits < 2) return 0;
+	if (reported_hits < 2)
+		return 0;
 
 	/* Lowest tolerance simply requires selecting the higher match count */
 	if (min_match_lines == 1)
@@ -423,11 +420,12 @@ uint32_t compile_ranges(match_data_t *match) {
 	/* Revise hits and decrease if needed */
 	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
 	{
-		long from     = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6);
-		long to       = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6 + 2);
+		long from = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6);
+		long to = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6 + 2);
 		long delta = to - from;
 
-		if (to < 1) break;
+		if (to < 1)
+			break;
 
 		/* Ranges to be ignored (under min_match_lines) should decrease hits counter */
 		if ((delta) < min_match_lines)
@@ -451,48 +449,30 @@ uint32_t compile_ranges(match_data_t *match) {
 	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
 	{
 
-		long from     = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6);
-		long to       = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6 + 2);
+		long from = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6);
+		long to = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6 + 2);
 		long oss_from = uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6 + 4);
 
-		scanlog("compile_ranges #%d = %ld to %ld\n", i, from, to);
+		scanlog("compile_ranges #%d = %ld to %ld - OSS from: %d\n", i, from, to, oss_from);
 
-		/* Determine if this is the last (first) range */
-		bool first_range = false;
-		if (i == MATCHMAP_RANGES) first_range = true;
-		else if (!uint16_read(match->scan_ower->match_ptr + MD5_LEN + 2 + (i + 1) * 6 + 2)) first_range = true;
-
-		if (to < 1) break;
+		if (to < 1)
+			break;
 
 		/* Add range as long as the minimum number of match lines is reached */
 		if ((to - from) >= min_match_lines)
 		{
 			if (engine_flags & ENABLE_SNIPPET_IDS)
-				add_snippet_ids(match, snippet_ids, from, to); //has to be reformulated
-
-			/* Add tolerance to end of last range */
-			if (!i)
-			{
-				to += range_tolerance;
-				if (to > match->scan_ower->total_lines) to =  match->scan_ower->total_lines;
-			}
-
-			/* Add tolerance to start of first range */
-			if (first_range)
-			{
-				from -= range_tolerance;
-				if (from < 1) from = 1;
-			}
+				add_snippet_ids(match, snippet_ids, from, to); // has to be reformulated
 
 			ranges[i].from = from;
-			ranges[i].to= to;
+			ranges[i].to = to;
 			ranges[i].oss_line = oss_from;
 		}
 	}
 
 	/* Add tolerances and assemble line ranges */
+	ranges_sort(ranges);
 	ranges_add_tolerance(ranges, match->scan_ower);
-	ranges_remove_empty(ranges);
 	ranges_join_overlapping(ranges);
 	hits = ranges_assemble(ranges, line_ranges, oss_ranges);
 	match->line_ranges = strdup(line_ranges);
@@ -511,23 +491,28 @@ static void adjust_tolerance(scan_data_t *scan)
 	bool skip = false;
 	uint32_t wfpcount = scan->hash_count;
 
-	if (!wfpcount) skip = true;
-	else if (scan->lines[wfpcount-1] < 10) skip = true;
+	if (!wfpcount)
+		skip = true;
+	else if (scan->lines[wfpcount - 1] < 10)
+		skip = true;
 
-	if (skip) min_match_lines = 1;
+	if (skip)
+		min_match_lines = 1;
 	else
 	{
 		/* Range tolerance is the maximum amount of non-matched lines accepted
 			 within a matched range. This goes from 21 in small files to 9 in large files */
 
 		range_tolerance = 21 - floor(wfpcount / 21);
-		if (range_tolerance < 9) range_tolerance = 9;
+		if (range_tolerance < 9)
+			range_tolerance = 9;
 
 		/* Min matched lines is the number of matched lines in total under which the result
 			 is ignored. This goes from 3 in small files to 10 in large files */
 
 		min_match_lines = 3 + floor(wfpcount / 5);
-		if (min_match_lines > 10) min_match_lines = 10;
+		if (min_match_lines > 10)
+			min_match_lines = 10;
 	}
 
 	scanlog("Tolerance: range=%d, lines=%d, wfpcount=%u\n", range_tolerance, min_match_lines, wfpcount);
@@ -540,40 +525,11 @@ static void adjust_tolerance(scan_data_t *scan)
  */
 void wfp_invert(uint32_t wfpint32, uint8_t *out)
 {
-	uint8_t *ptr = (uint8_t*)&wfpint32;
-	out[0]=ptr[3];
-	out[1]=ptr[2];
-	out[2]=ptr[1];
-	out[3]=ptr[0];
-}
-
-/**
- * @brief Add line hit to all files
- * @param scan pointer to scan data
- * @param line line number
- * @param min_tolerance min tolerance
- */
-void add_popular_snippet_to_matchmap(scan_data_t *scan, uint32_t line, uint32_t min_tolerance)
-{
-	/* Travel the match map */
-	for (long n = 0; n < scan->matchmap_size; n++)
-	{
-		/* Search for the range to expand */
-		for (int t = 0; t < MATCHMAP_RANGES; t++)
-		{
-			/* Exit if no more ranges are recorded for this file */
-			if (!scan->matchmap[n].range[t].from) continue;
-
-			int gap = scan->matchmap[n].range[t].from - line;
-
-			/* Increase existing range */
-			if (gap < range_tolerance || gap <= min_tolerance)
-			{
-				scan->matchmap[n].range[t].from = line;
-				continue;
-			}
-		}
-	}
+	uint8_t *ptr = (uint8_t *)&wfpint32;
+	out[0] = ptr[3];
+	out[1] = ptr[2];
+	out[2] = ptr[1];
+	out[3] = ptr[0];
 }
 
 /**
@@ -590,9 +546,14 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 	uint32_t from = 0;
 	uint32_t to = 0;
 	long map_rec_len = sizeof(matchmap_entry);
+	int popularity_limit = (md5s_ln / WFP_REC_LN) * (scan->total_lines / (min_tolerance + 1));
+	long jump = (popularity_limit / ((-1) * (scan->matchmap_size - MAX_FILES))) + 1;
+
+	if (jump <= 0)
+		jump = 1;
 
 	/* Recurse each record from the wfp table */
-	for (int n = 0; n < md5s_ln; n += WFP_REC_LN)
+	for (int n = 0; n < md5s_ln; n += WFP_REC_LN * jump)
 	{
 		/* Retrieve an MD5 from the recordset */
 		memcpy(scan->md5, md5s + n, MD5_LEN);
@@ -614,7 +575,8 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 		if (found < 0)
 		{
 			/* Not found. Add MD5 to map */
-			if (scan->matchmap_size >= matchmap_max_files) continue;
+			if (scan->matchmap_size >= matchmap_max_files)
+				continue;
 
 			found = scan->matchmap_size;
 
@@ -629,12 +591,14 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 		uint8_t *lastwfp = scan->matchmap[found].lastwfp;
 
 		/* Skip if we are hitting the same wfp again for this file) */
-		if (!memcmp(wfp, lastwfp, 4)) continue;
+		if (!memcmp(wfp, lastwfp, 4))
+			continue;
 
 		for (uint32_t t = 0; t < MATCHMAP_RANGES; t++)
 		{
 			from = scan->matchmap[found].range[t].from;
-			to   = scan->matchmap[found].range[t].to;
+			to = scan->matchmap[found].range[t].to;
+
 			int gap = from - line;
 
 			/* New range */
@@ -659,9 +623,15 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 			else if (gap < range_tolerance || gap <= min_tolerance)
 			{
 				/* Update range start (from) */
-				scan->matchmap[found].range[t].from = line;
+				if (line < scan->matchmap[found].range[t].from)
+				{
+					scan->matchmap[found].range[t].from = line;
+					scan->matchmap[found].range[t].oss_line = oss_line;
+				}
+				else if (line > scan->matchmap[found].range[t].to)
+					scan->matchmap[found].range[t].to = line;
+
 				scan->matchmap[found].hits++;
-				scan->matchmap[found].range[t].oss_line = oss_line;
 				break;
 			}
 		}
@@ -669,7 +639,8 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 		/* Update last wfp */
 		memcpy(lastwfp, wfp, 4);
 
-		if (found == scan->matchmap_size) scan->matchmap_size++;
+		if (found == scan->matchmap_size)
+			scan->matchmap_size++;
 	}
 }
 
@@ -681,48 +652,60 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
  * @param scan pointer to scan data to be processed
  * @return match type
  */
-match_t ldb_scan_snippets(scan_data_t *scan) {
+match_t ldb_scan_snippets(scan_data_t *scan)
+{
 
 	scanlog("ldb_scan_snippets\n");
-	if (!scan->hash_count) 
+	if (!scan->hash_count)
 	{
 		scanlog("No hashes return NONE\n");
 		return MATCH_NONE;
 	}
 
-	if (engine_flags & DISABLE_SNIPPET_MATCHING) return MATCH_NONE;
+	if (engine_flags & DISABLE_SNIPPET_MATCHING)
+		return MATCH_NONE;
 
-	if (trace_on) scanlog("Checking snippets. Traced (-qi) matches marked with *\n");
-	else scanlog("Checking snippets\n");
+	if (trace_on)
+		scanlog("Checking snippets. Traced (-qi) matches marked with *\n");
+	else
+		scanlog("Checking snippets\n");
 
 	adjust_tolerance(scan);
 
 	uint8_t *md5_set = malloc(MAX_QUERY_RESPONSE);
 	uint8_t wfp[4];
-	int consecutive = 0;
 	uint32_t line = 0;
-	uint32_t last_line = 0;
+	uint32_t last_line_j = 0;
+	uint32_t last_line_k = 0;
 	bool traced = false;
-	int jump_lines = 0;
 
 	/* Limit snippets to be scanned  */
-	uint32_t scan_from = 0;
 	uint32_t scan_to = scan->hash_count - 1;
-	if (scan->hash_count > MAX_SNIPPETS_SCANNED)
-	{
-		scan_from = scan->hash_count - MAX_SNIPPETS_SCANNED;
-	}
 
+	int j = 0;
+	int k = 0;
 	/* Compare each wfp, from last to first */
-	for (long i = scan_to; i >= scan_from; i--)
+	long mid_point = scan->hash_count / 2;
+	for (long i = 0; i < scan->hash_count; i++)
 	{
+
+		if (i % 2 == 0 && k < scan->hash_count)
+		{
+			wfp_invert(scan->hashes[k], wfp);
+			line = scan->lines[k];
+			k++;
+		}
+		else if (j < mid_point)
+		{
+			wfp_invert(scan->hashes[scan_to - j], wfp);
+			line = scan->lines[scan_to - j];
+			j++;
+		}
 		/* Read line number and wfp */
-		line = scan->lines[i];
-		wfp_invert(scan->hashes[i], wfp);
 
 		/* Get all file IDs for given wfp */
 		uint32_write(md5_set, 0);
-		ldb_fetch_recordset(NULL, oss_wfp, wfp, false, get_all_file_ids, (void *) md5_set);
+		ldb_fetch_recordset(NULL, oss_wfp, wfp, false, get_all_file_ids, (void *)md5_set);
 
 		/* md5_set starts with a 32-bit item count, followed by all 16-byte records */
 		uint32_t md5s_ln = uint32_read(md5_set);
@@ -731,8 +714,7 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 		/* If popularity is exceeded, matches for this snippet are added to all files */
 		if (md5s_ln > (WFP_POPULARITY_THRESHOLD * WFP_REC_LN))
 		{
-			scanlog("Snippet %02x%02x%02x%02x (line %d) >= WFP_POPULARITY_THRESHOLD\n", wfp[0], wfp[1], wfp[2], wfp[3], line);
-		//	add_popular_snippet_to_matchmap(scan, line, last_line - line);
+			scanlog("Snippet %02x%02x%02x%02x (line %d - %d) >= WFP_POPULARITY_THRESHOLD\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln);
 			continue;
 		}
 
@@ -740,40 +722,28 @@ match_t ldb_scan_snippets(scan_data_t *scan) {
 		{
 			traced = false;
 			for (uint32_t j = 0; j < md5s_ln && !traced; j++)
-				if (!memcmp(md5s + j, trace_id, MD5_LEN)) traced = true;
+				if (!memcmp(md5s + j, trace_id, MD5_LEN))
+					traced = true;
 		}
 
 		scanlog("Snippet %02x%02x%02x%02x (line %d) -> %u hits %s\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln / WFP_REC_LN, traced ? "*" : "");
 
-
-		/* If a snippet brings more than "score" result by "hits" times in a row, we skip "jump" snippets */
-		jump_lines = jump_lines / 2;
-		if (scan->hash_count > consecutive_threshold)
-		{
-			if (md5s_ln > consecutive_score)
-			{
-				if (++consecutive >= consecutive_hits)
-				{
-					i -= consecutive_jump;
-					consecutive = 0;
-					if (i >= scan_from)
-					{
-						jump_lines = line - scan->lines[i];
-						scanlog("Skipping %d snippets after %d consecutive_hits, raising tolerance by %d\n", consecutive_jump, consecutive_hits, jump_lines);
-					}
-				}
-			}
-		}
-
 		/* Add snippet records to matchmap */
-		if (jump_lines) scanlog("Tolerance increased by jump_lines = %d\n", jump_lines);
-		add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line, jump_lines + last_line - line);
-		last_line = line;
+		if (i % 2 == 0)
+		{
+			add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line, abs(line - last_line_k));
+			last_line_k = line;
+		}
+		else
+		{
+			add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line, abs(line - last_line_j));
+			last_line_j = line;
+		}
 	}
 
 	free(md5_set);
 
-	if (scan->matchmap_size) 
+	if (scan->matchmap_size)
 		return MATCH_SNIPPET;
 	scanlog("Snippet scan has no matches\n");
 	return MATCH_NONE;

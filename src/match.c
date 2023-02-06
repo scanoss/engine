@@ -46,6 +46,7 @@
 #include "component.h"
 #include "match_list.h"
 #include "dependency.h"
+#include "ignorelist.h"
 
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
 bool match_extensions = false;									  /** global match extension flag */
@@ -283,7 +284,8 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	memcpy(url_id, raw_data, MD5_LEN);
 	char path[MAX_FILE_PATH+1];
 	strncpy(path, decrypted, MAX_FILE_PATH);
-	add_component_from_urlid(component_list, url_id, path);
+	if (!ignored_extension(path))
+		add_component_from_urlid(component_list, url_id, path);
 
 	free(decrypted);
 	

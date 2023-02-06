@@ -79,8 +79,11 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 	{
 		if (iteration) len += sprintf(result+len,",");
 		len += sprintf(result+len,"{");
-		if (!src) 
-			len += sprintf(result+len,"\"score\": \"%s/5\",", quality);
+		if (!src)
+		{
+			int q = atoi(quality);
+			len += sprintf(result+len,"\"score\": \"%d/5\",", q);
+		}
 		else
 			len += sprintf(result+len,"\"score\": \"%s\",", quality);
 		len += sprintf(result+len,"\"source\": \"%s\"", quality_sources[atoi(source)]);
@@ -90,7 +93,6 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 
 	}
 
-	//str_cat_realloc(&match->quality_text, result);
 
 	free(source);
 	free(quality);
