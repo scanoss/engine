@@ -327,13 +327,7 @@ void print_licenses(component_data_t *comp)
 		scanlog("License table not present\n");
 		return;
 	}
-
-	if (engine_flags & DISABLE_LICENSES)
-	{
-		scanlog("Licenses analysis disabled\n");
-		return;
-	}
-
+	
 	/* Open licenses structure */
 	char result[MAX_FIELD_LN * 10] = "\0";
 	int len = 0;
