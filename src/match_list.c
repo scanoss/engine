@@ -296,7 +296,7 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         {    
             np = list->headp.lh_first;
             /*We have to find and remove the unwanted elements */
-            for (; np->entries.le_next != NULL && (list->headp.lh_first->match->hits * MATCH_LIST_TOLERANCE <= np->match->hits); np = np->entries.le_next)
+            for (; np->entries.le_next != NULL && (list->headp.lh_first->match->hits * MATCH_LIST_TOLERANCE <= np->entries.le_next->match->hits); np = np->entries.le_next)
             {
 
             }
