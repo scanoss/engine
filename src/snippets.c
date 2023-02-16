@@ -410,12 +410,12 @@ uint32_t compile_ranges(match_data_t *match)
 		return 0;
 
 	/* Lowest tolerance simply requires selecting the higher match count */
-	if (min_match_lines == 1)
+	/*if (min_match_lines == 1)
 	{
 		asprintf(&match->line_ranges, "N/A");
 		asprintf(&match->oss_ranges, "N/A");
 		return uint16_read(match->matchmap_reg + MD5_LEN);
-	}
+	}*/
 
 	/* Revise hits and decrease if needed */
 	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
@@ -547,6 +547,10 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 	uint32_t to = 0;
 	long map_rec_len = sizeof(matchmap_entry);
 	int popularity_limit = (md5s_ln / WFP_REC_LN) * (scan->total_lines / (min_tolerance + 1));
+	scanlog("%d - %d - %d\n",popularity_limit, scan->matchmap_size,  MAX_FILES);
+	
+	if (scan->matchmap_size >= MAX_FILES )
+		return;
 	long jump = (popularity_limit / ((-1) * (scan->matchmap_size - MAX_FILES))) + 1;
 
 	if (jump <= 0)
