@@ -19,6 +19,18 @@
     {
       "type": "library",
       "publisher": "scanoss",
+      "group": "hpsm",
+      "name": "hpsm",
+      "url": "https://github.com/scanoss/hpsm",
+      "licenses": [
+        {
+            "id": "GPL-2.0-or-later"
+          }
+      ]
+    },
+    {
+      "type": "library",
+      "publisher": "scanoss",
       "group": "minr",
       "name": "minr",
       "url": "https://github.com/scanoss/minr",
