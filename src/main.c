@@ -58,6 +58,7 @@ struct ldb_table oss_dependency;
 struct ldb_table oss_license;
 struct ldb_table oss_attribution;
 struct ldb_table oss_cryptography;
+struct ldb_table oss_shagit;
 component_item *ignore_components;
 component_item *declared_components;
 
@@ -150,6 +151,15 @@ void initialize_ldb_tables(char *name)
 	oss_cryptography.rec_ln = 0;
 	oss_cryptography.ts_ln = 2;
 	oss_cryptography.tmp = false;
+
+
+strcpy(oss_shagit.db, oss_db_name);
+	strcpy(oss_shagit.table, "sha");
+	oss_shagit.key_ln = 16;
+	oss_shagit.rec_ln = 0;
+	oss_shagit.ts_ln = 2;
+	oss_shagit.tmp = false;
+
 
 	kb_version_get();
 	osadl_load_file();

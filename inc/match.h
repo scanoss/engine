@@ -24,6 +24,7 @@ typedef struct match_data_t
 	uint32_t * crclist; /* pointer to crc list used in for processing */
 	char * quality_text; /* quality string used in json output format */
 	char * crytography_text; /* crytography string used in json output format */
+	char * shagit_text; /* shagit string */
 	uint16_t from;
 } match_data_t;
 

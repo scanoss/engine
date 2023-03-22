@@ -45,7 +45,7 @@
 #include "file.h"
 #include "versions.h"
 #include "hpsm.h"
-
+#include "shainfo.h"
 uint64_t engine_flags = 0;
 char  kb_version[MAX_INPUT];
 
@@ -330,6 +330,9 @@ bool print_json_match(struct match_data_t * match)
 	printf(",\"lines\": \"%s\"", match->line_ranges);
 	printf(",\"oss_lines\": \"%s\"", match->oss_ranges);
 	printf(",\"matched\": \"%s\"", match->matched_percent);
+	print_shagit_info(match);
+	printf(",\"sha1git\":%s", match->shagit_text);
+	
 	
 	if ((engine_flags & ENABLE_SNIPPET_IDS) && match->type == MATCH_SNIPPET)
 	{

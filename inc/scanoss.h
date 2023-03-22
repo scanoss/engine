@@ -141,7 +141,7 @@ extern struct ldb_table oss_dependency;
 extern struct ldb_table oss_license;
 extern struct ldb_table oss_attribution;
 extern struct ldb_table oss_cryptography;
-
+extern struct ldb_table oss_shagit;
 
 extern bool first_file;
 extern int max_vulnerabilities;
