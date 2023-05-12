@@ -46,7 +46,7 @@
   @see https://github.com/scanoss/engine/blob/master/src/scan.c
  */
 bool first_file = true;											  /** global first file flag */
-
+bool force_snippet_scan = false; //added to force snippet scan
 char *ignored_assets = NULL;
 
 /** @brief Init scan structure 
@@ -454,7 +454,7 @@ void ldb_scan(scan_data_t * scan)
 		scan->match_type = ldb_scan_file(scan);
 		
 		/* If no match, scan snippets */
-		if (scan->match_type == MATCH_NONE)
+		if (scan->match_type == MATCH_NONE || force_snippet_scan)
 		{
 			/* Load snippets into scan data */
 			if (!scan->preload)

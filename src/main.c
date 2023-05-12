@@ -305,7 +305,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 
-	while ((option = getopt(argc, argv, ":f:s:b:c:k:a:F:l:n:i:M:N:wtvhedqHB")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:B:c:k:a:F:l:n:i:M:N:wtvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -375,7 +375,8 @@ int main(int argc, char **argv)
 				force_wfp = true;
 				break;
 			case 'B':
-				force_bfp = true;
+				ignore_components = get_components(optarg);
+				force_snippet_scan = true;
 				break;
 			case 't':
 				scan_benchmark();
