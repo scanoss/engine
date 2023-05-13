@@ -353,15 +353,20 @@ void output_matches_json(scan_data_t *scan)
 		{
 			if (!first && scan->matches_list_array[i]->items && scan->matches_list_array[i]->best_match->component_list.items)
 				printf(",");
-			match_list_print(scan->matches_list_array[i], print_json_match, ",");
-			first = false;
+			if (match_list_print(scan->matches_list_array[i], print_json_match, ","))
+				first = false;
 		}
+		if (first)
+		{
+			print_json_nomatch();
+		}
+		scan->printed_succed = !first;
 	}
 	/* prinf no match if the scan was evaluated as none */ // TODO must be unified with the "else" clause
 	else if (scan->match_type == MATCH_NONE)
 	{
 		printf("\"%s\": [{", scan->file_path);
-		print_json_nomatch(scan);
+		print_json_nomatch();
 	}
 	else if (scan->matches_list_array_index > 1 && scan->max_snippets_to_process > 1)
 	{
@@ -380,7 +385,7 @@ void output_matches_json(scan_data_t *scan)
 	else
 	{
 		printf("\"%s\": [{", scan->file_path);
-		print_json_nomatch(scan);
+		print_json_nomatch();
 	}
 
 	json_close_file(scan);

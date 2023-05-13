@@ -134,7 +134,7 @@ typedef struct match_list_t
 
 /* Public functions declaration */
 
-void match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa), char * separator);
+bool match_list_print(match_list_t * list, bool (*printer) (match_data_t * fpa), char * separator);
 void match_list_debug(match_list_t * list);
 bool match_list_add(match_list_t * list, match_data_t * new_match, bool (* val) (match_data_t * a, match_data_t * b), bool remove_a);
 void match_list_destroy(match_list_t * list);

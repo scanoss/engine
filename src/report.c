@@ -100,7 +100,7 @@ void json_close_file(scan_data_t * scan)
 	if (!(engine_flags & DISABLE_BEST_MATCH))
 		printf("}]");
 	
-	if (scan->matches_list_array_index > 1  && scan->max_snippets_to_process > 1)
+	if (scan->matches_list_array_index > 1  && scan->max_snippets_to_process > 1 && scan->printed_succed)
 		printf("}");
 
 }
@@ -161,7 +161,7 @@ void print_server_stats(scan_data_t *scan)
  * @brief Return a match=none result
  * @param scan scan data pointer
  */
-void print_json_nomatch(scan_data_t *scan)
+void print_json_nomatch()
 {
 	if (quiet) 
 		return;
