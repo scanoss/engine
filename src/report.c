@@ -263,7 +263,7 @@ bool print_json_component(component_data_t * component)
 
 	/* Print (optional download_url */
 	if (engine_flags & ENABLE_DOWNLOAD_URL)
-	printf("\"download_url\": \"%s\",", component->url);
+		printf("\"download_url\": \"%s\",", component->url);
 
 	printf("\"release_date\": \"%s\",", component->release_date);
 	printf("\"file\": \"%s\",", component->url_match == true ? basename(component->url) : file_skip_release(component->purls[0], component->file));
@@ -275,7 +275,8 @@ bool print_json_component(component_data_t * component)
 	if (!(engine_flags & DISABLE_LICENSES))
 	{
 		print_licenses(component);
-		printf(",%s", json_remove_invalid_char(component->license_text));
+		if (component->license_text)
+			printf(",%s", json_remove_invalid_char(component->license_text));
 	}
 
 	if (!(engine_flags & DISABLE_HEALTH))
@@ -288,6 +289,7 @@ bool print_json_component(component_data_t * component)
 
 	if (!(engine_flags & DISABLE_DEPENDENCIES))
 	{
+		//check if dependencies were calculated during best-match tiebreak.
 		if (!component->dependency_text)
 			print_dependencies(component);
 		if (component->dependency_text)	
@@ -353,13 +355,15 @@ bool print_json_match(struct match_data_t * match)
 	if (!(engine_flags & DISABLE_QUALITY))
 	{
 		print_quality(match);
-		printf(",%s", json_remove_invalid_char(match->quality_text));
+		if (match->quality_text)
+			printf(",%s", json_remove_invalid_char(match->quality_text));
 	}
 
 	if (!(engine_flags & DISABLE_CRIPTOGRAPHY))
 	{
 		print_cryptography(match);
-		printf(",%s", json_remove_invalid_char(match->crytography_text));
+		if (match->crytography_text)
+			printf(",%s", json_remove_invalid_char(match->crytography_text));
 	}
 	if (!(engine_flags & DISABLE_BEST_MATCH))
 	{
