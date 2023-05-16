@@ -351,7 +351,9 @@ void output_matches_json(scan_data_t *scan)
 		printf("\"%s\": {\"matches\":[", scan->file_path);
 		match_list_t *best_list = match_select_m_component_best(scan);
 		scanlog("<<<best list items: %d>>>\n", best_list->items);
-		match_list_print(best_list, print_json_match, ",");
+		if(!match_list_print(best_list, print_json_match, ","))
+			print_json_nomatch();
+			
 		match_list_destroy(best_list);
 	}
 	else if (engine_flags & DISABLE_BEST_MATCH)
