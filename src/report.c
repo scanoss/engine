@@ -100,7 +100,7 @@ void json_close_file(scan_data_t * scan)
 	if (!(engine_flags & DISABLE_BEST_MATCH))
 		printf("}]");
 	
-	if (scan->matches_list_array_index > 1  && scan->max_snippets_to_process > 1 && scan->printed_succed)
+	if (scan->matches_list_array_index > 1  && scan->max_snippets_to_process > 1)// && scan->printed_succed)
 		printf("}");
 
 }

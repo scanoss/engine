@@ -345,7 +345,16 @@ void output_matches_json(scan_data_t *scan)
 
 	uint64_t engine_flags_aux = engine_flags;
 	/* Print matches */
-	if (engine_flags & DISABLE_BEST_MATCH)
+	if (scan->matches_list_array_index > 1 && scan->max_snippets_to_process > 1)
+	{
+		engine_flags |= DISABLE_BEST_MATCH;
+		printf("\"%s\": {\"matches\":[", scan->file_path);
+		match_list_t *best_list = match_select_m_component_best(scan);
+		scanlog("<<<best list items: %d>>>\n", best_list->items);
+		match_list_print(best_list, print_json_match, ",");
+		match_list_destroy(best_list);
+	}
+	else if (engine_flags & DISABLE_BEST_MATCH)
 	{
 		printf("\"%s\": [", scan->file_path);
 		bool first = true;
@@ -367,15 +376,6 @@ void output_matches_json(scan_data_t *scan)
 	{
 		printf("\"%s\": [{", scan->file_path);
 		print_json_nomatch();
-	}
-	else if (scan->matches_list_array_index > 1 && scan->max_snippets_to_process > 1)
-	{
-		engine_flags |= DISABLE_BEST_MATCH;
-		printf("\"%s\": {\"matches\":[", scan->file_path);
-		match_list_t *best_list = match_select_m_component_best(scan);
-		scanlog("<<<best list items: %d>>>\n", best_list->items);
-		match_list_print(best_list, print_json_match, ",");
-		match_list_destroy(best_list);
 	}
 	else if (scan->best_match && scan->best_match->component_list.items)
 	{
