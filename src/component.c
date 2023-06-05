@@ -87,7 +87,8 @@ component_data_t *component_data_copy(component_data_t *in)
     out->file = strdup(in->file);
     out->file_md5_ref = in->file_md5_ref;
     out->identified = in->identified;
-    out->latest_release_date = strdup(in->latest_release_date);
+	if(in->latest_release_date)
+    	out->latest_release_date = strdup(in->latest_release_date);
     out->latest_version = strdup(in->latest_version);
     out->license = strdup(in->license);
     out->url_match = in->url_match;

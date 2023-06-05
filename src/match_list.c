@@ -360,10 +360,11 @@ void match_list_debug(match_list_t *list)
     }
 }
 
-void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), char *separator)
+bool match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), char *separator)
 {
     bool first = true;
     int i = 0;
+    bool printed = false;
     for (struct entry *np = list->headp.lh_first; np != NULL && i<list->items; np = np->entries.le_next)
     {
         if (!np->match->component_list.items)
@@ -373,11 +374,14 @@ void match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), ch
         {
             printf("%s", separator);
         }
-        
-        printer(np->match);
+        printed |= printer(np->match);
         i++;
         first = false;
     }
+    if (!printed)
+        return false;
+
+    return true;
 }
 
 void component_list_print(component_list_t *list, bool (*printer)(component_data_t *fpa), char *separator)

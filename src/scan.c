@@ -46,7 +46,7 @@
   @see https://github.com/scanoss/engine/blob/master/src/scan.c
  */
 bool first_file = true;											  /** global first file flag */
-
+bool force_snippet_scan = false; //added to force snippet scan
 char *ignored_assets = NULL;
 
 /** @brief Init scan structure 
@@ -345,7 +345,18 @@ void output_matches_json(scan_data_t *scan)
 
 	uint64_t engine_flags_aux = engine_flags;
 	/* Print matches */
-	if (engine_flags & DISABLE_BEST_MATCH)
+	if (scan->matches_list_array_index > 1 && scan->max_snippets_to_process > 1)
+	{
+		engine_flags |= DISABLE_BEST_MATCH;
+		printf("\"%s\": {\"matches\":[", scan->file_path);
+		match_list_t *best_list = match_select_m_component_best(scan);
+		scanlog("<<<best list items: %d>>>\n", best_list->items);
+		if(!match_list_print(best_list, print_json_match, ","))
+			print_json_nomatch();
+			
+		match_list_destroy(best_list);
+	}
+	else if (engine_flags & DISABLE_BEST_MATCH)
 	{
 		printf("\"%s\": [", scan->file_path);
 		bool first = true;
@@ -353,24 +364,20 @@ void output_matches_json(scan_data_t *scan)
 		{
 			if (!first && scan->matches_list_array[i]->items && scan->matches_list_array[i]->best_match->component_list.items)
 				printf(",");
-			match_list_print(scan->matches_list_array[i], print_json_match, ",");
-			first = false;
+			if (match_list_print(scan->matches_list_array[i], print_json_match, ","))
+				first = false;
 		}
+		if (first)
+		{
+			print_json_nomatch();
+		}
+		scan->printed_succed = !first;
 	}
 	/* prinf no match if the scan was evaluated as none */ // TODO must be unified with the "else" clause
 	else if (scan->match_type == MATCH_NONE)
 	{
 		printf("\"%s\": [{", scan->file_path);
-		print_json_nomatch(scan);
-	}
-	else if (scan->matches_list_array_index > 1 && scan->max_snippets_to_process > 1)
-	{
-		engine_flags |= DISABLE_BEST_MATCH;
-		printf("\"%s\": {\"matches\":[", scan->file_path);
-		match_list_t *best_list = match_select_m_component_best(scan);
-		scanlog("<<<best list items: %d>>>\n", best_list->items);
-		match_list_print(best_list, print_json_match, ",");
-		match_list_destroy(best_list);
+		print_json_nomatch();
 	}
 	else if (scan->best_match && scan->best_match->component_list.items)
 	{
@@ -380,7 +387,7 @@ void output_matches_json(scan_data_t *scan)
 	else
 	{
 		printf("\"%s\": [{", scan->file_path);
-		print_json_nomatch(scan);
+		print_json_nomatch();
 	}
 
 	json_close_file(scan);
@@ -454,7 +461,7 @@ void ldb_scan(scan_data_t * scan)
 		scan->match_type = ldb_scan_file(scan);
 		
 		/* If no match, scan snippets */
-		if (scan->match_type == MATCH_NONE)
+		if (scan->match_type == MATCH_NONE || force_snippet_scan)
 		{
 			/* Load snippets into scan data */
 			if (!scan->preload)

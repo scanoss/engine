@@ -51,6 +51,7 @@ Configuration:\n\
 -M NUMBER  Looks for NUMBER of different components in a file (MAX 9).\n\
 -s SBOM    Use assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification.\n\
 -b SBOM    Ignore matches to assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format).\n\
+-B SBOM    Same than \"-b\" but forcing snippet scan.\n\
 -a SBOM    Displays attribution notices for provided SBOM.json.\n\
 -c HINT    Provide a component HINT to influence scan results.\n\
 -k KEY     Displays contents of file KEY from MZ sources archive.\n\

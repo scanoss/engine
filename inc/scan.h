@@ -60,7 +60,10 @@ typedef struct scan_data_t
 	int max_components_to_process; /* Max component to retrieve during snippet scanning */
 	int max_snippets_to_show; //TODO
 	int max_components_to_show; //TODO
+	bool printed_succed;
 } scan_data_t;
+
+extern bool force_snippet_scan;
 
 scan_data_t * scan_data_init(char *target, int max_snippets, int max_components);
 void scan_data_free (scan_data_t * scan);
