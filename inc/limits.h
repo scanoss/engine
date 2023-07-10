@@ -37,7 +37,7 @@
 #define MATCH_ANALYZE_KEYWORD_LIMIT 10000 // Maximum number of keywords to be considered when analyzing matches
 
 /* Snippets */
-#define MAX_FILES 10000     // Max number of files evaluated in snippet matching
+#define MAX_MATCHMAP_FILES 12000     // Max number of files evaluated in snippet matching
 #define WFP_POPULARITY_THRESHOLD 2500  // wfp hash with more hits than this will be ignored. This should never be higher than MAX_FILES;
 #define SKIP_SNIPPETS_IF_FILE_BIGGER (1024 * 1024 * 4)
 #define SKIP_SNIPPETS_IF_STARTS_WITH (const char*[3]) {"{", "<?xml", "<html"}

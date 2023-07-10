@@ -255,14 +255,14 @@ file_recordset *files = NULL;
 bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	/*Iterations must be doubled if high accuracy is enabled*/
-	int iteration_max = ((engine_flags && ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 2 : FETCH_MAX_FILES);
+	int iteration_max = ((engine_flags & ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 4 : FETCH_MAX_FILES);
 	/* Leave if FETCH_MAX_FILES is reached */
 	if (iteration < iteration_max && files)
 	{
 		memcpy(files[iteration].url_id, raw_data, MD5_LEN);
 	} 
 	/*Return we high accuracy it is not enabled*/
-	if (iteration > iteration_max * 2 && !(engine_flags && ENABLE_HIGH_ACCURACY))
+	if (iteration > iteration_max * 2 && !(engine_flags & ENABLE_HIGH_ACCURACY))
 		return true;
 
 	/* Ignore path lengths over the limit */
@@ -345,7 +345,7 @@ bool load_matches(match_data_t *match)
 	scanlog("URL recordset contains %u records\n", records);
 
 	/*Collect all files from the files table matching with the match md5 being processed */
-	int files_records_max = ((engine_flags && ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 2 : FETCH_MAX_FILES);
+	int files_records_max = ((engine_flags & ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 4 : FETCH_MAX_FILES);
 	files = calloc(files_records_max, sizeof(file_recordset));
 	records = ldb_fetch_recordset(NULL, oss_file, match->file_md5, false, component_from_file,(void *)&match->component_list);
 	scanlog("Found %d file entries\n", records);

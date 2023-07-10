@@ -31,6 +31,7 @@
 
 #include "help.h"
 #include "scanoss.h"
+#include "limits.h"
 
 /**
  * @brief Print the help
@@ -66,11 +67,15 @@ Options:\n\
 -q  Produces no JSON output. Only debugging info via STDERR.\n\
 -i  Trace specific file id when debugging (requires -q).\n\
 \n\
+Enviroment variables:\n\
+SCANOSS_MATCHMAP_MAX: define the snippet scanning match map size, %d by default.\n\
+SCANOSS_API_URL: defines the API url, %s by default.\n\
+\n\
 Engine scanning flags:\n\
 The scanning engine can be configured by passing configuration flags with the -F parameter.\n\
 Alternatively, these value can be written in %s\n\
-+-------+-----------------------------------------------------+\n\
-| Flag  | Setting                                             |\n\
++-------+-------------------------------------------------------+\n\
+| Flag  | Setting                                               |\n\
 +-------+-------------------------------------------------------+\n\
 |    1  | Disable snippet matching (default: enabled)           |\n\
 |    2  | Enable snippet_ids (default: disabled)                |\n\
@@ -90,6 +95,6 @@ Alternatively, these value can be written in %s\n\
 +-------+-------------------------------------------------------+\n\
 Example: scanoss -F 12 DIRECTORY (scans DIRECTORY disabling license and dependency data)\n\
 \n\
-Copyright (C) 2018-2022 SCANOSS.COM\n", ENGINE_FLAGS_FILE);
+Copyright (C) 2018-2022 SCANOSS.COM\n", MAX_MATCHMAP_FILES, API_URL, ENGINE_FLAGS_FILE);
 
 }

@@ -41,7 +41,7 @@
 #include "match_list.h"
 #include "stdlib.h"
 int map_rec_len;
-int matchmap_max_files = MAX_FILES;
+int matchmap_max_files = MAX_MATCHMAP_FILES;
 
 /**
  * @brief If the extension of the matched file does not match the extension of the scanned file
@@ -547,11 +547,11 @@ void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, u
 	uint32_t to = 0;
 	long map_rec_len = sizeof(matchmap_entry);
 	int popularity_limit = (md5s_ln / WFP_REC_LN) * (scan->total_lines / (min_tolerance + 1));
-	scanlog("%d - %d - %d\n",popularity_limit, scan->matchmap_size,  MAX_FILES);
+	scanlog("%d - %d - %d\n",popularity_limit, scan->matchmap_size,  matchmap_max_files);
 	
-	if (scan->matchmap_size >= MAX_FILES )
+	if (scan->matchmap_size >= matchmap_max_files )
 		return;
-	long jump = (popularity_limit / ((-1) * (scan->matchmap_size - MAX_FILES))) + 1;
+	long jump = (popularity_limit / ((-1) * (scan->matchmap_size - matchmap_max_files))) + 1;
 
 	if (jump <= 0)
 		jump = 1;
