@@ -57,19 +57,16 @@ bool snippet_extension_discard(match_data_t * match)
 	bool discard = false;
 
 	char *ext1 = extension(match->scan_ower->file_path);
-	char *ext2 = get_file_extension(match->file_md5);
 
 	if (!ext1)
 		return false;
+
+	char *ext2 = get_file_extension(match->file_md5);
+	
 	if (!ext2)
 		return false;
 
-	if (!*ext1)
-		return false;
-	if (!*ext2)
-		return false;
-
-	if (strcmp(ext1, ext2))
+	if (*ext1 && *ext2 && strcmp(ext1, ext2))
 		if (!known_src_extension(ext2))
 			discard = true;
 
@@ -799,12 +796,51 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	
 		last_sector_aux = scan->matchmap_size - 1;
 	}
+	
+	bool at_least_one_match = false;
+	for (int sector = 0; sector < 255; sector++)
+	{
+		if (scan->matchmap_rank_by_sector[sector] >-1 && 
+			scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits > min_match_hits)
+		{
+			at_least_one_match = true;
+			break;
+		}
+	}
+
+	if (!at_least_one_match)
+	{
+		scanlog("--No results, looking on the rest of the cathegories -- \n");
+		for (int cat = cat_limit_index; cat < MAP_INDIRECTION_CAT_NUMBER ; cat++)
+		{
+			/* travel the cathegories map*/
+			for (int item_in_cat = 0; item_in_cat < map_indirection_index[cat]; item_in_cat++)
+			{
+				int i = map_indirection[cat][item_in_cat];
+				uint8_t *md5s = map[i].md5_set + 4;
+				/* Add each item to the matchmap*/
+				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index += WFP_REC_LN)
+				{
+					int sector = md5s[wfp_index];
+			
+					int sector_max = min_match_hits;
+					if (scan->matchmap_rank_by_sector[sector] >= 0)
+						sector_max = scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits;
+					
+					if (sector_max > min_match_hits * 2)
+						break;
+									 
+					add_file_to_matchmap(scan, &map[i], &md5s[wfp_index], 0, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+				}
+			}	
+		}
+	}
 
 	//for debuging
 	if (debug_on)
 	{
 		scanlog("Max hits by sector\n");
-		for (int  sector = 0; sector < 255; sector++)
+		for (int sector = 0; sector < 255; sector++)
 		{
 			if (scan->matchmap_rank_by_sector[sector] >= 0)
 				scanlog("Sector %d, Max at %d with %d\n", sector, scan->matchmap_rank_by_sector[sector], scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits);

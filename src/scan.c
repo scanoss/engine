@@ -67,7 +67,7 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	
 	scan->max_snippets_to_process = max_snippets > MAX_MULTIPLE_COMPONENTS ? MAX_MULTIPLE_COMPONENTS : max_snippets; 
 	scan->max_snippets_to_process = scan->max_snippets_to_process == 0 ? 1 : scan->max_snippets_to_process;
-	
+	scan->matches_list_array_index = 0;
 	return scan;
 }
 
