@@ -34,11 +34,9 @@
 #define MAX_QUERY_RESPONSE (1024 * 1024 * 8)
 #define SLOW_QUERY_LIMIT_IN_USEC 2000000
 #define MAX_JSON_VALUE_LEN 4096
-#define MATCH_ANALYZE_KEYWORD_LIMIT 10000 // Maximum number of keywords to be considered when analyzing matches
 
 /* Snippets */
-#define MAX_MATCHMAP_FILES 12000     // Max number of files evaluated in snippet matching
-#define WFP_POPULARITY_THRESHOLD 2500  // wfp hash with more hits than this will be ignored. This should never be higher than MAX_FILES;
+#define MAX_MATCHMAP_FILES 10000     // Max number of files evaluated in snippet matching
 #define SKIP_SNIPPETS_IF_FILE_BIGGER (1024 * 1024 * 4)
 #define SKIP_SNIPPETS_IF_STARTS_WITH (const char*[3]) {"{", "<?xml", "<html"}
 #define MAX_SNIPPETS_SCANNED 2500

@@ -109,8 +109,13 @@ void biggest_snippet(scan_data_t *scan)
 
 	int snippet_tolerance = range_tolerance / scan->max_snippets_to_process + min_match_lines; /* Used to define bounds between two possible snippets */
 	/*Fill the matches list with the files from the matchmap */
-	for (int j = 0; j < scan->matchmap_size; j++)
+	for (int sector = 0; sector < 255; sector++)
 	{
+		int j = scan->matchmap_rank_by_sector[sector];
+		
+		if (j < 0)
+			continue;
+		
 		if (scan->matchmap[j].hits >= min_match_hits) /* Only consider file with more than min_match_hits */
 		{
 			match_data_t *match_new = calloc(1, sizeof(match_data_t)); /* Create a match object */
@@ -184,7 +189,7 @@ void biggest_snippet(scan_data_t *scan)
  * @param ptr //TODO
  * @return //TODO
  */
-
+#define MATCHMAP_ITEM_SIZE (matchmap_max_files)
 static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *)ptr;
@@ -192,18 +197,17 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	if (datalen)
 	{
 		uint32_t size = uint32_read(record);
-
 		/* End recordset fetch if MAX_QUERY_RESPONSE is reached */
-		if (size + datalen + 4 >= MAX_QUERY_RESPONSE)
+		if (size + datalen + 4 >= WFP_REC_LN * MATCHMAP_ITEM_SIZE)
+		{
+			//memcpy(record + size + 4, data, WFP_REC_LN * MATCHMAP_ITEM_SIZE - size);
+			//uint32_write(record, size + WFP_REC_LN * MATCHMAP_ITEM_SIZE);
 			return true;
+		}
 
-		/* End recordset fetch if MAX_FILES are reached for the snippet */
-		if ((WFP_REC_LN * matchmap_max_files) <= (size + datalen))
-			return true;
-
-		/* Save data and update dataln */
 		memcpy(record + size + 4, data, datalen);
 		uint32_write(record, size + datalen);
+		
 	}
 
 	return false;
@@ -532,130 +536,140 @@ void wfp_invert(uint32_t wfpint32, uint8_t *out)
 	out[3] = ptr[0];
 }
 
-/**
- * @brief Add matchmap to scan structure
- * @param scan pointer to scan dats structure
- * @param md5s md5 list
- * @param md5s_ln md5 list lenght
- * @param wfp pointer t wfp
- * @param line line number
- * @param min_tolerance min tolerance
- */
-void add_files_to_matchmap(scan_data_t *scan, uint8_t *md5s, uint32_t md5s_ln, uint8_t *wfp, uint32_t line, uint32_t min_tolerance)
+
+static void matchmap_setup(scan_data_t * scan)
 {
-	uint32_t from = 0;
-	uint32_t to = 0;
-	long map_rec_len = sizeof(matchmap_entry);
-	int popularity_limit = (md5s_ln / WFP_REC_LN) * (scan->total_lines / (min_tolerance + 1));
-	scanlog("%d - %d - %d\n",popularity_limit, scan->matchmap_size,  matchmap_max_files);
-	
-	if (scan->matchmap_size >= matchmap_max_files )
-		return;
-	long jump = (popularity_limit / ((-1) * (scan->matchmap_size - matchmap_max_files))) + 1;
-
-	if (jump <= 0)
-		jump = 1;
-
-	/* Recurse each record from the wfp table */
-	for (int n = 0; n < md5s_ln; n += WFP_REC_LN * jump)
+	char * matchmap_env = getenv("SCANOSS_MATCHMAP_MAX");
+	if (matchmap_env)
 	{
-		/* Retrieve an MD5 from the recordset */
-		memcpy(scan->md5, md5s + n, MD5_LEN);
-
-		/* The md5 is followed by the line number where the wfp hash was seen */
-		uint16_t oss_line = uint16_read(md5s + n + MD5_LEN);
-
-		/* Check if md5 already exists in map */
-		long found = -1;
-		for (long t = 0; t < scan->matchmap_size; t++)
+		int matchmap_max_files_aux = atoi(matchmap_env);
+		if (matchmap_max_files_aux > MAX_MATCHMAP_FILES / 4 &&  matchmap_max_files_aux < MAX_MATCHMAP_FILES * 20)
 		{
-			if (md5cmp(scan->matchmap[t].md5, scan->md5))
-			{
-				found = t;
-				break;
-			}
+			scanlog("matchmap size changed by env variable to: %d\n", matchmap_max_files_aux);
+			matchmap_max_files = matchmap_max_files_aux;
 		}
-
-		if (found < 0)
-		{
-			/* Not found. Add MD5 to map */
-			if (scan->matchmap_size >= matchmap_max_files)
-				continue;
-
-			found = scan->matchmap_size;
-
-			/* Clear row */
-			memset(scan->matchmap[found].md5, 0, map_rec_len);
-
-			/* Write MD5 */
-			memcpy(scan->matchmap[found].md5, scan->md5, MD5_LEN);
-		}
-
-		/* Search for the right range */
-		uint8_t *lastwfp = scan->matchmap[found].lastwfp;
-
-		/* Skip if we are hitting the same wfp again for this file) */
-		if (!memcmp(wfp, lastwfp, 4))
-			continue;
-
-		for (uint32_t t = 0; t < MATCHMAP_RANGES; t++)
-		{
-			from = scan->matchmap[found].range[t].from;
-			to = scan->matchmap[found].range[t].to;
-
-			int gap = from - line;
-
-			/* New range */
-			if (!from && !to)
-			{
-				/* Update from and to */
-				scan->matchmap[found].range[t].from = line;
-				scan->matchmap[found].range[t].to = line;
-				scan->matchmap[found].range[t].oss_line = oss_line;
-				scan->matchmap[found].hits++;
-				break;
-			}
-
-			/* Another hit in the same line, no need to expand range */
-			else if (from == line)
-			{
-				scan->matchmap[found].hits++;
-				break;
-			}
-
-			/* Increase range */
-			else if (gap < range_tolerance || gap <= min_tolerance)
-			{
-				/* Update range start (from) */
-				if (line < scan->matchmap[found].range[t].from)
-				{
-					scan->matchmap[found].range[t].from = line;
-					scan->matchmap[found].range[t].oss_line = oss_line;
-				}
-				else if (line > scan->matchmap[found].range[t].to)
-					scan->matchmap[found].range[t].to = line;
-
-				scan->matchmap[found].hits++;
-				break;
-			}
-		}
-
-		/* Update last wfp */
-		memcpy(lastwfp, wfp, 4);
-
-		if (found == scan->matchmap_size)
-			scan->matchmap_size++;
 	}
+	//If we are looking fow multiple snippets, update the matchmap size
+	matchmap_max_files = scan->max_snippets_to_process * matchmap_max_files;
+	
+	if (engine_flags & ENABLE_HIGH_ACCURACY)
+	{
+		matchmap_max_files *=5;
+		scanlog("matchmap size changed by high accuracy analisys to: %d\n", matchmap_max_files);
+	}
+	scan->matchmap = calloc(matchmap_max_files, sizeof(matchmap_entry));
 }
 
+typedef struct  matchmap_entry_t
+{
+	uint8_t * md5_set;
+	uint32_t line;
+	uint8_t wfp[WFP_LN];
+	uint32_t size; 
+} matchmap_entry_t;
+
 /**
- * @brief Query all wfp and add resulting file ids to the matchmap
-		Scan is done from last to first line, because headers and
-		first lines are statistically more common than the end of
-		the file
- * @param scan pointer to scan data to be processed
- * @return match type
+ * @brief Add one new md5 to the matchmap
+ * @param scan pointer to scan object
+ * @param item new item to be added in the matchmap
+ * @param look_from Index to start to look for the position
+ * @param max_hit External variable to keep the max_hits
+ * @param max_hit_pos External variable to keep the index of the max hit
  */
+
+int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5, int look_from, int *max_hit, int *max_hit_pos)
+{
+	/* Check if md5 already exists in map */
+	int found = -1;
+	int start_pos = look_from < 0 ? 0 : look_from;
+	/* Travel the matchmap from the starting point*/
+	for (long t = start_pos; t < scan->matchmap_size; t++)
+	{
+		if (md5cmp(scan->matchmap[t].md5, md5))
+		{
+			found = t;
+			scan->matchmap[found].hits++;
+			if (scan->matchmap[found].hits > *max_hit)
+			{
+				*max_hit_pos = t;
+				// scanlog("hit max = %d at %d\n", hit_max, t);
+			}
+			break;
+		}
+	}
+
+	if (found < 0)
+	{
+		/* Not found. Add MD5 to map */
+		if (scan->matchmap_size >= matchmap_max_files)
+			return -1;
+
+		found = scan->matchmap_size;
+
+		/* Clear row */
+		memset(scan->matchmap[found].md5, 0, map_rec_len);
+
+		/* Write MD5 */
+		memcpy(scan->matchmap[found].md5, md5, MD5_LEN);
+	}
+
+	/* Search for the right range */
+	uint8_t *lastwfp = scan->matchmap[found].lastwfp;
+
+	/* Skip if we are hitting the same wfp again for this file) */
+	if (!memcmp(item->wfp, lastwfp, 4))
+		return -2;
+
+	uint32_t from = 0, to = 0;
+	uint16_t oss_line = uint16_read(md5 + MD5_LEN);
+
+	for (uint32_t t = 0; t < MATCHMAP_RANGES; t++)
+	{
+		from = scan->matchmap[found].range[t].from;
+		to = scan->matchmap[found].range[t].to;
+
+		int gap = from - item->line;
+
+		/* New range */
+		if (!from && !to)
+		{
+			/* Update from and to */
+			scan->matchmap[found].range[t].from = item->line;
+			scan->matchmap[found].range[t].to = item->line;
+			scan->matchmap[found].range[t].oss_line = oss_line;
+			break;
+		}
+
+		/* Another hit in the same line, no need to expand range */
+		else if (from == item->line)
+		{
+			break;
+		}
+
+		/* Increase range */
+		else if (gap < range_tolerance)
+		{
+			/* Update range start (from) */
+			if (item->line < scan->matchmap[found].range[t].from)
+			{
+				scan->matchmap[found].range[t].from = item->line;
+				scan->matchmap[found].range[t].oss_line = oss_line;
+			}
+			else if (item->line > scan->matchmap[found].range[t].to)
+				scan->matchmap[found].range[t].to = item->line;
+
+			break;
+		}
+	}
+
+	/* Update last wfp */
+	memcpy(lastwfp, item->wfp, WFP_LN);
+
+	if (found == scan->matchmap_size)
+		scan->matchmap_size++;
+	return 0;
+}
+
 match_t ldb_scan_snippets(scan_data_t *scan)
 {
 
@@ -674,81 +688,140 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	else
 		scanlog("Checking snippets\n");
 
+	matchmap_setup(scan);
 	adjust_tolerance(scan);
 
-	uint8_t *md5_set = malloc(MAX_QUERY_RESPONSE);
-	uint8_t wfp[4];
-	uint32_t line = 0;
-	uint32_t last_line_j = 0;
-	uint32_t last_line_k = 0;
-	bool traced = false;
+	/* First build a map with all the MD5s related with each WFP from the source file*/
 
-	/* Limit snippets to be scanned  */
-	uint32_t scan_to = scan->hash_count - 1;
-
-	int j = 0;
-	int k = 0;
-	/* Compare each wfp, from last to first */
-	long mid_point = scan->hash_count / 2;
+	matchmap_entry_t map[scan->hash_count];
+	int map_max_size = 0;
 	for (long i = 0; i < scan->hash_count; i++)
 	{
-
-		if (i % 2 == 0 && k < scan->hash_count)
-		{
-			wfp_invert(scan->hashes[k], wfp);
-			line = scan->lines[k];
-			k++;
-		}
-		else if (j < mid_point)
-		{
-			wfp_invert(scan->hashes[scan_to - j], wfp);
-			line = scan->lines[scan_to - j];
-			j++;
-		}
-		/* Read line number and wfp */
-
 		/* Get all file IDs for given wfp */
-		uint32_write(md5_set, 0);
-		ldb_fetch_recordset(NULL, oss_wfp, wfp, false, get_all_file_ids, (void *)md5_set);
+		map[i].md5_set = malloc(WFP_REC_LN * MATCHMAP_ITEM_SIZE);
+		wfp_invert(scan->hashes[i], map[i].wfp);
+		uint32_write(map[i].md5_set, 0);
+		map[i].line = scan->lines[i];
+		ldb_fetch_recordset(NULL, oss_wfp, map[i].wfp, false, get_all_file_ids, (void *)map[i].md5_set);
+		map[i].size = uint32_read(map[i].md5_set);
+		if (map[i].size > map_max_size)
+			map_max_size = map[i].size;
+	}
+	
+	scanlog ("max size on map: %d \n", map_max_size);
 
-		/* md5_set starts with a 32-bit item count, followed by all 16-byte records */
-		uint32_t md5s_ln = uint32_read(md5_set);
-		uint8_t *md5s = md5_set + 4;
+	/* Classify the WFPs in cathegories depending on popularity
+	Each cathegoy will contain a sub set of index refered to map rows*/
+	#define MAP_INDIRECTION_CAT_NUMBER 1000
+	#define MAP_INDIRECTION_CAT_SIZE (map_max_size / (MAP_INDIRECTION_CAT_NUMBER-1))
+	int map_indedirection_items_size = scan->hash_count / (MAP_INDIRECTION_CAT_NUMBER / 10) < 10 ? 
+													scan->hash_count : 
+													scan->hash_count / (MAP_INDIRECTION_CAT_NUMBER / 10);
 
-		/* If popularity is exceeded, matches for this snippet are added to all files */
-		if (md5s_ln > (WFP_POPULARITY_THRESHOLD * WFP_REC_LN))
-		{
-			scanlog("Snippet %02x%02x%02x%02x (line %d - %d) >= WFP_POPULARITY_THRESHOLD\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln);
+	int map_indirection[MAP_INDIRECTION_CAT_NUMBER][map_indedirection_items_size]; //define the cathegories
+	int map_indirection_index[MAP_INDIRECTION_CAT_NUMBER]; //index for each cathegory
+	
+	memset(map_indirection, 0, sizeof(map_indirection));
+	memset(map_indirection_index, 0, sizeof(map_indirection_index));
+
+	for (int i =0; i < scan->hash_count; i++)
+	{
+		int cat = map[i].size / (MAP_INDIRECTION_CAT_SIZE+1);
+		
+		if (map_indirection_index[cat] >= map_indedirection_items_size)
 			continue;
-		}
 
-		if (trace_on)
+		map_indirection[cat][map_indirection_index[cat]] = i;
+		map_indirection_index[cat]++;
+	}
+
+	/* Calculate a limit to the quantity of cathegories to be processed, 
+	the cathegoies with less quantity of MD5s (less popular) will be prioritased*/
+	int cat_limit = 0;
+	int cat_limit_index=0;
+	
+	for (int i = 0; i < MAP_INDIRECTION_CAT_NUMBER; i++)
+	{
+		bool exit = false;
+		for (int j=0; j < map_indirection_index[i]; j++)
 		{
-			traced = false;
-			for (uint32_t j = 0; j < md5s_ln && !traced; j++)
-				if (!memcmp(md5s + j, trace_id, MD5_LEN))
-					traced = true;
+			cat_limit += map[map_indirection[i][j]].size;
+			if (cat_limit > matchmap_max_files * WFP_REC_LN)
+			{
+				cat_limit_index = i;
+				exit = true;
+				break;
+			}
 		}
-
-		scanlog("Snippet %02x%02x%02x%02x (line %d) -> %u hits %s\n", wfp[0], wfp[1], wfp[2], wfp[3], line, md5s_ln / WFP_REC_LN, traced ? "*" : "");
-
-		/* Add snippet records to matchmap */
-		if (i % 2 == 0)
-		{
-			add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line, abs(line - last_line_k));
-			last_line_k = line;
-		}
+		if (exit)
+			break;
 		else
+			cat_limit_index = i+1;
+	}
+	
+	/* If the limit is less than the 10% of cathegories force it*/
+	if (cat_limit_index < MAP_INDIRECTION_CAT_NUMBER / 10)
+		cat_limit_index = MAP_INDIRECTION_CAT_NUMBER / 10;
+
+	scanlog("Map limit on %d MD5s at  %d of %d\n",cat_limit / WFP_REC_LN, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER);
+
+	int map_indexes[scan->hash_count];
+	memset(map_indexes, 0, sizeof(map_indexes));
+
+	/*Add MD5s to the matchmap, sorting by sector. First add the MD5s starting with 00, then with 01 and so on*/
+	int last_sector_aux = 0;
+	for (int  sector = 0; sector < 255; sector++)
+	{
+		scan->matchmap_rank_by_sector[sector] = -1;
+		int sector_max = min_match_hits;
+		for (int cat = 0; cat < cat_limit_index; cat++)
 		{
-			add_files_to_matchmap(scan, md5s, md5s_ln, wfp, line, abs(line - last_line_j));
-			last_line_j = line;
+			/* travel the cathegories map*/
+			for (int item_in_cat = 0; item_in_cat < map_indirection_index[cat]; item_in_cat++)
+			{
+				int i = map_indirection[cat][item_in_cat];
+				uint8_t *md5s = map[i].md5_set + 4;
+				/* Add each item to the matchmap*/
+				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index += WFP_REC_LN)
+				{
+					/*Stop when a new sector appers*/
+					if (md5s[wfp_index] != sector)
+					{
+						map_indexes[i] = wfp_index;
+						//scanlog("map pos %d - sector %d - index %d\n", i, sector, wfp_index);
+						break;
+					}
+
+					add_file_to_matchmap(scan, &map[i], &md5s[wfp_index], last_sector_aux, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+				}
+			}	
+		}
+	
+		last_sector_aux = scan->matchmap_size - 1;
+	}
+
+	//for debuging
+	if (debug_on)
+	{
+		scanlog("Max hits by sector\n");
+		for (int  sector = 0; sector < 255; sector++)
+		{
+			if (scan->matchmap_rank_by_sector[sector] >= 0)
+				scanlog("Sector %d, Max at %d with %d\n", sector, scan->matchmap_rank_by_sector[sector], scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits);
 		}
 	}
 
-	free(md5_set);
-
+	//Free memory
+	for (int i = 0; i  < scan->hash_count; i++)
+	{
+		free(map[i].md5_set);
+	}
+	
 	if (scan->matchmap_size)
-		return MATCH_SNIPPET;
+	 	return MATCH_SNIPPET;
+	
 	scanlog("Snippet scan has no matches\n");
 	return MATCH_NONE;
+
+
 }
