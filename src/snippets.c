@@ -168,7 +168,7 @@ void biggest_snippet(scan_data_t *scan)
 			{
 				char md5_hex[MD5_LEN * 2 + 1];
 				ldb_bin_to_hex(item->match->file_md5, MD5_LEN, md5_hex);
-				scanlog("%s\n", md5_hex);
+				scanlog("%s - %d\n", md5_hex, item->match->hits);
 			}
 		}
 	}
@@ -582,6 +582,10 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 	/* Travel the matchmap from the starting point*/
 	for (long t = start_pos; t < scan->matchmap_size; t++)
 	{
+		//The matchmap is sorted, stop if you are comparing against a different sector
+		if ((scan->matchmap_size >= matchmap_max_files) && (*scan->matchmap[t].md5 > *md5))
+			return -1;
+		
 		if (md5cmp(scan->matchmap[t].md5, md5))
 		{
 			found = t;
@@ -793,10 +797,11 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 				}
 			}	
 		}
-	
+		/*start to look from the last added md5*/
 		last_sector_aux = scan->matchmap_size - 1;
 	}
 	
+	/* Check if we have at least one possible match*/
 	bool at_least_one_match = false;
 	for (int sector = 0; sector < 255; sector++)
 	{
@@ -807,7 +812,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 			break;
 		}
 	}
-
+	/* Second state scan, using the rest of the availbles MD5s from the map*/
 	if (!at_least_one_match)
 	{
 		scanlog("--No results, looking on the rest of the cathegories -- \n");
