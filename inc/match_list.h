@@ -1,7 +1,7 @@
 /**
 *@file match_list.h
 *@date 08 Aug 2022
-*@brief Main match/component "objects" definitions. As is know C languaje does not have "objects", but we are going to use
+*@brief Main match/component "objects" definitions. As is know C language does not have "objects", but we are going to use
 * this word since the code is organized like a 	class.
 *#Introduction
 * Version 5 of the engine is based in a deep refactoring, changing the match selection process and component filling, from
