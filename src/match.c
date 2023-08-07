@@ -460,7 +460,7 @@ bool find_oldest_match(match_data_t *fp1, match_data_t *fp2)
 		return false;
 	if (!fp1->component_list.headp.lh_first)
 		return true;
-
+	
 	return component_date_comparation(fp1->component_list.headp.lh_first->component, fp2->component_list.headp.lh_first->component);
 }
 /**
@@ -484,6 +484,51 @@ void match_select_best(scan_data_t *scan)
 		}
 	}
 
+	for (int i = 0; i < scan->matches_list_array_index; i++)
+	{
+		if (!scan->matches_list_array[i]->best_match)
+			continue;
+		struct entry *item = NULL;
+		
+		scanlog("Final logic for list %d: \n", i);
+
+		LIST_FOREACH(item, &scan->matches_list_array[i]->headp, entries)
+		{
+			if (!item->match->component_list.headp.lh_first)
+				continue;
+
+			scanlog("%s -%s - %d VS %s - %s - %d\n",
+					scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component->purls[0],
+					scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component->release_date,
+					scan->matches_list_array[i]->best_match->hits,
+					item->match->component_list.headp.lh_first->component->purls[0], item->match->component_list.headp.lh_first->component->release_date, item->match->hits);
+
+			if (!strcmp(scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component->purls[0],
+						item->match->component_list.headp.lh_first->component->purls[0]) &&
+				scan->matches_list_array[i]->best_match->hits <= item->match->hits)
+			{
+
+				if (scan->matches_list_array[i]->best_match->hits < item->match->hits)
+				{
+					scanlog("Replacing best match for a newers version with more hits\n");
+					scan->matches_list_array[i]->best_match = item->match;
+				}
+				else if (find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
+				{
+					scanlog("Replacing best match for an older version with equal hits\n");
+					scan->matches_list_array[i]->best_match = item->match;
+				}
+			}
+			else if (scan->matches_list_array[i]->best_match->hits > item->match->hits)
+			{
+				scanlog("Hits are lower than the best match, no more comparations are needed. Exiting...\n");
+				break;
+			}
+		}
+	}
+
+	
+	//Look for the best of the best (for multiple snippet analysis)
 	int max_hits = 0;
 	int index = 0;
 	for (int i = 0; i < scan->matches_list_array_index; i++)
@@ -518,7 +563,7 @@ void match_select_best(scan_data_t *scan)
 			}
 		}
 	}
-
+	//if we have multiple snippets match, the best of the best is the most hitted.
 	scan->best_match = scan->matches_list_array[index]->best_match;
 	/*if the component of the best match was identified in the assets list, return none*/
 	if (!scan->best_match || !scan->best_match->component_list.items || ((engine_flags & DISABLE_REPORT_IDENTIFIED) && scan->best_match->component_list.headp.lh_first->component->identified))

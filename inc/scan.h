@@ -51,6 +51,7 @@ typedef struct scan_data_t
 	match_t match_type; /* match_t (file, snippet, none), this is replicated in each match in the matches list */
 	matchmap_entry *matchmap; /*matchmap pointer, used in snippet scanning */
 	uint32_t matchmap_size; /*size of the match map */
+	int matchmap_rank_by_sector[255]; /* Indirection array pointing to the max hits from the matchmap classyfied by sector.*/
 	uint8_t *match_ptr; // pointer to matching record in match_map
 	match_list_t * matches_list_array[MAX_MULTIPLE_COMPONENTS]; /* array of "match_list_t", each snippet with different "from line" will generate its own matches list */
 	int matches_list_array_index; /* elements in the matches list array*/

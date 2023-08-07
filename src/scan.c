@@ -67,26 +67,7 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	
 	scan->max_snippets_to_process = max_snippets > MAX_MULTIPLE_COMPONENTS ? MAX_MULTIPLE_COMPONENTS : max_snippets; 
 	scan->max_snippets_to_process = scan->max_snippets_to_process == 0 ? 1 : scan->max_snippets_to_process;
-	
-	char * matchmap_env = getenv("SCANOSS_MATCHMAP_MAX");
-	if (matchmap_env)
-	{
-		int matchmap_max_files_aux = atoi(matchmap_env);
-		if (matchmap_max_files_aux > MAX_MATCHMAP_FILES / 4 &&  matchmap_max_files_aux < MAX_MATCHMAP_FILES * 20)
-		{
-			scanlog("matchmap size changed by env variable to: %d\n", matchmap_max_files_aux);
-			matchmap_max_files = matchmap_max_files_aux;
-		}
-	}
-	//If we are looking fow multiple snippets, update the matchmap size
-	matchmap_max_files = scan->max_snippets_to_process * matchmap_max_files;
-	
-	if (engine_flags & ENABLE_HIGH_ACCURACY)
-	{
-		matchmap_max_files *=5;
-		scanlog("matchmap size changed by high accuracy analisys to: %d\n", matchmap_max_files);
-	}
-	scan->matchmap = calloc(matchmap_max_files, sizeof(matchmap_entry));
+	scan->matches_list_array_index = 0;
 	return scan;
 }
 
