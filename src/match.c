@@ -385,7 +385,7 @@ bool load_matches(match_data_t *match)
 		}
 	}
 
-	if (engine_flags && DISABLE_BEST_MATCH)
+	if (engine_flags & DISABLE_BEST_MATCH)
 	{
 		struct comp_entry *item = NULL;
 		LIST_FOREACH(item, &match->component_list.headp, entries)
