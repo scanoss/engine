@@ -369,15 +369,21 @@ void print_licenses(component_data_t *comp)
 
 	for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
 	{
-		records = ldb_fetch_recordset(NULL, oss_license, comp->purls_md5[i], false, print_licenses_item, comp);
-		scanlog("License for %s license returns %d hits\n", comp->purls[i], records);
-
 		/* Calculate purl@version md5 */
 		uint8_t purlversion_md5[MD5_LEN];
 		purl_version_md5(purlversion_md5, comp->purls[i], comp->version);
 
 		records = ldb_fetch_recordset(NULL, oss_license, purlversion_md5, false, print_licenses_item, comp);
 		scanlog("License for %s@%s license returns %d hits\n", comp->purls[i], comp->version, records);
+
+		if (records)
+			break;
+
+		records = ldb_fetch_recordset(NULL, oss_license, comp->purls_md5[i], false, print_licenses_item, comp);
+		scanlog("License for %s license returns %d hits\n", comp->purls[i], records);
+		
+		if (records)
+			break;
 	}
 
 	char *aux = NULL;
