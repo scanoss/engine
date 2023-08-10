@@ -84,13 +84,13 @@ Alternatively, these value can be written in %s\n\
 |   16  | Disable copyrights (default: enabled)                 |\n\
 |   32  | Disable vulnerabilities (default: enabled)            |\n\
 |   64  | Disable quality (default: enabled)                    |\n\
-|  128  | Disable criptography (defalt: enabled)                |\n\
+|  128  | Disable cryptography (defalt: enabled)                |\n\
 |  256  | Disable best match only (default: enabled)            |\n\
 |  512  | Hide identified files (default: disabled)             |\n\
 | 1024  | Enable download_url (default: disabled)               |\n\
 | 2048  | Enable GitHub full path (default: disabled)           |\n\
 | 4096  | Disable extended server stats (default: enabled)      |\n\
-| 8192  | Disable helth layer (default: enabled)                |\n\
+| 8192  | Disable health layer (default: enabled)               |\n\
 | 16384 | Enable high accuracy, slower scan (default: disabled) |\n\
 +-------+-------------------------------------------------------+\n\
 Example: scanoss -F 12 DIRECTORY (scans DIRECTORY disabling license and dependency data)\n\
