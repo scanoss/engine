@@ -59,7 +59,7 @@ void normalise_version(char *version, char *component)
 	if ((version && component) && stristart(version, component))
 	{
 		int compt_len = strlen(component);
-		sprintf(version, "%s",version + compt_len);
+		sprintf(aux, "%s",version + compt_len + 1);
 	}
 
 	/* Remove unwanted leading characters from the version */
