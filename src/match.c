@@ -310,7 +310,14 @@ bool load_matches(match_data_t *match)
 	if (match->type == MATCH_SNIPPET)
 	{
 		hits = compile_ranges(match);
+		scanlog("compile_ranges returns %d hits\n", hits);
 
+		if (hits < min_match_hits)
+		{
+			match->type = MATCH_NONE;
+			return false;
+		}
+		
 		float percent = (hits * 100) / match->scan_ower->total_lines;
 		if (hits)
 			matched_percent = floor(percent);
@@ -318,10 +325,6 @@ bool load_matches(match_data_t *match)
 			matched_percent = 99;
 		if (matched_percent < 1)
 			matched_percent = 1;
-
-		scanlog("compile_ranges returns %d hits\n", hits);
-		if (!hits)
-			return false;
 
 		asprintf(&match->matched_percent, "%u%%", matched_percent);
 	}

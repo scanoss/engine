@@ -291,7 +291,7 @@ int ranges_assemble(matchmap_range *ranges, char *line_ranges, char *oss_ranges)
 		int oss = ranges[i].oss_line;
 
 		if (!from && !to)
-			break;
+			continue;
 		else if (oss)
 		{
 			/* Add commas unless it is the first range */
@@ -316,8 +316,8 @@ int range_comp(const void *a, const void *b)
 	matchmap_range *ra = (matchmap_range *)a;
 	matchmap_range *rb = (matchmap_range *)b;
 	if (ra->from == rb->from)
-		return (rb->to - ra->to);
-	return (rb->from - ra->from);
+		return (ra->to - rb->to);
+	return (ra->from - rb->from);
 }
 /**
  * @brief Join overlapping ranges
@@ -325,18 +325,32 @@ int range_comp(const void *a, const void *b)
  */
 void ranges_join_overlapping(matchmap_range *ranges)
 {
+	matchmap_range *out_ranges = calloc(sizeof(matchmap_range), MATCHMAP_RANGES);
 
-	for (int i = MATCHMAP_RANGES - 1; i > 0; i--)
+	out_ranges[0] = ranges[0];
+	int out_ranges_index = -1;
+	
+	for (int i = 0; i < MATCHMAP_RANGES; i++)
 	{
-		/* Join range */
-		if (ranges[i].from && ranges[i].to >= ranges[i - 1].from - range_tolerance)
+		if (ranges[i].from && ranges[i].to)
 		{
-			ranges[i - 1].from = ranges[i].from;
-			ranges[i - 1].oss_line = ranges[i].oss_line;
-			ranges[i].from = 0;
-			ranges[i].to = 0;
+			if(out_ranges_index >= 0 && (ranges[i].from - range_tolerance <= out_ranges[out_ranges_index].to))
+			{
+				out_ranges[out_ranges_index].to = ranges[i].to;
+				scanlog("join range %d with %d\n", i, i-1);
+			}
+			else
+			{
+				out_ranges_index++;
+				out_ranges[out_ranges_index].from = ranges[i].from;
+				out_ranges[out_ranges_index].to = ranges[i].to;
+				out_ranges[out_ranges_index].oss_line = ranges[i].oss_line;	
+			}
 		}
 	}
+
+	memcpy(ranges, out_ranges, sizeof(matchmap_range) * MATCHMAP_RANGES);
+	free(out_ranges);
 }
 
 /**
@@ -460,7 +474,7 @@ uint32_t compile_ranges(match_data_t *match)
 			break;
 
 		/* Add range as long as the minimum number of match lines is reached */
-		if ((to - from) >= min_match_lines)
+		if (abs(to - from) >= min_match_lines)
 		{
 			if (engine_flags & ENABLE_SNIPPET_IDS)
 				add_snippet_ids(match, snippet_ids, from, to); // has to be reformulated
@@ -470,16 +484,33 @@ uint32_t compile_ranges(match_data_t *match)
 			ranges[i].oss_line = oss_from;
 		}
 	}
+	scanlog("accepted:\n");
 
+	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
+	{
+		scanlog("	%d = %ld to %ld - OSS from: %d\n", i, ranges[i].from, ranges[i].to, ranges[i].oss_line);
+	}
 	/* Add tolerances and assemble line ranges */
 	ranges_sort(ranges);
+	
+	scanlog("sorted:\n");
+
 	ranges_add_tolerance(ranges, match->scan_ower);
 	ranges_join_overlapping(ranges);
+
+	scanlog("ranges result:\n");
+
+	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
+	{
+		scanlog("	%d = %ld to %ld - OSS from: %d\n", i, ranges[i].from, ranges[i].to, ranges[i].oss_line);
+	}
+
 	hits = ranges_assemble(ranges, line_ranges, oss_ranges);
 	match->line_ranges = strdup(line_ranges);
 	match->oss_ranges = strdup(oss_ranges);
 	match->snippet_ids = strdup(snippet_ids);
 	free(ranges);
+
 	return hits;
 }
 
@@ -583,7 +614,7 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 	for (long t = start_pos; t < scan->matchmap_size; t++)
 	{
 		//The matchmap is sorted, stop if you are comparing against a different sector
-		if ((scan->matchmap_size >= matchmap_max_files) && (*scan->matchmap[t].md5 > *md5))
+		if (*scan->matchmap[t].md5 > *md5)
 			return -1;
 		
 		if (md5cmp(scan->matchmap[t].md5, md5))
@@ -629,7 +660,7 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 		from = scan->matchmap[found].range[t].from;
 		to = scan->matchmap[found].range[t].to;
 
-		int gap = from - item->line;
+		int gap = abs(from - item->line);
 
 		/* New range */
 		if (!from && !to)
@@ -802,18 +833,24 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	}
 	
 	/* Check if we have at least one possible match*/
-	bool at_least_one_match = false;
+	bool at_least_one_possible_match = false;
 	for (int sector = 0; sector < 255; sector++)
 	{
-		if (scan->matchmap_rank_by_sector[sector] >-1 && 
-			scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits > min_match_hits)
+		if (scan->matchmap_rank_by_sector[sector] > -1)
 		{
-			at_least_one_match = true;
-			break;
+			 if (scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits > 0)
+			{
+				at_least_one_possible_match = true;
+				break;
+			}
 		}
 	}
+	if (!at_least_one_possible_match)
+	{
+		scanlog("No sector with hits, no match\n");
+	}
 	/* Second state scan, using the rest of the availbles MD5s from the map*/
-	if (!at_least_one_match)
+	else
 	{
 		scanlog("--No results, looking on the rest of the cathegories -- \n");
 		for (int cat = cat_limit_index; cat < MAP_INDIRECTION_CAT_NUMBER ; cat++)
@@ -827,15 +864,17 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index += WFP_REC_LN)
 				{
 					int sector = md5s[wfp_index];
+
+					if (scan->matchmap_rank_by_sector[sector] < 0)
+						continue;
 			
 					int sector_max = min_match_hits;
-					if (scan->matchmap_rank_by_sector[sector] >= 0)
-						sector_max = scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits;
-					
-					if (sector_max > min_match_hits * 2)
-						break;
-									 
-					add_file_to_matchmap(scan, &map[i], &md5s[wfp_index], 0, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+					sector_max = scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits;
+
+					if (md5cmp(&md5s[wfp_index], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5))
+					{				 
+						add_file_to_matchmap(scan, &map[i], &md5s[wfp_index], 0, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+					}
 				}
 			}	
 		}
