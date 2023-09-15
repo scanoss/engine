@@ -743,7 +743,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 		/* Get all file IDs for given wfp */
 		map[i].md5_set = malloc(WFP_REC_LN * MATCHMAP_ITEM_SIZE);
 		wfp_invert(scan->hashes[i], map[i].wfp);
-		scanlog(" Add wfp %02x%02x%02x%02x to map\n",map[i].wfp[0], map[i].wfp[1],map[i].wfp[2],map[i].wfp[3]);
+		//scanlog(" Add wfp %02x%02x%02x%02x to map\n",map[i].wfp[0], map[i].wfp[1],map[i].wfp[2],map[i].wfp[3]);
 		uint32_write(map[i].md5_set, 0);
 		map[i].line = scan->lines[i];
 		ldb_fetch_recordset(NULL, oss_wfp, map[i].wfp, false, get_all_file_ids, (void *)map[i].md5_set);
