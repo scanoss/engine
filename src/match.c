@@ -310,7 +310,14 @@ bool load_matches(match_data_t *match)
 	if (match->type == MATCH_SNIPPET)
 	{
 		hits = compile_ranges(match);
+		scanlog("compile_ranges returns %d hits\n", hits);
 
+		if (hits < min_match_hits)
+		{
+			match->type = MATCH_NONE;
+			return false;
+		}
+		
 		float percent = (hits * 100) / match->scan_ower->total_lines;
 		if (hits)
 			matched_percent = floor(percent);
@@ -318,10 +325,6 @@ bool load_matches(match_data_t *match)
 			matched_percent = 99;
 		if (matched_percent < 1)
 			matched_percent = 1;
-
-		scanlog("compile_ranges returns %d hits\n", hits);
-		if (!hits)
-			return false;
 
 		asprintf(&match->matched_percent, "%u%%", matched_percent);
 	}
@@ -504,20 +507,20 @@ void match_select_best(scan_data_t *scan)
 					item->match->component_list.headp.lh_first->component->purls[0], item->match->component_list.headp.lh_first->component->release_date, item->match->hits);
 
 			if (!strcmp(scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component->purls[0],
-						item->match->component_list.headp.lh_first->component->purls[0]) &&
-				scan->matches_list_array[i]->best_match->hits <= item->match->hits)
+						item->match->component_list.headp.lh_first->component->purls[0]))
 			{
-
-				if (scan->matches_list_array[i]->best_match->hits < item->match->hits)
-				{
-					scanlog("Replacing best match for a newers version with more hits\n");
-					scan->matches_list_array[i]->best_match = item->match;
-				}
-				else if (find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
+				if (abs(scan->matches_list_array[i]->best_match->hits - item->match->hits) <= 2 &&
+					find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
 				{
 					scanlog("Replacing best match for an older version with equal hits\n");
 					scan->matches_list_array[i]->best_match = item->match;
 				}
+				else if (scan->matches_list_array[i]->best_match->hits + 1 < item->match->hits)
+				{
+					scanlog("Replacing best match for a newers version with more hits\n");
+					scan->matches_list_array[i]->best_match = item->match;
+				}
+
 			}
 			else if (scan->matches_list_array[i]->best_match->hits > item->match->hits)
 			{
@@ -527,44 +530,52 @@ void match_select_best(scan_data_t *scan)
 		}
 	}
 
-	
-	//Look for the best of the best (for multiple snippet analysis)
 	int max_hits = 0;
 	int index = 0;
-	for (int i = 0; i < scan->matches_list_array_index; i++)
+	//Look for the best of the best (for multiple snippet analysis)
+	if (scan->match_type == MATCH_SNIPPET)
 	{
-		if (!scan->matches_list_array[i]->best_match)
-			continue;
-
-		if (scan->matches_list_array[i]->best_match->hits > max_hits)
+		index = -1;
+		for (int i = 0; i < scan->matches_list_array_index; i++)
 		{
-			static struct ranges r = {NULL, NULL, NULL};
-			bool accept = true;
-			if (scan->match_type == MATCH_SNIPPET && hpsm_enabled)
-			{
-				r = hpsm_calc(scan->matches_list_array[i]->best_match->file_md5);
-				if (hpsm_enabled && r.matched && !memcmp(r.matched, "0%%", 2))
-					accept = false;
-			}
+			if (!scan->matches_list_array[i]->best_match)
+				continue;
 
-			if (scan->match_type == MATCH_FILE || accept)
+			if (scan->matches_list_array[i]->best_match->hits > max_hits)
 			{
-				max_hits = scan->matches_list_array[i]->best_match->hits;
-				index = i;
-				if (hpsm_enabled)
+				if (hpsm_enabled) // update the line ranges if HPSM is enabled.
 				{
-					free(scan->matches_list_array[i]->best_match->line_ranges);
-					free(scan->matches_list_array[i]->best_match->oss_ranges);
-					free(scan->matches_list_array[i]->best_match->matched_percent);
-					scan->matches_list_array[i]->best_match->line_ranges = r.local;
-					scan->matches_list_array[i]->best_match->oss_ranges = r.remote;
-					scan->matches_list_array[i]->best_match->matched_percent = r.matched;
+					static struct ranges r = {NULL, NULL, NULL};
+					r = hpsm_calc(scan->matches_list_array[i]->best_match->file_md5);
+					if (hpsm_enabled && r.matched && !memcmp(r.matched, "0%%", 2))
+					{
+						scan->matches_list_array[i]->best_match->type = MATCH_NONE;
+					}
+					else
+					{
+						free(scan->matches_list_array[i]->best_match->line_ranges);
+						free(scan->matches_list_array[i]->best_match->oss_ranges);
+						free(scan->matches_list_array[i]->best_match->matched_percent);
+						scan->matches_list_array[i]->best_match->line_ranges = r.local;
+						scan->matches_list_array[i]->best_match->oss_ranges = r.remote;
+						scan->matches_list_array[i]->best_match->matched_percent = r.matched;
+
+						max_hits = scan->matches_list_array[i]->best_match->hits;
+						index = i;
+					}
+				}
+				else
+				{
+					max_hits = scan->matches_list_array[i]->best_match->hits;
+					index = i;
 				}
 			}
 		}
 	}
+
 	//if we have multiple snippets match, the best of the best is the most hitted.
-	scan->best_match = scan->matches_list_array[index]->best_match;
+	if (index >= 0)
+		scan->best_match = scan->matches_list_array[index]->best_match;
 	/*if the component of the best match was identified in the assets list, return none*/
 	if (!scan->best_match || !scan->best_match->component_list.items || ((engine_flags & DISABLE_REPORT_IDENTIFIED) && scan->best_match->component_list.headp.lh_first->component->identified))
 	{
