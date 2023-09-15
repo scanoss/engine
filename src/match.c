@@ -507,20 +507,20 @@ void match_select_best(scan_data_t *scan)
 					item->match->component_list.headp.lh_first->component->purls[0], item->match->component_list.headp.lh_first->component->release_date, item->match->hits);
 
 			if (!strcmp(scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component->purls[0],
-						item->match->component_list.headp.lh_first->component->purls[0]) &&
-				scan->matches_list_array[i]->best_match->hits <= item->match->hits)
+						item->match->component_list.headp.lh_first->component->purls[0]))
 			{
-
-				if (scan->matches_list_array[i]->best_match->hits < item->match->hits)
-				{
-					scanlog("Replacing best match for a newers version with more hits\n");
-					scan->matches_list_array[i]->best_match = item->match;
-				}
-				else if (find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
+				if (abs(scan->matches_list_array[i]->best_match->hits - item->match->hits) <= 2 &&
+					find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
 				{
 					scanlog("Replacing best match for an older version with equal hits\n");
 					scan->matches_list_array[i]->best_match = item->match;
 				}
+				else if (scan->matches_list_array[i]->best_match->hits + 1 < item->match->hits)
+				{
+					scanlog("Replacing best match for a newers version with more hits\n");
+					scan->matches_list_array[i]->best_match = item->match;
+				}
+
 			}
 			else if (scan->matches_list_array[i]->best_match->hits > item->match->hits)
 			{
