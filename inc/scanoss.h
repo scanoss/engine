@@ -12,7 +12,6 @@
 #include <math.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <openssl/md5.h>
 #include <sched.h>
 #include <semaphore.h>
 #include <signal.h>
@@ -30,6 +29,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include "limits.h"
+
+#ifndef MD5
+#include <openssl/md5.h>
+#endif
 
 #define MAX_FILE_PATH 1024
 #define FETCH_MAX_FILES 12000

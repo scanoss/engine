@@ -214,7 +214,7 @@ int get_component_age(uint8_t *md5)
 
 void purl_version_md5(uint8_t *out, char *purl, char *version)
 {
-	char purl_version[MAX_ARGLN];
+	char purl_version[MAX_ARGLN] = "\0";
 	sprintf(purl_version, "%s@%s", purl, version);
 	MD5((uint8_t *)purl_version, strlen(purl_version), out);
 }
