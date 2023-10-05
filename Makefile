@@ -9,7 +9,7 @@ LDB_TARGET_VERSION := 3.2
 
 VERSION_IS_LESS := $(shell echo $(LDB_CURRENT_VERSION) \< $(LDB_TARGET_VERSION) | bc)
 ifeq ($(VERSION_IS_LESS),1)
-	LDFLAGS += -lcrypto
+	LDFLAGS += -lcrypto -lz
 endif
 
 CCFLAGS ?= -O -lz -Wall -Wno-unused-result -Wno-deprecated-declarations -g -Iinc -Iexternal/inc -D_LARGEFILE64_SOURCE -D_GNU_SOURCE
