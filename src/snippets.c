@@ -453,7 +453,7 @@ uint32_t compile_ranges(match_data_t *match)
 
 	int hits = 0;
 	matchmap_range *ranges = calloc(sizeof(matchmap_range), MATCHMAP_RANGES);
-
+	scanlog("min_match_lines: %d\n",min_match_lines);
 	/* Count matched lines */
 	int j = 0;
 	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
@@ -469,7 +469,7 @@ uint32_t compile_ranges(match_data_t *match)
 			break;
 
 		/* Add range as long as the minimum number of match lines is reached */
-		if (abs(to - from) >= min_match_lines)
+		if (abs(to - from) >= min_match_lines / 2)
 		{
 			if (engine_flags & ENABLE_SNIPPET_IDS)
 				add_snippet_ids(match, snippet_ids, from, to); // has to be reformulated
@@ -880,6 +880,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 				scanlog("Sector %02x, Max at %d with %d\n", sector, scan->matchmap_rank_by_sector[sector], scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits);
 		}
 	}
+
 	if (!at_least_one_possible_match)
 	{
 		scanlog("No sector with hits, no match\n");	
@@ -902,12 +903,12 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 					int sector = md5s[wfp_p];
 					int sector_max = min_match_hits;
 
-					if (scan->matchmap_rank_by_sector[sector] < 0 && at_least_one_possible_match)
+					if (scan->matchmap_rank_by_sector[sector] < 0)
 						continue;
 					else if (scan->matchmap_rank_by_sector[sector] >= 0 )
 						sector_max = scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits;
 
-					if (md5cmp(&md5s[wfp_p], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5) || !at_least_one_possible_match)
+					if (md5cmp(&md5s[wfp_p], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5))
 					{				 
 						add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], 0, &sector_max, &scan->matchmap_rank_by_sector[sector]);
 					}

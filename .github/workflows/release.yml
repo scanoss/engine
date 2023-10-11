@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Install third party dependencies
-        run: sudo apt update && sudo apt install -y build-essential libssl-dev zlib1g-dev libsqlite3-dev libz-dev curl gem ruby unzip p7zip-full unrar-free git
+        run: sudo apt update && sudo apt install -y build-essential zlib1g-dev libsqlite3-dev libz-dev curl gem ruby unzip p7zip-full unrar-free git libgcrypt-dev
 
       - uses: actions/checkout@v3
         with:

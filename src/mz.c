@@ -37,6 +37,72 @@
 #include <ldb.h>
 #include "debug.h"
 #include <unistd.h>
+
+
+#ifndef MZ_DEFLATE
+#include <zlib.h>
+/* This code is here to provide backward compatibility, this is duplicated in the newers versions of ldb*/
+#define CHUNK_SIZE 1024
+
+int uncompress_by_chunks(uint8_t **data, uint8_t *zdata, size_t zdata_len) {
+    int ret;
+    z_stream strm;
+    unsigned char out[CHUNK_SIZE];
+    size_t data_size = 0;  // Current size of decompressed data
+
+    // Initialize the z_stream structure
+    memset(&strm, 0, sizeof(strm));
+    ret = inflateInit(&strm);
+    if (ret != Z_OK) {
+        fprintf(stderr, "inflateInit failed with error %d\n", ret);
+        exit(EXIT_FAILURE);
+    }
+	*data = malloc(CHUNK_SIZE);
+    // Process the compressed data
+    strm.avail_in = zdata_len;  // Size of the compressed data
+    strm.next_in = zdata;
+
+    do {
+        strm.avail_out = CHUNK_SIZE;
+        strm.next_out = out;
+
+        ret = inflate(&strm, Z_NO_FLUSH);
+        if (ret == Z_STREAM_ERROR) {
+            fprintf(stderr, "inflate failed with error Z_STREAM_ERROR\n");
+            inflateEnd(&strm);
+			mz_corrupted();
+        }
+
+        unsigned have = CHUNK_SIZE - strm.avail_out;
+
+        // Realloc to increase the size of data
+        *data = realloc(*data, data_size + have);
+        if (*data == NULL) 
+		{
+            fprintf(stderr, "Error reallocating memory to store decompressed data");
+            inflateEnd(&strm);
+            exit(EXIT_FAILURE);
+        }
+
+        // Copy the decompressed data to the end of data
+        memcpy(*data + data_size, out, have);
+        data_size += have;
+    } while (ret != Z_STREAM_END);
+
+    // Free resources
+    inflateEnd(&strm);
+	return data_size;
+}
+
+void mz_deflate2(struct mz_job *job)
+{
+	/* Decompress data */
+	job->data_ln = uncompress_by_chunks((uint8_t **) &job->data, job->zdata, job->zdata_ln);
+	job->data_ln--;
+}
+#define MZ_DEFLATE(job) mz_deflate2(job)
+#endif
+
 /**
  * @brief Find a key and print the result
  * 
@@ -88,7 +154,7 @@ void mz_get_key(struct mz_job *job, char *key)
 				decrypt_mz(job->id, job->zdata_ln);
 			}
 			/* Decompress */
-			mz_deflate(job);
+			MZ_DEFLATE(job);
 
 			job->data[job->data_ln] = 0;
 			printf("%s", job->data);

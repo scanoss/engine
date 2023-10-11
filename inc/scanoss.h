@@ -12,7 +12,6 @@
 #include <math.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <openssl/md5.h>
 #include <sched.h>
 #include <semaphore.h>
 #include <signal.h>
@@ -31,6 +30,10 @@
 #include <unistd.h>
 #include "limits.h"
 
+#ifndef MD5
+#include <openssl/md5.h>
+#endif
+
 #define MAX_FILE_PATH 1024
 #define FETCH_MAX_FILES 12000
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
@@ -41,7 +44,7 @@
 #define WFP_REC_LN 18
 
 /* Log files */
-#define SCANOSS_VERSION "5.3.1"
+#define SCANOSS_VERSION "5.3.2"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"

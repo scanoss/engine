@@ -5,7 +5,7 @@
 #include "match_list.h"
 #define MAX_MULTIPLE_COMPONENTS 10
 #define MAX_SNIPPET_IDS_RETURNED 10000
-#define MATCHMAP_RANGES 10
+#define MATCHMAP_RANGES 20
 /**
  * @brief Structure used to define the snippet ranges.
  * 
