@@ -453,7 +453,7 @@ uint32_t compile_ranges(match_data_t *match)
 
 	int hits = 0;
 	matchmap_range *ranges = calloc(sizeof(matchmap_range), MATCHMAP_RANGES);
-
+	scanlog("min_match_lines: %d\n",min_match_lines);
 	/* Count matched lines */
 	int j = 0;
 	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
@@ -469,7 +469,7 @@ uint32_t compile_ranges(match_data_t *match)
 			break;
 
 		/* Add range as long as the minimum number of match lines is reached */
-		if (abs(to - from) >= min_match_lines)
+		if (abs(to - from) >= min_match_lines / 2)
 		{
 			if (engine_flags & ENABLE_SNIPPET_IDS)
 				add_snippet_ids(match, snippet_ids, from, to); // has to be reformulated
