@@ -300,7 +300,7 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
  */
 bool load_matches(match_data_t *match)
 {
-	scanlog("Load matches");
+	scanlog("Load matches\n");
 
 	/* Compile match ranges and fill up matched percent */
 	int hits = 100;

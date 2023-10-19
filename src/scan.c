@@ -296,7 +296,8 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			char *hexhash = line + strlen(line) + 1;
 
 			/* Save all hashes in the present line */
-			while (*hexhash) {
+			while (*hexhash) 
+			{
 
 				/* Convert hash to binary */
 				ldb_hex_to_bin(hexhash, 8, (uint8_t *)&scan->hashes[scan->hash_count]);
@@ -309,6 +310,8 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 				hexhash += strlen(hexhash) + 1;
 
 				scan->hash_count++;
+				if (scan->hash_count > MAX_HASHES_READ)
+					break;
 			}
 		}
 	}

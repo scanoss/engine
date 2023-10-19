@@ -192,8 +192,13 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 		free(purl);
 		return false;
 	}
-	uint32_t CRC = string_crc32c(purl);
+	
+	char * c = strchr(purl, '/');
+	char purl_type[MAX_FIELD_LN] = "\0";
+	strncpy(purl_type, purl, c - purl);
+	uint32_t CRC = string_crc32c(purl_type);
 	bool dup = add_CRC(component->crclist, CRC);
+	
 	if (!dup)
 	{
 		/* Copy purl record to match */
@@ -212,6 +217,10 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 			/* Already exists, exit */
 			else if (!strcmp(component->purls[i], purl)) break;
 		}
+	}
+	else
+	{
+		scanlog("purl ignored: %s\n", purl);
 	}
 
 	free(purl);
@@ -242,6 +251,12 @@ void fetch_related_purls(component_data_t *component)
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
 		if (!component->purls[i]) break;
+		char * c = strchr(component->purls[i], '/');
+		char purl_type[MAX_FIELD_LN] = "\0";
+		strncpy(purl_type, component->purls[i], c - component->purls[i]);
+		uint32_t CRC = string_crc32c(purl_type);
+		add_CRC(component->crclist, CRC);
+		
 		int purls = ldb_fetch_recordset(NULL, oss_purl, component->purls_md5[i], false, handle_purl_record, component);
 		if (purls)
 			scanlog("Finding related PURLs for %s returned %d matches\n", component->purls[i], purls);
