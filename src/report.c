@@ -180,20 +180,12 @@ void print_json_nomatch()
  */
 void print_purl_array(component_data_t * component)
 {
-	//bool purl_with_version = false;
-	//if (!strcmp(component->version, component->latest_version))
-	//	purl_with_version = true;
-	
 	printf("\"purl\": [");
 	for (int i = 0; i < MAX_PURLS; i++)
 	{
 		if (component->purls[i]) 
 		{
-			//Disabled do to clients compatibility
-			/*if (purl_with_version)
-				printf("\"%s@%s\"", component->purls[i], component->version);
-			else*/
-				printf("\"%s\"", component->purls[i]);
+			printf("\"%s\"", component->purls[i]);
 			if (i < (MAX_PURLS - 1)) if (component->purls[i + 1]) printf(",");
 		} 
 		else break;

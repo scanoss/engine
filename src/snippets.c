@@ -453,7 +453,6 @@ uint32_t compile_ranges(match_data_t *match)
 
 	int hits = 0;
 	matchmap_range *ranges = calloc(sizeof(matchmap_range), MATCHMAP_RANGES);
-	scanlog("min_match_lines: %d\n",min_match_lines);
 	/* Count matched lines */
 	int j = 0;
 	for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
@@ -469,10 +468,10 @@ uint32_t compile_ranges(match_data_t *match)
 			break;
 
 		/* Add range as long as the minimum number of match lines is reached */
-		if (abs(to - from) >= min_match_lines / 2)
+		if (abs(to - from) >= min_match_lines)
 		{
 			if (engine_flags & ENABLE_SNIPPET_IDS)
-				add_snippet_ids(match, snippet_ids, from, to); // has to be reformulated
+				add_snippet_ids(match, snippet_ids, from, to); //TODO
 
 			ranges[j].from = from;
 			ranges[j].to = to;
@@ -526,22 +525,30 @@ static void adjust_tolerance(scan_data_t *scan)
 		skip = true;
 
 	if (skip)
+	{
 		min_match_lines = 1;
+		min_match_hits = 4;
+	}
 	else
 	{
 		/* Range tolerance is the maximum amount of non-matched lines accepted
-			 within a matched range. This goes from 21 in small files to 9 in large files */
+			 within a matched range. This goes from 21 in small files to 5 in large files */
 
 		range_tolerance = 21 - floor(wfpcount / 21);
-		if (range_tolerance < 9)
-			range_tolerance = 9;
+		if (range_tolerance < 5)
+			range_tolerance = 5;
 
 		/* Min matched lines is the number of matched lines in total under which the result
-			 is ignored. This goes from 3 in small files to 10 in large files */
+			 is ignored. This goes from 1 in small files to 10 in large files */
 
-		min_match_lines = 3 + floor(wfpcount / 5);
+		min_match_lines = 1 + floor(wfpcount / 193);
 		if (min_match_lines > 10)
 			min_match_lines = 10;
+		/* setup scan sensibility*/
+		min_match_hits = 2 + floor(wfpcount / 41);
+		if (min_match_hits > 6)
+			min_match_hits = 6;
+
 	}
 
 	scanlog("Tolerance: range=%d, lines=%d, wfpcount=%u\n", range_tolerance, min_match_lines, wfpcount);
@@ -630,11 +637,11 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 			else
 			{
 				scan->matchmap[found].hits++;
+				//scanlog("hit %d at %d\n", scan->matchmap[found].hits, found);
 				if (scan->matchmap[found].hits > *max_hit)
 				{
 					*max_hit_pos = t;
 					*max_hit = scan->matchmap[found].hits;
-					// scanlog("hit max = %d at %d\n", hit_max, t);
 				}
 			}
 
@@ -735,7 +742,6 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	adjust_tolerance(scan);
 
 	/* First build a map with all the MD5s related with each WFP from the source file*/
-
 	matchmap_entry_t map[scan->hash_count];
 	int map_max_size = 0;
 	for (long i = 0; i < scan->hash_count; i++)
@@ -767,7 +773,8 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	memset(map_indirection, 0, sizeof(map_indirection));
 	memset(map_indirection_index, 0, sizeof(map_indirection_index));
 
-	scanlog ("< Snippet scan setup: Map size = %d, Cat N = %d, Cat size = %d >\n", map_max_size, MAP_INDIRECTION_CAT_NUMBER, MAP_INDIRECTION_CAT_SIZE);
+	scanlog ("< Snippet scan setup: Min hits: %d, Min lines: %d, Map max size = %d, Cat N = %d, Cat size = %d >\n", 
+			min_match_hits, min_match_lines, map_max_size, MAP_INDIRECTION_CAT_NUMBER, MAP_INDIRECTION_CAT_SIZE);
 
 	for (int i =0; i < scan->hash_count; i++)
 	{
@@ -860,7 +867,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	
 	/* Check if we have at least one possible match*/
 	bool at_least_one_possible_match = false;
-	for (int sector = 0; sector < 255; sector++)
+	for (int sector = 0; sector < 256; sector++)
 	{
 		if (scan->matchmap_rank_by_sector[sector] > -1)
 		{
@@ -874,7 +881,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	if (debug_on)
 	{
 		scanlog("First Stage - Max hits by sector\n");
-		for (int sector = 0; sector < 255; sector++)
+		for (int sector = 0; sector < 256; sector++)
 		{
 			if (scan->matchmap_rank_by_sector[sector] >= 0)
 				scanlog("Sector %02x, Max at %d with %d\n", sector, scan->matchmap_rank_by_sector[sector], scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits);
@@ -905,7 +912,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 
 					if (scan->matchmap_rank_by_sector[sector] < 0)
 						continue;
-					else if (scan->matchmap_rank_by_sector[sector] >= 0 )
+					else
 						sector_max = scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits;
 
 					if (md5cmp(&md5s[wfp_p], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5))
@@ -921,7 +928,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	if (debug_on)
 	{
 		scanlog("Max hits by sector\n");
-		for (int sector = 0; sector < 255; sector++)
+		for (int sector = 0; sector < 256; sector++)
 		{
 			if (scan->matchmap_rank_by_sector[sector] >= 0)
 				scanlog("Sector %02x, Max at %d with %d\n", sector, scan->matchmap_rank_by_sector[sector], scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits);
