@@ -14,7 +14,7 @@ The knowledge database is incrementally built using the SCANOSS mining tool (min
 
 # Prerequisites
 - Open SSL shared library. In Debian install with: apt install libssl-dev
-- LDB shared library. Installation instructions: https://github.com/scanoss/ldb/README.md
+- LDB shared library. Installation instructions: [https://github.com/scanoss/ldb/README.md](https://github.com/scanoss/ldb/blob/master/README.md)
 
 # Installation
 
