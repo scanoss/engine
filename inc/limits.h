@@ -36,7 +36,8 @@
 #define MAX_JSON_VALUE_LEN 4096
 
 /* Snippets */
-#define MAX_MATCHMAP_FILES 10000     // Max number of files evaluated in snippet matching
+#define DEFAULT_MATCHMAP_FILES 10000     // Default number of files evaluated in snippet matching
+#define MAX_MATCHMAP_FILES (DEFAULT_MATCHMAP_FILES * 3)     // Max number of files evaluated in snippet matching to prevent performance issues
 #define SKIP_SNIPPETS_IF_FILE_BIGGER (1024 * 1024 * 4)
 #define SKIP_SNIPPETS_IF_STARTS_WITH (const char*[3]) {"{", "<?xml", "<html"}
 #define MAX_SNIPPETS_SCANNED 2500

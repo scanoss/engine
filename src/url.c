@@ -194,6 +194,9 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 	}
 	
 	char * c = strchr(purl, '/');
+	if (!c)
+		return false;
+		
 	char purl_type[MAX_FIELD_LN] = "\0";
 	strncpy(purl_type, purl, c - purl);
 	uint32_t CRC = string_crc32c(purl_type);

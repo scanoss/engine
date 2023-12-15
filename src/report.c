@@ -240,14 +240,13 @@ bool print_json_component(component_data_t * component)
 	printf("\"vendor\": \"%s\",", component->vendor);
 	printf("\"component\": \"%s\",", component->component);
 	
-	char * version_clean = NULL;
-	version_clean = version_cleanup(component->version, component->component);
+	char * version_clean = version_cleanup(component->version, component->component);
 	printf("\"version\": \"%s\",", version_clean ? version_clean : "");
 	free(version_clean);
 
-	version_clean = version_cleanup(component->latest_version, component->component);
+	char * lastest_clean = version_cleanup(component->latest_version, component->component);
 	printf("\"latest\": \"%s\",", version_clean ? version_clean : "");
-	free(version_clean);
+	free(lastest_clean);
 	
 	printf("\"url\": \"%s\",", component->main_url ? component->main_url : component->url);
 
