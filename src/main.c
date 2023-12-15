@@ -251,8 +251,7 @@ bool lib_encoder_load()
 	char * err;
 	if ((err = dlerror())) 
 	{
-		printf("%s\n", err);
-		exit(EXIT_FAILURE);
+		scanlog("Lib scanoss-enocder was not detected. %s\n", err);
 	}
     
 	if (lib_encoder_handle) 
