@@ -95,6 +95,6 @@ Alternatively, these value can be written in %s\n\
 +-------+-------------------------------------------------------+\n\
 Example: scanoss -F 12 DIRECTORY (scans DIRECTORY disabling license and dependency data)\n\
 \n\
-Copyright (C) 2018-2022 SCANOSS.COM\n", MAX_MATCHMAP_FILES, API_URL, ENGINE_FLAGS_FILE);
+Copyright (C) 2018-2022 SCANOSS.COM\n", DEFAULT_MATCHMAP_FILES, API_URL, ENGINE_FLAGS_FILE);
 
 }

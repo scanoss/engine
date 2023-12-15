@@ -41,7 +41,7 @@
 #include "match_list.h"
 #include "stdlib.h"
 int map_rec_len;
-int matchmap_max_files = MAX_MATCHMAP_FILES;
+int matchmap_max_files = DEFAULT_MATCHMAP_FILES;
 
 /**
  * @brief If the extension of the matched file does not match the extension of the scanned file
@@ -186,7 +186,7 @@ void biggest_snippet(scan_data_t *scan)
  * @param ptr //TODO
  * @return //TODO
  */
-#define MATCHMAP_ITEM_SIZE (matchmap_max_files)
+#define MATCHMAP_ITEM_SIZE (matchmap_max_files * 2)
 static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *)ptr;
@@ -575,7 +575,7 @@ static void matchmap_setup(scan_data_t * scan)
 	if (matchmap_env)
 	{
 		int matchmap_max_files_aux = atoi(matchmap_env);
-		if (matchmap_max_files_aux > MAX_MATCHMAP_FILES / 4 &&  matchmap_max_files_aux < MAX_MATCHMAP_FILES * 20)
+		if (matchmap_max_files_aux > DEFAULT_MATCHMAP_FILES / 4 &&  matchmap_max_files_aux < DEFAULT_MATCHMAP_FILES * 20)
 		{
 			scanlog("matchmap size changed by env variable to: %d\n", matchmap_max_files_aux);
 			matchmap_max_files = matchmap_max_files_aux;
@@ -589,7 +589,6 @@ static void matchmap_setup(scan_data_t * scan)
 		matchmap_max_files *=5;
 		scanlog("matchmap size changed by high accuracy analisys to: %d\n", matchmap_max_files);
 	}
-	scan->matchmap = calloc(matchmap_max_files, sizeof(matchmap_entry));
 }
 
 typedef struct  matchmap_entry_t
@@ -794,26 +793,36 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	the cathegoies with less quantity of MD5s (less popular) will be prioritased*/
 	int cat_limit = 0;
 	int cat_limit_index=0;
-	
+	int hashes_to_process = 0;
 	for (int i = 0; i < MAP_INDIRECTION_CAT_NUMBER; i++)
 	{
 		bool exit = false;
 		for (int j=0; j < map_indirection_index[i]; j++)
 		{
+			if (map[map_indirection[i][j]].size <= 0)
+				continue;
+			hashes_to_process++;	
 			cat_limit += map[map_indirection[i][j]].size;
 			if (cat_limit > matchmap_max_files)
 			{
-				cat_limit_index = i;
-				exit = true;
-				break;
+				if (hashes_to_process < scan->hash_count / 10 && cat_limit < MAX_MATCHMAP_FILES)
+				{
+					matchmap_max_files += map[map_indirection[i][j]].size;
+				}
+				else
+				{
+					cat_limit_index = i;
+					exit = true;
+					break;
+				}
 			}
 		}
 		if (exit)
 			break;
 		else
-			cat_limit_index = i+1;
+			cat_limit_index = i;
 	}
-	
+
 	if (debug_on)
 	{
 		scanlog("Cathegories result:\n");
@@ -822,13 +831,14 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 			for (int j=0; j < map_indirection_index[i]; j++)
 			{
 				 uint8_t * wfp = map[map_indirection[i][j]].wfp;
-				scanlog("Cat :%d - item %d line %d - %02x%02x%02x%02x - size %d\n",i,j, 
+				scanlog("Cat :%d.%d - line %d - %02x%02x%02x%02x - size %d\n",i,j, 
 						map[map_indirection[i][j]].line, wfp[0], wfp[1],wfp[2],wfp[3], map[map_indirection[i][j]].size);
 			}
 		}
 	}
-
-	scanlog("Map limit on %d MD5s at  %d of %d\n",cat_limit, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER);
+	matchmap_max_files = cat_limit;
+	scanlog("Map limit on %d MD5s at  %d of %d. Selected hashed: %d/%d - cat_limit_files = %d\n",matchmap_max_files, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER, hashes_to_process, scan->hash_count, cat_limit);
+	scan->matchmap = calloc(matchmap_max_files, sizeof(matchmap_entry));
 
 	int map_indexes[scan->hash_count];
 	memset(map_indexes, 0, sizeof(map_indexes));
@@ -895,6 +905,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	/* Second state scan, using the rest of the availbles MD5s from the map*/
 	else
 	{
+		int md5_proceced = 0;
 		scanlog("-- Second Stage: Looking on the rest of the cathegories -- \n");
 		for (int cat = cat_limit_index; cat < MAP_INDIRECTION_CAT_NUMBER ; cat++)
 		{
@@ -918,9 +929,13 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 					if (md5cmp(&md5s[wfp_p], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5))
 					{				 
 						add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], 0, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+						md5_proceced++;
 					}
 				}
-			}	
+			}
+			//limit the quantity of iterations to prevent performance issues.
+			if (md5_proceced > DEFAULT_MATCHMAP_FILES)
+				break;
 		}
 	}
 

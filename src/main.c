@@ -249,7 +249,12 @@ bool lib_encoder_load()
 	/*set decode funtion pointer to NULL*/
 	lib_encoder_handle = dlopen("libscanoss_encoder.so", RTLD_NOW);
 	char * err;
-    if (lib_encoder_handle) 
+	if ((err = dlerror())) 
+	{
+		scanlog("Lib scanoss-enocder was not detected. %s\n", err);
+	}
+    
+	if (lib_encoder_handle) 
 	{
 		scanlog("Lib scanoss-enocder present\n");
 		decrypt_data = dlsym(lib_encoder_handle, "scanoss_decode_table");
