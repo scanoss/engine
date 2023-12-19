@@ -245,7 +245,7 @@ bool print_json_component(component_data_t * component)
 	free(version_clean);
 
 	char * lastest_clean = version_cleanup(component->latest_version, component->component);
-	printf("\"latest\": \"%s\",", version_clean ? version_clean : "");
+	printf("\"latest\": \"%s\",", lastest_clean ? lastest_clean : "");
 	free(lastest_clean);
 	
 	printf("\"url\": \"%s\",", component->main_url ? component->main_url : component->url);
