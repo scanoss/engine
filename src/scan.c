@@ -265,6 +265,12 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 
 			/* Get file MD5 */
 			char * hexmd5 = strndup(line + tagln, MD5_LEN * 2);
+			if (strlen(hexmd5) <  MD5_LEN * 2)
+			{
+				scanlog("Incorrect md5 len in line %s. Skipping\n", line);
+				free(hexmd5);
+				continue;
+			}
 			
 			rec = (uint8_t*) strdup(line + tagln + (MD5_LEN * 2) + 1);
 			char * target = field_n(2, (char *)rec);
