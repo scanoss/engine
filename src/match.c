@@ -132,6 +132,64 @@ static int hint_eval(component_data_t *a, component_data_t *b)
 }
 
 
+// Function to compare the similarity of two paths from back to front
+int comparePaths(char *a, char *b) {
+    // Pointers to traverse the paths from the end
+    char *ptr_a = strrchr(a, '/');
+    char *ptr_b = strrchr(b, '/');
+
+	char * ptr_a_prev = a + strlen(a) - 1; 
+	char * ptr_b_prev = b + strlen(b) - 1;
+
+    // Variables to count level matches
+    int match = 0;
+	while (ptr_a >= a && ptr_b >= b)
+	{
+		char * level_a = strndup(ptr_a, ptr_a_prev - ptr_a);
+		char * level_b = strndup(ptr_b, ptr_b_prev - ptr_b);
+
+		printf("%s / %s\n", ptr_a, ptr_b);
+
+		        // Compare the current levels
+        int comparison = strcmp(level_a, level_b);
+
+		printf("A: %s - B: %s - rank: %d\n", level_a, level_b, comparison);
+		free(level_a);
+		free(level_b);
+
+		ptr_a_prev = ptr_a;
+		ptr_b_prev = ptr_b;
+		ptr_a--;
+		ptr_b--;
+		ptr_a = strrchr(ptr_a, '/');
+		if (!ptr_a)
+			ptr_a = a;
+    	ptr_b = strrchr(ptr_b, '/');
+		if (!ptr_b)
+			ptr_b = b;
+
+
+
+		if (comparison == 0) 
+		{
+            match++;
+        } /*else {
+            // Adjust the match if levels do not match exactly
+            // You can adjust these values according to your needs
+            match += 1 - (float)comparison / 128;
+        }*/
+
+	}
+	printf("---\n");
+
+    // Compare each level of the paths from back to front
+
+    // Calculate the similarity index
+    //int index = (match * 100) / ((lenA > lenB) ? lenA : lenB);
+
+    return match;
+}
+
 /**
  * @brief Funtion to be called as pointer when a new compoent has to be loaded in to the list
  * 
@@ -140,6 +198,8 @@ static int hint_eval(component_data_t *a, component_data_t *b)
  * @return true b has to be included in the list before "a"
  * @return false "a" wins, compare with the next component.
  */
+
+static char * file_path = NULL;
 static bool component_hint_date_comparation(component_data_t *a, component_data_t *b)
 {
 	if (declared_components)
@@ -166,7 +226,15 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		if (result < 0)
 			return false;
 	}
-
+	if (file_path)
+	{
+		int a_cmp = comparePaths(file_path, a->file);
+		int b_cmp = comparePaths(file_path, b->file);
+		if (b_cmp - a_cmp > 1)
+			return true;
+		if (b_cmp - a_cmp < 1)
+			return false;
+	}
 	if (!*b->release_date)
 		return false;
 	if (!*a->release_date)
@@ -202,39 +270,40 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 
 	return false;
 }
-	
-bool add_component_from_urlid(component_list_t  * component_list, uint8_t* url_id, char * path)
+
+bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id, char *path)
 {
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
-	
+
 	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)url_rec);
 
-		/* Extract date from url_rec */
-		char date[MAX_ARGLN] = "0";
-		extract_csv(date, (char *)url_rec, 4, MAX_ARGLN);
-		/* Create a new component and fill it from the url record */
-		component_data_t *new_comp = calloc(1, sizeof(*new_comp));
-		bool result = fill_component(new_comp, url_id, path, (uint8_t *)url_rec);
-		if (result)
-		{	
-			new_comp->file_md5_ref = component_list->match_ref->file_md5;
-			/* If the component is valid add it to the component list */
-			/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
-			/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
-			new_comp->identified = IDENTIFIED_NONE;
-			asset_declared(new_comp);
-			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
-			{
-				scanlog("component rejected by date: %s\n",new_comp->purls[0]);
-				component_data_free(new_comp); /* Free if the componet was rejected */
-			}
-		}
-		else
+	/* Extract date from url_rec */
+	char date[MAX_ARGLN] = "0";
+	extract_csv(date, (char *)url_rec, 4, MAX_ARGLN);
+	/* Create a new component and fill it from the url record */
+	component_data_t *new_comp = calloc(1, sizeof(*new_comp));
+	bool result = fill_component(new_comp, url_id, path, (uint8_t *)url_rec);
+	if (result)
+	{
+		new_comp->file_md5_ref = component_list->match_ref->file_md5;
+		/* If the component is valid add it to the component list */
+		/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
+		/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
+		new_comp->identified = IDENTIFIED_NONE;
+		asset_declared(new_comp);
+		file_path = component_list->match_ref->scan_ower->file_path;
+		if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
 		{
-			scanlog("incomplete component: %s\n", new_comp->component);
-			component_data_free(new_comp);
+			scanlog("component rejected by date: %s\n", new_comp->purls[0]);
+			component_data_free(new_comp); /* Free if the componet was rejected */
 		}
-		free(url_rec);
+	}
+	else
+	{
+		scanlog("incomplete component: %s\n", new_comp->component);
+		component_data_free(new_comp);
+	}
+	free(url_rec);
 	return true;
 }
 
