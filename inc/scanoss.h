@@ -44,7 +44,7 @@
 #define WFP_REC_LN 18
 
 /* Log files */
-#define SCANOSS_VERSION "5.3.5"
+#define SCANOSS_VERSION "5.3.6"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
@@ -86,7 +86,7 @@ extern const char *vulnerability_sources[];
 extern const char *quality_sources[];
 extern const char *dependency_sources[];
 
-typedef enum {MATCH_NONE, MATCH_FILE, MATCH_SNIPPET, MATCH_BINARY} match_t;
+typedef enum {MATCH_NONE, MATCH_FILE, MATCH_SNIPPET, MATCH_BINARY, MATCH_FAILED} match_t;
 
 typedef struct keywords
 {

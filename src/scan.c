@@ -55,15 +55,14 @@ char *ignored_assets = NULL;
     */
 scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 {
-	scanlog("Scan Init\n");
 	scan_data_t * scan = calloc(1, sizeof(*scan));
 	scan->file_path = strdup(target);
 	scan->file_size = malloc(32);
 	scan->hashes = malloc(MAX_FILE_SIZE);
 	scan->lines  = malloc(MAX_FILE_SIZE);
 	scan->match_type = MATCH_NONE;
-
 	scan->max_components_to_process = max_components;
+	scanlog("Scan Init - path: %s\n", scan->file_path);
 	
 	scan->max_snippets_to_process = max_snippets > MAX_MULTIPLE_COMPONENTS ? MAX_MULTIPLE_COMPONENTS : max_snippets; 
 	scan->max_snippets_to_process = scan->max_snippets_to_process == 0 ? 1 : scan->max_snippets_to_process;
@@ -281,7 +280,6 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
 			scan->preload = true;
 			free(rec);
-			scanlog("File md5 to be scanned: %s\n", hexmd5);
 			ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
 			free(hexmd5);
 		}
@@ -358,7 +356,7 @@ void output_matches_json(scan_data_t *scan)
 		match_list_t *best_list = match_select_m_component_best(scan);
 		scanlog("<<<best list items: %d>>>\n", best_list->items);
 		if(!match_list_print(best_list, print_json_match, ","))
-			print_json_nomatch();
+			print_json_nomatch(scan->match_type);
 			
 		match_list_destroy(best_list);
 	}
@@ -375,15 +373,15 @@ void output_matches_json(scan_data_t *scan)
 		}
 		if (first)
 		{
-			print_json_nomatch();
+			print_json_nomatch(MATCH_NONE);
 		}
 		scan->printed_succed = !first;
 	}
 	/* prinf no match if the scan was evaluated as none */ // TODO must be unified with the "else" clause
-	else if (scan->match_type == MATCH_NONE)
+	else if (scan->match_type == MATCH_NONE || scan->match_type == MATCH_FAILED)
 	{
 		printf("\"%s\": [{", scan->file_path);
-		print_json_nomatch();
+		print_json_nomatch(scan->match_type);
 	}
 	else if (scan->best_match && scan->best_match->component_list.items)
 	{
@@ -393,7 +391,7 @@ void output_matches_json(scan_data_t *scan)
 	else
 	{
 		printf("\"%s\": [{", scan->file_path);
-		print_json_nomatch();
+		print_json_nomatch(scan->match_type);
 	}
 
 	json_close_file(scan);
@@ -462,6 +460,7 @@ void ldb_scan(scan_data_t * scan)
 		char *tmp_md5_hex = md5_hex(scan->md5);
 		strcpy(scan->source_md5, tmp_md5_hex);
 		free(tmp_md5_hex);
+		scanlog("File MD5: %s\n", scan->source_md5);
 	
 	/* Look for full file match or url match in ldb */
 		scan->match_type = ldb_scan_file(scan);

@@ -119,7 +119,7 @@ void biggest_snippet(scan_data_t *scan)
 			memcpy(match_new->file_md5, scan->matchmap[j].md5, MD5_LEN);
 			match_new->hits = scan->matchmap[j].hits;
 			match_new->matchmap_reg = scan->matchmap[j].md5;
-			match_new->type = scan->match_type;
+			match_new->type = MATCH_SNIPPET;
 			match_new->from = scan->matchmap[j].range->from;
 			strcpy(match_new->source_md5, scan->source_md5);
 			match_new->scan_ower = scan;
@@ -190,6 +190,13 @@ void biggest_snippet(scan_data_t *scan)
 static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *)ptr;
+	// Manage memory issue or problem quering the WFP table.
+	if (data == NULL && datalen > 0)
+	{
+		scanlog("Error quering WFP table. datalen=%u but data is NULL\n", datalen);
+		uint32_write(record,0);
+		return true;
+	}
 
 	if (datalen)
 	{
@@ -721,16 +728,16 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 
 match_t ldb_scan_snippets(scan_data_t *scan)
 {
-
+	match_t result = MATCH_NONE;
 	scanlog("ldb_scan_snippets\n");
 	if (!scan->hash_count)
 	{
 		scanlog("No hashes return NONE\n");
-		return MATCH_NONE;
+		return result;
 	}
 
 	if (engine_flags & DISABLE_SNIPPET_MATCHING)
-		return MATCH_NONE;
+		return result;
 
 	if (trace_on)
 		scanlog("Checking snippets. Traced (-qi) matches marked with *\n");
@@ -747,6 +754,14 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	{
 		/* Get all file IDs for given wfp */
 		map[i].md5_set = malloc(WFP_REC_LN * MATCHMAP_ITEM_SIZE);
+		//Exit if there is not RAM memory available
+		if (!map[i].md5_set)
+		{
+			scanlog("Error: memory allocation failed, aborting scan\n");
+			result = MATCH_FAILED;
+			break;
+		}
+
 		wfp_invert(scan->hashes[i], map[i].wfp);
 		//scanlog(" Add wfp %02x%02x%02x%02x to map\n",map[i].wfp[0], map[i].wfp[1],map[i].wfp[2],map[i].wfp[3]);
 		uint32_write(map[i].md5_set, 0);
@@ -757,210 +772,215 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 			map_max_size = map[i].size;
 		
 	}
-	
-	/* Classify the WFPs in cathegories depending on popularity
-	Each cathegoy will contain a sub set of index refered to map rows*/
-	#define MAP_INDIRECTION_CAT_NUMBER 1000
-	#define MAP_INDIRECTION_CAT_SIZE (map_max_size / (MAP_INDIRECTION_CAT_NUMBER-1))
-	int map_indedirection_items_size = scan->hash_count / (MAP_INDIRECTION_CAT_NUMBER / 10) < 10 ? 
-													scan->hash_count : 
-													scan->hash_count / (MAP_INDIRECTION_CAT_NUMBER / 10);
-
-	int map_indirection[MAP_INDIRECTION_CAT_NUMBER][map_indedirection_items_size]; //define the cathegories
-	int map_indirection_index[MAP_INDIRECTION_CAT_NUMBER]; //index for each cathegory
-	
-	memset(map_indirection, 0, sizeof(map_indirection));
-	memset(map_indirection_index, 0, sizeof(map_indirection_index));
-
-	scanlog ("< Snippet scan setup: Min hits: %d, Min lines: %d, Map max size = %d, Cat N = %d, Cat size = %d >\n", 
-			min_match_hits, min_match_lines, map_max_size, MAP_INDIRECTION_CAT_NUMBER, MAP_INDIRECTION_CAT_SIZE);
-
-	for (int i =0; i < scan->hash_count; i++)
+	//Manage unexpected condition, some WFP should have a hit.
+	if (map_max_size <= 0)
 	{
-		int cat = map[i].size / (MAP_INDIRECTION_CAT_SIZE+1);
+		scanlog("Warning no WFP with hits, returning failed\n");
+		result = MATCH_FAILED;
+	}
+	
+	if (map_max_size > 0 && result != MATCH_FAILED)
+	{
+		/* Classify the WFPs in cathegories depending on popularity
+		Each cathegoy will contain a sub set of index refered to map rows*/
+		#define MAP_INDIRECTION_CAT_NUMBER 1000
+		#define MAP_INDIRECTION_CAT_SIZE (map_max_size / (MAP_INDIRECTION_CAT_NUMBER-1))
+		int map_indedirection_items_size = scan->hash_count / (MAP_INDIRECTION_CAT_NUMBER / 10) < 10 ? 
+														scan->hash_count : 
+														scan->hash_count / (MAP_INDIRECTION_CAT_NUMBER / 10);
+
+		int map_indirection[MAP_INDIRECTION_CAT_NUMBER][map_indedirection_items_size]; //define the cathegories
+		int map_indirection_index[MAP_INDIRECTION_CAT_NUMBER]; //index for each cathegory
 		
-		if (map_indirection_index[cat] >= map_indedirection_items_size)
-		{
-			scanlog("Cat %d is full, skiping...\n", cat);
-			continue;
-		}
+		memset(map_indirection, 0, sizeof(map_indirection));
+		memset(map_indirection_index, 0, sizeof(map_indirection_index));
 
-		map_indirection[cat][map_indirection_index[cat]] = i;
-		map_indirection_index[cat]++;
-	}
+		scanlog ("< Snippet scan setup: Min hits: %d, Min lines: %d, Map max size = %d, Cat N = %d, Cat size = %d >\n", 
+				min_match_hits, min_match_lines, map_max_size, MAP_INDIRECTION_CAT_NUMBER, MAP_INDIRECTION_CAT_SIZE);
 
-	/* Calculate a limit to the quantity of cathegories to be processed, 
-	the cathegoies with less quantity of MD5s (less popular) will be prioritased*/
-	int cat_limit = 0;
-	int cat_limit_index=0;
-	int hashes_to_process = 0;
-	for (int i = 0; i < MAP_INDIRECTION_CAT_NUMBER; i++)
-	{
-		bool exit = false;
-		for (int j=0; j < map_indirection_index[i]; j++)
+		for (int i =0; i < scan->hash_count; i++)
 		{
-			if (map[map_indirection[i][j]].size <= 0)
-				continue;
-			hashes_to_process++;	
-			cat_limit += map[map_indirection[i][j]].size;
-			if (cat_limit > matchmap_max_files)
+			int cat = map[i].size / (MAP_INDIRECTION_CAT_SIZE+1);
+			
+			if (map_indirection_index[cat] >= map_indedirection_items_size)
 			{
-				if (hashes_to_process < scan->hash_count / 10 && cat_limit < MAX_MATCHMAP_FILES)
-				{
-					matchmap_max_files += map[map_indirection[i][j]].size;
-				}
-				else
-				{
-					cat_limit_index = i;
-					exit = true;
-					break;
-				}
+				scanlog("Cat %d is full, skiping...\n", cat);
+				continue;
 			}
-		}
-		if (exit)
-			break;
-		else
-			cat_limit_index = i;
-	}
 
-	if (debug_on)
-	{
-		scanlog("Cathegories result:\n");
+			map_indirection[cat][map_indirection_index[cat]] = i;
+			map_indirection_index[cat]++;
+		}
+
+		/* Calculate a limit to the quantity of cathegories to be processed, 
+		the cathegoies with less quantity of MD5s (less popular) will be prioritased*/
+		int cat_limit = 0;
+		int cat_limit_index=0;
+		int hashes_to_process = 0;
 		for (int i = 0; i < MAP_INDIRECTION_CAT_NUMBER; i++)
 		{
+			bool exit = false;
 			for (int j=0; j < map_indirection_index[i]; j++)
 			{
-				 uint8_t * wfp = map[map_indirection[i][j]].wfp;
-				scanlog("Cat :%d.%d - line %d - %02x%02x%02x%02x - size %d\n",i,j, 
-						map[map_indirection[i][j]].line, wfp[0], wfp[1],wfp[2],wfp[3], map[map_indirection[i][j]].size);
-			}
-		}
-	}
-	matchmap_max_files = cat_limit;
-	scanlog("Map limit on %d MD5s at  %d of %d. Selected hashed: %d/%d - cat_limit_files = %d\n",matchmap_max_files, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER, hashes_to_process, scan->hash_count, cat_limit);
-	scan->matchmap = calloc(matchmap_max_files, sizeof(matchmap_entry));
-
-	int map_indexes[scan->hash_count];
-	memset(map_indexes, 0, sizeof(map_indexes));
-
-	/*Add MD5s to the matchmap, sorting by sector. First add the MD5s starting with 00, then with 01 and so on*/
-	int last_sector_aux = 0;
-	for (int  sector = 0; sector < 256; sector++)
-	{
-		scan->matchmap_rank_by_sector[sector] = -1;
-		int sector_max = min_match_hits;
-		for (int cat = 0; cat < cat_limit_index; cat++)
-		{
-			/* travel the cathegories map*/
-			for (int item_in_cat = 0; item_in_cat < map_indirection_index[cat]; item_in_cat++)
-			{
-				int i = map_indirection[cat][item_in_cat];
-				uint8_t *md5s = map[i].md5_set + 4;
-				/* Add each item to the matchmap*/
-				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index++)
+				if (map[map_indirection[i][j]].size <= 0)
+					continue;
+				hashes_to_process++;	
+				cat_limit += map[map_indirection[i][j]].size;
+				if (cat_limit > matchmap_max_files)
 				{
-					int wfp_p = wfp_index * WFP_REC_LN;
-					/*Stop when a new sector appers*/
-					if (md5s[wfp_p] != sector)
+					if (hashes_to_process < scan->hash_count / 10 && cat_limit < MAX_MATCHMAP_FILES)
 					{
-						map_indexes[i] = wfp_index;
+						matchmap_max_files += map[map_indirection[i][j]].size;
+					}
+					else
+					{
+						cat_limit_index = i;
+						exit = true;
 						break;
 					}
-
-					add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], last_sector_aux, &sector_max, &scan->matchmap_rank_by_sector[sector]);
 				}
-			}	
+			}
+			if (exit)
+				break;
+			else
+				cat_limit_index = i;
 		}
-		/*start to look from the last added md5*/
-		last_sector_aux = scan->matchmap_size - 1;
-	}
-	
-	/* Check if we have at least one possible match*/
-	bool at_least_one_possible_match = false;
-	for (int sector = 0; sector < 256; sector++)
-	{
-		if (scan->matchmap_rank_by_sector[sector] > -1)
+
+		if (debug_on)
 		{
-			if (scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits > 0)
+			scanlog("Cathegories result:\n");
+			for (int i = 0; i < MAP_INDIRECTION_CAT_NUMBER; i++)
 			{
-				at_least_one_possible_match = true;
+				for (int j=0; j < map_indirection_index[i]; j++)
+				{
+					uint8_t * wfp = map[map_indirection[i][j]].wfp;
+					scanlog("Cat :%d.%d - line %d - %02x%02x%02x%02x - size %d\n",i,j, 
+							map[map_indirection[i][j]].line, wfp[0], wfp[1],wfp[2],wfp[3], map[map_indirection[i][j]].size);
+				}
 			}
 		}
-	}
+		if (matchmap_max_files < cat_limit)
+			matchmap_max_files = cat_limit;
+		scanlog("Map limit on %d MD5s at  %d of %d. Selected hashed: %d/%d - cat_limit_files = %d\n",matchmap_max_files, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER, hashes_to_process, scan->hash_count, cat_limit);
+		scan->matchmap = calloc(matchmap_max_files, sizeof(matchmap_entry));
 
-	if (debug_on)
-	{
-		scanlog("First Stage - Max hits by sector\n");
+		int map_indexes[scan->hash_count];
+		memset(map_indexes, 0, sizeof(map_indexes));
+
+		/*Add MD5s to the matchmap, sorting by sector. First add the MD5s starting with 00, then with 01 and so on*/
+		int last_sector_aux = 0;
+		for (int  sector = 0; sector < 256; sector++)
+		{
+			scan->matchmap_rank_by_sector[sector] = -1;
+			int sector_max = min_match_hits;
+			for (int cat = 0; cat < cat_limit_index; cat++)
+			{
+				/* travel the cathegories map*/
+				for (int item_in_cat = 0; item_in_cat < map_indirection_index[cat]; item_in_cat++)
+				{
+					int i = map_indirection[cat][item_in_cat];
+					uint8_t *md5s = map[i].md5_set + 4;
+					/* Add each item to the matchmap*/
+					for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index++)
+					{
+						int wfp_p = wfp_index * WFP_REC_LN;
+						/*Stop when a new sector appers*/
+						if (md5s[wfp_p] != sector)
+						{
+							map_indexes[i] = wfp_index;
+							break;
+						}
+
+						add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], last_sector_aux, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+					}
+				}	
+			}
+			/*start to look from the last added md5*/
+			last_sector_aux = scan->matchmap_size - 1;
+		}
+		
+		/* Check if we have at least one possible match*/
+		bool at_least_one_possible_match = false;
 		for (int sector = 0; sector < 256; sector++)
 		{
-			if (scan->matchmap_rank_by_sector[sector] >= 0)
-				scanlog("Sector %02x, Max at %d with %d\n", sector, scan->matchmap_rank_by_sector[sector], scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits);
-		}
-	}
-
-	if (!at_least_one_possible_match)
-	{
-		scanlog("No sector with hits, no match\n");	
-	}
-	/* Second state scan, using the rest of the availbles MD5s from the map*/
-	else
-	{
-		int md5_proceced = 0;
-		scanlog("-- Second Stage: Looking on the rest of the cathegories -- \n");
-		for (int cat = cat_limit_index; cat < MAP_INDIRECTION_CAT_NUMBER ; cat++)
-		{
-			/* travel the cathegories map*/
-			for (int item_in_cat = 0; item_in_cat < map_indirection_index[cat]; item_in_cat++)
+			if (scan->matchmap_rank_by_sector[sector] > -1)
 			{
-				int i = map_indirection[cat][item_in_cat];
-				uint8_t *md5s = map[i].md5_set + 4;
-				/* Add each item to the matchmap*/
-				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index++)
+				if (scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits > 0)
 				{
-					int wfp_p = wfp_index * WFP_REC_LN;
-					int sector = md5s[wfp_p];
-					int sector_max = min_match_hits;
+					at_least_one_possible_match = true;
+				}
+			}
+		}
 
-					if (scan->matchmap_rank_by_sector[sector] < 0)
-						continue;
-					else
-						sector_max = scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits;
+		if (debug_on)
+		{
+			scanlog("First Stage - Max hits by sector\n");
+			for (int sector = 0; sector < 256; sector++)
+			{
+				if (scan->matchmap_rank_by_sector[sector] >= 0)
+					scanlog("Sector %02x, Max at %d with %d\n", sector, scan->matchmap_rank_by_sector[sector], scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits);
+			}
+		}
 
-					if (md5cmp(&md5s[wfp_p], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5))
-					{				 
-						add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], 0, &sector_max, &scan->matchmap_rank_by_sector[sector]);
-						md5_proceced++;
+		if (!at_least_one_possible_match)
+		{
+			scanlog("No sector with hits, no match\n");	
+			result = MATCH_NONE;
+		}
+		/* Second state scan, using the rest of the availbles MD5s from the map*/
+		else
+		{
+			int md5_proceced = 0;
+			scanlog("-- Second Stage: Looking on the rest of the cathegories -- \n");
+			for (int cat = cat_limit_index; cat < MAP_INDIRECTION_CAT_NUMBER ; cat++)
+			{
+				/* travel the cathegories map*/
+				for (int item_in_cat = 0; item_in_cat < map_indirection_index[cat]; item_in_cat++)
+				{
+					int i = map_indirection[cat][item_in_cat];
+					uint8_t *md5s = map[i].md5_set + 4;
+					/* Add each item to the matchmap*/
+					for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index++)
+					{
+						int wfp_p = wfp_index * WFP_REC_LN;
+						int sector = md5s[wfp_p];
+						int sector_max = min_match_hits;
+
+						if (scan->matchmap_rank_by_sector[sector] < 0)
+							continue;
+						else
+							sector_max = scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits;
+
+						if (md5cmp(&md5s[wfp_p], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5))
+						{				 
+							add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], 0, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+							md5_proceced++;
+						}
 					}
 				}
+				//limit the quantity of iterations to prevent performance issues.
+				if (md5_proceced > DEFAULT_MATCHMAP_FILES)
+					break;
 			}
-			//limit the quantity of iterations to prevent performance issues.
-			if (md5_proceced > DEFAULT_MATCHMAP_FILES)
-				break;
+			result = MATCH_SNIPPET;
 		}
-	}
 
-	//for debuging
-	if (debug_on)
-	{
-		scanlog("Max hits by sector\n");
-		for (int sector = 0; sector < 256; sector++)
+		//for debuging
+		if (debug_on)
 		{
-			if (scan->matchmap_rank_by_sector[sector] >= 0)
-				scanlog("Sector %02x, Max at %d with %d\n", sector, scan->matchmap_rank_by_sector[sector], scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits);
+			scanlog("Max hits by sector\n");
+			for (int sector = 0; sector < 256; sector++)
+			{
+				if (scan->matchmap_rank_by_sector[sector] >= 0)
+					scanlog("Sector %02x, Max at %d with %d\n", sector, scan->matchmap_rank_by_sector[sector], scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits);
+			}
 		}
 	}
-
 	//Free memory
 	for (int i = 0; i  < scan->hash_count; i++)
 	{
 		free(map[i].md5_set);
 	}
 	
-	if (scan->matchmap_size)
-	 	return MATCH_SNIPPET;
-	
-	scanlog("Snippet scan has no matches\n");
-	return MATCH_NONE;
-
-
+	return result;
 }

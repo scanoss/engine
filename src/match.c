@@ -48,7 +48,7 @@
 #include "dependency.h"
 #include "ignorelist.h"
 
-const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
+const char *matchtypes[] = {"none", "file", "snippet", "binary", "failed"}; /** describe the availables kinds of match */
 bool match_extensions = false;									  /** global match extension flag */
 
 char *component_hint = NULL;
@@ -107,12 +107,13 @@ static int hint_eval(component_data_t *a, component_data_t *b)
 		/*Check for component hint in purl, select components matching with the hint */
 		if (a->purls[0] && strstr(a->purls[0], component_hint) && !(b->purls[0] && strstr(b->purls[0], component_hint)))
 		{
-			scanlog("Reject component %s by hint: %s\n", b->purls[0], component_hint);
+			scanlog("Reject component %s by purl hint: %s\n", b->purls[0], component_hint);
 			return -1;
 		}
 		if (b->purls[0] && strstr(b->purls[0], component_hint) && !(a->purls[0] && strstr(a->purls[0], component_hint)))
 		{
-			scanlog("Accept component %s by hint: %s\n", b->purls[0], component_hint);
+			scanlog("Accept component %s by purl hint: %s\n", b->purls[0], component_hint);
+			b->identified = 1;
 			return 1;
 		}
 
@@ -125,6 +126,7 @@ static int hint_eval(component_data_t *a, component_data_t *b)
 		if (b->component && strstr(b->component, component_hint) && !(a->component && strstr(a->purls[0], component_hint)))
 		{
 			scanlog("Accept component %s by hint: %s\n",  b->component, component_hint);
+			b->identified = 1;
 			return 1;
 		}
 
@@ -365,7 +367,8 @@ bool load_matches(match_data_t *match)
 			if (!item->entries.le_next || !item->entries.le_next->component)
 				break;
 			/* if the date of two components it's the same */
-			if(!strcmp(item->component->release_date, item->entries.le_next->component->release_date))
+			if(!strcmp(item->component->release_date, item->entries.le_next->component->release_date) && 
+				item->component->identified <= item->entries.le_next->component->identified)
 			{
 				/* If item has no dependencies or depencencies are empty I must check the next one */
 				if(!item->component->dependency_text || strlen(item->component->dependency_text) < 4)
@@ -376,6 +379,7 @@ bool load_matches(match_data_t *match)
 					/*if the next component has dependencies, permute */
 					else if (print_dependencies(item->entries.le_next->component))
 					{
+						scanlog("Best match replaced due to dependencies");
 						struct comp_entry *aux = item->entries.le_next->entries.le_next;
 						LIST_INSERT_HEAD(&match->component_list.headp, item->entries.le_next, entries);
 						item->entries.le_next = aux;
@@ -580,7 +584,7 @@ void match_select_best(scan_data_t *scan)
 	if (!scan->best_match || !scan->best_match->component_list.items || ((engine_flags & DISABLE_REPORT_IDENTIFIED) && scan->best_match->component_list.headp.lh_first->component->identified))
 	{
 		scan->match_type = MATCH_NONE;
-		scanlog("Match without components or declared in sbom");
+		scanlog("Match without components or declared in sbom\n");
 	}
 }
 

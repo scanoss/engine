@@ -161,13 +161,13 @@ void print_server_stats(scan_data_t *scan)
  * @brief Return a match=none result
  * @param scan scan data pointer
  */
-void print_json_nomatch()
+void print_json_nomatch(match_t m)
 {
 	if (quiet) 
 		return;
 	if (engine_flags & DISABLE_BEST_MATCH)
 		printf("{");
-	printf("\"id\": \"none\"");
+	printf("\"id\":\"%s\"",matchtypes[m]);
 	//print_server_stats(scan);
 	if (engine_flags & DISABLE_BEST_MATCH)
 		printf("}");

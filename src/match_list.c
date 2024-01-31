@@ -80,13 +80,13 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
 
     if (!list->headp.lh_first)
     {
-        scanlog("first component in list\n");
         struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert at the head. */
         LIST_INSERT_HEAD(&list->headp, nn, entries);
         nn->component = new_comp;
         list->items++;
         list->last_element = nn;
         list->last_element_aux = NULL;
+        scanlog("first component in list: %s\n", list->last_element->component->purls[0]);
         return true;
     }
     else if (val)
@@ -117,7 +117,7 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
         }
 
         struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert after. */
-        nn->component = new_comp; 
+        nn->component = new_comp;
         LIST_INSERT_BEFORE(np, nn, entries);
        
         if (!np->entries.le_next)

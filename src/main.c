@@ -512,7 +512,6 @@ int main(int argc, char **argv)
 				/* Scan file directly */
 				else 
 				{
-					scanlog("Scanning file %s\n", target);
 					scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components);
 					ldb_scan(scan);
 				}
