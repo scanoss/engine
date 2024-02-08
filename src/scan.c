@@ -408,19 +408,13 @@ void output_matches_json(scan_data_t *scan)
  * 
  * @param scan 
  */
-void ldb_scan(scan_data_t * scan)
+void ldb_scan(scan_data_t *scan)
 {
-	bool skip = false;
 	if (!scan)
 		return;
 
-	if (unwanted_path(scan->file_path))
-	{
-		skip = true;
-		scanlog("File %s skipped by path", scan->file_path);
-	}
 	/* LDB must be available to proceed with the scan*/
-	if (!ldb_table_exists(oss_file.db, oss_file.table) || !ldb_table_exists(oss_url.db, oss_url.table)) 
+	if (!ldb_table_exists(oss_file.db, oss_file.table) || !ldb_table_exists(oss_url.db, oss_url.table))
 	{
 		printf("Error: file and url tables must be present in %s KB in order to proceed with the scan\n", oss_file.db);
 		free(scan);
@@ -433,74 +427,66 @@ void ldb_scan(scan_data_t * scan)
 
 	/* Get file length */
 	uint64_t file_size = 0;
-	if (!skip)
-	{
-		if (scan->preload) file_size = atoi(scan->file_size);
-		else file_size = get_file_size(scan->file_path);
-		if (file_size < 0) ldb_error("Cannot access file");
-	}
+
+	if (scan->preload)
+		file_size = atoi(scan->file_size);
+	else
+		file_size = get_file_size(scan->file_path);
+
+	if (file_size < 0)
+		ldb_error("Cannot access file");
 
 	/* Calculate MD5 hash (if not already preloaded) */
-	if (!skip) if (!scan->preload) get_file_md5(scan->file_path, scan->md5);
+	if (!scan->preload)
+		get_file_md5(scan->file_path, scan->md5);
 
-	if (!skip && extension(scan->file_path) && ignored_extension(scan->file_path)) 
-	{
-		skip = true;
-		scanlog("File %s skipped by extension", scan->file_path);
-	}
+	/* Scan full file */
+	char *tmp_md5_hex = md5_hex(scan->md5);
+	strcpy(scan->source_md5, tmp_md5_hex);
+	free(tmp_md5_hex);
 
-	/* Ignore <=1 byte */
-	if (file_size <= MIN_FILE_SIZE) 
-	{
-		skip = true;
-		scanlog("File %s skipped by file size < %d\n", scan->file_path, MIN_FILE_SIZE);
-	}
-
-	if (!skip)
-	{
-		/* Scan full file */
-		char *tmp_md5_hex = md5_hex(scan->md5);
-		strcpy(scan->source_md5, tmp_md5_hex);
-		free(tmp_md5_hex);
-	
 	/* Look for full file match or url match in ldb */
-		scan->match_type = ldb_scan_file(scan);
-		
-		/* If no match, scan snippets */
-		if (scan->match_type == MATCH_NONE || force_snippet_scan)
+	scan->match_type = ldb_scan_file(scan);
+
+	/* If no match, scan snippets */
+	if (scan->match_type == MATCH_NONE || force_snippet_scan)
+	{
+		/* Load snippets into scan data */
+		if (!scan->preload)
 		{
-			/* Load snippets into scan data */
-			if (!scan->preload)
+			/* Read file into memory */
+			char *src = calloc(MAX_FILE_SIZE, 1);
+			if (file_size < MAX_FILE_SIZE)
+				read_file(src, scan->file_path, 0);
+
+			/* If HPSM is enable calculate the crc8 line hash calling the shared lib */
+			if (hpsm_enabled)
 			{
-				/* Read file into memory */
-				char *src = calloc(MAX_FILE_SIZE, 1);
-				if (file_size < MAX_FILE_SIZE) read_file(src, scan->file_path, 0);
-				
-				/* If HPSM is enable calculate the crc8 line hash calling the shared lib */
-				if(hpsm_enabled) 
+				char *aux = hpsm_hash_file_contents(src);
+				if (aux)
 				{
-					char *aux = hpsm_hash_file_contents(src);
-					if(aux)
-					{
-						hpsm_crc_lines = strdup(&aux[5]);
-						free(aux);
-					}
-				}					
-				/* Determine if file is to skip snippet search */
-				if (!skip_snippets(src, file_size))
-				{	/* Load wfps into scan structure */
-					scan->hash_count = winnowing(src, scan->hashes, scan->lines, MAX_FILE_SIZE);
-					if (scan->hash_count) scan->total_lines = scan->lines[scan->hash_count - 1];
+					hpsm_crc_lines = strdup(&aux[5]);
+					free(aux);
 				}
-				free(src);
 			}
-			else if (scan->hash_count) scan->total_lines = scan->lines[scan->hash_count - 1];
-
-			/* Perform snippet scan */
-			if (scan->total_lines) scan->match_type = ldb_scan_snippets(scan);
-
-			else scanlog("File skipped\n");
+			/* Determine if file is to skip snippet search */
+			if (!skip_snippets(src, file_size))
+			{ /* Load wfps into scan structure */
+				scan->hash_count = winnowing(src, scan->hashes, scan->lines, MAX_FILE_SIZE);
+				if (scan->hash_count)
+					scan->total_lines = scan->lines[scan->hash_count - 1];
+			}
+			free(src);
 		}
+		else if (scan->hash_count)
+			scan->total_lines = scan->lines[scan->hash_count - 1];
+
+		/* Perform snippet scan */
+		if (scan->total_lines)
+			scan->match_type = ldb_scan_snippets(scan);
+
+		else
+			scanlog("File skipped\n");
 	}
 
 	/* Compile matches */
@@ -508,7 +494,7 @@ void ldb_scan(scan_data_t * scan)
 
 	if (!scan->best_match)
 		scanlog("No best match\n");
-	
+
 	/* Output matches */
 	scanlog("Match output starts\n");
 	if (!quiet)

@@ -35,6 +35,7 @@
 
 #include "ignorelist.h"
 #include "ignored_extensions.h"
+#include "debug.h"
 
 /**
  * @brief Returns a pointer to the file extension of "path"
@@ -100,7 +101,11 @@ bool ignored_extension(char *name)
 {
 	int i=0;
 	while (IGNORED_EXTENSIONS[i])
-		if (ends_with(IGNORED_EXTENSIONS[i++], name)) return true;
+		if (ends_with(IGNORED_EXTENSIONS[i++], name)) 
+		{
+			scanlog("Component ignored by path extension: %s", name);
+			return true;
+		}
 
 	return false;
 }

@@ -139,27 +139,32 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 
 	/* Read file contents into buffer */
 	FILE *in = fopen(filepath, "rb");
+
+	if (!in)
+	{
+		MD5(NULL, 0, md5_result);
+		return;
+	}
+
 	fseek(in, 0L, SEEK_END);
 	long filesize = ftell(in);
-
 	if (!filesize)
 	{
 		MD5(NULL, 0, md5_result);
 	}
-
 	else
 	{
 		/* Read file contents */
 		fseek(in, 0L, SEEK_SET);
 		uint8_t *buffer = malloc(filesize);
-		if (!fread(buffer, filesize, 1, in)) fprintf(stderr, "Warning: cannot open file %s\n", filepath);
+		if (!fread(buffer, filesize, 1, in))
+			fprintf(stderr, "Warning: cannot open file %s\n", filepath);
 
 		/* Calculate MD5sum */
 		MD5(buffer, filesize, md5_result);
-		free (buffer);
+		free(buffer);
+		fclose(in);
 	}
-
-	fclose(in);
 }
 
 /**

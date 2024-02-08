@@ -131,63 +131,133 @@ static int hint_eval(component_data_t *a, component_data_t *b)
 		return 0;
 }
 
+// own function to compare strings and rate the similarity
+static int string_compare(const char *string1, const char *string2)
+{
+	float difference = 0;
+	float div = (strlen(string1) + strlen(string2)) / 2;
+	if (!strcmp(string1, string2))
+		return -1;
 
+	while (*string1 != '\0' && *string2 != '\0')
+	{
+		if (*string1 != *string2)
+		{
+			difference += 1 / div;
+		}
+
+		string1++;
+		string2++;
+	}
+
+	// Add the length difference if the strings have different lengths
+	difference += abs((int)strlen(string1) - (int)strlen(string2)) / div;
+
+	return ceil(difference);
+}
+
+static bool look_for_version(char *in)
+{
+	if (!in)
+		return false;
+
+	char *v = strstr(in, "-v");
+	if (v && isdigit(*(v + 1)))
+		return true;
+
+	v = strchr(in, '-');
+	if (v && isdigit(*(v + 1)) && isdigit(*(v + 2)))
+		return true;
+
+	return false;
+}
+
+#define PATH_LEVEL_COMP_INIT_VALUE 1000
+#define PATH_LEVEL_COMP_REF 10
 // Function to compare the similarity of two paths from back to front
-int comparePaths(char *a, char *b) {
-    // Pointers to traverse the paths from the end
-    char *ptr_a = strrchr(a, '/');
-    char *ptr_b = strrchr(b, '/');
+static int paths_compare(const char *a, const char *b)
+{
+	// Pointers to traverse the paths from the end
+	const char *ptr_a = strrchr(a, '/');
+	if (!ptr_a)
+		ptr_a = a;
 
-	char * ptr_a_prev = a + strlen(a) - 1; 
-	char * ptr_b_prev = b + strlen(b) - 1;
+	const char *ptr_b = strrchr(b, '/');
+	if (!ptr_b)
+		ptr_b = b;
 
-    // Variables to count level matches
-    int match = 0;
+	const char *ptr_a_prev = a + strlen(a) - 1;
+	const char *ptr_b_prev = b + strlen(b) - 1;
+
+	int rank = PATH_LEVEL_COMP_REF;
+	// check if both path have equal lenght
+	if (strlen(a) == strlen(b))
+		rank--;
+
 	while (ptr_a >= a && ptr_b >= b)
 	{
-		char * level_a = strndup(ptr_a, ptr_a_prev - ptr_a);
-		char * level_b = strndup(ptr_b, ptr_b_prev - ptr_b);
-
-		printf("%s / %s\n", ptr_a, ptr_b);
-
-		        // Compare the current levels
-        int comparison = strcmp(level_a, level_b);
-
-		printf("A: %s - B: %s - rank: %d\n", level_a, level_b, comparison);
-		free(level_a);
-		free(level_b);
-
-		ptr_a_prev = ptr_a;
-		ptr_b_prev = ptr_b;
-		ptr_a--;
-		ptr_b--;
-		ptr_a = strrchr(ptr_a, '/');
-		if (!ptr_a)
-			ptr_a = a;
-    	ptr_b = strrchr(ptr_b, '/');
-		if (!ptr_b)
-			ptr_b = b;
-
-
-
-		if (comparison == 0) 
+		// Look for each path level
+		if ((*ptr_a == '/' || ptr_a == a) && (*ptr_b == '/' || ptr_b == b))
 		{
-            match++;
-        } /*else {
-            // Adjust the match if levels do not match exactly
-            // You can adjust these values according to your needs
-            match += 1 - (float)comparison / 128;
-        }*/
+			size_t size_a = ptr_a_prev - ptr_a;
+			size_t size_b = ptr_b_prev - ptr_b;
 
+			char *level_a = strndup(ptr_a, size_a);
+			char *level_b = strndup(ptr_b, size_b);
+
+			// Compare the current levels - the level will be ignored if it has version information inside.
+			if (!(look_for_version(level_a) || look_for_version(level_b)))
+				rank += string_compare(*level_a == '/' ? level_a + 1 : level_a, *level_b == '/' ? level_b + 1 : level_b);
+
+			free(level_a);
+			free(level_b);
+
+			// Move pointers
+			if (ptr_a > a)
+			{
+				ptr_a_prev = ptr_a;
+				ptr_a--;
+			}
+			if (ptr_b > b)
+			{
+				ptr_b_prev = ptr_b;
+				ptr_b--;
+			}
+			rank--;
+		}
+
+		if (ptr_a == a && ptr_b == b)
+			break;
+
+		// look for the next levels
+		if (!(*ptr_a == '/' || ptr_a == a))
+			ptr_a--;
+
+		if (!(*ptr_b == '/' || ptr_b == b))
+			ptr_b--;
 	}
-	printf("---\n");
 
-    // Compare each level of the paths from back to front
+	return rank;
+}
 
-    // Calculate the similarity index
-    //int index = (match * 100) / ((lenA > lenB) ? lenA : lenB);
-
-    return match;
+static void evaluate_path_rank(component_data_t *comp)
+{
+	if (comp->path_rank == PATH_LEVEL_COMP_INIT_VALUE)
+	{
+		//generate the rank based on the similarity of the paths.
+		comp->path_rank = paths_compare(comp->file_path_ref, comp->file);
+		//modulate the result based on component information-
+		if (comp->path_rank < PATH_LEVEL_COMP_REF && (strstr(comp->file_path_ref, comp->component) || strstr(comp->file_path_ref, comp->vendor)))
+		{
+			comp->path_rank -= PATH_LEVEL_COMP_REF / 5 + 1;
+			if (strstr(comp->file_path_ref, comp->component) && strstr(comp->file_path_ref, comp->vendor))
+			{
+				comp->path_rank -= PATH_LEVEL_COMP_REF / 2;
+			}
+			if (strstr(comp->purls[0], "github"))
+				comp->path_rank--;
+		}
+	}
 }
 
 /**
@@ -199,7 +269,6 @@ int comparePaths(char *a, char *b) {
  * @return false "a" wins, compare with the next component.
  */
 
-static char * file_path = NULL;
 static bool component_hint_date_comparation(component_data_t *a, component_data_t *b)
 {
 	if (declared_components)
@@ -220,19 +289,37 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 
 	else if (component_hint)
 	{
+		scanlog("hint eval\n");
 		int result = hint_eval(a,b);
 		if (result > 0)
 			return true;
 		if (result < 0)
 			return false;
 	}
-	if (file_path)
+	
+	if ((engine_flags & ENABLE_PATH_HINT) && a->file_path_ref && b->file_path_ref)
 	{
-		int a_cmp = comparePaths(file_path, a->file);
-		int b_cmp = comparePaths(file_path, b->file);
-		if (b_cmp - a_cmp > 1)
-			return true;
-		if (b_cmp - a_cmp < 1)
+		//evalute path rank for component a
+		evaluate_path_rank(a);
+		
+		//evalute path rank for component b
+		evaluate_path_rank(b);
+
+		//The path_rank will be used as hint only when it has a reasonable value, in other cases the critea will be ignored.
+		if (b->path_rank < PATH_LEVEL_COMP_REF / 3 + 1)
+		{
+			if (b->path_rank - a->path_rank < 0)
+			{
+				scanlog("%s wins %s by path rank %d\n", b->purls[0], a->purls[0], b->path_rank);
+				return true;
+			}
+			if (b->path_rank - a->path_rank > 0)
+			{
+				scanlog("%s - %s loses %s by path rank %d/%d\n", b->purls[0],b->file,  a->purls[0], b->path_rank, a->path_rank);
+				return false;
+			}
+		}
+		else if (a->path_rank < PATH_LEVEL_COMP_REF / 3 + 1)
 			return false;
 	}
 	if (!*b->release_date)
@@ -291,12 +378,17 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 		/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
 		new_comp->identified = IDENTIFIED_NONE;
 		asset_declared(new_comp);
-		file_path = component_list->match_ref->scan_ower->file_path;
+		new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
+		new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
+		scanlog("--- new comp ---\n");
 		if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
 		{
-			scanlog("component rejected by date: %s\n", new_comp->purls[0]);
+			scanlog("component rejected: %s\n", new_comp->purls[0]);
 			component_data_free(new_comp); /* Free if the componet was rejected */
 		}
+		else
+			scanlog("component accepted: %s - pathrank: %d\n", new_comp->purls[0], new_comp->path_rank);
+
 	}
 	else
 	{
@@ -353,12 +445,11 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	memcpy(url_id, raw_data, MD5_LEN);
 	char path[MAX_FILE_PATH+1];
 	strncpy(path, decrypted, MAX_FILE_PATH);
-	if (!ignored_extension(path))
+	//check the ignore list only if the match type is MATCH_SNIPPET. TODO: remove this after remine everything.
+	if (!(component_list->match_ref->type == MATCH_SNIPPET && !ignored_extension(path)))
 		add_component_from_urlid(component_list, url_id, path);
 
 	free(decrypted);
-	
-	//scanlog("#%d File %s\n", iteration, files[iteration].path);
 	return false;
 }
 
@@ -445,6 +536,7 @@ bool load_matches(match_data_t *match)
 					/*if the next component has dependencies, permute */
 					else if (print_dependencies(item->entries.le_next->component))
 					{
+						scanlog("permute due to dependencies\n");
 						struct comp_entry *aux = item->entries.le_next->entries.le_next;
 						LIST_INSERT_HEAD(&match->component_list.headp, item->entries.le_next, entries);
 						item->entries.le_next = aux;

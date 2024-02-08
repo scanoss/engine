@@ -36,9 +36,9 @@ char *IGNORED_EXTENSIONS[] = {
 
 	/* File extensions */
 	".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9", ".ac", ".adoc", ".am",
-	".asc", ".asciidoc", ".bmp", ".build", ".cfg", ".chm", ".class", ".cmake",
+	".asc", ".asciidoc", ".bmp", ".build", ".cfg", ".chm", ".cmake",
 	".cnf", ".conf", ".config", ".contributors", ".copying", ".crt", ".csproj",
-	".css", ".csv", ".cvsignore", ".dat", ".data", ".db", ".doc", ".ds_store",
+	".csv", ".cvsignore", ".dat", ".data", ".db", ".doc", ".ds_store",
 	".dtd", ".dts", ".dtsi", ".dump", ".eot", ".eps", ".geojson", ".gdoc", ".gif",
 	".gitignore", ".glif", ".gmo", ".gradle", ".guess", ".hex", ".htm", ".html",
 	".ico", ".in", ".inc", ".info", ".ini", ".ipynb", ".jpeg", ".jpg", ".json",
@@ -49,10 +49,10 @@ char *IGNORED_EXTENSIONS[] = {
 	".spec", ".sql", ".sub", ".svg", ".svn-base", ".tab", ".template", ".test",
 	".tex", ".tiff", ".toml", ".ttf", ".txt", ".utf-8", ".vim", ".wav", ".whl",
 	".woff", ".xht", ".xhtml", ".xls", ".xml", ".xpm", ".xsd", ".xul", ".yaml",
-	".yml", ".LAS",".adk",".asc",".cif",".cli",".cosmo",".deploy",
+	".yml", ".LAS",".adk",".asc",".cif",".cli",".cosmo",".deploy",".pom",
 	".dfm",".dmm",".fa",".fasta",".fcb",".flm",".fna",".gbr",".gen",".gro",
 	".hgtags",".hh",".ihex",".kp",".mpx",".pdb",".poly",".prn",".ps",".ref",
-	".resx",".smp",".stg",".tfa",".tsv",".vcf",".vhd",".xy",".xyz",
+	".resx",".smp",".stg",".tfa",".tsv",".vcf",".vhd",".xy",".xyz",".xsd"
 
 
 	/* File endings */
