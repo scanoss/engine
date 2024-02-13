@@ -156,22 +156,6 @@ static int string_compare(const char *string1, const char *string2)
 	return ceil(difference);
 }
 
-static bool look_for_version(char *in)
-{
-	if (!in)
-		return false;
-
-	char *v = strstr(in, "-v");
-	if (v && isdigit(*(v + 1)))
-		return true;
-
-	v = strchr(in, '-');
-	if (v && isdigit(*(v + 1)) && isdigit(*(v + 2)))
-		return true;
-
-	return false;
-}
-
 #define PATH_LEVEL_COMP_INIT_VALUE 1000
 #define PATH_LEVEL_COMP_REF 10
 // Function to compare the similarity of two paths from back to front
@@ -205,9 +189,8 @@ static int paths_compare(const char *a, const char *b)
 			char *level_a = strndup(ptr_a, size_a);
 			char *level_b = strndup(ptr_b, size_b);
 
-			// Compare the current levels - the level will be ignored if it has version information inside.
-			if (!(look_for_version(level_a) || look_for_version(level_b)))
-				rank += string_compare(*level_a == '/' ? level_a + 1 : level_a, *level_b == '/' ? level_b + 1 : level_b);
+			// Compare the current levels
+			rank += string_compare(*level_a == '/' ? level_a + 1 : level_a, *level_b == '/' ? level_b + 1 : level_b);
 
 			free(level_a);
 			free(level_b);
@@ -246,6 +229,7 @@ static void evaluate_path_rank(component_data_t *comp)
 	{
 		//generate the rank based on the similarity of the paths.
 		comp->path_rank = paths_compare(comp->file_path_ref, comp->file);
+
 		//modulate the result based on component information-
 		if (comp->path_rank < PATH_LEVEL_COMP_REF && (strstr(comp->file_path_ref, comp->component) || strstr(comp->file_path_ref, comp->vendor)))
 		{
@@ -254,7 +238,9 @@ static void evaluate_path_rank(component_data_t *comp)
 			{
 				comp->path_rank -= PATH_LEVEL_COMP_REF / 2;
 			}
-			if (strstr(comp->purls[0], "github"))
+			if (strstr(comp->purls[0], ".mirror"))
+				comp->path_rank+=PATH_LEVEL_COMP_REF / 2;
+			else if (strstr(comp->purls[0], "github"))
 				comp->path_rank--;
 		}
 	}
@@ -446,7 +432,7 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	char path[MAX_FILE_PATH+1];
 	strncpy(path, decrypted, MAX_FILE_PATH);
 	//check the ignore list only if the match type is MATCH_SNIPPET. TODO: remove this after remine everything.
-	if (!(component_list->match_ref->type == MATCH_SNIPPET && !ignored_extension(path)))
+	if (!(component_list->match_ref->type == MATCH_SNIPPET && ignored_extension(path)))
 		add_component_from_urlid(component_list, url_id, path);
 
 	free(decrypted);

@@ -52,7 +52,7 @@ char *IGNORED_EXTENSIONS[] = {
 	".yml", ".LAS",".adk",".asc",".cif",".cli",".cosmo",".deploy",".pom",
 	".dfm",".dmm",".fa",".fasta",".fcb",".flm",".fna",".gbr",".gen",".gro",
 	".hgtags",".hh",".ihex",".kp",".mpx",".pdb",".poly",".prn",".ps",".ref",
-	".resx",".smp",".stg",".tfa",".tsv",".vcf",".vhd",".xy",".xyz",".xsd"
+	".resx",".smp",".stg",".tfa",".tsv",".vcf",".vhd",".xy",".xyz",
 
 
 	/* File endings */

@@ -242,7 +242,8 @@ bool print_json_component(component_data_t * component)
 
 	printf("\"release_date\": \"%s\",", component->release_date);
 	printf("\"file\": \"%s\",", component->url_match == true ? basename(component->url) : component->file);
-	printf("\"path_rank\": %d,", component->path_rank);
+	if (engine_flags & ENABLE_PATH_HINT)
+		printf("\"path_rank\": %d,", component->path_rank);
 
 	char *url_id = md5_hex(component->url_md5);
 	printf("\"url_hash\": \"%s\"", url_id);

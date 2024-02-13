@@ -598,7 +598,6 @@ typedef struct  matchmap_entry_t
 	uint8_t wfp[WFP_LN];
 	uint32_t size; 
 } matchmap_entry_t;
-
 /**
  * @brief Add one new md5 to the matchmap
  * @param scan pointer to scan object
@@ -742,6 +741,9 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 
 	/* First build a map with all the MD5s related with each WFP from the source file*/
 	matchmap_entry_t map[scan->hash_count];
+	int8_t map_lines_indirection[scan->lines[scan->hash_count -1] + 1];
+	memset(map_lines_indirection, -1, sizeof(map_lines_indirection));
+	int lines_coverage = 0;
 	int map_max_size = 0;
 	for (long i = 0; i < scan->hash_count; i++)
 	{
@@ -751,13 +753,13 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 		//scanlog(" Add wfp %02x%02x%02x%02x to map\n",map[i].wfp[0], map[i].wfp[1],map[i].wfp[2],map[i].wfp[3]);
 		uint32_write(map[i].md5_set, 0);
 		map[i].line = scan->lines[i];
+		map_lines_indirection[scan->lines[i]] = 0;
 		ldb_fetch_recordset(NULL, oss_wfp, map[i].wfp, false, get_all_file_ids, (void *)map[i].md5_set);
 		map[i].size = uint32_read(map[i].md5_set) / WFP_REC_LN;
 		if (map[i].size > map_max_size)
 			map_max_size = map[i].size;
 		
 	}
-	
 	/* Classify the WFPs in cathegories depending on popularity
 	Each cathegoy will contain a sub set of index refered to map rows*/
 	#define MAP_INDIRECTION_CAT_NUMBER 1000
@@ -803,9 +805,14 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 				continue;
 			hashes_to_process++;	
 			cat_limit += map[map_indirection[i][j]].size;
+			if (map_lines_indirection[map[map_indirection[i][j]].line] == 0)
+			{
+				map_lines_indirection[map[map_indirection[i][j]].line] = 1;
+				lines_coverage++; 
+			}
 			if (cat_limit > matchmap_max_files)
 			{
-				if (hashes_to_process < scan->hash_count / 10 && cat_limit < MAX_MATCHMAP_FILES)
+				if ((hashes_to_process < scan->hash_count / 10 || (float) lines_coverage / scan->hash_count < 0.6) && cat_limit < MAX_MATCHMAP_FILES)
 				{
 					matchmap_max_files += map[map_indirection[i][j]].size;
 				}
@@ -830,14 +837,23 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 		{
 			for (int j=0; j < map_indirection_index[i]; j++)
 			{
-				 uint8_t * wfp = map[map_indirection[i][j]].wfp;
+				uint8_t * wfp = map[map_indirection[i][j]].wfp;
 				scanlog("Cat :%d.%d - line %d - %02x%02x%02x%02x - size %d\n",i,j, 
 						map[map_indirection[i][j]].line, wfp[0], wfp[1],wfp[2],wfp[3], map[map_indirection[i][j]].size);
 			}
 		}
+
+		for (int i = 0; i <= scan->lines[scan->hash_count - 1]; i++)
+		{
+			if (map_lines_indirection[i] > -1 && map_lines_indirection[i] == 0)
+			{
+				scanlog("Warning ignored line %d\n", i);
+			}
+		}
 	}
 	matchmap_max_files = cat_limit;
-	scanlog("Map limit on %d MD5s at  %d of %d. Selected hashed: %d/%d - cat_limit_files = %d\n",matchmap_max_files, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER, hashes_to_process, scan->hash_count, cat_limit);
+	scanlog("Map limit on %d MD5s at  %d of %d lines. Selected hashed: %d/%d - cat_limit_files = %d - lines coverage %d\n",
+			matchmap_max_files, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER, hashes_to_process, scan->hash_count, cat_limit, (lines_coverage * 100) / scan->hash_count);
 	scan->matchmap = calloc(matchmap_max_files, sizeof(matchmap_entry));
 
 	int map_indexes[scan->hash_count];
@@ -951,7 +967,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	}
 
 	//Free memory
-	for (int i = 0; i  < scan->hash_count; i++)
+	for (int i = 0; i < scan->hash_count; i++)
 	{
 		free(map[i].md5_set);
 	}
