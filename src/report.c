@@ -213,7 +213,7 @@ bool print_json_component(component_data_t * component)
 		printf("{");
 	else
 		printf(",");
-/* Fetch related purls */
+	/* Fetch related purls */
 	fetch_related_purls(component);
 
 	/* Calculate main URL */

@@ -65,91 +65,61 @@ component_item *declared_components;
 uint8_t trace_id[MD5_LEN];
 bool trace_on;
 
-
+#define LDB_VER_MIN "4.1.0"
 /* Initialize tables for the DB name indicated (defaults to oss) */
 void initialize_ldb_tables(char *name)
 {
+	
+	char * ldb_ver = NULL;
+	ldb_version(&ldb_ver);
+	scanlog("ldb version: %s\n", ldb_ver);
+	
+	if (!ldb_ver || strcmp(ldb_ver, LDB_VER_MIN) < 0)
+	{
+		fprintf(stderr, "The current ldb version %s is too old, please upgrade to %s to proceed\n", ldb_ver, LDB_VER_MIN);
+		exit(EXIT_FAILURE);
+	}
+	free(ldb_ver);
+	
 	char oss_db_name[MAX_ARGLN];
 
 	if (name) strcpy(oss_db_name, name);
 	else strcpy(oss_db_name, DEFAULT_OSS_DB_NAME);
 
-	strcpy(oss_url.db, oss_db_name);
-	strcpy(oss_url.table, "url");
-	oss_url.key_ln = 16;
-	oss_url.rec_ln = 0;
-	oss_url.ts_ln = 2;
-	oss_url.tmp = false;
+	char dbtable[MAX_ARGLN * 2];
+	scanlog("Loading tables definitions\n");
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "url");
+	oss_url = ldb_read_cfg(dbtable);
 
-	strcpy(oss_file.db, oss_db_name);
-	strcpy(oss_file.table, "file");
-	oss_file.key_ln = 16;
-	oss_file.rec_ln = 0;
-	oss_file.ts_ln = 2;
-	oss_file.tmp = false;
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "file");
+	oss_file = ldb_read_cfg(dbtable);
 
-	strcpy(oss_wfp.db, oss_db_name);
-	strcpy(oss_wfp.table, "wfp");
-	oss_wfp.key_ln = 4;
-	oss_wfp.rec_ln = 18;
-	oss_wfp.ts_ln = 2;
-	oss_wfp.tmp = false;
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "wfp");
+	oss_wfp = ldb_read_cfg(dbtable);
 
-	strcpy(oss_purl.db, oss_db_name);
-	strcpy(oss_purl.table, "purl");
-	oss_purl.key_ln = 16;
-	oss_purl.rec_ln = 0;
-	oss_purl.ts_ln = 2;
-	oss_purl.tmp = false;
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "purl");
+	oss_purl = ldb_read_cfg(dbtable);
 
-	strcpy(oss_copyright.db, oss_db_name);
-	strcpy(oss_copyright.table, "copyright");
-	oss_copyright.key_ln = 16;
-	oss_copyright.rec_ln = 0;
-	oss_copyright.ts_ln = 2;
-	oss_copyright.tmp = false;
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "copyright");
+	oss_copyright = ldb_read_cfg(dbtable);
+	
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "quality");
+	oss_quality = ldb_read_cfg(dbtable);
 
-	strcpy(oss_quality.db, oss_db_name);
-	strcpy(oss_quality.table, "quality");
-	oss_quality.key_ln = 16;
-	oss_quality.rec_ln = 0;
-	oss_quality.ts_ln = 2;
-	oss_quality.tmp = false;
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "vulnerability");
+	oss_vulnerability = ldb_read_cfg(dbtable);
 
-	strcpy(oss_vulnerability.db, oss_db_name);
-	strcpy(oss_vulnerability.table, "vulnerability");
-	oss_vulnerability.key_ln = 16;
-	oss_vulnerability.rec_ln = 0;
-	oss_vulnerability.ts_ln = 2;
-	oss_vulnerability.tmp = false;
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "dependency");
+	oss_dependency = ldb_read_cfg(dbtable);
 
-	strcpy(oss_dependency.db, oss_db_name);
-	strcpy(oss_dependency.table, "dependency");
-	oss_dependency.key_ln = 16;
-	oss_dependency.rec_ln = 0;
-	oss_dependency.ts_ln = 2;
-	oss_dependency.tmp = false;
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "license");
+	oss_license = ldb_read_cfg(dbtable);
 
-	strcpy(oss_license.db, oss_db_name);
-	strcpy(oss_license.table, "license");
-	oss_license.key_ln = 16;
-	oss_license.rec_ln = 0;
-	oss_license.ts_ln = 2;
-	oss_license.tmp = false;
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "attribution");
+	oss_attribution = ldb_read_cfg(dbtable);
 
-	strcpy(oss_attribution.db, oss_db_name);
-	strcpy(oss_attribution.table, "attribution");
-	oss_attribution.key_ln = 16;
-	oss_attribution.rec_ln = 0;
-	oss_attribution.ts_ln = 2;
-	oss_attribution.tmp = false;
-
-	strcpy(oss_cryptography.db, oss_db_name);
-	strcpy(oss_cryptography.table, "cryptography");
-	oss_cryptography.key_ln = 16;
-	oss_cryptography.rec_ln = 0;
-	oss_cryptography.ts_ln = 2;
-	oss_cryptography.tmp = false;
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "cryptography");
+	oss_cryptography = ldb_read_cfg(dbtable);
 
 	kb_version_get();
 	osadl_load_file();
@@ -304,12 +274,10 @@ int main(int argc, char **argv)
 	
 	microseconds_start = microseconds_now();
 
-	initialize_ldb_tables(NULL);
-
 	/* Parse arguments */
 	int option;
 	bool invalid_argument = false;
-
+	char * ldb_db_name = NULL;
 	while ((option = getopt(argc, argv, ":f:s:b:B:c:k:a:F:l:n:i:M:N:wtvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
@@ -339,6 +307,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'k':
+				initialize_ldb_tables(ldb_db_name);
 				mz_file_contents(optarg, oss_file.db);
 				exit(EXIT_SUCCESS);
 				break;
@@ -359,7 +328,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'n':
-				initialize_ldb_tables(optarg);
+				ldb_db_name = strdup(optarg);
 				break;
 			case 'M':
 				scan_max_snippets = atol(optarg);
@@ -474,6 +443,9 @@ int main(int argc, char **argv)
 			fprintf(stdout, "Target cannot exceed %d bytes\n", MAX_ARGLN);
 			exit(EXIT_FAILURE);
 		}
+
+		initialize_ldb_tables(ldb_db_name);
+		free(ldb_db_name);
 
 		/* Remove trailing backslashes from target (if any) */
 		strcpy (target, argv[argc-1]);

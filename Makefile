@@ -5,12 +5,9 @@ endif
 LDFLAGS+= -lldb -lm -lpthread -ldl
 
 LDB_CURRENT_VERSION := $(shell ldb -v | sed 's/ldb-//' | head -c 3)
-LDB_TARGET_VERSION := 3.2
+LDB_TARGET_VERSION := 4.1
 
 VERSION_IS_LESS := $(shell echo $(LDB_CURRENT_VERSION) \< $(LDB_TARGET_VERSION) | bc)
-ifeq ($(VERSION_IS_LESS),1)
-	LDFLAGS += -lcrypto -lz
-endif
 
 CCFLAGS ?= -O -lz -Wall -Wno-unused-result -Wno-deprecated-declarations -g -Iinc -Iexternal/inc -D_LARGEFILE64_SOURCE -D_GNU_SOURCE
 SOURCES=$(wildcard src/*.c) $(wildcard src/**/*.c)  $(wildcard external/*.c) $(wildcard external/**/*.c)
@@ -20,8 +17,10 @@ TARGET=scanoss
 
 # Regla de prueba
 $(TARGET): $(OBJECTS)
-	@echo "Current version: $(LDB_CURRENT_VERSION)"
-	@echo "LDFLAGS: $(LDFLAGS)"
+ifeq ($(VERSION_IS_LESS),1)
+	@echo "Current LDB version: $(LDB_CURRENT_VERSION) is too old, please update to the lastest version to continue."
+	exit 1
+endif
 
 	$(CC) -g -o $(TARGET) $^ $(LDFLAGS)
 
