@@ -88,7 +88,7 @@ Alternatively, these value can be written in %s\n\
 |  256  | Disable best match only (default: enabled)            |\n\
 |  512  | Hide identified files (default: disabled)             |\n\
 | 1024  | Enable download_url (default: disabled)               |\n\
-| 2048  | Enable GitHub full path (default: disabled)           |\n\
+| 2048  | Enable \"use path hint\" logic (default: disabled)    |\n\
 | 4096  | Disable extended server stats (default: enabled)      |\n\
 | 8192  | Disable health layer (default: enabled)               |\n\
 | 16384 | Enable high accuracy, slower scan (default: disabled) |\n\
