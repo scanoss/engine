@@ -191,14 +191,19 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 {
 	uint8_t *record = (uint8_t *)ptr;
 
+	if (data == NULL && datalen > 0)
+	{
+		scanlog("Error quering WFP table. datalen=%u but data is NULL\n", datalen);
+		uint32_write(record,0);
+		return true;
+	}
+
 	if (datalen)
 	{
 		uint32_t size = uint32_read(record);
 		/* End recordset fetch if MAX_QUERY_RESPONSE is reached */
 		if (size + datalen + 4 >= WFP_REC_LN * MATCHMAP_ITEM_SIZE)
 		{
-			//memcpy(record + size + 4, data, WFP_REC_LN * MATCHMAP_ITEM_SIZE - size);
-			//uint32_write(record, size + WFP_REC_LN * MATCHMAP_ITEM_SIZE);
 			return true;
 		}
 
@@ -789,6 +794,12 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 
 		map_indirection[cat][map_indirection_index[cat]] = i;
 		map_indirection_index[cat]++;
+	}
+
+	if (map_max_size <= 0)
+	{
+		scanlog("Warning no WFP with hits, returning failed\n");
+		return MATCH_NONE;
 	}
 
 	/* Calculate a limit to the quantity of cathegories to be processed, 
