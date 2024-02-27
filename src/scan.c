@@ -149,7 +149,7 @@ int asset_declared(component_data_t * comp)
 			break;
 
 		/* Compare purl */
-		if (comp->purls[0])
+		if (purl && comp->purls[0])
 		{
 			scanlog("check	assets with %s\n", purl);
 			if (!strcmp((const char *) purl, (const char *) comp->purls[0])) 
