@@ -193,22 +193,6 @@ void print_purl_array(component_data_t * component)
 	printf("],");
 }
 
-/**
- * @brief Skip the first directory name for Github and Gitlab files
- * @param purl purl string
- * @param file file string
- * @return modified file string
- */
-char *file_skip_release(char *purl, char *file)
-{
-	if (!(engine_flags & ENABLE_GITHUB_FULL_PATH) && (starts_with(purl, "pkg:github") || starts_with(purl, "pkg:gitlab")))
-	{
-		return skip_first_slash(file);
-	}
-	return file;
-}
-
-
 bool print_json_component(component_data_t * component)
 {
 	if (!component)
@@ -229,7 +213,7 @@ bool print_json_component(component_data_t * component)
 		printf("{");
 	else
 		printf(",");
-/* Fetch related purls */
+	/* Fetch related purls */
 	fetch_related_purls(component);
 
 	/* Calculate main URL */
@@ -257,7 +241,9 @@ bool print_json_component(component_data_t * component)
 		printf("\"download_url\": \"%s\",", component->url);
 
 	printf("\"release_date\": \"%s\",", component->release_date);
-	printf("\"file\": \"%s\",", component->url_match == true ? basename(component->url) : file_skip_release(component->purls[0], component->file));
+	printf("\"file\": \"%s\",", component->url_match == true ? basename(component->url) : component->file);
+	if (engine_flags & ENABLE_PATH_HINT)
+		printf("\"path_rank\": %d,", component->path_rank);
 
 	char *url_id = md5_hex(component->url_md5);
 	printf("\"url_hash\": \"%s\"", url_id);

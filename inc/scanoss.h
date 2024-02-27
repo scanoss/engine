@@ -44,7 +44,7 @@
 #define WFP_REC_LN 18
 
 /* Log files */
-#define SCANOSS_VERSION "5.3.5"
+#define SCANOSS_VERSION "5.4.0"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
@@ -65,7 +65,7 @@
 #define DISABLE_BEST_MATCH 256
 #define DISABLE_REPORT_IDENTIFIED 512
 #define ENABLE_DOWNLOAD_URL 1024
-#define ENABLE_GITHUB_FULL_PATH 2048
+#define ENABLE_PATH_HINT 2048
 #define DISABLE_SERVER_INFO 4096
 #define DISABLE_HEALTH 8192
 #define ENABLE_HIGH_ACCURACY 16384

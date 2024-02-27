@@ -161,7 +161,11 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 
 static void fhash_process(char * hash, component_list_t * comp_list)
 {
-	struct ldb_table oss_fhash = {.db = "oss", .table = "fhashes", .key_ln = 16, .rec_ln = 0, .ts_ln = 2, .tmp = false};
+	struct ldb_table oss_fhash = {.db = "oss", .table = "fhashes", .key_ln = 16, .rec_ln = 0, .ts_ln = 2, .tmp = false, .keys=2, .definitions = 0};
+	
+	if (!ldb_table_exists(oss_fhash.db, oss_fhash.table)) // skip if the table is not present
+		return;
+	
 	uint8_t fhash[16]; 
 	ldb_hex_to_bin(hash, 32, fhash);
 	/* Get all file IDs for given wfp */
@@ -304,7 +308,10 @@ int binary_scan(char * input)
 			break;
 		component_list_destroy(result.components);
 		free(result.file);
+		result.file = NULL;
 		free(result.md5);
+		result.md5 = NULL;
+		
 		sensibility++;
 	};
 

@@ -80,7 +80,7 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
 
     if (!list->headp.lh_first)
     {
-        scanlog("first component in list\n");
+        scanlog("first component in list %s\n", new_comp->purls[0]);
         struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert at the head. */
         LIST_INSERT_HEAD(&list->headp, nn, entries);
         nn->component = new_comp;

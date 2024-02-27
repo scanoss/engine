@@ -41,6 +41,8 @@ typedef struct component_data_t
 	char * dependency_text; /* used in json output generation */
 	char * health_text; /* used in json output generation */
 	int hits; /*used in binary analysis*/
+	char * file_path_ref;
+	int path_rank;
 } component_data_t;
 
 component_data_t * component_init(void);

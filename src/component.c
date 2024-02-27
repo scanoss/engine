@@ -177,6 +177,32 @@ bool ignored_asset_match(uint8_t *url_record)
 	return found;
 }
 
+static char * look_for_version(char *in)
+{
+	if (!in)
+		return NULL;
+	bool is_ver = false;
+
+	char *v = strstr(in, "-v");
+	if (v && isdigit(*(v + 2)))
+		is_ver = true;
+	else
+	{
+		v = strchr(in, '.');
+		if (v && isdigit(*(v + 1)) && (*(v + 2) == '.' || isdigit(*(v + 2))))
+			is_ver = true;
+	}
+
+	if (is_ver)
+	{
+		char * p = strchr(v, '/');
+		if (p)
+			return (p+1);
+	}
+
+	return in;
+}
+
 /**
  * @brief Fill the match structure
  * @param url_key md5 of the match url
@@ -203,7 +229,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 		memcpy(component->url_md5, url_key, MD5_LEN);
 		if (file_path)
 		{
-			component->file = strdup(file_path);
+			component->file = strdup(look_for_version(file_path));
 			component->path_ln = strlen(file_path);
 			flip_slashes(component->file);
 		}

@@ -107,12 +107,13 @@ static int hint_eval(component_data_t *a, component_data_t *b)
 		/*Check for component hint in purl, select components matching with the hint */
 		if (a->purls[0] && strstr(a->purls[0], component_hint) && !(b->purls[0] && strstr(b->purls[0], component_hint)))
 		{
-			scanlog("Reject component %s by hint: %s\n", b->purls[0], component_hint);
+			scanlog("Reject component %s by purl hint: %s\n", b->purls[0], component_hint);
 			return -1;
 		}
 		if (b->purls[0] && strstr(b->purls[0], component_hint) && !(a->purls[0] && strstr(a->purls[0], component_hint)))
 		{
-			scanlog("Accept component %s by hint: %s\n", b->purls[0], component_hint);
+			scanlog("Accept component %s by purl hint: %s\n", b->purls[0], component_hint);
+			b->identified = 1;
 			return 1;
 		}
 
@@ -125,12 +126,127 @@ static int hint_eval(component_data_t *a, component_data_t *b)
 		if (b->component && strstr(b->component, component_hint) && !(a->component && strstr(a->purls[0], component_hint)))
 		{
 			scanlog("Accept component %s by hint: %s\n",  b->component, component_hint);
+			b->identified = 1;
 			return 1;
 		}
 
 		return 0;
 }
 
+// own function to compare strings and rate the similarity
+static int string_compare(const char *string1, const char *string2)
+{
+	float difference = 0;
+	float div = (strlen(string1) + strlen(string2)) / 2;
+	if (!strcmp(string1, string2))
+		return -1;
+
+	while (*string1 != '\0' && *string2 != '\0')
+	{
+		if (*string1 != *string2)
+		{
+			difference += 1 / div;
+		}
+
+		string1++;
+		string2++;
+	}
+
+	// Add the length difference if the strings have different lengths
+	difference += abs((int)strlen(string1) - (int)strlen(string2)) / div;
+
+	return ceil(difference);
+}
+
+#define PATH_LEVEL_COMP_INIT_VALUE 1000
+#define PATH_LEVEL_COMP_REF 10
+// Function to compare the similarity of two paths from back to front
+static int paths_compare(const char *a, const char *b)
+{
+	// Pointers to traverse the paths from the end
+	const char *ptr_a = strrchr(a, '/');
+	if (!ptr_a)
+		ptr_a = a;
+
+	const char *ptr_b = strrchr(b, '/');
+	if (!ptr_b)
+		ptr_b = b;
+
+	const char *ptr_a_prev = a + strlen(a) - 1;
+	const char *ptr_b_prev = b + strlen(b) - 1;
+
+	int rank = PATH_LEVEL_COMP_REF;
+	// check if both path have equal lenght
+	if (strlen(a) == strlen(b))
+		rank--;
+
+	while (ptr_a >= a && ptr_b >= b)
+	{
+		// Look for each path level
+		if ((*ptr_a == '/' || ptr_a == a) && (*ptr_b == '/' || ptr_b == b))
+		{
+			size_t size_a = ptr_a_prev - ptr_a;
+			size_t size_b = ptr_b_prev - ptr_b;
+
+			char *level_a = strndup(ptr_a, size_a);
+			char *level_b = strndup(ptr_b, size_b);
+
+			// Compare the current levels
+			rank += string_compare(*level_a == '/' ? level_a + 1 : level_a, *level_b == '/' ? level_b + 1 : level_b);
+
+			free(level_a);
+			free(level_b);
+
+			// Move pointers
+			if (ptr_a > a)
+			{
+				ptr_a_prev = ptr_a;
+				ptr_a--;
+			}
+			if (ptr_b > b)
+			{
+				ptr_b_prev = ptr_b;
+				ptr_b--;
+			}
+			rank--;
+		}
+
+		if (ptr_a == a && ptr_b == b)
+			break;
+
+		// look for the next levels
+		if (!(*ptr_a == '/' || ptr_a == a))
+			ptr_a--;
+
+		if (!(*ptr_b == '/' || ptr_b == b))
+			ptr_b--;
+	}
+
+	return rank;
+}
+
+static void evaluate_path_rank(component_data_t *comp)
+{
+	if (comp->path_rank == PATH_LEVEL_COMP_INIT_VALUE)
+	{
+		//generate the rank based on the similarity of the paths.
+		comp->path_rank = paths_compare(comp->file_path_ref, comp->file);
+
+		//modulate the result based on component information-
+		if (comp->path_rank < PATH_LEVEL_COMP_REF && (strstr(comp->file_path_ref, comp->component) || strstr(comp->file_path_ref, comp->vendor)))
+		{
+			comp->path_rank -= PATH_LEVEL_COMP_REF / 5 + 1;
+			if (strstr(comp->file_path_ref, comp->component) && strstr(comp->file_path_ref, comp->vendor))
+			{
+				comp->path_rank -= PATH_LEVEL_COMP_REF / 2;
+			}
+			if (strstr(comp->purls[0], ".mirror"))
+				comp->path_rank+=PATH_LEVEL_COMP_REF / 2;
+			else if (strstr(comp->purls[0], "github"))
+				comp->path_rank--;
+		}
+	}
+}
 
 /**
  * @brief Funtion to be called as pointer when a new compoent has to be loaded in to the list
@@ -140,6 +256,7 @@ static int hint_eval(component_data_t *a, component_data_t *b)
  * @return true b has to be included in the list before "a"
  * @return false "a" wins, compare with the next component.
  */
+
 static bool component_hint_date_comparation(component_data_t *a, component_data_t *b)
 {
 	if (declared_components)
@@ -160,13 +277,39 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 
 	else if (component_hint)
 	{
+		scanlog("hint eval\n");
 		int result = hint_eval(a,b);
 		if (result > 0)
 			return true;
 		if (result < 0)
 			return false;
 	}
+	
+	if ((engine_flags & ENABLE_PATH_HINT) && a->file_path_ref && b->file_path_ref)
+	{
+		//evalute path rank for component a
+		evaluate_path_rank(a);
+		
+		//evalute path rank for component b
+		evaluate_path_rank(b);
 
+		//The path_rank will be used as hint only when it has a reasonable value, in other cases the critea will be ignored.
+		if (b->path_rank < PATH_LEVEL_COMP_REF / 3 + 1)
+		{
+			if (b->path_rank - a->path_rank < 0)
+			{
+				scanlog("%s wins %s by path rank %d\n", b->purls[0], a->purls[0], b->path_rank);
+				return true;
+			}
+			if (b->path_rank - a->path_rank > 0)
+			{
+				scanlog("%s - %s loses %s by path rank %d/%d\n", b->purls[0],b->file,  a->purls[0], b->path_rank, a->path_rank);
+				return false;
+			}
+		}
+		else if (a->path_rank < PATH_LEVEL_COMP_REF / 3 + 1)
+			return false;
+	}
 	if (!*b->release_date)
 		return false;
 	if (!*a->release_date)
@@ -202,39 +345,45 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 
 	return false;
 }
-	
-bool add_component_from_urlid(component_list_t  * component_list, uint8_t* url_id, char * path)
+
+bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id, char *path)
 {
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
-	
+
 	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)url_rec);
 
-		/* Extract date from url_rec */
-		char date[MAX_ARGLN] = "0";
-		extract_csv(date, (char *)url_rec, 4, MAX_ARGLN);
-		/* Create a new component and fill it from the url record */
-		component_data_t *new_comp = calloc(1, sizeof(*new_comp));
-		bool result = fill_component(new_comp, url_id, path, (uint8_t *)url_rec);
-		if (result)
-		{	
-			new_comp->file_md5_ref = component_list->match_ref->file_md5;
-			/* If the component is valid add it to the component list */
-			/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
-			/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
-			new_comp->identified = IDENTIFIED_NONE;
-			asset_declared(new_comp);
-			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
-			{
-				scanlog("component rejected by date: %s\n",new_comp->purls[0]);
-				component_data_free(new_comp); /* Free if the componet was rejected */
-			}
+	/* Extract date from url_rec */
+	char date[MAX_ARGLN] = "0";
+	extract_csv(date, (char *)url_rec, 4, MAX_ARGLN);
+	/* Create a new component and fill it from the url record */
+	component_data_t *new_comp = calloc(1, sizeof(*new_comp));
+	bool result = fill_component(new_comp, url_id, path, (uint8_t *)url_rec);
+	if (result)
+	{
+		new_comp->file_md5_ref = component_list->match_ref->file_md5;
+		/* If the component is valid add it to the component list */
+		/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
+		/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
+		new_comp->identified = IDENTIFIED_NONE;
+		asset_declared(new_comp);
+		new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
+		new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
+		scanlog("--- new comp ---\n");
+		if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
+		{
+			scanlog("component rejected: %s\n", new_comp->purls[0]);
+			component_data_free(new_comp); /* Free if the componet was rejected */
 		}
 		else
-		{
-			scanlog("incomplete component: %s\n", new_comp->component);
-			component_data_free(new_comp);
-		}
-		free(url_rec);
+			scanlog("component accepted: %s - pathrank: %d\n", new_comp->purls[0], new_comp->path_rank);
+
+	}
+	else
+	{
+		scanlog("incomplete component: %s\n", new_comp->component);
+		component_data_free(new_comp);
+	}
+	free(url_rec);
 	return true;
 }
 
@@ -284,12 +433,11 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	memcpy(url_id, raw_data, MD5_LEN);
 	char path[MAX_FILE_PATH+1];
 	strncpy(path, decrypted, MAX_FILE_PATH);
-	if (!ignored_extension(path))
+	//check the ignore list only if the match type is MATCH_SNIPPET. TODO: remove this after remine everything.
+	if (!(component_list->match_ref->type == MATCH_SNIPPET && ignored_extension(path)))
 		add_component_from_urlid(component_list, url_id, path);
 
 	free(decrypted);
-	
-	//scanlog("#%d File %s\n", iteration, files[iteration].path);
 	return false;
 }
 
@@ -365,10 +513,11 @@ bool load_matches(match_data_t *match)
 			if (!item->entries.le_next || !item->entries.le_next->component)
 				break;
 			/* if the date of two components it's the same */
-			if(!strcmp(item->component->release_date, item->entries.le_next->component->release_date))
+			if((!strcmp(item->component->release_date, item->entries.le_next->component->release_date) && 
+				item->component->identified <= item->entries.le_next->component->identified))
 			{
 				/* If item has no dependencies or depencencies are empty I must check the next one */
-				if(!item->component->dependency_text || strlen(item->component->dependency_text) < 4)
+				if(!item->component->dependency_text || strlen(item->component->dependency_text) < 4)	
 				{
 					/* if item has dependencies, stop */
 					if(print_dependencies(item->component))
@@ -376,6 +525,7 @@ bool load_matches(match_data_t *match)
 					/*if the next component has dependencies, permute */
 					else if (print_dependencies(item->entries.le_next->component))
 					{
+						scanlog("Component permuted due to dependency tiebreak\n");
 						struct comp_entry *aux = item->entries.le_next->entries.le_next;
 						LIST_INSERT_HEAD(&match->component_list.headp, item->entries.le_next, entries);
 						item->entries.le_next = aux;
@@ -580,7 +730,7 @@ void match_select_best(scan_data_t *scan)
 	if (!scan->best_match || !scan->best_match->component_list.items || ((engine_flags & DISABLE_REPORT_IDENTIFIED) && scan->best_match->component_list.headp.lh_first->component->identified))
 	{
 		scan->match_type = MATCH_NONE;
-		scanlog("Match without components or declared in sbom");
+		scanlog("Match without components or declared in sbom\n");
 	}
 }
 
