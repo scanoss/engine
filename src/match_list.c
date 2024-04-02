@@ -352,7 +352,7 @@ void match_list_debug(match_list_t *list)
     for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
         char md5_hex[MD5_LEN * 2 + 1];
-        ldb_bin_to_hex(np->match->matchmap_reg, MD5_LEN, md5_hex);
+        ldb_bin_to_hex(np->match->matchmap_reg->md5, MD5_LEN, md5_hex);
         //   printf("Item: %d - hits: %d - md5: %s - file: %s - release_date: %s - ranges: %s - purl:%s\n",
         // i, np->match->hits, md5_hex, np->match->file, np->match->release_date, np->match->line_ranges, np->match->purls[0]);
         printf("\nItem: %d - hits: %d - md5: %s - release: %s \n", i, np->match->hits, md5_hex, np->match->component_list.headp.lh_first->component->release_date);

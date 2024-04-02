@@ -83,6 +83,11 @@ void scan_data_free(scan_data_t * scan)
 	free(scan->file_size);
 	free(scan->hashes);
 	free(scan->lines);
+
+	for (int i = 0; i < scan->matchmap_size; i++)
+	{
+		free(scan->matchmap[i].range);
+	}
 	free(scan->matchmap);
 	free(scan);
 	scan = NULL;
