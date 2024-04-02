@@ -49,7 +49,7 @@
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-#define API_URL "https://osskb.org/api"
+#define API_URL "https://api.osskb.org/"
 #define DEFAULT_OSS_DB_NAME "oss"
 
 /* Engine configuration flags */
