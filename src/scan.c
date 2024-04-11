@@ -83,6 +83,11 @@ void scan_data_free(scan_data_t * scan)
 	free(scan->file_size);
 	free(scan->hashes);
 	free(scan->lines);
+
+	for (int i = 0; i < scan->matchmap_size; i++)
+	{
+		free(scan->matchmap[i].range);
+	}
 	free(scan->matchmap);
 	free(scan);
 	scan = NULL;
@@ -466,6 +471,7 @@ void ldb_scan(scan_data_t *scan)
 				if (aux)
 				{
 					hpsm_crc_lines = strdup(&aux[5]);
+					scanlog("HPSM lines CRC: %s\n", hpsm_crc_lines);
 					free(aux);
 				}
 			}

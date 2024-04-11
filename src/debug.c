@@ -168,7 +168,7 @@ void map_dump(scan_data_t *scan)
 		fprintf(map, " %04x ", scan->matchmap[i].hits);
 
 		/* Print ranges */
-		for (int j = 0; j < MATCHMAP_RANGES; j ++)
+		for (int j = 0; j < scan->matchmap[i].ranges_number; j ++)
 		{
 			matchmap_range *range = &scan->matchmap[i].range[j];
 			fprintf(map, "%04x-%04x<%04x ", range->from, range->to, range->oss_line);

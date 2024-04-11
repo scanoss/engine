@@ -19,7 +19,7 @@ typedef struct match_data_t
 	int  path_ln; /*file path lenght*/ //TODO check if this is needed.
 	uint8_t file_md5[MD5_LEN]; /* file md5 */
 	char source_md5[MD5_LEN * 2 + 1]; /*matched file md5 in hex format */
-    uint8_t * matchmap_reg; /* pointer to matchmap record */
+    matchmap_entry * matchmap_reg; /* pointer to matchmap record */
 	char * snippet_ids; /* comma separated list of matching snippet ids */
 	uint32_t * crclist; /* pointer to crc list used in for processing */
 	char * quality_text; /* quality string used in json output format */

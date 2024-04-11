@@ -5,7 +5,7 @@
 #include "match_list.h"
 #define MAX_MULTIPLE_COMPONENTS 10
 #define MAX_SNIPPET_IDS_RETURNED 10000
-#define MATCHMAP_RANGES 20
+#define MATCHMAP_RANGES 10
 /**
  * @brief Structure used to define the snippet ranges.
  * 
@@ -26,7 +26,8 @@ typedef struct matchmap_entry
 {
 	uint8_t md5[MD5_LEN];
 	uint16_t hits;
-	matchmap_range range[MATCHMAP_RANGES];
+	matchmap_range * range;
+	int ranges_number;
 	uint8_t lastwfp[WFP_LN];
 } matchmap_entry;
 
