@@ -44,12 +44,12 @@
 #define WFP_REC_LN 18
 
 /* Log files */
-#define SCANOSS_VERSION "5.4.0"
+#define SCANOSS_VERSION "5.4.1"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-#define API_URL "https://api.osskb.org/"
+#define API_URL "https://api.osskb.org"
 #define DEFAULT_OSS_DB_NAME "oss"
 
 /* Engine configuration flags */

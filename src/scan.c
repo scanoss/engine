@@ -471,6 +471,7 @@ void ldb_scan(scan_data_t *scan)
 				if (aux)
 				{
 					hpsm_crc_lines = strdup(&aux[5]);
+					scanlog("HPSM lines CRC: %s\n", hpsm_crc_lines);
 					free(aux);
 				}
 			}

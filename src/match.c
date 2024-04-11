@@ -697,28 +697,31 @@ void match_select_best(scan_data_t *scan)
 				{
 					static struct ranges r = {NULL, NULL, NULL};
 					r = hpsm_calc(scan->matches_list_array[i]->best_match->file_md5);
-					if (hpsm_enabled && r.matched && !memcmp(r.matched, "0%%", 2))
+					scanlog("HPSM range: %s\n", r.local);
+					if (*r.local && !strstr(r.local,"-1")) //check if HPSM was able to run
 					{
-						scan->matches_list_array[i]->best_match->type = MATCH_NONE;
-					}
-					else
-					{
-						free(scan->matches_list_array[i]->best_match->line_ranges);
-						free(scan->matches_list_array[i]->best_match->oss_ranges);
-						free(scan->matches_list_array[i]->best_match->matched_percent);
-						scan->matches_list_array[i]->best_match->line_ranges = r.local;
-						scan->matches_list_array[i]->best_match->oss_ranges = r.remote;
-						scan->matches_list_array[i]->best_match->matched_percent = r.matched;
+						if (hpsm_enabled && r.matched && !memcmp(r.matched, "0%%", 2))
+						{
+							scan->matches_list_array[i]->best_match->type = MATCH_NONE;
+						}
+						else
+						{
+							free(scan->matches_list_array[i]->best_match->line_ranges);
+							free(scan->matches_list_array[i]->best_match->oss_ranges);
+							free(scan->matches_list_array[i]->best_match->matched_percent);
+							scan->matches_list_array[i]->best_match->line_ranges = r.local;
+							scan->matches_list_array[i]->best_match->oss_ranges = r.remote;
+							scan->matches_list_array[i]->best_match->matched_percent = r.matched;
 
-						max_hits = scan->matches_list_array[i]->best_match->hits;
-						index = i;
+							max_hits = scan->matches_list_array[i]->best_match->hits;
+							index = i;
+						}
+						continue;
 					}
 				}
-				else
-				{
-					max_hits = scan->matches_list_array[i]->best_match->hits;
-					index = i;
-				}
+
+				max_hits = scan->matches_list_array[i]->best_match->hits;
+				index = i;
 			}
 		}
 	}
