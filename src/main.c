@@ -229,9 +229,10 @@ bool lib_encoder_load()
 		scanlog("Lib scanoss-enocder present\n");
 		decrypt_data = dlsym(lib_encoder_handle, "scanoss_decode_table");
 		decrypt_mz = dlsym(lib_encoder_handle, "scanoss_decode_mz");
+		encoder_version = dlsym(lib_encoder_handle, "scanoss_encoder_version");
 		if ((err = dlerror())) 
 		{
-			printf("%s\n", err);
+			printf("%s - You may need to update libscanoss_encoder.so\n", err);
 			exit(EXIT_FAILURE);
 		}
 		return true;
@@ -377,7 +378,11 @@ int main(int argc, char **argv)
 				quiet = true;
 				scanlog("Quiet mode enabled. Displaying only debugging info via STDERR.\n");
 				if (lib_encoder_present)
-					scanlog("Lib encoder present.\n");
+				{
+					char version[32] = "\0";
+					encoder_version(version);
+					scanlog("Lib encoder present - version %s\n", version);
+				}
 				break;
 
 			case 'd':

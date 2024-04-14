@@ -37,6 +37,7 @@
 
 char * (*decrypt_data) (uint8_t *data, uint32_t size, struct ldb_table table, uint8_t *key, uint8_t *subkey);
 void  (*decrypt_mz) (uint8_t *data, uint32_t len);
+void (*encoder_version) (char * version);
 /**
  * @brief Decrypt data function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param data //TODO  
