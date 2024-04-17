@@ -30,7 +30,6 @@
   */
 
 #include <sys/stat.h>
-#include <openssl/md5.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

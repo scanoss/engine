@@ -43,7 +43,7 @@
 #include "scanoss.h"
 #include "util.h"
 
-#include "decrypt.h"
+#include <decrypt.h>
 #include "hpsm.h"
 #include <dlfcn.h>
 
@@ -64,7 +64,7 @@ component_item *declared_components;
 /* File tracing -qi */
 uint8_t trace_id[MD5_LEN];
 bool trace_on;
-
+bool lib_encoder_present = false;
 #define LDB_VER_MIN "4.1.0"
 /* Initialize tables for the DB name indicated (defaults to oss) */
 void initialize_ldb_tables(char *name)
@@ -216,17 +216,18 @@ uint64_t read_flags()
 void * lib_encoder_handle = NULL;
 bool lib_encoder_load()
 {
+#ifndef SCANOSS_ENCODER_VERSION
 	/*set decode funtion pointer to NULL*/
 	lib_encoder_handle = dlopen("libscanoss_encoder.so", RTLD_NOW);
 	char * err;
 	if ((err = dlerror())) 
 	{
-		scanlog("Lib scanoss-enocder was not detected. %s\n", err);
+		scanlog("Lib scanoss-encoder was not detected. %s\n", err);
 	}
     
 	if (lib_encoder_handle) 
 	{
-		scanlog("Lib scanoss-enocder present\n");
+		scanlog("Lib scanoss-encoder present\n");
 		decrypt_data = dlsym(lib_encoder_handle, "scanoss_decode_table");
 		decrypt_mz = dlsym(lib_encoder_handle, "scanoss_decode_mz");
 		encoder_version = dlsym(lib_encoder_handle, "scanoss_encoder_version");
@@ -240,6 +241,13 @@ bool lib_encoder_load()
 	decrypt_data = standalone_decrypt_data;
 	decrypt_mz = NULL;
 	return false;
+#else
+	decrypt_data = scanoss_decode_table;
+	decrypt_mz = scanoss_decode_mz;
+	encoder_version = scanoss_encoder_version;
+	scanlog("Using built-in encoder library v%s\n", SCANOSS_ENCODER_VERSION);
+	return false;
+#endif
 }
 
 
@@ -259,8 +267,6 @@ int main(int argc, char **argv)
 	trace_on = false;
 	memset(trace_id, 0 ,16);
 	
-	bool lib_encoder_present = lib_encoder_load();
-
 	if (argc <= 1)
 	{
 		fprintf (stdout, "Missing parameters. Please use -h\n");
@@ -377,12 +383,6 @@ int main(int argc, char **argv)
 				debug_on = true;
 				quiet = true;
 				scanlog("Quiet mode enabled. Displaying only debugging info via STDERR.\n");
-				if (lib_encoder_present)
-				{
-					char version[32] = "\0";
-					encoder_version(version);
-					scanlog("Lib encoder present - version %s\n", version);
-				}
 				break;
 
 			case 'd':
@@ -429,6 +429,14 @@ int main(int argc, char **argv)
 	/* Perform scan */
 	else 
 	{
+		lib_encoder_present = lib_encoder_load();
+		if (lib_encoder_present && debug_on)
+		{
+			char version[32] = "\0";
+			encoder_version(version);
+			scanlog("Lib encoder present - version %s\n", version);
+		}
+
 		/* Validate target */
 		char *arg_target = argv[argc-1];
 		bool isfile = is_file(arg_target);
