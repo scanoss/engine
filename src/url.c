@@ -357,6 +357,11 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 				scanlog("<<URL wins by purl date, %s - %s / %s -%s>>\n", purl_new, purl_date_new, purl_oldest ,purl_date_oldest);
 			}
 		}
+		else if (!*release_date && !*oldest)
+		{
+			replace = true;
+			scanlog("URL without release date accepted");
+		}
 
 		if (replace)
 		{
