@@ -52,10 +52,18 @@ void mz_get_key(struct mz_job *job, char *key)
 	memcpy(mz_file_id, key, 4);
 
 	sprintf(mz_path, "%s/%s.mz", job->path, mz_file_id);
+	if (oss_sources.definitions & LDB_TABLE_DEFINITION_ENCRYPTED)
+	{
+		if (decrypt_mz)
+			strcat(mz_path, ".enc");
+		else
+		{
+			fprintf(stderr, "Encoder lib not available. Install libscanoss_encoder.so and try again\n");
+			exit(EXIT_FAILURE);
+		}	
+	}
 	scanlog("MZ path: %s \n", mz_path);
 
-	if (decrypt_mz && access(mz_path, F_OK) != 0)
-		strcat(mz_path, ".enc");
 	/* Save path and key on job */
 	job->key = calloc(MD5_LEN, 1);
 	ldb_hex_to_bin(key, MD5_LEN * 2, job->key);	

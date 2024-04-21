@@ -40,7 +40,7 @@
 #define WFP_REC_LN 18
 
 /* Log files */
-#define SCANOSS_VERSION "5.4.2"
+#define SCANOSS_VERSION "5.4.3"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
@@ -140,7 +140,7 @@ extern struct ldb_table oss_dependency;
 extern struct ldb_table oss_license;
 extern struct ldb_table oss_attribution;
 extern struct ldb_table oss_cryptography;
-
+extern struct ldb_table oss_sources;
 
 extern bool first_file;
 extern int max_vulnerabilities;
