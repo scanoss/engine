@@ -58,6 +58,8 @@ struct ldb_table oss_dependency;
 struct ldb_table oss_license;
 struct ldb_table oss_attribution;
 struct ldb_table oss_cryptography;
+struct ldb_table oss_sources;
+
 component_item *ignore_components;
 component_item *declared_components;
 
@@ -66,6 +68,48 @@ uint8_t trace_id[MD5_LEN];
 bool trace_on;
 bool lib_encoder_present = false;
 #define LDB_VER_MIN "4.1.0"
+
+void * lib_encoder_handle = NULL;
+bool lib_encoder_load()
+{
+#ifndef SCANOSS_ENCODER_VERSION
+	/*set decode funtion pointer to NULL*/
+	lib_encoder_handle = dlopen("libscanoss_encoder.so", RTLD_NOW);
+	char * err;
+	if ((err = dlerror())) 
+	{
+		scanlog("Lib scanoss-encoder was not detected. %s\n", err);
+	}
+    
+	if (lib_encoder_handle) 
+	{
+		scanlog("Lib scanoss-encoder present\n");
+		decrypt_data = dlsym(lib_encoder_handle, "scanoss_decode_table");
+		decrypt_mz = dlsym(lib_encoder_handle, "scanoss_decode_mz");
+		encoder_version = dlsym(lib_encoder_handle, "scanoss_encoder_version");
+		if ((err = dlerror())) 
+		{
+			printf("%s - You may need to update libscanoss_encoder.so\n", err);
+			exit(EXIT_FAILURE);
+		}
+
+		char version[32] = "\0";
+		encoder_version(version);
+		scanlog("Lib scanoss-encoder version %s\n", version);
+		return true;
+    }
+	decrypt_data = standalone_decrypt_data;
+	decrypt_mz = NULL;
+	return false;
+#else
+	decrypt_data = scanoss_decode_table;
+	decrypt_mz = scanoss_decode_mz;
+	encoder_version = scanoss_encoder_version;
+	scanlog("Using built-in encoder library v%s\n", SCANOSS_ENCODER_VERSION);
+	return false;
+#endif
+}
+
 /* Initialize tables for the DB name indicated (defaults to oss) */
 void initialize_ldb_tables(char *name)
 {
@@ -121,8 +165,13 @@ void initialize_ldb_tables(char *name)
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "cryptography");
 	oss_cryptography = ldb_read_cfg(dbtable);
 
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "sources");
+	oss_sources = ldb_read_cfg(dbtable);
+
 	kb_version_get();
 	osadl_load_file();
+
+	lib_encoder_present = lib_encoder_load();
 }
 
 /**
@@ -211,45 +260,6 @@ uint64_t read_flags()
 	}
 	return 0;
 }
-
-
-void * lib_encoder_handle = NULL;
-bool lib_encoder_load()
-{
-#ifndef SCANOSS_ENCODER_VERSION
-	/*set decode funtion pointer to NULL*/
-	lib_encoder_handle = dlopen("libscanoss_encoder.so", RTLD_NOW);
-	char * err;
-	if ((err = dlerror())) 
-	{
-		scanlog("Lib scanoss-encoder was not detected. %s\n", err);
-	}
-    
-	if (lib_encoder_handle) 
-	{
-		scanlog("Lib scanoss-encoder present\n");
-		decrypt_data = dlsym(lib_encoder_handle, "scanoss_decode_table");
-		decrypt_mz = dlsym(lib_encoder_handle, "scanoss_decode_mz");
-		encoder_version = dlsym(lib_encoder_handle, "scanoss_encoder_version");
-		if ((err = dlerror())) 
-		{
-			printf("%s - You may need to update libscanoss_encoder.so\n", err);
-			exit(EXIT_FAILURE);
-		}
-		return true;
-    }
-	decrypt_data = standalone_decrypt_data;
-	decrypt_mz = NULL;
-	return false;
-#else
-	decrypt_data = scanoss_decode_table;
-	decrypt_mz = scanoss_decode_mz;
-	encoder_version = scanoss_encoder_version;
-	scanlog("Using built-in encoder library v%s\n", SCANOSS_ENCODER_VERSION);
-	return false;
-#endif
-}
-
 
 /**
  * @brief //TODO
@@ -429,14 +439,6 @@ int main(int argc, char **argv)
 	/* Perform scan */
 	else 
 	{
-		lib_encoder_present = lib_encoder_load();
-		if (lib_encoder_present && debug_on)
-		{
-			char version[32] = "\0";
-			encoder_version(version);
-			scanlog("Lib encoder present - version %s\n", version);
-		}
-
 		/* Validate target */
 		char *arg_target = argv[argc-1];
 		bool isfile = is_file(arg_target);
