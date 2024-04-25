@@ -40,7 +40,7 @@
 #define WFP_REC_LN 18
 
 /* Log files */
-#define SCANOSS_VERSION "5.4.3"
+#define SCANOSS_VERSION "5.4.4"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"

@@ -334,8 +334,8 @@ matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size)
 	matchmap_range *out_ranges = malloc(sizeof(matchmap_range) * MATCHMAP_RANGES);
 
 	int processed = 0;
-	int tolerance = range_tolerance;
-	while (processed < size)
+	int tolerance = range_tolerance > 0 ? range_tolerance : 1;
+	while (processed < size && tolerance < range_tolerance * 20)
 	{
 		int out_ranges_index = -1;
 		processed = 0;

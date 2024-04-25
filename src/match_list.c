@@ -210,6 +210,15 @@ bool component_list_add_binary(component_list_t *list, component_data_t *new_com
     return false;
 }
 
+bool tolerance_eval(int a, int b)
+{
+    int relative_error = (abs(a - b) * 100) / ((a + b) / 2);
+    if (100 - relative_error >= MATCH_LIST_TOLERANCE)
+        return true;
+    else
+        return false;
+}
+
 
 /**
  * @brief Try to add a match in a existing matches list.
@@ -292,11 +301,11 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         }
         /* in autolimit mode the list doesnt have a fix size, it will accept all the matchest until a 75% of the fist element (the biggest) */
         //TODO: this part of the code should be in the function pointer or I need to re-evaluate the archtecture of this function */
-        if (list->autolimit && (list->headp.lh_first->match->hits * MATCH_LIST_TOLERANCE > list->last_element->match->hits))
+        if (list->autolimit && !tolerance_eval(list->headp.lh_first->match->hits, list->last_element->match->hits))
         {    
             np = list->headp.lh_first;
             /*We have to find and remove the unwanted elements */
-            for (; np->entries.le_next != NULL && (list->headp.lh_first->match->hits * MATCH_LIST_TOLERANCE <= np->entries.le_next->match->hits); np = np->entries.le_next)
+            for (; np->entries.le_next != NULL && tolerance_eval(list->headp.lh_first->match->hits, np->entries.le_next->match->hits); np = np->entries.le_next)
             {
 
             }

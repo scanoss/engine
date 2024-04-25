@@ -70,14 +70,11 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 
 	string_clean(quality);
 
-	bool reported = false;
-
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
 
 	if (*quality && (src < (sizeof(quality_sources) / sizeof(quality_sources[0]))))
 	{
-		if (iteration) len += sprintf(result+len,",");
 		len += sprintf(result+len,"{");
 		if (!src)
 		{
@@ -88,16 +85,14 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 			len += sprintf(result+len,"\"score\": \"%s\",", quality);
 		len += sprintf(result+len,"\"source\": \"%s\"", quality_sources[atoi(source)]);
 		len += sprintf(result+len,"}");
-		reported = true;
 		match->quality_text = strdup(result);
-
 	}
 
 
 	free(source);
 	free(quality);
 
-	return reported;
+	return true;
 }
 
 /**
