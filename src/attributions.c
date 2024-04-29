@@ -59,34 +59,13 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 	memcpy(hexkey, data, MD5_LEN * 2);
 	hexkey[MD5_LEN * 2] = 0;
 
-	/* Define mz_job values */
-	char *src = calloc(MZ_MAX_FILE + 1, 1);
-	uint8_t *zsrc = calloc((MZ_MAX_FILE + 1) * 2, 1);
-	struct mz_job job;
-	sprintf(job.path, "%s/oss/notices", ldb_root);
-	memset(job.mz_id, 0, 2);
-	job.mz = NULL;
-	job.mz_ln = 0;
-	job.id = NULL;
-	job.ln = 0;
-	job.data = src;        // Uncompressed data
-	job.data_ln = 0;
-	job.zdata = zsrc;      // Compressed data
-	job.zdata_ln = 0;
-	job.md5[MD5_LEN] = 0;
-	job.key = NULL;
-
 	/* Print attribution notice header */
 	char *component = (char *) ptr;
 	printf("[%s]\n\n", component);
 
 	/* Print attribution notice */
-	//mz_cat(&job, hexkey);
-	mz_get_key(&job,hexkey);
+	mz_get_key(oss_notices, hexkey);
 	printf("\n");
-
-	free(src);
-	free(zsrc);
 
 	return false;
 }
@@ -304,11 +283,11 @@ void print_purl_attribution_notices(struct ldb_table oss_attributions, char * li
  * @brief //Validate the declared SBOM and print the attribution noticies in stdout
  * @return //TODO
  */
-int attribution_notices()
+int attribution_notices(char * components)
 {
 	char * licenses_json = notices_load_file();
 	/* Validate SBOM */
-	declared_components = get_components(optarg);
+	declared_components = get_components(components);
 	if (check_purl_attributions(oss_attribution, licenses_json) && !debug_on)
 		/* Print attribution notices */
 		print_purl_attribution_notices(oss_attribution, licenses_json);

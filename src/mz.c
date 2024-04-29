@@ -44,15 +44,16 @@
  * @param job input mz job
  * @param key key to be found
  */
-void mz_get_key(struct mz_job *job, char *key)
+void mz_get_key(struct ldb_table kb, char *key)
 {
 	/* Calculate mz file path */
 	char mz_path[LDB_MAX_PATH + MD5_LEN] = "\0";
 	char mz_file_id[5] = "\0\0\0\0\0";
+	struct mz_job job;
 	memcpy(mz_file_id, key, 4);
+	sprintf(mz_path, "%s/%s/%s/%s.mz", ldb_root, kb.db, kb.table,mz_file_id);
 
-	sprintf(mz_path, "%s/%s.mz", job->path, mz_file_id);
-	if (oss_sources.definitions & LDB_TABLE_DEFINITION_ENCRYPTED)
+	if (kb.definitions & LDB_TABLE_DEFINITION_ENCRYPTED)
 	{
 		if (decrypt_mz)
 			strcat(mz_path, ".enc");
@@ -65,88 +66,52 @@ void mz_get_key(struct mz_job *job, char *key)
 	scanlog("MZ path: %s \n", mz_path);
 
 	/* Save path and key on job */
-	job->key = calloc(MD5_LEN, 1);
-	ldb_hex_to_bin(key, MD5_LEN * 2, job->key);	
+	job.key = calloc(MD5_LEN, 1);
+	ldb_hex_to_bin(key, MD5_LEN * 2, job.key);	
 
 	/* Read source mz file into memory */
-	job->mz = file_read(mz_path, &job->mz_ln);
+	job.mz = file_read(mz_path, &job.mz_ln);
 
 	/* Search and display "key" file contents */
 	/* Recurse mz contents */
 	uint64_t ptr = 0;
-	while (ptr < job->mz_ln)
+	while (ptr < job.mz_ln)
 	{
 		/* Position pointers */
-		job->id = job->mz + ptr;
-		uint8_t *file_ln = job->id + MZ_MD5;
-		job->zdata = file_ln + MZ_SIZE;
+		job.id = job.mz + ptr;
+		uint8_t *file_ln = job.id + MZ_MD5;
+		job.zdata = file_ln + MZ_SIZE;
 
 		/* Get compressed data size */
 		uint32_t tmpln;
 		memcpy((uint8_t*)&tmpln, file_ln, MZ_SIZE);
-		job->zdata_ln = tmpln;
+		job.zdata_ln = tmpln;
 
 		/* Get total mz record length */
-		job->ln = MZ_MD5 + MZ_SIZE + job->zdata_ln;
+		job.ln = MZ_MD5 + MZ_SIZE + job.zdata_ln;
 
 		/* Pass job to handler */
-		if (!memcmp(job->id, job->key + 2, MZ_MD5))
+		if (!memcmp(job.id, job.key + 2, MZ_MD5))
 		{
-			if (decrypt_mz)
+			if (kb.definitions & LDB_TABLE_DEFINITION_ENCRYPTED)
 			{
-				decrypt_mz(job->id, job->zdata_ln);
+				decrypt_mz(job.id, job.zdata_ln);
 			}
 			/* Decompress */
-			MZ_DEFLATE(job);
+			MZ_DEFLATE(&job);
 
-			job->data[job->data_ln] = 0;
-			printf("%s", job->data);
+			job.data[job.data_ln] = 0;
+			printf("%s", job.data);
 			return;
 		}
 		/* Increment pointer */
-		ptr += job->ln;
-		if (ptr > job->mz_ln)
+		ptr += job.ln;
+		if (ptr > job.mz_ln)
 		{
-			printf("%s integrity failed\n", job->path);
+			printf("%s integrity failed\n", job.path);
 			exit(EXIT_FAILURE);
 		}
 	}
-	free(job->key);
-	free(job->mz);
-}
-
-
-/**
- * @brief uncompress the file contents of a given md5 key
- * @param key md5 key
- */
-void mz_file_contents(char *key, char * db)
-{
-	/* Extract values from command */
-	char dbtable[64];
-	sprintf(dbtable,"%s/sources",db);
-
-	/* Reserve memory for compressed and uncompressed data */
-	char *src = calloc(MZ_MAX_FILE + 1, 1);
-	uint8_t *zsrc = calloc((MZ_MAX_FILE + 1) * 2, 1);
-
-	/* Define mz_job values */
-	struct mz_job job;
-	sprintf(job.path, "%s/%s", ldb_root, dbtable);
-	memset(job.mz_id, 0, 2);
-	job.mz = NULL;
-	job.mz_ln = 0;
-	job.id = NULL;
-	job.ln = 0;
-	job.data = src;        // Uncompressed data
-	job.data_ln = 0;
-	job.zdata = zsrc;      // Compressed data
-	job.zdata_ln = 0;
-	job.md5[MD5_LEN] = 0;
-	job.key = NULL;
-
-	mz_get_key(&job, key);
-
-	free(src);
-	free(zsrc);
+	free(job.key);
+	free(job.mz);
 }

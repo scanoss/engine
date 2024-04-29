@@ -59,7 +59,7 @@ struct ldb_table oss_license;
 struct ldb_table oss_attribution;
 struct ldb_table oss_cryptography;
 struct ldb_table oss_sources;
-
+struct ldb_table oss_notices;
 component_item *ignore_components;
 component_item *declared_components;
 
@@ -167,6 +167,9 @@ void initialize_ldb_tables(char *name)
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "sources");
 	oss_sources = ldb_read_cfg(dbtable);
+
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "notices");
+	oss_notices = ldb_read_cfg(dbtable);
 
 	kb_version_get();
 	osadl_load_file();
@@ -325,12 +328,17 @@ int main(int argc, char **argv)
 
 			case 'k':
 				initialize_ldb_tables(ldb_db_name);
-				mz_file_contents(optarg, oss_file.db);
+				mz_get_key(oss_sources, optarg);
 				exit(EXIT_SUCCESS);
 				break;
 
 			case 'a':
-				if (declared_components) printf("Cannot combine -s and -a\n");
+				if (declared_components) 
+				{
+					printf("Cannot combine -s and -a\n");
+					break;
+				}
+				initialize_ldb_tables(ldb_db_name);
 				exit(attribution_notices(optarg));
 				break;
 
