@@ -65,7 +65,6 @@ Options:\n\
 -h  Display this help and exit.\n\
 -d  Save debugging information to disk (/tmp).\n\
 -q  Produces no JSON output. Only debugging info via STDERR.\n\
--i  Trace specific file id when debugging (requires -q).\n\
 \n\
 Enviroment variables:\n\
 SCANOSS_MATCHMAP_MAX: define the snippet scanning match map size, %d by default.\n\

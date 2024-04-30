@@ -399,7 +399,7 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
  * @return false
  */
 
-file_recordset *files = NULL;
+static file_recordset *files = NULL;
 
 bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {

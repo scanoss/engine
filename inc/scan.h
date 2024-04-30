@@ -62,6 +62,7 @@ typedef struct scan_data_t
 	int max_components_to_process; /* Max component to retrieve during snippet scanning */
 	int max_snippets_to_show; //TODO
 	int max_components_to_show; //TODO
+	int max_matchmap_size;
 	bool printed_succed;
 } scan_data_t;
 

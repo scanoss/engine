@@ -63,9 +63,6 @@ struct ldb_table oss_notices;
 component_item *ignore_components;
 component_item *declared_components;
 
-/* File tracing -qi */
-uint8_t trace_id[MD5_LEN];
-bool trace_on;
 bool lib_encoder_present = false;
 #define LDB_VER_MIN "4.1.0"
 
@@ -275,10 +272,6 @@ int main(int argc, char **argv)
 	//global var initialization - it must be improved
 	debug_on = false;
 	quiet = false;
-
-	/* File tracing with -qi */
-	trace_on = false;
-	memset(trace_id, 0 ,16);
 	
 	if (argc <= 1)
 	{
@@ -298,7 +291,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
-	while ((option = getopt(argc, argv, ":f:s:b:B:c:k:a:F:l:n:i:M:N:wtvhedqH")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:B:c:k:a:F:l:n:M:N:wtvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -361,15 +354,6 @@ int main(int argc, char **argv)
 			case 'N':
 				scan_max_components = atol(optarg);
 				break;
-			case 'i':
-				if (strlen(optarg) == (MD5_LEN * 2))
-				{
-					ldb_hex_to_bin(optarg, MD5_LEN * 2, trace_id);
-					trace_on = true;
-				}
-				else fprintf(stderr, "Ignoring -i due to invalid length\n");
-				break;
-
 			case 'w':
 				force_wfp = true;
 				break;
