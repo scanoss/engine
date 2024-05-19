@@ -341,6 +341,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'l':
+				initialize_ldb_tables(ldb_db_name);
 				print_osadl_license_data(optarg);
 				exit(EXIT_SUCCESS);
 				break;
@@ -362,6 +363,7 @@ int main(int argc, char **argv)
 				force_snippet_scan = true;
 				break;
 			case 't':
+				initialize_ldb_tables(ldb_db_name);
 				scan_benchmark();
 				exit(EXIT_SUCCESS);
 				break;
@@ -409,7 +411,7 @@ int main(int argc, char **argv)
 				else
 				{
 					printf("'libhpsm.so' must be present in the system to execute this command\n");
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				break;
 		}
