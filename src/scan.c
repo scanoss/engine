@@ -115,7 +115,7 @@ static bool zero_bytes (uint8_t *md5)
  */
 static match_t ldb_scan_file(scan_data_t * scan) {
 			
-	scanlog("Checking entire file\n");
+	scanlog("Checking entire file %s\n", scan->file_path);
 	
 	if (zero_bytes(scan->md5)) return MATCH_NONE;
 	

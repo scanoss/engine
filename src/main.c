@@ -59,13 +59,10 @@ struct ldb_table oss_license;
 struct ldb_table oss_attribution;
 struct ldb_table oss_cryptography;
 struct ldb_table oss_sources;
-
+struct ldb_table oss_notices;
 component_item *ignore_components;
 component_item *declared_components;
 
-/* File tracing -qi */
-uint8_t trace_id[MD5_LEN];
-bool trace_on;
 bool lib_encoder_present = false;
 #define LDB_VER_MIN "4.1.0"
 
@@ -167,6 +164,9 @@ void initialize_ldb_tables(char *name)
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "sources");
 	oss_sources = ldb_read_cfg(dbtable);
+
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "notices");
+	oss_notices = ldb_read_cfg(dbtable);
 
 	kb_version_get();
 	osadl_load_file();
@@ -272,10 +272,6 @@ int main(int argc, char **argv)
 	//global var initialization - it must be improved
 	debug_on = false;
 	quiet = false;
-
-	/* File tracing with -qi */
-	trace_on = false;
-	memset(trace_id, 0 ,16);
 	
 	if (argc <= 1)
 	{
@@ -295,7 +291,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
-	while ((option = getopt(argc, argv, ":f:s:b:B:c:k:a:F:l:n:i:M:N:wtvhedqH")) != -1)
+	while ((option = getopt(argc, argv, ":f:s:b:B:c:k:a:F:l:n:M:N:wtvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -325,12 +321,17 @@ int main(int argc, char **argv)
 
 			case 'k':
 				initialize_ldb_tables(ldb_db_name);
-				mz_file_contents(optarg, oss_file.db);
+				mz_get_key(oss_sources, optarg);
 				exit(EXIT_SUCCESS);
 				break;
 
 			case 'a':
-				if (declared_components) printf("Cannot combine -s and -a\n");
+				if (declared_components) 
+				{
+					printf("Cannot combine -s and -a\n");
+					break;
+				}
+				initialize_ldb_tables(ldb_db_name);
 				exit(attribution_notices(optarg));
 				break;
 
@@ -340,6 +341,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'l':
+				initialize_ldb_tables(ldb_db_name);
 				print_osadl_license_data(optarg);
 				exit(EXIT_SUCCESS);
 				break;
@@ -353,15 +355,6 @@ int main(int argc, char **argv)
 			case 'N':
 				scan_max_components = atol(optarg);
 				break;
-			case 'i':
-				if (strlen(optarg) == (MD5_LEN * 2))
-				{
-					ldb_hex_to_bin(optarg, MD5_LEN * 2, trace_id);
-					trace_on = true;
-				}
-				else fprintf(stderr, "Ignoring -i due to invalid length\n");
-				break;
-
 			case 'w':
 				force_wfp = true;
 				break;
@@ -370,6 +363,7 @@ int main(int argc, char **argv)
 				force_snippet_scan = true;
 				break;
 			case 't':
+				initialize_ldb_tables(ldb_db_name);
 				scan_benchmark();
 				exit(EXIT_SUCCESS);
 				break;
@@ -417,7 +411,7 @@ int main(int argc, char **argv)
 				else
 				{
 					printf("'libhpsm.so' must be present in the system to execute this command\n");
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				break;
 		}

@@ -117,7 +117,6 @@ bool osadl_load_file(void)
 		scanlog("Warning: Cannot find OSADL definition. Please check that %s is present\n", path);
 	else
 		result = true;
-
 	free(path);
 	return result;
 }
@@ -172,9 +171,13 @@ int osadl_print_license(char *output, const char *license, bool more_keys_after)
 void print_osadl_license_data(char *license)
 {
 	char output[MAX_FIELD_LN];
-	osadl_print_license(output, license, false);
-	printf("{\"%s\": {%s}}", license, output);
+	int len = osadl_print_license(output, license, false);
+	if (len >0)
+		printf("{\"%s\": {%s}}", license, output);
+	else
+		printf("{\"%s\": {}}", license);
 }
+
 
 static char *json_from_license(uint32_t *crclist, char *buffer, char *license, int src, bool *first_record)
 {

@@ -40,7 +40,7 @@
 #define WFP_REC_LN 18
 
 /* Log files */
-#define SCANOSS_VERSION "5.4.4"
+#define SCANOSS_VERSION "5.4.5"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
@@ -119,10 +119,6 @@ extern long microseconds_start;
 extern int map_rec_len;
 extern bool match_extensions;
 
-/* File tracing -qi */
-extern uint8_t trace_id[MD5_LEN];
-extern bool trace_on;
-
 /*component hint hold the last component matched/guessed */
 extern char * component_hint;
 
@@ -141,6 +137,8 @@ extern struct ldb_table oss_license;
 extern struct ldb_table oss_attribution;
 extern struct ldb_table oss_cryptography;
 extern struct ldb_table oss_sources;
+extern struct ldb_table oss_notices;
+
 
 extern bool first_file;
 extern int max_vulnerabilities;

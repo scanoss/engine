@@ -80,7 +80,6 @@
 
 #define MATCH_LIST_TOLERANCE 98.5
 typedef struct match_data_t match_data_t; /* Forward declaration */
-typedef struct scan_data_t scan_data_t; /* Forward declaration*/
 
 /**
  * @brief Define a list of component_data_t

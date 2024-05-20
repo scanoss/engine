@@ -3,6 +3,6 @@
 
 #include "scanoss.h"
 
-int attribution_notices();
+int attribution_notices(char * components);
 
 #endif

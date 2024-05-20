@@ -536,23 +536,25 @@ void wfp_invert(uint32_t wfpint32, uint8_t *out)
 static void matchmap_setup(scan_data_t * scan)
 {
 	char * matchmap_env = getenv("SCANOSS_MATCHMAP_MAX");
+	scan->max_matchmap_size = DEFAULT_MATCHMAP_FILES;
 	if (matchmap_env)
 	{
 		int matchmap_max_files_aux = atoi(matchmap_env);
 		if (matchmap_max_files_aux > DEFAULT_MATCHMAP_FILES / 4 &&  matchmap_max_files_aux < DEFAULT_MATCHMAP_FILES * 20)
 		{
 			scanlog("matchmap size changed by env variable to: %d\n", matchmap_max_files_aux);
-			matchmap_max_files = matchmap_max_files_aux;
+			scan->max_matchmap_size = matchmap_max_files_aux;
 		}
 	}
 	//If we are looking fow multiple snippets, update the matchmap size
-	matchmap_max_files = scan->max_snippets_to_process * matchmap_max_files;
+	scan->max_matchmap_size *= scan->max_snippets_to_process;
 	
 	if (engine_flags & ENABLE_HIGH_ACCURACY)
 	{
-		matchmap_max_files *=5;
-		scanlog("matchmap size changed by high accuracy analisys to: %d\n", matchmap_max_files);
+		scan->max_matchmap_size *=5;
+		scanlog("matchmap size changed by high accuracy analisys to: %d\n", scan->max_matchmap_size);
 	}
+	matchmap_max_files = scan->max_matchmap_size;
 }
 
 typedef struct  matchmap_entry_t
@@ -581,7 +583,7 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 	for (long t = start_pos; t < scan->matchmap_size; t++)
 	{
 		//The matchmap is sorted, stop if you are comparing against a different sector
-		if (*scan->matchmap[t].md5 > *md5 && (scan->matchmap_size < matchmap_max_files))
+		if (*scan->matchmap[t].md5 > *md5 && (scan->matchmap_size < scan->max_matchmap_size))
 		{
 			scanlog("skipping: md5 out of range wfp\n");
 			return -1;
@@ -614,7 +616,7 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 	if (found < 0)
 	{
 		/* Not found. Add MD5 to map */
-		if (scan->matchmap_size >= matchmap_max_files)
+		if (scan->matchmap_size >= scan->max_matchmap_size)
 		{
 			scanlog("skipping: matchmap is full\n");
 			return -1;
@@ -704,11 +706,6 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	if (engine_flags & DISABLE_SNIPPET_MATCHING)
 		return MATCH_NONE;
 
-	if (trace_on)
-		scanlog("Checking snippets. Traced (-qi) matches marked with *\n");
-	else
-		scanlog("Checking snippets\n");
-
 	matchmap_setup(scan);
 	adjust_tolerance(scan);
 
@@ -753,7 +750,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	memset(map_indirection_index, 0, sizeof(map_indirection_index));
 
 	scanlog ("< Snippet scan setup: Total lines: %d ,Matchmap size: %d, Min hits: %d, Min lines: %d, Map max size = %d, Cat N = %d x %d, Cat size = %d >\n", 
-			scan->total_lines, matchmap_max_files, min_match_hits, min_match_lines, map_max_size, MAP_INDIRECTION_CAT_NUMBER, map_indedirection_items_size, MAP_INDIRECTION_CAT_SIZE);
+			scan->total_lines, scan->max_matchmap_size, min_match_hits, min_match_lines, map_max_size, MAP_INDIRECTION_CAT_NUMBER, map_indedirection_items_size, MAP_INDIRECTION_CAT_SIZE);
 
 	for (int i =0; i < scan->hash_count; i++)
 	{
@@ -802,11 +799,11 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 				map_lines_indirection[map[map_indirection[i][j]].line] = 1;
 				lines_coverage++; 
 			}
-			if (cat_limit > matchmap_max_files)
+			if (cat_limit > scan->max_matchmap_size)
 			{
 				if ((hashes_to_process < scan->hash_count / 10 || (float) lines_coverage / scan->hash_count < 0.6) && cat_limit < MAX_MATCHMAP_FILES)
 				{
-					matchmap_max_files += map[map_indirection[i][j]].size;
+					scan->max_matchmap_size += map[map_indirection[i][j]].size;
 				}
 				else
 				{
@@ -843,10 +840,10 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 			}
 		}
 	}
-	matchmap_max_files = cat_limit;
+	scan->max_matchmap_size = cat_limit;
 	scanlog("Map limit on %d MD5s at  %d of %d caths. Selected hashes: %d/%d - lines coverage %d\n",
-			matchmap_max_files, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER, hashes_to_process, scan->hash_count, (lines_coverage * 100) / scan->total_lines);
-	scan->matchmap = calloc(matchmap_max_files, sizeof(matchmap_entry));
+			scan->max_matchmap_size, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER, hashes_to_process, scan->hash_count, (lines_coverage * 100) / scan->total_lines);
+	scan->matchmap = calloc(scan->max_matchmap_size, sizeof(matchmap_entry));
 
 	int map_indexes[scan->hash_count];
 	memset(map_indexes, 0, sizeof(map_indexes));
