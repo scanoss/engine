@@ -167,7 +167,7 @@ void remove_char(char *str, char chr)
  * @brief Cleans str from unprintable characters or quotes
  * @param str string to be processed
  */
-void string_clean(char *str)
+char * string_clean(char *str)
 {
   char *s = str;
   while (*s)
@@ -178,6 +178,7 @@ void string_clean(char *str)
   }
 
   json_remove_invalid_char(str);
+  return str;
 }
 
 char * json_remove_invalid_char(char * input)

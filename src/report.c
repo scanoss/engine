@@ -241,7 +241,7 @@ bool print_json_component(component_data_t * component)
 		printf("\"download_url\": \"%s\",", component->url);
 
 	printf("\"release_date\": \"%s\",", component->release_date);
-	printf("\"file\": \"%s\",", component->url_match == true ? basename(component->url) : component->file);
+	printf("\"file\": \"%s\",", component->url_match == true ? basename(component->url) : string_clean(component->file));
 	if (engine_flags & ENABLE_PATH_HINT)
 		printf("\"path_rank\": %d,", component->path_rank);
 
