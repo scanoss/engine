@@ -39,7 +39,7 @@ void remove_char(char *str, char chr);
 bool stristart(char *a, char *b);
 
 /* Cleans str from unprintable characters or quotes */
-void string_clean(char *str);
+char * string_clean(char *str);
 
 /* Calculates crc32c for a string */
 uint32_t string_crc32c(char *str);
