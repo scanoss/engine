@@ -50,7 +50,7 @@
 	 3 = Declared in LICENSE file
 	 4 = Scancode detection 
 	 5 = Scancode detection at mining time*/
-const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header", "license_file", "scancode", "scancode"};
+const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header", "license_file", "scancode", "scancode", "OSSelot"};
 
 /**
  * @brief Remove invalid characters from a license name

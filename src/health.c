@@ -84,7 +84,7 @@ bool print_health_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
 	
 	int len = 0;
 
-	len += sprintf(&result[len]," \"health\":{\"creation_date\":\"%s\", ", isalnum(*creation_date) ? creation_date : "n");
+	len += sprintf(&result[len]," \"health\":{\"creation_date\":\"%s\", ", isalnum(*creation_date) ? creation_date : " ");
 	len += sprintf(&result[len],"\"last_update\":\"%s\", ", isalnum(*last_update) ? last_update : " ");
 	len += sprintf(&result[len],"\"last_push\":\"%s\", ", isalnum(*last_push) ? last_push : " ");
 	len += sprintf(&result[len],"\"stars\":%s, ", isdigit(*watchers_count) ? watchers_count : "null");

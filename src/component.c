@@ -243,6 +243,14 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	extract_csv(license, (char *)url_record, 5, sizeof(license));
 	extract_csv(purl, (char *)url_record, 6, sizeof(purl));
 	extract_csv(url, (char *)url_record, 7, sizeof(url));
+	/* Fill url stats if these are available*/
+	for (int i = 0; i < 5; i++) {
+		char stat[16] = "\0";
+		extract_csv(stat, (char *)url_record, 8+i, sizeof(url));
+		if (!*stat)
+			break;
+		component->url_stats[i] = atoi(stat);
+	}
 	strcpy(latest_version, version);
 
 	flip_slashes(vendor);
