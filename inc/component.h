@@ -43,6 +43,7 @@ typedef struct component_data_t
 	int hits; /*used in binary analysis*/
 	char * file_path_ref;
 	int path_rank;
+	int url_stats[5];
 } component_data_t;
 
 component_data_t * component_init(void);

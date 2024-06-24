@@ -248,6 +248,19 @@ bool print_json_component(component_data_t * component)
 	char *url_id = md5_hex(component->url_md5);
 	printf("\"url_hash\": \"%s\"", url_id);
 	free(url_id);
+	//report url stats. An empty object is reported if there are not availables
+	printf(",\"url_stats\":{");
+	if (component->url_stats[0] > 0)
+	{
+					printf("\"total_files\":%d,"\
+						  "\"indexed_files\":%d,"\
+						  "\"source_files\":%d,"\
+						  "\"ignored_files\":%d,"\
+						  "\"package_size\":%d", 
+							component->url_stats[0], component->url_stats[1], component->url_stats[2], 
+							component->url_stats[3], component->url_stats[4]);
+	}
+	printf("}");
 
 	if (!(engine_flags & DISABLE_LICENSES))
 	{
