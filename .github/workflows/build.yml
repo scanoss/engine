@@ -41,7 +41,7 @@ jobs:
        echo ${{ steps.version.outputs.version }}
 
     - name: 'Tar files'
-      run: tar czvf scanoss.tar.gz scanoss LICENSE
+      run: tar czvf scanoss.tar.gz scanoss LICENSES/GPL-2.0-only.txt
 
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v3
