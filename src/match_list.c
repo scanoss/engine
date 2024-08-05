@@ -393,6 +393,19 @@ bool match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), ch
     return true;
 }
 
+bool match_list_eval(match_list_t *list, match_data_t * in,  bool (*eval)(match_data_t *fpa, match_data_t *fpb))
+{
+    bool found = false;
+    int i = 0;
+    for (struct entry *np = list->headp.lh_first; np != NULL && i<list->items; np = np->entries.le_next)
+    {
+        if(eval(np->match, in))
+            return true;
+            i++;
+    }
+    return false;
+}
+
 void component_list_print(component_list_t *list, bool (*printer)(component_data_t *fpa), char *separator)
 {
     for (struct comp_entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)

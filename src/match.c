@@ -457,8 +457,9 @@ bool load_matches(match_data_t *match)
 	/* Get matching line ranges (snippet match) */
 	if (match->type == MATCH_SNIPPET)
 	{
-		hits = compile_ranges(match);
-		scanlog("compile_ranges returns %d hits\n", hits);
+				scanlog("compile_ranges returns %d hits\n", hits);
+
+	/*	hits = compile_ranges(match);
 
 		if (hits < min_match_hits)
 		{
@@ -474,7 +475,7 @@ bool load_matches(match_data_t *match)
 		if (matched_percent < 1)
 			matched_percent = 1;
 
-		asprintf(&match->matched_percent, "%u%%", matched_percent);
+		asprintf(&match->matched_percent, "%u%%", matched_percent);*/
 	}
 	else if (match->type == MATCH_BINARY)
 	{
@@ -698,7 +699,7 @@ void match_select_best(scan_data_t *scan)
 					static struct ranges r = {NULL, NULL, NULL};
 					r = hpsm_calc(scan->matches_list_array[i]->best_match->file_md5);
 					scanlog("HPSM range: %s\n", r.local);
-					if (*r.local && !strstr(r.local,"-1")) //check if HPSM was able to run
+					if (*r.local && strcmp(r.local,"-1")) //check if HPSM was able to run
 					{
 						if (hpsm_enabled && r.matched && !memcmp(r.matched, "0%%", 2))
 						{

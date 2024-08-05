@@ -51,7 +51,7 @@ char *IGNORED_EXTENSIONS[] = {
 	".woff", ".xht", ".xhtml", ".xls", ".xml", ".xpm", ".xsd", ".xul", ".yaml",
 	".yml", ".LAS",".adk",".asc",".cif",".cli",".cosmo",".deploy",".pom",
 	".dfm",".dmm",".fa",".fasta",".fcb",".flm",".fna",".gbr",".gen",".gro",
-	".hgtags",".hh",".ihex",".kp",".mpx",".pdb",".poly",".prn",".ps",".ref",
+	".hgtags",".ihex",".kp",".mpx",".pdb",".poly",".prn",".ps",".ref",
 	".resx",".smp",".stg",".tfa",".tsv",".vcf",".vhd",".xy",".xyz",
 
 
