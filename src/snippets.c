@@ -144,20 +144,14 @@ void biggest_snippet(scan_data_t *scan)
 				continue;
 			}
 
-			int matched_lines = compile_ranges(match_new);
-			if (matched_lines < min_match_lines) {
-				match_data_free(match_new); 
-				continue;
-			}
-
-			float percent = (matched_lines * 100) / match_new->scan_ower->total_lines;
+			int hits = compile_ranges(match_new);
+			float percent = (hits * 100) / match_new->scan_ower->total_lines;
 			int matched_percent = floor(percent);
 			if (matched_percent > 99)
 				matched_percent = 99;
 			if (matched_percent < 1)
 				matched_percent = 1;
 			asprintf(&match_new->matched_percent, "%u%%", matched_percent);
-			match_new->lines_matched = matched_lines;
 			//match_new->hits = hits;
 
 			do /*Check if there is already a list for this line ranges */
@@ -372,7 +366,7 @@ matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size)
 		processed = 0;
 		out_ranges[0] = ranges[0];
 		memset(out_ranges, 0, sizeof(matchmap_range) * MATCHMAP_RANGES);
-		scanlog("Range tolerance: %d\n", tolerance);
+		//scanlog("Range tolerance: %d\n", tolerance);
 		for (int i = 0; i < size; i++)
 		{
 			if (ranges[i].from && ranges[i].to)
@@ -383,7 +377,7 @@ matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size)
 						continue;
 
 					out_ranges[out_ranges_index].to = ranges[i].to;
-					//scanlog("join range %d with %d: %d - %d\n", i, out_ranges_index, out_ranges[out_ranges_index].from, out_ranges[out_ranges_index].to);
+					//scanlog("join range %d with %d\n", i, out_ranges_index);
 				}
 				else
 				{
@@ -432,10 +426,37 @@ uint32_t compile_ranges(match_data_t *match)
 	}
 
 	int hits = 0;
+	/* Revise hits and decrease if needed */
+	for (uint32_t i = 0; i < match->matchmap_reg->ranges_number; i++)
+	{
+		long from =  match->matchmap_reg->range[i].from;
+		long to = match->matchmap_reg->range[i].to;
+		long delta = to - from;
+
+		if (to < 1)
+			break;
+
+		/* Ranges to be ignored (under min_match_lines) should decrease hits counter */
+		if (delta < min_match_lines)
+		{
+			/* Single-line range decreases by 1, otherwise decrease by 2 (from and to) */
+			reported_hits -= ((delta == 0) ? 1 : 2);
+		}
+
+		/* Exit if hits is below two */
+		if (reported_hits < min_match_hits)
+		{
+			scanlog("Discarted ranges brings hits count to %u\n", reported_hits);
+			return 0;
+		}
+
+		//scanlog("compile_ranges #%d = %ld to %ld - OSS from: %d\n", i, from, to, match->matchmap_reg->range[i].oss_line);
+	}
+	
 	/* Add tolerances and assemble line ranges */
 	ranges_sort(match->matchmap_reg->range, match->matchmap_reg->ranges_number);
 
-	if (debug_on)
+	/*if (debug_on)
 	{
 		scanlog("Accepted ranges (min lines range = %d):\n", min_match_lines);
 		for (uint32_t i = 0; i < match->matchmap_reg->ranges_number; i++)
@@ -444,7 +465,7 @@ uint32_t compile_ranges(match_data_t *match)
 				scanlog("	%d = %ld to %ld - OSS from: %d\n", i, match->matchmap_reg->range[i].from,match->matchmap_reg->range[i].to, 
 																match->matchmap_reg->range[i].oss_line);
 		}
-	}
+	}*/
 
 	matchmap_range *ranges = ranges_join_overlapping(match->matchmap_reg->range,  match->matchmap_reg->ranges_number);
 	
@@ -459,7 +480,7 @@ uint32_t compile_ranges(match_data_t *match)
 		}
 	}
 		
-	if (debug_on)
+	/*if (debug_on)
 	{
 		scanlog("Final ranges:\n");
 		for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
@@ -467,7 +488,7 @@ uint32_t compile_ranges(match_data_t *match)
 		if ( ranges[i].from && ranges[i].to)
 				scanlog("	%d = %ld to %ld - OSS from: %d\n", i, ranges[i].from, ranges[i].to, ranges[i].oss_line);
 		}
-	}
+	}*/
 	hits = ranges_assemble(ranges, line_ranges, oss_ranges);
 	match->line_ranges = strdup(line_ranges);
 	match->oss_ranges = strdup(oss_ranges);
