@@ -40,6 +40,7 @@
 #include "match.h"
 #include "match_list.h"
 #include "stdlib.h"
+#include "snippets.h"
 int matchmap_max_files = DEFAULT_MATCHMAP_FILES;
 
 /**
@@ -91,6 +92,20 @@ static bool hit_test(match_data_t *a, match_data_t *b)
 	else
 		return false;
 }
+
+ bool ranges_intersection(match_data_t *a, match_data_t *b)
+{
+	for (int i = 0; i < a->matchmap_reg->ranges_number; i++)
+	{
+		for (int j = 0; j < b->matchmap_reg->ranges_number; j++)
+		{
+			if (a->matchmap_reg->range[i].from <= b->matchmap_reg->range[j].to &&
+				b->matchmap_reg->range[j].from <= a->matchmap_reg->range[i].to)
+				return true;
+		}
+	}
+	return false;
+}
 /**
  * @brief Fill the matches list array based on the matchmap. The possible matches will be sorted by hits number.
  *
@@ -103,7 +118,6 @@ void biggest_snippet(scan_data_t *scan)
 	for (int i = 0; i < scan->max_snippets_to_process; i++)
 		scan->matches_list_array_indirection[i] = -1;
 
-	int snippet_tolerance = range_tolerance / scan->max_snippets_to_process + min_match_lines; /* Used to define bounds between two possible snippets */
 	/*Fill the matches list with the files from the matchmap */
 	for (int sector = 0; sector < 255; sector++)
 	{
@@ -122,36 +136,46 @@ void biggest_snippet(scan_data_t *scan)
 			match_new->from = scan->matchmap[j].range->from;
 			strcpy(match_new->source_md5, scan->source_md5);
 			match_new->scan_ower = scan;
-			bool found = false;
 			int i = 0;
-			for (; i < scan->matches_list_array_index; i++) /*Check if there is already a list for this line ranges */
+
+			if (snippet_extension_discard(match_new))
 			{
-				if (scan->matches_list_array_indirection[i] > -1 &&
-					abs(scan->matches_list_array_indirection[i] - match_new->from) < snippet_tolerance)
+				match_data_free(match_new); 
+				continue;
+			}
+
+			int hits = compile_ranges(match_new);
+			float percent = (hits * 100) / match_new->scan_ower->total_lines;
+			int matched_percent = floor(percent);
+			if (matched_percent > 99)
+				matched_percent = 99;
+			if (matched_percent < 1)
+				matched_percent = 1;
+			asprintf(&match_new->matched_percent, "%u%%", matched_percent);
+			//match_new->hits = hits;
+
+			do /*Check if there is already a list for this line ranges */
+			{
+				if (!scan->matches_list_array[scan->matches_list_array_index] && scan->matches_list_array_index < scan->max_snippets_to_process)
 				{
-					found = true;
+					scan->matches_list_array[scan->matches_list_array_index] = match_list_init(true, 1);	/*create the list if it doesnt exist*/
+					scan->matches_list_array_index++;
+					if(!match_list_add(scan->matches_list_array[i], match_new, hit_test, true))
+					{
+						match_data_free(match_new); 
+					}
 					break;
 				}
-			}
-
-			if (!found) /*If there is no list for the snippet range we have to create a new one */
-			{
-				if (scan->matches_list_array_index < scan->max_snippets_to_process) /* Check for the list limit */
+				if (match_list_eval(scan->matches_list_array[i], match_new, ranges_intersection) || i == scan->max_snippets_to_process -1)
 				{
-					scan->matches_list_array_indirection[scan->matches_list_array_index] = match_new->from; /*update indirection*/
-					scan->matches_list_array[scan->matches_list_array_index] = match_list_init(true, 1);	/*create the list*/
-					i = scan->matches_list_array_index;														/* update index*/
-					scan->matches_list_array_index++;
+					if(!match_list_add(scan->matches_list_array[i], match_new, hit_test, true))
+					{
+						match_data_free(match_new); 
+					}
+					break;
 				}
-				else
-					i = scan->max_snippets_to_process - 1; /*add in the last available list if there is no more space for new lists*/
-			}
-
-			if (snippet_extension_discard(match_new) || !match_list_add(scan->matches_list_array[i], match_new, hit_test, true)) /*Add the match in the selected list */
-			{
-				scanlog("Rejected match with %d hits\n", match_new->hits);
-				match_data_free(match_new); /* the the memory if the match was not accepted in the list */
-			}
+				i++;
+			} while(i < scan->matches_list_array_index); /*Check if there is already a list for this line ranges */
 		}
 	}
 	/*just for loging*/
@@ -341,7 +365,7 @@ matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size)
 		processed = 0;
 		out_ranges[0] = ranges[0];
 		memset(out_ranges, 0, sizeof(matchmap_range) * MATCHMAP_RANGES);
-		scanlog("Range tolerance: %d\n", tolerance);
+		//scanlog("Range tolerance: %d\n", tolerance);
 		for (int i = 0; i < size; i++)
 		{
 			if (ranges[i].from && ranges[i].to)
@@ -349,7 +373,7 @@ matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size)
 				if(out_ranges_index >= 0 && (ranges[i].from - tolerance <= out_ranges[out_ranges_index].to))
 				{
 					out_ranges[out_ranges_index].to = ranges[i].to;
-					scanlog("join range %d with %d\n", i, out_ranges_index);
+					//scanlog("join range %d with %d\n", i, out_ranges_index);
 				}
 				else
 				{
@@ -402,8 +426,8 @@ uint32_t compile_ranges(match_data_t *match)
 	/* Revise hits and decrease if needed */
 	for (uint32_t i = 0; i < match->matchmap_reg->ranges_number; i++)
 	{
-		long from =  match->matchmap_reg->range[i].from; //uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6);
-		long to = match->matchmap_reg->range[i].to; //uint16_read(match->matchmap_reg + MD5_LEN + 2 + i * 6 + 2);
+		long from =  match->matchmap_reg->range[i].from;
+		long to = match->matchmap_reg->range[i].to;
 		long delta = to - from;
 
 		if (to < 1)
@@ -423,13 +447,13 @@ uint32_t compile_ranges(match_data_t *match)
 			return 0;
 		}
 
-		scanlog("compile_ranges #%d = %ld to %ld - OSS from: %d\n", i, from, to, match->matchmap_reg->range[i].oss_line);
+		//scanlog("compile_ranges #%d = %ld to %ld - OSS from: %d\n", i, from, to, match->matchmap_reg->range[i].oss_line);
 	}
 	
 	/* Add tolerances and assemble line ranges */
 	ranges_sort(match->matchmap_reg->range, match->matchmap_reg->ranges_number);
 
-	if (debug_on)
+	/*if (debug_on)
 	{
 		scanlog("Accepted ranges (min lines range = %d):\n", min_match_lines);
 		for (uint32_t i = 0; i < match->matchmap_reg->ranges_number; i++)
@@ -438,7 +462,7 @@ uint32_t compile_ranges(match_data_t *match)
 				scanlog("	%d = %ld to %ld - OSS from: %d\n", i, match->matchmap_reg->range[i].from,match->matchmap_reg->range[i].to, 
 																match->matchmap_reg->range[i].oss_line);
 		}
-	}
+	}*/
 
 	matchmap_range *ranges = ranges_join_overlapping(match->matchmap_reg->range,  match->matchmap_reg->ranges_number);
 	
@@ -453,7 +477,7 @@ uint32_t compile_ranges(match_data_t *match)
 		}
 	}
 		
-	if (debug_on)
+	/*if (debug_on)
 	{
 		scanlog("Final ranges:\n");
 		for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
@@ -461,7 +485,7 @@ uint32_t compile_ranges(match_data_t *match)
 		if ( ranges[i].from && ranges[i].to)
 				scanlog("	%d = %ld to %ld - OSS from: %d\n", i, ranges[i].from, ranges[i].to, ranges[i].oss_line);
 		}
-	}
+	}*/
 	hits = ranges_assemble(ranges, line_ranges, oss_ranges);
 	match->line_ranges = strdup(line_ranges);
 	match->oss_ranges = strdup(oss_ranges);

@@ -478,8 +478,9 @@ bool load_matches(match_data_t *match)
 	/* Get matching line ranges (snippet match) */
 	if (match->type == MATCH_SNIPPET)
 	{
-		hits = compile_ranges(match);
-		scanlog("compile_ranges returns %d hits\n", hits);
+				scanlog("compile_ranges returns %d hits\n", hits);
+
+	/*	hits = compile_ranges(match);
 
 		if (hits < min_match_hits)
 		{
@@ -495,7 +496,7 @@ bool load_matches(match_data_t *match)
 		if (matched_percent < 1)
 			matched_percent = 1;
 
-		asprintf(&match->matched_percent, "%u%%", matched_percent);
+		asprintf(&match->matched_percent, "%u%%", matched_percent);*/
 	}
 	else if (match->type == MATCH_BINARY)
 	{
