@@ -346,6 +346,19 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	return false;
 }
 
+list_update_t component_update(component_data_t *a, component_data_t *b)
+{
+	if (a && b && a->purls[0] && b->purls[0] && a->release_date && b->release_date && !strcmp(a->purls[0], b->purls[0]))
+	{
+		if (strcmp(b->release_date, a->release_date) < 0)
+			return LIST_ITEM_UPDATE;
+		else
+			return LIST_ITEM_FOUND;
+	} 
+	else
+		return LIST_ITEM_NOT_FOUND;
+}
+
 bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id, char *path)
 {
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
@@ -368,14 +381,21 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 		asset_declared(new_comp);
 		new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
 		new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
-		scanlog("--- new comp ---\n");
-		if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
+		if (!component_list_update(component_list, new_comp, component_update))
 		{
-			scanlog("component rejected: %s\n", new_comp->purls[0]);
-			component_data_free(new_comp); /* Free if the componet was rejected */
+			scanlog("--- new comp %s---\n", new_comp->component);
+			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
+			{
+				scanlog("component rejected: %s\n", new_comp->purls[0]);
+				component_data_free(new_comp); /* Free if the componet was rejected */
+			}
+			else
+				scanlog("component accepted: %s - pathrank: %d\n", new_comp->purls[0], new_comp->path_rank);
 		}
-		else
-			scanlog("component accepted: %s - pathrank: %d\n", new_comp->purls[0], new_comp->path_rank);
+		else if (debug_on)
+		{
+			scanlog("--- Componen already exist: %s---\n", new_comp->component);
+		}
 
 	}
 	else
