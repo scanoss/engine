@@ -427,6 +427,24 @@ void component_list_print(component_list_t *list, bool (*printer)(component_data
     }
 }
 
+bool component_list_update(component_list_t *list, component_data_t * in, list_update_t (*eval)(component_data_t *fpa, component_data_t *fpb))
+{
+    for (struct comp_entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
+    {
+        list_update_t r = eval(np->component, in);
+        if (r == LIST_ITEM_UPDATE)
+        {
+            component_data_t * aux = np->component;
+            np->component = in;
+            component_data_free(aux);
+            return true;
+        }
+        else if (r == LIST_ITEM_FOUND)
+            return true;
+    }
+    return false;
+}
+
 void match_list_process(match_list_t *list, bool (*funct_p)(match_data_t *fpa))
 {
     for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)

@@ -381,6 +381,19 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	return false;
 }
 
+list_update_t component_update(component_data_t *a, component_data_t *b)
+{
+	if (a && b && a->purls[0] && b->purls[0] && a->release_date && b->release_date && !strcmp(a->purls[0], b->purls[0]))
+	{
+		if (strcmp(b->release_date, a->release_date) < 0)
+			return LIST_ITEM_UPDATE;
+		else
+			return LIST_ITEM_FOUND;
+	} 
+	else
+		return LIST_ITEM_NOT_FOUND;
+}
+
 bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id, char *path)
 {
 	component_data_t *new_comp = NULL;
@@ -391,18 +404,34 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 		
 	fill_component_path(new_comp, path);
 	/* Create a new component and fill it from the url record */
-
-	new_comp->file_md5_ref = component_list->match_ref->file_md5;
-	/* If the component is valid add it to the component list */
-	/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
-	/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
-	new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
-	new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
-
-	scanlog("--- new comp: %s@%s %s %d---\n", new_comp->purls[0], new_comp->version, new_comp->release_date, new_comp->identified);
-	if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
+	component_data_t *new_comp = calloc(1, sizeof(*new_comp));
+	bool result = fill_component(new_comp, url_id, path, (uint8_t *)url_rec);
+	if (result)
 	{
-		component_data_free(new_comp); /* Free if the componet was rejected */
+		new_comp->file_md5_ref = component_list->match_ref->file_md5;
+		/* If the component is valid add it to the component list */
+		/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
+		/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
+		new_comp->identified = IDENTIFIED_NONE;
+		asset_declared(new_comp);
+		new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
+		new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
+		if (!component_list_update(component_list, new_comp, component_update))
+		{
+			scanlog("--- new comp %s---\n", new_comp->component);
+			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
+			{
+				scanlog("component rejected: %s\n", new_comp->purls[0]);
+				component_data_free(new_comp); /* Free if the componet was rejected */
+			}
+			else
+				scanlog("component accepted: %s - pathrank: %d\n", new_comp->purls[0], new_comp->path_rank);
+		}
+		else if (debug_on)
+		{
+			scanlog("--- Componen already exist: %s---\n", new_comp->component);
+		}
+
 	}
 	else
 	{
