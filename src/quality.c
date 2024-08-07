@@ -56,13 +56,13 @@ const char *quality_sources[] = {"best_practices"};
 bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	
-	match_data_t * match  = (match_data_t*) ptr;
-	char *CSV = (char*) data;
+	char ** out  = ptr;
+	char *csv = (char*) data;
 	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *quality = calloc(MAX_JSON_VALUE_LEN, 1);
 
-	extract_csv(source, CSV, 1, MAX_JSON_VALUE_LEN);
-	extract_csv(quality, CSV, 2, MAX_JSON_VALUE_LEN);
+	extract_csv(source, csv, 1, MAX_JSON_VALUE_LEN);
+	extract_csv(quality, csv, 2, MAX_JSON_VALUE_LEN);
 
 	int src = atoi(source);
 
@@ -85,7 +85,7 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 			len += sprintf(result+len,"\"score\": \"%s\",", quality);
 		len += sprintf(result+len,"\"source\": \"%s\"", quality_sources[atoi(source)]);
 		len += sprintf(result+len,"}");
-		match->quality_text = strdup(result);
+		*out = strdup(result);
 	}
 
 
@@ -105,17 +105,16 @@ void print_quality(match_data_t * match)
 		return;
 	
 	char result[MAX_FIELD_LN] = "\0";
-	match->quality_text = NULL;
+	char * aux = NULL;
 
 	sprintf(result,"\"quality\": [");
 
 
-	ldb_fetch_recordset(NULL, oss_quality, match->file_md5, false, print_quality_item, match);	
+	ldb_fetch_recordset(NULL, oss_quality, match->file_md5, false, print_quality_item, &aux);	
 	
-	char * aux = NULL;
-	asprintf(&aux, "%s%s]", result, match->quality_text ? match->quality_text : "");
 	free(match->quality_text);	
-	match->quality_text = aux;
+	asprintf(&match->quality_text, "%s%s]", result, aux ? aux : "");
+	free(aux);
 
 }
 
