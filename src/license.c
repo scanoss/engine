@@ -80,19 +80,18 @@ void normalize_license(char *license)
 	{
 		char def[MAX_ARGLN];
 		strcpy(def, license_normalization[i]);
-		char *token;
 
 		/* get the first token */
-		token = strtok(def, ",");
+		char * token = strtok(def, ",");
 
-		char *spdx = token;
+		//char *spdx = token;
 
 		/* walk through other tokens */
 		while (token != NULL)
 		{
 			if (stricmp(license, token))
 			{
-				strcpy(license, spdx);
+				strcpy(license, token);
 				return;
 			}
 			token = strtok(NULL, ",");

@@ -388,7 +388,11 @@ list_update_t component_update(component_data_t *a, component_data_t *b)
 		if (strcmp(b->release_date, a->release_date) < 0)
 			return LIST_ITEM_UPDATE;
 		else
+		{
+			scanlog("--- Componen already exist: %s---\n", b->component);
+			component_data_free(b);
 			return LIST_ITEM_FOUND;
+		}
 	} 
 	else
 		return LIST_ITEM_NOT_FOUND;
@@ -427,11 +431,6 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 			else
 				scanlog("component accepted: %s - pathrank: %d\n", new_comp->purls[0], new_comp->path_rank);
 		}
-		else if (debug_on)
-		{
-			scanlog("--- Componen already exist: %s---\n", new_comp->component);
-		}
-
 	}
 	else
 	{
