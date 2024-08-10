@@ -36,7 +36,7 @@ jobs:
           make all
           mkdir -p ./artifacts
           cp scanoss ./artifacts/scanoss
-          cp LICENSE ./artifacts/LICENSE
+          cp LICENSES/GPL-2.0-only.txt ./artifacts/LICENSE
           echo "Produced artifact at ${PWD}/artifacts/scanoss"
 
       - name: 'Tar files'
