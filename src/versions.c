@@ -171,7 +171,7 @@ void update_version_range(component_data_t *component, release_version *release)
 		component->version = strdup(release->version);
 		free(component->release_date);
 		component->release_date = strdup(release->date);
-		memcpy(component->url_md5, release->url_id, MD5_LEN);
+		memcpy(component->url_md5, release->url_id, oss_url.key_ln);
 	}
 	
 

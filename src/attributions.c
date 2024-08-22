@@ -54,10 +54,10 @@
 bool notices_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, \
 uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	if (datalen != 2 * MD5_LEN) return false;
-	char hexkey[MD5_LEN * 2 + 1];
-	memcpy(hexkey, data, MD5_LEN * 2);
-	hexkey[MD5_LEN * 2] = 0;
+	if (datalen != 2 * oss_attribution.key_ln) return false;
+	char hexkey[oss_attribution.key_ln * 2 + 1];
+	memcpy(hexkey, data, oss_attribution.key_ln * 2);
+	hexkey[oss_attribution.key_ln * 2] = 0;
 
 	/* Print attribution notice header */
 	char *component = (char *) ptr;
@@ -86,11 +86,11 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	bool *valid = (bool *) ptr;
 
-	if (datalen != MD5_LEN) return false;
+	if (datalen != oss_attribution.key_ln) return false;
 
 	/* Convert key */
 	uint8_t attr_id[16];
-	ldb_hex_to_bin((char *) data, MD5_LEN * 2, attr_id);
+	ldb_hex_to_bin((char *) data, oss_attribution.key_ln * 2, attr_id);
 
 	/* Define mz_job values */
 	struct mz_job job;
@@ -100,7 +100,7 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 	job.mz_ln = 0;
 	job.id = NULL;
 	job.ln = 0;
-	job.md5[MD5_LEN] = 0;
+	job.md5[oss_attribution.key_ln] = 0;
 	job.key = NULL;
 
 	/* If file does not exist, exit with valid = false */
@@ -288,7 +288,7 @@ int attribution_notices(char * components)
 	char * licenses_json = notices_load_file();
 	/* Validate SBOM */
 	declared_components = get_components(components);
-	if (check_purl_attributions(oss_attribution, licenses_json) && !debug_on)
+	if (check_purl_attributions(oss_attribution, licenses_json))
 		/* Print attribution notices */
 		print_purl_attribution_notices(oss_attribution, licenses_json);
 

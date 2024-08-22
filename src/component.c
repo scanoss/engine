@@ -92,7 +92,7 @@ component_data_t *component_data_copy(component_data_t *in)
     out->latest_version = strdup(in->latest_version);
     out->license = strdup(in->license);
     out->url_match = in->url_match;
-    memcpy(out->url_md5, in->url_md5, MD5_LEN);
+    memcpy(out->url_md5, in->url_md5, oss_url.key_ln);
     if (in->main_url)
         out->main_url = strdup(in->main_url);
     out->url = strdup(in->url);
@@ -106,8 +106,8 @@ component_data_t *component_data_copy(component_data_t *in)
 
         if (in->purls_md5[i])
         {
-            out->purls_md5[i] = malloc(MD5_LEN);
-            memcpy(out->purls_md5[i], in->purls_md5[i], MD5_LEN);
+            out->purls_md5[i] = malloc(oss_purl.key_ln);
+            memcpy(out->purls_md5[i], in->purls_md5[i], oss_purl.key_ln);
         }
     }
 
@@ -226,7 +226,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	/* Extract fields from file record */
 	if (url_key)
 	{
-		memcpy(component->url_md5, url_key, MD5_LEN);
+		memcpy(component->url_md5, url_key, oss_url.key_ln);
 		if (file_path)
 		{
 			component->file = strdup(look_for_version(file_path));
@@ -291,14 +291,14 @@ bool component_date_comparation(component_data_t *a, component_data_t *b)
 
 	if (!a->purls_md5[0] && a->purls[0])
 	{
-		a->purls_md5[0] = malloc(MD5_LEN);
+		a->purls_md5[0] = malloc(oss_url.key_ln);
 		MD5((uint8_t *)a->purls[0], strlen(a->purls[0]), a->purls_md5[0]);
 		a->age = get_component_age(a->purls_md5[0]);
 	}
 
 	if (!b->purls_md5[0] && b->purls[0])
 	{
-		b->purls_md5[0] = malloc(MD5_LEN);
+		b->purls_md5[0] = malloc(oss_purl.key_ln);
 		MD5((uint8_t *)b->purls[0], strlen(b->purls[0]), b->purls_md5[0]);
 		b->age = get_component_age(b->purls_md5[0]);
 	}

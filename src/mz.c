@@ -47,7 +47,7 @@
 void mz_get_key(struct ldb_table kb, char *key)
 {
 	/* Calculate mz file path */
-	char mz_path[LDB_MAX_PATH + MD5_LEN] = "\0";
+	char mz_path[LDB_MAX_PATH + kb.key_ln];
 	char mz_file_id[5] = "\0\0\0\0\0";
 	struct mz_job job;
 	memcpy(mz_file_id, key, 4);
@@ -66,8 +66,8 @@ void mz_get_key(struct ldb_table kb, char *key)
 	scanlog("MZ path: %s \n", mz_path);
 
 	/* Save path and key on job */
-	job.key = calloc(MD5_LEN, 1);
-	ldb_hex_to_bin(key, MD5_LEN * 2, job.key);	
+	job.key = calloc(kb.key_ln, 1);
+	ldb_hex_to_bin(key, kb.key_ln * 2, job.key);	
 
 	/* Read source mz file into memory */
 	job.mz = file_read(mz_path, &job.mz_ln);

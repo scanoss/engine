@@ -47,8 +47,8 @@
 char *get_filename(char *md5)
 {
 	/* Convert md5 to bin */
-	uint8_t md5bin[MD5_LEN];
-	ldb_hex_to_bin(md5, MD5_LEN * 2, md5bin);
+	uint8_t md5bin[oss_file.key_ln];
+	ldb_hex_to_bin(md5, oss_file.key_ln * 2, md5bin);
 
 	/* Init record */
 	uint8_t *record = calloc(LDB_MAX_REC_LN + 1, 1);

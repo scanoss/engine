@@ -26,11 +26,6 @@ char *datestamp(void);
 /* Prints a "created" JSON element with the current datestamp */
 void print_datestamp(void);
 
-//void file_md5(char *filepath, uint8_t *md5_result);
-
-/* Returns a string with a hex representation of md5 */
-char *md5_hex(uint8_t *md5);
-
 /* Removes chr from str */
 void remove_char(char *str, char chr);
 
