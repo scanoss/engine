@@ -68,7 +68,7 @@ static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, ui
 	if (iteration > MAX_URLS)
 		return true;
 	/* Ignore path lengths over the limit */
-	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+	if (!datalen || datalen >= (oss_file.key_ln + MAX_FILE_PATH)) return false;
 
 	/* Decrypt data */
 	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
@@ -77,8 +77,8 @@ static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, ui
 	
 	component_list_t * component_list = (component_list_t*) ptr;
 	/* Copy data to memory */
-	uint8_t url_id[MD5_LEN];
-	memcpy(url_id, raw_data, MD5_LEN);
+	uint8_t url_id[oss_url.key_ln];
+	memcpy(url_id, raw_data, oss_url.key_ln);
 	char path[MAX_FILE_PATH+1];
 	strncpy(path, decrypted, MAX_FILE_PATH);
 
@@ -136,7 +136,7 @@ static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	{
 		if (iteration < max_files_to_process * 2)
 		{
-			memcpy(files[iteration].url_id, data, MD5_LEN);
+			memcpy(files[iteration].url_id, data, oss_url.key_ln);
 			return false;
 		} 
 		return true;
@@ -253,16 +253,16 @@ extern bool first_file;
 int binary_scan(char * input)
 {
 	/* Get file MD5 */
-	char * hexmd5 = strndup(input, MD5_LEN * 2);
+	char * hexmd5 = strndup(input, oss_file.key_ln * 2);
 	scanlog("Bin File md5 to be scanned: %s\n", hexmd5);
-	uint8_t bin_md5[MD5_LEN];
-	ldb_hex_to_bin(hexmd5, MD5_LEN * 2, bin_md5);
+	uint8_t bin_md5[oss_file.key_ln];
+	ldb_hex_to_bin(hexmd5, oss_file.key_ln * 2, bin_md5);
 	free(hexmd5);
 
-	uint8_t zero_md5[MD5_LEN] = {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
+	/*uint8_t zero_md5[oss_file.key_ln] = {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
 	
 	if (!memcmp(zero_md5,bin_md5, MD5_LEN)) //the md5 key of an empty string must be skipped.
-		return -1;
+		return -1;*/
 	
 	if (ldb_key_exists(oss_file, bin_md5))
 	{
@@ -272,7 +272,7 @@ int binary_scan(char * input)
 		char * target = strndup(file_name, target_len);
 		scan_data_t * scan =  scan_data_init(target, 1, 1);
 		free(target);
-		memcpy(scan->md5, bin_md5, MD5_LEN);
+		memcpy(scan->md5, bin_md5, oss_file.key_ln);
 		scan->match_type = MATCH_FILE;
 		compile_matches(scan);
 

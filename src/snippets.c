@@ -129,7 +129,7 @@ void biggest_snippet(scan_data_t *scan)
 		if (scan->matchmap[j].hits >= min_match_hits) /* Only consider file with more than min_match_hits */
 		{
 			match_data_t *match_new = calloc(1, sizeof(match_data_t)); /* Create a match object */
-			memcpy(match_new->file_md5, scan->matchmap[j].md5, MD5_LEN);
+			memcpy(match_new->file_md5, scan->matchmap[j].md5, oss_file.key_ln);
 			match_new->hits = scan->matchmap[j].hits;
 			match_new->matchmap_reg = &scan->matchmap[j];
 			match_new->type = scan->match_type;
@@ -189,8 +189,8 @@ void biggest_snippet(scan_data_t *scan)
 			struct entry *item = NULL;
 			LIST_FOREACH(item, &scan->matches_list_array[i]->headp, entries)
 			{
-				char md5_hex[MD5_LEN * 2 + 1];
-				ldb_bin_to_hex(item->match->file_md5, MD5_LEN, md5_hex);
+				char md5_hex[oss_file.key_ln * 2 + 1];
+				ldb_bin_to_hex(item->match->file_md5, oss_file.key_ln, md5_hex);
 				scanlog("%s - %d\n", md5_hex, item->match->hits);
 			}
 		}
@@ -647,14 +647,14 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 
 		found = scan->matchmap_size;
 		/* Write MD5 */
-		memcpy(scan->matchmap[found].md5, md5, MD5_LEN);
+		memcpy(scan->matchmap[found].md5, md5, oss_file.key_ln);
 		scan->matchmap[found].ranges_number = 0;	
 	}
 
 	/* Search for the right range */
 
 	uint32_t from = 0;
-	uint16_t oss_line = uint16_read(md5 + MD5_LEN);
+	uint16_t oss_line = uint16_read(md5 + oss_file.key_ln);
 	bool range_found = false;
 
 	for (uint32_t t = 0; t < scan->matchmap[found].ranges_number; t++)

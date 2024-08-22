@@ -143,9 +143,12 @@ void vendor_component_md5(char *component, char *vendor, uint8_t *out)
 	MD5((uint8_t *)pair, strlen(pair), out);
 
 	/* Log pair_md5 */
-	char hex[MD5_LEN * 2 + 1] = "\0";
-	ldb_bin_to_hex(out, MD5_LEN, hex);
-	scanlog("vendor/component: %s = %s\n", pair, hex);
+	if (debug_on)
+	{
+		char hex[oss_purl.key_ln * 2 + 1];
+		ldb_bin_to_hex(out, oss_purl.key_ln, hex);
+		scanlog("vendor/component: %s = %s\n", pair, hex);
+	}
 }
 
 /**
@@ -225,18 +228,6 @@ void print_datestamp()
 	char *stamp = datestamp();
 	printf("%s", stamp);
 	free(stamp);
-}
-
-/**
- * @brief Returns a string with a hex representation of md5
- * @param md5 input md5
- * @return pointer to string
- */
-char *md5_hex(uint8_t *md5)
-{
-	char *out =  calloc(2 * MD5_LEN + 1, 1);
-	for (int i = 0; i < MD5_LEN; i++) sprintf(out + strlen(out), "%02x", md5[i]);
-	return out;
 }
 
 /**

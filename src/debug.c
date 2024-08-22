@@ -162,7 +162,7 @@ void map_dump(scan_data_t *scan)
 		
 		/* Print matching MD5 */
 		uint8_t *md5 = scan->matchmap[i].md5;
-		for (int j = 0; j < MD5_LEN; j++) fprintf(map, "%02x", md5[j]);
+		for (int j = 0; j < oss_file.key_ln; j++) fprintf(map, "%02x", md5[j]);
 
 		/* Print hits */
 		fprintf(map, " %04x ", scan->matchmap[i].hits);
@@ -198,7 +198,7 @@ void scan_benchmark()
 	{
 		scan_data_t * scan = scan_data_init("pseudo_file", 0, 0);
 		scan->preload = true;
-		memcpy(scan->md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
+		memset(scan->md5, 0, oss_file.key_ln);
 		strcpy(scan->file_size, "1024");
 
 		progress ("Scanning: ", f + 1, total_files, false);

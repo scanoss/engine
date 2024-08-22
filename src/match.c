@@ -86,7 +86,7 @@ void match_data_free(match_data_t *data)
 match_data_t * match_data_copy(match_data_t * in)
 {
     match_data_t * out = calloc(1, sizeof(*out));
-    memcpy(out->file_md5,in->file_md5,MD5_LEN);
+    memcpy(out->file_md5,in->file_md5,oss_file.key_ln);
     out->hits = in->hits;
     out->type = in->type;
     out->line_ranges = strdup(in->line_ranges);
@@ -354,14 +354,14 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		
 		if (!a->purls_md5[0] && a->purls[0])
 		{
-			a->purls_md5[0] = malloc(MD5_LEN);
+			a->purls_md5[0] = malloc(oss_purl.key_ln);
 			MD5((uint8_t *)a->purls[0], strlen(a->purls[0]), a->purls_md5[0]);
 			a->age = get_component_age(a->purls_md5[0]);
 		}
 		
 		if (!b->purls_md5[0] && b->purls[0])
 		{
-			b->purls_md5[0] = malloc(MD5_LEN);
+			b->purls_md5[0] = malloc(oss_purl.key_ln);
 			MD5((uint8_t *)b->purls[0], strlen(b->purls[0]), b->purls_md5[0]);
 			b->age = get_component_age(b->purls_md5[0]);
 		}
@@ -464,7 +464,7 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 		return true;
 
 	/* Ignore path lengths over the limit */
-	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+	if (!datalen || datalen >= (oss_file.key_ln + MAX_FILE_PATH)) return false;
 
 	/* Decrypt data */
 	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
@@ -474,12 +474,12 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	component_list_t * component_list = (component_list_t*) ptr;
 	/* Copy data to memory */
 
-	uint8_t url_id[MD5_LEN] = {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
+	uint8_t url_id[oss_url.key_ln]; /*= {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
 	
 	if (!memcmp(raw_data,url_id, MD5_LEN)) //the md5 key of an empty string must be skipped.
-		return false;
+		return false;*/
 
-	memcpy(url_id, raw_data, MD5_LEN);
+	memcpy(url_id, raw_data, oss_url.key_ln);
 	char path[MAX_FILE_PATH+1];
 	strncpy(path, decrypted, MAX_FILE_PATH);
 	//check the ignore list only if the match type is MATCH_SNIPPET. TODO: remove this after remine everything.
@@ -847,7 +847,7 @@ void compile_matches(scan_data_t *scan)
 		match_data_t *match_new = calloc(1, sizeof(match_data_t));
 		match_new->type = scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
-		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);
+		memcpy(match_new->file_md5, scan->match_ptr, oss_file.key_ln);
 		match_new->scan_ower = scan;
 		if (!match_list_add(scan->matches_list_array[0], match_new, NULL, false))
 		{

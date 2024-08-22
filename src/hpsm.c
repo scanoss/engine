@@ -105,9 +105,9 @@ struct ranges hpsm_calc(uint8_t *file_md5)
         return r;
     }
     scanlog("Running HPSM\n");
-    char *file = md5_hex(file_md5);
-    struct ranges result = hpsm(hpsm_crc_lines, file);
-    free(file);
+    char file_hex[oss_file.key_ln * 2 + 1];
+    ldb_bin_to_hex(file_md5, oss_file.key_ln, file_hex);
+    struct ranges result = hpsm(hpsm_crc_lines, file_hex);
     return result;
 }
 

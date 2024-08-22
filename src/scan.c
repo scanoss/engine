@@ -19,7 +19,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 #include "debug.h"
 #include "file.h"
 #include "ignorelist.h"
@@ -195,7 +194,7 @@ int hash_scan(char *path, int scan_max_snippets, int scan_max_components)
 	scan->preload = true;
 
 		/* Get file MD5 */
-	ldb_hex_to_bin(scan->file_path, MD5_LEN * 2, scan->md5);
+	ldb_hex_to_bin(scan->file_path, oss_file.key_ln * 2, scan->md5);
 
 	/* Fake file length */
 	strcpy(scan->file_size, "999");
@@ -236,7 +235,6 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 	/* Get wfp MD5 hash */
 	uint8_t tmp_md5[16];
 	get_file_md5(path, tmp_md5);
-	char *tmp_md5_hex = md5_hex(tmp_md5);
 
 	/* Read line by line */
 	while ((lineln = getline(&line, &len, fp)) != -1)
@@ -268,25 +266,25 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			const int tagln = 5; // len of 'file='
 
 			/* Get file MD5 */
-			char * hexmd5 = strndup(line + tagln, MD5_LEN * 2);
-			if (strlen(hexmd5) <  MD5_LEN * 2)
+			char * hexmd5 = strndup(line + tagln, oss_file.key_ln * 2);
+			if (strlen(hexmd5) <  oss_file.key_ln * 2)
 			{
 				scanlog("Incorrect md5 len in line %s. Skipping\n", line);
 				free(hexmd5);
 				continue;
 			}
 			
-			rec = (uint8_t*) strdup(line + tagln + (MD5_LEN * 2) + 1);
+			rec = (uint8_t*) strdup(line + tagln + (oss_file.key_ln * 2) + 1);
 			char * target = field_n(2, (char *)rec);
 			
 			/*Init a new scan object for the next file to be scanned */
 			scan = scan_data_init(target, scan_max_snippets, scan_max_components);
-			strcpy(scan->source_md5, tmp_md5_hex);
+			ldb_bin_to_hex(tmp_md5, oss_file.key_ln, scan->source_md5);
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
 			scan->preload = true;
 			free(rec);
 			scanlog("File md5 to be scanned: %s\n", hexmd5);
-			ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
+			ldb_hex_to_bin(hexmd5, oss_file.key_ln * 2, scan->md5);
 			free(hexmd5);
 		}
 
@@ -331,7 +329,6 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 	fclose(fp);
 	if (line) free(line);
 	
-	free(tmp_md5_hex);
 	return EXIT_SUCCESS;
 }
 
@@ -445,9 +442,7 @@ void ldb_scan(scan_data_t *scan)
 		get_file_md5(scan->file_path, scan->md5);
 
 	/* Scan full file */
-	char *tmp_md5_hex = md5_hex(scan->md5);
-	strcpy(scan->source_md5, tmp_md5_hex);
-	free(tmp_md5_hex);
+	ldb_bin_to_hex(scan->md5, oss_file.key_ln, scan->source_md5);
 
 	/* Look for full file match or url match in ldb */
 	scan->match_type = ldb_scan_file(scan);
