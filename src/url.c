@@ -213,7 +213,7 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 			{
 				scanlog("Related PURL: %s\n", purl);
 				component->purls[i] = purl;
-				component->purls_md5[i] = malloc(MD5_LEN);
+				component->purls_md5[i] = malloc(oss_purl.key_ln);
 				MD5((uint8_t *)purl, strlen(purl), component->purls_md5[i]);
 				return false;
 			}
@@ -246,7 +246,7 @@ void fetch_related_purls(component_data_t *component)
 	/* add main purl md5 if it is not ready */
 	if (!component->purls_md5[0] && component->purls[0])
 	{
-		component->purls_md5[0] = malloc(MD5_LEN);
+		component->purls_md5[0] = malloc(oss_purl.key_ln);
 		MD5((uint8_t *)component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
 	}
 
@@ -308,7 +308,7 @@ void purl_release_date(char *purl, char *date)
 	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
 		return; 
 
-	uint8_t purl_md5[MD5_LEN];
+	uint8_t purl_md5[oss_purl.key_ln];
 	MD5((uint8_t *)purl, strlen(purl), purl_md5);
 
 	ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) date);

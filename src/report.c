@@ -203,7 +203,7 @@ bool print_json_component(component_data_t * component)
 	{
 		if (component->purls[i] && !component->purls_md5[i])
 		{
-			component->purls_md5[i] = malloc(MD5_LEN);
+			component->purls_md5[i] = malloc(oss_purl.key_ln);
 			MD5((uint8_t *)component->purls[i], strlen(component->purls[i]), component->purls_md5[i]);
 		}
 	}
@@ -245,7 +245,8 @@ bool print_json_component(component_data_t * component)
 	if (engine_flags & ENABLE_PATH_HINT)
 		printf("\"path_rank\": %d,", component->path_rank);
 
-	char *url_id = md5_hex(component->url_md5);
+	char url_id[oss_url.key_ln * 2 + 1];
+    ldb_bin_to_hex(component->url_md5, oss_url.key_ln, url_id);
 	printf("\"url_hash\": \"%s\"", url_id);
 	free(url_id);
 
@@ -315,7 +316,8 @@ bool print_json_match(struct match_data_t * match)
 		scanlog("Match with no components ignored: %s", match->source_md5);
 		return false;
 	}
-	char *file_id = md5_hex(match->file_md5);
+	char file_id[oss_file.key_ln * 2 +1];
+	ldb_bin_to_hex(match->file_md5, oss_file.key_ln, file_id);
 
 	if (engine_flags & DISABLE_BEST_MATCH)
 		printf("{");
@@ -344,11 +346,6 @@ bool print_json_match(struct match_data_t * match)
 		else
 			printf(",\"file_url\": \"%s\"", match->component_list.headp.lh_first->component->url);
 	}
-	else //return an empty string
-		printf(",\"file_url\": \" \"");
-
-
-	free(file_id);
 	
 	if (!(engine_flags & DISABLE_QUALITY))
 	{

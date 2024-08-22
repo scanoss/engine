@@ -372,7 +372,7 @@ void print_licenses(component_data_t *comp)
 	for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
 	{
 		/* Calculate purl@version md5 */
-		uint8_t purlversion_md5[MD5_LEN];
+		uint8_t purlversion_md5[oss_purl.key_ln];
 		purl_version_md5(purlversion_md5, comp->purls[i], comp->version);
 
 		records = ldb_fetch_recordset(NULL, oss_license, purlversion_md5, false, print_licenses_item, comp);

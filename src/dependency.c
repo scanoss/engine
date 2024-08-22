@@ -123,10 +123,10 @@ int print_dependencies(component_data_t * comp)
 	if (!records)
 		for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
 		{
-			uint8_t md5[MD5_LEN];
-			purl_version_md5(md5, comp->purls[i], comp->version);
+			uint8_t hash[oss_purl.key_ln];
+			purl_version_md5(hash, comp->purls[i], comp->version);
 
-			records = ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, comp);
+			records = ldb_fetch_recordset(NULL, oss_dependency, hash, false, print_dependencies_item, comp);
 			if (records)
 			{
 				scanlog("Dependency matches (%d) reported for %s@%s\n", records, comp->purls[i],comp->version);
@@ -139,10 +139,10 @@ int print_dependencies(component_data_t * comp)
 	if (!records)
 		for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
 		{
-			uint8_t md5[MD5_LEN];
-			purl_version_md5(md5, comp->purls[i], comp->latest_version);
+			uint8_t hash[oss_purl.key_ln];
+			purl_version_md5(hash, comp->purls[i], comp->latest_version);
 
-			records = ldb_fetch_recordset(NULL, oss_dependency, md5, false, print_dependencies_item, comp);
+			records = ldb_fetch_recordset(NULL, oss_dependency, hash, false, print_dependencies_item, comp);
 			if (records)
 			{
 				scanlog("Dependency matches (%d) reported for %s@%s\n", records, comp->purls[i],comp->latest_version);

@@ -650,14 +650,14 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 
 		found = scan->matchmap_size;
 		/* Write MD5 */
-		memcpy(scan->matchmap[found].md5, md5, MD5_LEN);
+		memcpy(scan->matchmap[found].md5, md5, oss_file.key_ln);
 		scan->matchmap[found].ranges_number = 0;	
 	}
 
 	/* Search for the right range */
 
 	uint32_t from = 0;
-	uint16_t oss_line = uint16_read(md5 + MD5_LEN);
+	uint16_t oss_line = uint16_read(md5 + oss_file.key_ln);
 	bool range_found = false;
 
 	for (uint32_t t = 0; t < scan->matchmap[found].ranges_number; t++)
