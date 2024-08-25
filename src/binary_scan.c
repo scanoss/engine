@@ -62,7 +62,7 @@ static bool sort_by_hits(component_data_t *a, component_data_t *b)
 
 #define MAX_URLS 100
 
-static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+static bool add_purl_from_urlid(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 
 	if (iteration > MAX_URLS)
@@ -71,7 +71,7 @@ static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, ui
 	if (!datalen || datalen >= (oss_file.key_ln + MAX_FILE_PATH)) return false;
 
 	/* Decrypt data */
-	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
+	char * decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
 	if (!decrypted)
 		return NULL;
 	
@@ -128,7 +128,7 @@ int max_files_to_process = 4;
  * @param ptr //TODO
  * @return //TODO
  */
-static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+static bool get_all_file_ids(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	//component_list_t * comp_list = (component_list_t *) ptr;
 	file_recordset * files = (file_recordset *) ptr;

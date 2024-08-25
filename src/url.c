@@ -51,11 +51,11 @@
  * @param ptr //TODO
  * @return //TODO
  */
-bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+bool handle_url_record(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen && datalen >= MAX_PATH) return false;
 
-	char * data = decrypt_data(raw_data, datalen, oss_url, key, subkey);
+	char * data = decrypt_data(raw_data, datalen, *table, key, subkey);
 
 	if (!data)
 		return false;
@@ -65,7 +65,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 		free(data);
 		return false;
 	}
-
+	int subkey_ln = table->key_ln - LDB_KEY_LN;
 	component_list_t * component_list = (component_list_t*) ptr;
 	
 	component_data_t * new_comp = calloc(1, sizeof(*new_comp));
@@ -177,7 +177,7 @@ bool purl_type_matches(char *purl1, char *purl2)
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
 **/
 
-bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool handle_purl_record(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	component_data_t *component = (component_data_t *) ptr;
 
@@ -213,7 +213,7 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 			{
 				scanlog("Related PURL: %s\n", purl);
 				component->purls[i] = purl;
-				component->purls_md5[i] = malloc(oss_purl.key_ln);
+				component->purls_md5[i] = malloc(table->key_ln);
 				MD5((uint8_t *)purl, strlen(purl), component->purls_md5[i]);
 				return false;
 			}
@@ -273,11 +273,11 @@ void fetch_related_purls(component_data_t *component)
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
 **/
 
-bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool get_purl_first_release(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen) return false;
 
-	char * purl = decrypt_data(data, datalen, oss_purl, key, subkey);
+	char * purl = decrypt_data(data, datalen, *table, key, subkey);
 	uint8_t *oldest = (uint8_t *) ptr;
 
 	if (!purl)
@@ -320,9 +320,9 @@ void purl_release_date(char *purl, char *date)
  * @brief Handler function for getting the oldest URL.
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
 **/
-bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool get_oldest_url(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char * url = decrypt_data(data, datalen, oss_url, key, subkey);
+	char * url = decrypt_data(data, datalen, *table, key, subkey);
 	if (!url) 
 		return false;
 

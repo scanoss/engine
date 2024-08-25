@@ -51,13 +51,12 @@
  * @param ptr //TODO 
  * @return //TODO  
  */
-bool notices_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, \
-uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool notices_handler(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (datalen != 2 * oss_attribution.key_ln) return false;
 	char hexkey[oss_attribution.key_ln * 2 + 1];
 	memcpy(hexkey, data, oss_attribution.key_ln * 2);
-	hexkey[oss_attribution.key_ln * 2] = 0;
+	hexkey[table->key_ln * 2] = 0;
 
 	/* Print attribution notice header */
 	char *component = (char *) ptr;
@@ -81,8 +80,7 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
  * @param ptr //TODO
  * @return return true or false if the atribution exist or not.
  */
-bool attribution_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, \
-uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool attribution_handler(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	bool *valid = (bool *) ptr;
 

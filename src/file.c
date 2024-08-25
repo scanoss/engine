@@ -263,11 +263,11 @@ char *file_extension(char *path)
  * @param ptr //TODO
  * @return //TODO
  */
-bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool get_first_file(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen) return false;
 
-	char * file_data = decrypt_data(data, datalen, oss_file, key, subkey);
+	char * file_data = decrypt_data(data, datalen, *table, key, subkey);
 	
 	if (!file_data || !*file_data) 
 		return false;

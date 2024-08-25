@@ -465,9 +465,9 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (oss_file.key_ln + MAX_FILE_PATH)) return false;
-
+	
 	/* Decrypt data */
-	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
+	char * decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
 	if (!decrypted)
 		return false;
 	
