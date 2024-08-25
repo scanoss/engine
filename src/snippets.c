@@ -210,7 +210,7 @@ void biggest_snippet(scan_data_t *scan)
  * @return //TODO
  */
 #define MATCHMAP_ITEM_SIZE (matchmap_max_files * 2)
-static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+static bool get_all_file_ids(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *)ptr;
 

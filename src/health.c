@@ -43,11 +43,11 @@
  * @brief Prints information about statistics of a component comming from GitHub or gitee
  * 
  */
-bool print_health_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool print_health_item(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	component_data_t *match = ptr;
 
-	char * decrypted = decrypt_data(data, datalen, oss_purl, key, subkey);
+	char * decrypted = decrypt_data(data, datalen, *table, key, subkey);
 
 	/* Expect at least a date or a pkg:*/
 	if (strlen(decrypted) < 9) 

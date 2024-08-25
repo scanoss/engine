@@ -53,7 +53,7 @@ const char *quality_sources[] = {"best_practices"};
  * @param ptr //TODO
  * @return //TODO
  */
-bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool print_quality_item(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	
 	char ** out  = ptr;

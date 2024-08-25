@@ -109,17 +109,19 @@ char * version_cleanup(char *  version, char * component)
  * @param ptr //TODO
  * @return //TODO
  */
-static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+static bool get_purl_version_handler(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	release_version *release = ptr;
 
 	if (!datalen) 
 		return false;
 
-	char *CSV = decrypt_data(data, datalen, oss_url, key, subkey);
+	char *CSV = decrypt_data(data, datalen, *table, key, subkey);
 
 	if (!CSV)
 		return false;
+
+	int subkey_ln = table->key_ln - LDB_KEY_LN; 
 	
 
 	char *purl = calloc(MAX_JSON_VALUE_LEN, 1);
