@@ -85,10 +85,10 @@ static void clean_copyright(char *out, char *copyright)
  * @param subkey //TODO
  * @return //TODO
  */
-static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+static bool print_copyrights_item(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	component_data_t * comp = ptr;
-	char * CSV = decrypt_data(data, datalen, oss_copyright, key, subkey);
+	char * CSV = decrypt_data(data, datalen, *table, key, subkey);
 
 	char *source  = calloc(MAX_JSON_VALUE_LEN + 1, 1);
 	char *copyright = calloc(MAX_COPYRIGHT + 1, 1);

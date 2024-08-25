@@ -54,9 +54,9 @@ const char *dependency_sources[] = {"component_declared"};
  * @param ptr //TODO
  * @return //TODO
  */
-bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool print_dependencies_item(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char *CSV = decrypt_data(data, datalen, oss_dependency, key, subkey);
+	char *CSV = decrypt_data(data, datalen, *table, key, subkey);
 	component_data_t * comp = (component_data_t *) ptr;
 	char *source = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *vendor = calloc(MAX_JSON_VALUE_LEN, 1);
