@@ -49,6 +49,7 @@
 
 struct ldb_table oss_url;
 struct ldb_table oss_file;
+struct ldb_table oss_path;
 struct ldb_table oss_wfp;
 struct ldb_table oss_purl;
 struct ldb_table oss_copyright;
@@ -134,6 +135,15 @@ void initialize_ldb_tables(char *name)
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "file");
 	oss_file = ldb_read_cfg(dbtable);
+
+	ldb_hash_mode_select(oss_file.key_ln);
+
+	if (ldb_table_exists(oss_db_name, "path"))
+	{
+		path_table_present = true;
+		snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "path");
+		oss_path = ldb_read_cfg(dbtable);
+	}
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "wfp");
 	oss_wfp = ldb_read_cfg(dbtable);

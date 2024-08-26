@@ -114,7 +114,12 @@ static bool zero_bytes (uint8_t *md5)
  */
 static match_t ldb_scan_file(scan_data_t * scan) {
 			
-	scanlog("Checking entire file %s\n", scan->file_path);
+	if (debug_on)
+	{
+		char hex_hash[oss_file.key_ln * 2 +1];
+		ldb_bin_to_hex(scan->md5, oss_file.key_ln, hex_hash);
+		scanlog("Checking entire file %s - hash: %s\n", scan->file_path, hex_hash);
+	}
 	
 	if (zero_bytes(scan->md5)) return MATCH_NONE;
 	

@@ -51,8 +51,8 @@
 #include "health.h"
 
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
-bool match_extensions = false;									  /** global match extension flag */
-
+bool match_extensions = false;								  /** global match extension flag */
+bool path_table_present = false;
 char *component_hint = NULL;
 
 /**
@@ -442,6 +442,24 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	return true;
 }
 
+bool path_query_handler(struct ldb_table * table, uint8_t * key, uint8_t * subkey, uint8_t * data, uint32_t datalen, int record_number, void * ptr)
+{
+	char **path = ptr;
+	/* Decrypt data */
+	char * decrypted = decrypt_data(data, datalen, *table, key, subkey);
+	if (!decrypted || !*decrypted)
+		return false;
+	
+	*path = decrypted;
+	return true;
+}
+static char * path_query(uint8_t * file_id)
+{
+	char * path = NULL;
+	ldb_fetch_recordset(NULL, oss_path, file_id, false, path_query_handler, (void *) &path);
+	return path;
+}
+
 /**
  * @brief Load componentes for a match processing the file recordset list.
  * For each file in the recordset we will query for the oldest url in the url table.
@@ -462,24 +480,31 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	/*Return we high accuracy it is not enabled*/
 	if (iteration > iteration_max * 2 && !(engine_flags & ENABLE_HIGH_ACCURACY))
 		return true;
-
 	/* Ignore path lengths over the limit */
-	if (!datalen || datalen >= (oss_file.key_ln + MAX_FILE_PATH)) return false;
+	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH)) return false;
+	char * decrypted = NULL;
+	if (path_table_present)
+	{
+		decrypted = path_query(&raw_data[table->key_ln]);
+	}
+	else
+	{
+		/* Decrypt data */
+		decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
+	}
 	
-	/* Decrypt data */
-	char * decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
 	if (!decrypted)
 		return false;
 	
 	component_list_t * component_list = (component_list_t*) ptr;
 	/* Copy data to memory */
 
-	uint8_t url_id[oss_url.key_ln]; /*= {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
+	uint8_t url_id[table->key_ln]; /*= {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
 	
 	if (!memcmp(raw_data,url_id, MD5_LEN)) //the md5 key of an empty string must be skipped.
 		return false;*/
 
-	memcpy(url_id, raw_data, oss_url.key_ln);
+	memcpy(url_id, raw_data, table->key_ln);
 	char path[MAX_FILE_PATH+1];
 	strncpy(path, decrypted, MAX_FILE_PATH);
 	//check the ignore list only if the match type is MATCH_SNIPPET. TODO: remove this after remine everything.
