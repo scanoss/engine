@@ -179,41 +179,6 @@ int dir_count(char *path)
 }
 
 /**
- * @brief Collect all files function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
- * @param key //TODO
- * @param subkey //TODO
- * @param subkey_ln //TODO
- * @param raw_data //TODO
- * @param datalen //TODO
- * @param iteration //TODO
- * @param ptr //TODO
- * @return //TODO
- */
-bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
-{
-
-	/* Leave if FETCH_MAX_FILES is reached */
-	if (iteration >= FETCH_MAX_FILES) return true;
-
-	/* Ignore path lengths over the limit */
-	if (!datalen || datalen >= (oss_file.key_ln + MAX_FILE_PATH)) return false;
-
-	/* Decrypt data */
-	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
-	if (!decrypted)
-		return NULL;
-	/* Copy data to memory */
-	file_recordset *files = ptr;
-
-	memcpy(files[iteration].url_id, raw_data, oss_url.key_ln);
-	strncpy(files[iteration].path, decrypted, MAX_FILE_PATH);
-	free(decrypted);
-	
-	files[iteration].path_ln = dir_count(files[iteration].path);
-	return false;
-}
-
-/**
  * @brief Count all entries for a given md5. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key //TODO
  * @param subkey //TODO

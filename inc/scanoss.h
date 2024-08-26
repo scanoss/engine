@@ -126,6 +126,7 @@ extern char * component_hint;
 /* DB tables */
 extern struct ldb_table oss_url;
 extern struct ldb_table oss_file;
+extern struct ldb_table oss_path;
 extern struct ldb_table oss_wfp;
 extern struct ldb_table oss_purl;
 extern struct ldb_table oss_copyright;
