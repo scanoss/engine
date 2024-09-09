@@ -220,7 +220,7 @@ bool check_purl_attributions(struct ldb_table oss_attributions, char * licenses_
 		{
 			/* Get purl md5 */
 			uint8_t md5[16];
-			MD5((uint8_t *)purl, strlen(purl), md5);
+			oss_attribution.hash_calc((uint8_t *)purl, strlen(purl), md5);
 			if (declared_components[i].license && licenses_json && 
 				license_search_on_licenses_json(declared_components[i].license, licenses_json))
 			{
@@ -269,7 +269,7 @@ void print_purl_attribution_notices(struct ldb_table oss_attributions, char * li
 		{
 			/* Get purl md5 */
 			uint8_t md5[16];
-			MD5((uint8_t *)purl, strlen(purl), md5);
+			oss_attribution.hash_calc((uint8_t *)purl, strlen(purl), md5);
 			print_notices(oss_attributions, md5, purl);
 		}
   	}

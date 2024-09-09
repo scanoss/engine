@@ -99,9 +99,9 @@ void uint32_reverse(uint8_t *data)
  * @param md52 md5 2
  * @return true for equal
  */
-bool md5cmp(uint8_t *md51, uint8_t *md52)
+bool hashcmp(int hash_len, uint8_t *md51, uint8_t *md52)
 {
-	for (int i = 0; i < 16; i++)
+	for (int i = 0; i < hash_len; i++)
 		if (md51[i] != md52[i])
 			return false;
 	return true;
@@ -124,31 +124,6 @@ void trim(char *str)
     len = strlen(str);
     for (i = len - 1; i >= 0 ; i--) if (!isspace(str[i])) break;
     str[i + 1] = 0;
-}
-
-/**
- * @brief Returns the pair md5 of "component/vendor"
- * @param component component string
- * @param vendor vendor sting
- * @param out[out] pointer ot md5
- */
-void vendor_component_md5(char *component, char *vendor, uint8_t *out)
-{
-	char pair[1024] = "\0";
-	if (strlen(component) + strlen(vendor) + 2 >= 1024) return;
-
-	/* Calculate pair_md5 */
-	sprintf(pair, "%s/%s", component, vendor);
-	for (int i = 0; i < strlen(pair); i++) pair[i] = tolower(pair[i]);
-	MD5((uint8_t *)pair, strlen(pair), out);
-
-	/* Log pair_md5 */
-	if (debug_on)
-	{
-		char hex[oss_purl.key_ln * 2 + 1];
-		ldb_bin_to_hex(out, oss_purl.key_ln, hex);
-		scanlog("vendor/component: %s = %s\n", pair, hex);
-	}
 }
 
 /**

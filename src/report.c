@@ -204,7 +204,7 @@ bool print_json_component(component_data_t * component)
 		if (component->purls[i] && !component->purls_md5[i])
 		{
 			component->purls_md5[i] = malloc(oss_purl.key_ln);
-			MD5((uint8_t *)component->purls[i], strlen(component->purls[i]), component->purls_md5[i]);
+			oss_purl.hash_calc((uint8_t *)component->purls[i], strlen(component->purls[i]), component->purls_md5[i]);
 		}
 	}
 		

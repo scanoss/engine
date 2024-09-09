@@ -141,7 +141,7 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 
 	if (!in)
 	{
-		MD5(NULL, 0, md5_result);
+		oss_file.hash_calc(NULL, 0, md5_result);
 		return;
 	}
 
@@ -149,7 +149,7 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 	long filesize = ftell(in);
 	if (!filesize)
 	{
-		MD5(NULL, 0, md5_result);
+		oss_file.hash_calc(NULL, 0, md5_result);
 	}
 	else
 	{
@@ -160,7 +160,7 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 			fprintf(stderr, "Warning: cannot open file %s\n", filepath);
 
 		/* Calculate MD5sum */
-		MD5(buffer, filesize, md5_result);
+		oss_file.hash_calc(buffer, filesize, md5_result);
 		free(buffer);
 		fclose(in);
 	}
