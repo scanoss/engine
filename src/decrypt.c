@@ -36,7 +36,7 @@
 #include "decrypt.h"
 
 char * (*decrypt_data) (uint8_t *data, uint32_t size, struct ldb_table table, uint8_t *key, uint8_t *subkey);
-void  (*decrypt_mz) (uint8_t *data, uint32_t len);
+void  (*decrypt_mz) (int key_ln, uint8_t *data, uint32_t len);
 void (*encoder_version) (char * version);
 /**
  * @brief Decrypt data function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
@@ -51,7 +51,7 @@ char * standalone_decrypt_data(uint8_t *data, uint32_t size, struct ldb_table ta
 	char * msg = NULL;
   
   if (!strcmp(table.table, "file"))
-    msg = strndup((char*) data + 16, size - 16);
+    msg = strndup((char*) data + table.key_ln, size - table.key_ln);
   else
     msg = strndup((char*) data, size);
   

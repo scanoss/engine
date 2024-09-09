@@ -37,8 +37,6 @@
 #define SNIPPET_LINE_TOLERANCE 10
 
 #define WFP_LN 4
-#define WFP_REC_LN 18
-
 /* Log files */
 #define SCANOSS_VERSION "5.4.10"
 #define SCAN_LOG "/tmp/scanoss_scan.log"

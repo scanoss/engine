@@ -50,6 +50,7 @@ void mz_get_key(struct ldb_table kb, char *key)
 	char mz_path[LDB_MAX_PATH + kb.key_ln];
 	char mz_file_id[5] = "\0\0\0\0\0";
 	struct mz_job job;
+	job.key_ln = kb.key_ln -2;
 	memcpy(mz_file_id, key, 4);
 	sprintf(mz_path, "%s/%s/%s/%s.mz", ldb_root, kb.db, kb.table,mz_file_id);
 
@@ -79,7 +80,7 @@ void mz_get_key(struct ldb_table kb, char *key)
 	{
 		/* Position pointers */
 		job.id = job.mz + ptr;
-		uint8_t *file_ln = job.id + MZ_MD5;
+		uint8_t *file_ln = job.id + job.key_ln;
 		job.zdata = file_ln + MZ_SIZE;
 
 		/* Get compressed data size */
@@ -88,19 +89,19 @@ void mz_get_key(struct ldb_table kb, char *key)
 		job.zdata_ln = tmpln;
 
 		/* Get total mz record length */
-		job.ln = MZ_MD5 + MZ_SIZE + job.zdata_ln;
+		job.ln = job.key_ln + MZ_SIZE + job.zdata_ln;
 
 		/* Pass job to handler */
-		if (!memcmp(job.id, job.key + 2, MZ_MD5))
+		if (!memcmp(job.id, job.key + 2, job.key_ln))
 		{
 			if (kb.definitions & LDB_TABLE_DEFINITION_ENCRYPTED)
 			{
-				decrypt_mz(job.id, job.zdata_ln);
+				decrypt_mz(kb.key_ln, job.id, job.zdata_ln);
 			}
 			/* Decompress */
 			MZ_DEFLATE(&job);
 
-			job.data[job.data_ln] = 0;
+			//job.data[job.data_ln] = 0;
 			printf("%s", job.data);
 			return;
 		}

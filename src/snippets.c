@@ -226,7 +226,7 @@ static bool get_all_file_ids(struct ldb_table * table, uint8_t *key, uint8_t *su
 	{
 		uint32_t size = uint32_read(record);
 		/* End recordset fetch if MAX_QUERY_RESPONSE is reached */
-		if (size + datalen + 4 >= WFP_REC_LN * MATCHMAP_ITEM_SIZE)
+		if (size + datalen + 4 >= table->rec_ln * MATCHMAP_ITEM_SIZE)
 		{
 			return true;
 		}
@@ -615,7 +615,7 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 			return -1;
 		}
 		
-		if (md5cmp(scan->matchmap[t].md5, md5))
+		if (hashcmp(oss_file.key_ln, scan->matchmap[t].md5, md5))
 		{
 			lastwfp = scan->matchmap[t].lastwfp;
 			found = t;
@@ -746,13 +746,13 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	for (long i = 0; i < scan->hash_count; i++)
 	{
 		/* Get all file IDs for given wfp */
-		map[i].md5_set = malloc(WFP_REC_LN * MATCHMAP_ITEM_SIZE);
+		map[i].md5_set = malloc(oss_wfp.rec_ln * MATCHMAP_ITEM_SIZE);
 		wfp_invert(scan->hashes[i], map[i].wfp);
-		//scanlog(" Add wfp %02x%02x%02x%02x to map\n",map[i].wfp[0], map[i].wfp[1],map[i].wfp[2],map[i].wfp[3]);
+		scanlog(" Add wfp %02x%02x%02x%02x to map\n",map[i].wfp[0], map[i].wfp[1],map[i].wfp[2],map[i].wfp[3]);
 		uint32_write(map[i].md5_set, 0);
 		map[i].line = scan->lines[i];
 		ldb_fetch_recordset(NULL, oss_wfp, map[i].wfp, false, get_all_file_ids, (void *)map[i].md5_set);
-		map[i].size = uint32_read(map[i].md5_set) / WFP_REC_LN;
+		map[i].size = uint32_read(map[i].md5_set) / oss_wfp.rec_ln;
 		//Initializate the lines indirection when a wfp from a line has at least one md5 linked
 		if (map[i].size)
 			map_lines_indirection[scan->lines[i]] = 0;
@@ -761,6 +761,18 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 			map_max_size = map[i].size;
 		
 	}
+
+	/*for (long i = 0; i < scan->hash_count; i++)
+	{ 
+		printf("%02x%02x%02x%02x: ", map[i].wfp[0], map[i].wfp[1],map[i].wfp[2],map[i].wfp[3]);
+		for (int j=0; j < map[i].size; j++)
+		{
+			char hex[MD5_LEN_HEX] = "\0";
+			ldb_bin_to_hex(map[i].md5_set + 4 + j * oss_wfp.rec_ln,  oss_file.key_ln, hex);
+			printf(" %s", hex);
+		}
+		printf("\n");
+	}*/
 	/* Classify the WFPs in cathegories depending on popularity
 	Each cathegoy will contain a sub set of index refered to map rows*/
 	#define MAP_INDIRECTION_CAT_NUMBER 1000
@@ -890,7 +902,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 				/* Add each item to the matchmap*/
 				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index++)
 				{
-					int wfp_p = wfp_index * WFP_REC_LN;
+					int wfp_p = wfp_index * oss_wfp.rec_ln;
 					/*Stop when a new sector appers*/
 					if (md5s[wfp_p] != sector)
 					{
@@ -948,7 +960,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 				/* Add each item to the matchmap*/
 				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index++)
 				{
-					int wfp_p = wfp_index * WFP_REC_LN;
+					int wfp_p = wfp_index * oss_wfp.rec_ln;
 					int sector = md5s[wfp_p];
 					int sector_max = min_match_hits;
 
@@ -957,7 +969,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 					else
 						sector_max = scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits;
 
-					if (md5cmp(&md5s[wfp_p], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5))
+					if (hashcmp(oss_file.key_ln, &md5s[wfp_p], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5))
 					{				 
 						add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], 0, &sector_max, &scan->matchmap_rank_by_sector[sector]);
 						md5_proceced++;

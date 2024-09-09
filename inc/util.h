@@ -12,13 +12,10 @@ void uint32_reverse(uint8_t *data);
 void hex_to_bin(char *hex, uint32_t len, uint8_t *out);
 
 /* Compares two MD5 checksums */
-bool md5cmp(uint8_t *md51, uint8_t *md52);
+bool hashcmp(int hash_len, uint8_t *md51, uint8_t *md52);
 
 /* Trim str */
 void trim(char *str);
-
-/* Returns the pair md5 of "component/vendor" */
-void vendor_component_md5(char *component, char *vendor, uint8_t *out);
 
 /* Returns the current date stamp */
 char *datestamp(void);
