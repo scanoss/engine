@@ -108,10 +108,17 @@ bool lib_encoder_load()
 #endif
 }
 
+static hash_calc_t hash_function_select(int key_ln)
+{
+	if (key_ln == 8)
+		return ldb_crc64;
+	
+	return md5_string;
+}
+
 /* Initialize tables for the DB name indicated (defaults to oss) */
 void initialize_ldb_tables(char *name)
 {
-	
 	char * ldb_ver = NULL;
 	ldb_version(&ldb_ver);
 	scanlog("ldb version: %s\n", ldb_ver);
@@ -132,51 +139,65 @@ void initialize_ldb_tables(char *name)
 	scanlog("Loading tables definitions\n");
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "url");
 	oss_url = ldb_read_cfg(dbtable);
+	oss_url.hash_calc = hash_function_select(oss_url.key_ln);
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "file");
 	oss_file = ldb_read_cfg(dbtable);
+	oss_file.hash_calc = hash_function_select(oss_file.key_ln);
 
-	ldb_hash_mode_select(oss_file.key_ln);
+	//ldb_hash_mode_select(oss_file.key_ln);
 
 	if (ldb_table_exists(oss_db_name, "path"))
 	{
 		path_table_present = true;
 		snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "path");
 		oss_path = ldb_read_cfg(dbtable);
+		oss_path.hash_calc = hash_function_select(oss_path.key_ln);
 	}
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "wfp");
 	oss_wfp = ldb_read_cfg(dbtable);
+	oss_wfp.hash_calc = hash_function_select(oss_wfp.key_ln);
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "purl");
 	oss_purl = ldb_read_cfg(dbtable);
+	oss_purl.hash_calc = hash_function_select(oss_purl.key_ln);
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "copyright");
 	oss_copyright = ldb_read_cfg(dbtable);
+	oss_copyright.hash_calc = hash_function_select(oss_copyright.key_ln);
 	
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "quality");
 	oss_quality = ldb_read_cfg(dbtable);
+	oss_quality.hash_calc = hash_function_select(oss_quality.key_ln);
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "vulnerability");
 	oss_vulnerability = ldb_read_cfg(dbtable);
+	oss_vulnerability.hash_calc = hash_function_select(oss_vulnerability.key_ln);
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "dependency");
 	oss_dependency = ldb_read_cfg(dbtable);
+	oss_dependency.hash_calc = hash_function_select(oss_dependency.key_ln);
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "license");
 	oss_license = ldb_read_cfg(dbtable);
+	oss_license.hash_calc = hash_function_select(oss_license.key_ln);
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "attribution");
 	oss_attribution = ldb_read_cfg(dbtable);
+	oss_attribution.hash_calc = hash_function_select(oss_attribution.key_ln);
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "cryptography");
 	oss_cryptography = ldb_read_cfg(dbtable);
+	oss_cryptography.hash_calc = hash_function_select(oss_cryptography.key_ln);
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "sources");
 	oss_sources = ldb_read_cfg(dbtable);
+	oss_sources.hash_calc = hash_function_select(oss_sources.key_ln);
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "notices");
 	oss_notices = ldb_read_cfg(dbtable);
+	oss_notices.hash_calc = hash_function_select(oss_notices.key_ln);
 
 	kb_version_get();
 	osadl_load_file();

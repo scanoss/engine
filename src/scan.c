@@ -260,7 +260,7 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 		if (is_bin)
 			binary_scan(&line[4]);
 
-		/* Parse file information with format: file=MD5(32),file_size,file_path */
+		/* Parse file information with format: file=HASH(16/32),file_size,file_path */
 		if (is_file)
 		{
 			/* A scan data was fullfilled and is ready to be scanned */

@@ -355,14 +355,14 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		if (!a->purls_md5[0] && a->purls[0])
 		{
 			a->purls_md5[0] = malloc(oss_purl.key_ln);
-			MD5((uint8_t *)a->purls[0], strlen(a->purls[0]), a->purls_md5[0]);
+			oss_purl.hash_calc((uint8_t *)a->purls[0], strlen(a->purls[0]), a->purls_md5[0]);
 			a->age = get_component_age(a->purls_md5[0]);
 		}
 		
 		if (!b->purls_md5[0] && b->purls[0])
 		{
 			b->purls_md5[0] = malloc(oss_purl.key_ln);
-			MD5((uint8_t *)b->purls[0], strlen(b->purls[0]), b->purls_md5[0]);
+			oss_purl.hash_calc((uint8_t *)b->purls[0], strlen(b->purls[0]), b->purls_md5[0]);
 			b->age = get_component_age(b->purls_md5[0]);
 		}
 		
