@@ -108,7 +108,7 @@ void print_cryptography(match_data_t * match)
 	memset(crclist, 0, sizeof(crclist));
 	match->crclist = crclist;
 	
-	ldb_fetch_recordset(NULL, oss_cryptography, match->file_md5, false, print_crypto_item, match);
+	fetch_recordset(oss_cryptography, match->file_md5, print_crypto_item, match);
 	
 	char * aux = NULL;
 	asprintf(&aux, "%s%s]", result, (match->crytography_text && *match->crytography_text) ? match->crytography_text : "" );

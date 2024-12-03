@@ -145,6 +145,9 @@ void biggest_snippet(scan_data_t *scan)
 			}
 
 			int hits = compile_ranges(match_new);
+			if (hits < min_match_hits)
+				continue;
+
 			float percent = (hits * 100) / match_new->scan_ower->total_lines;
 			int matched_percent = floor(percent);
 			if (matched_percent > 99)
@@ -181,6 +184,7 @@ void biggest_snippet(scan_data_t *scan)
 	/*just for loging*/
 	if (debug_on)
 	{
+		scanlog("Match list array index: %d\n", scan->matches_list_array_index);
 		for (int i = 0; i < scan->matches_list_array_index; i++)
 		{
 			scanlog("Match list N %d, with %d matches. %d <= HITS <= %d \n", i, scan->matches_list_array[i]->items,
@@ -443,8 +447,8 @@ uint32_t compile_ranges(match_data_t *match)
 		/* Exit if hits is below two */
 		if (reported_hits < min_match_hits)
 		{
-			scanlog("Discarted ranges brings hits count to %u\n", reported_hits);
-			return 0;
+			scanlog("Discarted ranges brings hits count to %u (MIN MATCH HITS: %d)\n", reported_hits, min_match_hits);
+			return reported_hits;
 		}
 
 		//scanlog("compile_ranges #%d = %ld to %ld - OSS from: %d\n", i, from, to, match->matchmap_reg->range[i].oss_line);
@@ -708,7 +712,7 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 
 	if (found == scan->matchmap_size)
 		scan->matchmap_size++;
-	return 0;
+	return found;
 }
 
 /**
@@ -748,7 +752,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 		scanlog(" Add wfp %02x%02x%02x%02x to map\n",map[i].wfp[0], map[i].wfp[1],map[i].wfp[2],map[i].wfp[3]);
 		uint32_write(map[i].md5_set, 0);
 		map[i].line = scan->lines[i];
-		ldb_fetch_recordset(NULL, oss_wfp, map[i].wfp, false, get_all_file_ids, (void *)map[i].md5_set);
+		fetch_recordset(oss_wfp, map[i].wfp, get_all_file_ids, (void *)map[i].md5_set);
 		map[i].size = uint32_read(map[i].md5_set) / oss_wfp.rec_ln;
 		//Initializate the lines indirection when a wfp from a line has at least one md5 linked
 		if (map[i].size)
@@ -907,7 +911,14 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 						break;
 					}
 
-					add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], last_sector_aux, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+					int pos = add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], last_sector_aux, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+					/*if (pos >= 0 && debug_on)
+					{
+						char key_hex[(MD5_LEN+2)*2 + 1];
+						ldb_bin_to_hex(&md5s[wfp_p], MD5_LEN+2, key_hex);
+						printf("%02x%02x%02x%02x,%s\n", map[i].wfp[0], map[i].wfp[1], map[i].wfp[2], map[i].wfp[3], key_hex);
+					}*/
+					
 				}
 			}	
 		}

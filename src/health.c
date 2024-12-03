@@ -111,6 +111,6 @@ void print_health(component_data_t *component)
 {
 	if (!ldb_table_exists(oss_purl.db, oss_purl.table)) //skip crypto if the table is not present
 		return;
-	ldb_fetch_recordset(NULL, oss_purl, component->purls_md5[0], false, print_health_item, component);
+	fetch_recordset(oss_purl, component->purls_md5[0], print_health_item, component);
 }
 
