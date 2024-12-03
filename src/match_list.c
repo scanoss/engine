@@ -137,6 +137,11 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
             
             if(list->last_element_aux)
             {
+                if (debug_on) 
+                {
+                    scanlog(">>> component %s-%s is replaced by %s-%s <<<\n", list->last_element->component->purls[0], list->last_element->component->release_date,
+                                                                                new_comp->purls[0], new_comp->release_date);
+                }
                 component_data_free(list->last_element->component);
                 LIST_REMOVE(list->last_element_aux->entries.le_next, entries);
                 free(list->last_element);
@@ -427,33 +432,67 @@ void component_list_print(component_list_t *list, bool (*printer)(component_data
     }
 }
 
-bool component_list_update(component_list_t *list, component_data_t * in, list_update_t (*eval)(component_data_t *fpa, component_data_t *fpb))
+static void component_switch(struct comp_entry * na, struct comp_entry * nb)
+{
+    component_data_t * aux = na->component;
+    na->component = nb->component;
+    nb->component = aux;
+}
+void component_list_sort(struct comp_entry *np, bool (*val)(component_data_t *a, component_data_t *b))
+{
+    struct comp_entry *next = np->entries.le_next;
+    if (!next)
+        return;
+    if (next->entries.le_next)
+    {
+        component_list_sort(next, val);
+    }    
+   if (val(np->component, next->component)) 
+        component_switch(np, next);
+}
+
+
+list_update_t component_list_update(component_list_t *list, component_data_t * in, list_update_t (*eval)(component_data_t *fpa, component_data_t *fpb))
 {
     for (struct comp_entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
         list_update_t r = eval(np->component, in);
         if (r == LIST_ITEM_UPDATE)
         {
+            scanlog("update component %s with release date %s by %s\n", np->component->purls[0], np->component->release_date, in->release_date);
             component_data_t * aux = np->component;
             np->component = in;
             component_data_free(aux);
-            return true;
+            return r;
         }
         else if (r == LIST_ITEM_FOUND)
-            return true;
+            return r;
     }
-    return false;
+    return LIST_ITEM_NOT_FOUND;
 }
 
 void match_list_process(match_list_t *list, bool (*funct_p)(match_data_t *fpa))
 {
     for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
     {
+        if (debug_on)
+        {
+            char md5_hex[MD5_LEN * 2 + 1];
+            ldb_bin_to_hex(np->match->file_md5, MD5_LEN, md5_hex);
+            scanlog("-------- looking matches for md5: %s --------\n", md5_hex);
+        }
         bool result = funct_p(np->match);
+
+        if (debug_on)
+        {
+            scanlog("<<<Best match was: %s - %s>>>\n", np->match->component_list.headp.lh_first->component->purls[0], 
+                                                        np->match->component_list.headp.lh_first->component->release_date);
+        }
 
         if (result)
             break;
     }
+
 }
 
 bool match_list_is_empty(match_list_t *list)

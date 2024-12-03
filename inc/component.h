@@ -55,5 +55,6 @@ bool component_date_comparation(component_data_t * a, component_data_t * b);
 component_data_t * component_data_copy(component_data_t * in);
 int asset_declared(component_data_t * comp);
 void component_item_free(component_item * comp_item);
+void component_purl_md5(component_data_t * component);
 void fill_component_path(component_data_t *component, char *file_path);
 #endif

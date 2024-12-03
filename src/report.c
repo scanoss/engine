@@ -197,16 +197,6 @@ bool print_json_component(component_data_t * component)
 {
 	if (!component)
 		return true;
-
-	/*Check if there are some purl's md5 missing. We could do this earlier, but this is a performance optimization*/	
-	for (int i = 0; i < MAX_PURLS; i++)	
-	{
-		if (component->purls[i] && !component->purls_md5[i])
-		{
-			component->purls_md5[i] = malloc(oss_purl.key_ln);
-			oss_purl.hash_calc((uint8_t *)component->purls[i], strlen(component->purls[i]), component->purls_md5[i]);
-		}
-	}
 		
 	scanlog("print component\n");
 	if (engine_flags & DISABLE_BEST_MATCH)
@@ -298,7 +288,8 @@ bool print_json_component(component_data_t * component)
 
 	if (!(engine_flags & DISABLE_VULNERABILITIES))
 	{
-		print_vulnerabilities(component);
+		if (!component->vulnerabilities_text)
+			print_vulnerabilities(component);
 		if (component->vulnerabilities_text)
 			printf(",%s", json_remove_invalid_char(component->vulnerabilities_text));
 	}

@@ -260,7 +260,7 @@ void fetch_related_purls(component_data_t *component)
 		uint32_t CRC = string_crc32c(purl_type);
 		add_CRC(component->crclist, CRC);
 		
-		int purls = ldb_fetch_recordset(NULL, oss_purl, component->purls_md5[i], false, handle_purl_record, component);
+		int purls = fetch_recordset( oss_purl, component->purls_md5[i], handle_purl_record, component);
 		if (purls)
 			scanlog("Finding related PURLs for %s returned %d matches\n", component->purls[i], purls);
 		else
@@ -311,7 +311,7 @@ void purl_release_date(char *purl, char *date)
 	uint8_t purl_md5[oss_purl.key_ln];
 	oss_purl.hash_calc((uint8_t *)purl, strlen(purl), purl_md5);
 
-	ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) date);
+	fetch_recordset( oss_purl, purl_md5, get_purl_first_release, (void *) date);
 }
 
 

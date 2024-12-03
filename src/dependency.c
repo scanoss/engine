@@ -113,7 +113,7 @@ int print_dependencies(component_data_t * comp)
 	uint32_t records = 0;
 
 	/* Pull URL dependencies */
-	records = ldb_fetch_recordset(NULL, oss_dependency, comp->url_md5, false, print_dependencies_item, NULL);
+	records = fetch_recordset( oss_dependency, comp->url_md5, print_dependencies_item, NULL);
 	if (records)
 		scanlog("Dependency matches (%d) reported for url_hash\n", records);
 	else
@@ -126,7 +126,7 @@ int print_dependencies(component_data_t * comp)
 			uint8_t hash[oss_purl.key_ln];
 			purl_version_md5(hash, comp->purls[i], comp->version);
 
-			records = ldb_fetch_recordset(NULL, oss_dependency, hash, false, print_dependencies_item, comp);
+			records = fetch_recordset( oss_dependency, hash, print_dependencies_item, comp);
 			if (records)
 			{
 				scanlog("Dependency matches (%d) reported for %s@%s\n", records, comp->purls[i],comp->version);
@@ -142,7 +142,7 @@ int print_dependencies(component_data_t * comp)
 			uint8_t hash[oss_purl.key_ln];
 			purl_version_md5(hash, comp->purls[i], comp->latest_version);
 
-			records = ldb_fetch_recordset(NULL, oss_dependency, hash, false, print_dependencies_item, comp);
+			records = fetch_recordset( oss_dependency, hash, print_dependencies_item, comp);
 			if (records)
 			{
 				scanlog("Dependency matches (%d) reported for %s@%s\n", records, comp->purls[i],comp->latest_version);

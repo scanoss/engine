@@ -155,4 +155,7 @@ bool ignored_asset_match(uint8_t *url_record);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
 
 int binary_scan(char * bfp);
+
+uint32_t fetch_recordset(struct ldb_table table, uint8_t *key, ldb_record_handler_t handler, void *ptr);
+
 #endif

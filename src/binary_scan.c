@@ -38,6 +38,7 @@
 #include "url.h"
 #include "decrypt.h"
 #include "report.h"
+#include "query.h"
 
 component_data_t comp_max_hits = {.hits=-1};
 static bool component_hits_comparation(component_data_t *a, component_data_t *b)
@@ -83,7 +84,7 @@ static bool add_purl_from_urlid(struct ldb_table * table, uint8_t *key, uint8_t 
 	strncpy(path, decrypted, MAX_FILE_PATH);
 
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
-	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)url_rec);
+	fetch_recordset(oss_url, url_id, get_oldest_url, (void *)url_rec);
 
 	/* Create a new component and fill it from the url record */
 	component_data_t *new_comp = calloc(1, sizeof(*new_comp));
@@ -168,12 +169,12 @@ static void fhash_process(char * hash, component_list_t * comp_list)
 	ldb_hex_to_bin(hash, 32, fhash);
 	/* Get all file IDs for given wfp */
 	file_recordset *files = calloc(1001, sizeof(file_recordset));;
-	int records = ldb_fetch_recordset(NULL, oss_fhash, fhash, false, get_all_file_ids, (void *) files);
+	int records = fetch_recordset( oss_fhash, fhash, get_all_file_ids, (void *) files);
 	if (records < max_files_to_process)
 	{
 		for (int i = 0; i < records; i++)
 		{
-			ldb_fetch_recordset(NULL, oss_file, files[i].url_id, false, add_purl_from_urlid,(void *)comp_list);
+			fetch_recordset( oss_file, files[i].url_id, add_purl_from_urlid,(void *)comp_list);
 		}
 	}
 	free(files);

@@ -39,7 +39,7 @@
 #include "parse.h"
 #include "util.h"
 #include "mz.h"
-
+#include "query.h"
 /**
  * @brief Notices LDB function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
  * @param key ldb key looking for
@@ -120,7 +120,7 @@ bool attribution_handler(struct ldb_table * table, uint8_t *key, uint8_t *subkey
 bool purl_notices_exist(struct ldb_table oss_attribution, uint8_t *key)
 {
 	bool validated = true;
-	ldb_fetch_recordset(NULL, oss_attribution, key, false, attribution_handler, &validated);
+	fetch_recordset(oss_attribution, key, attribution_handler, &validated);
 	return validated;
 }
 
@@ -134,7 +134,7 @@ bool purl_notices_exist(struct ldb_table oss_attribution, uint8_t *key)
 bool print_notices(struct ldb_table oss_attribution, uint8_t *key, char *component)
 {
 	bool validated = true;
-	ldb_fetch_recordset(NULL, oss_attribution, key, false, notices_handler, component);
+	fetch_recordset(oss_attribution, key, notices_handler, component);
 	return validated;
 }
 

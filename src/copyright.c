@@ -145,17 +145,17 @@ void print_copyrights(component_data_t * comp)
 	
 	uint32_t records = 0;
 
-	records = ldb_fetch_recordset(NULL, oss_copyright, comp->file_md5_ref, false, print_copyrights_item, comp);
+	records = fetch_recordset( oss_copyright, comp->file_md5_ref, print_copyrights_item, comp);
 	scanlog("File md5 copyright records %d\n", records);
 	if (!records)
 	{
-		records = ldb_fetch_recordset(NULL, oss_copyright, comp->url_md5, false, print_copyrights_item, comp);
+		records = fetch_recordset( oss_copyright, comp->url_md5, print_copyrights_item, comp);
 		scanlog("URL md5 copyright records %d\n", records);
 
 	}
 	if (!records)
 		for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
-			if (ldb_fetch_recordset(NULL, oss_copyright, comp->purls_md5[i], false, print_copyrights_item, comp)) break;
+			if (fetch_recordset( oss_copyright, comp->purls_md5[i], print_copyrights_item, comp)) break;
 
 	char * aux = NULL;
 	if (comp->copyright_text && *comp->copyright_text)

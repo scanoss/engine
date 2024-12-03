@@ -110,7 +110,7 @@ void print_quality(match_data_t * match)
 	sprintf(result,"\"quality\": [");
 
 
-	ldb_fetch_recordset(NULL, oss_quality, match->file_md5, false, print_quality_item, &aux);	
+	fetch_recordset(oss_quality, match->file_md5, print_quality_item, &aux);	
 	
 	free(match->quality_text);	
 	asprintf(&match->quality_text, "%s%s]", result, aux ? aux : "");
