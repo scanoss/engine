@@ -257,6 +257,6 @@ char *get_file_extension(uint8_t *md5)
 	char *out = malloc(MAX_ARGLN + 1);
 	*out = 0;
 
-	ldb_fetch_recordset(NULL, oss_file, md5, false, get_first_file, out);
+	fetch_recordset(oss_file, md5, get_first_file, out);
 	return out;
 }

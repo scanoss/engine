@@ -28,7 +28,7 @@
   * //TODO Long description
   * @see https://github.com/scanoss/engine/blob/master/src/quality.c
   */
-
+#include "scanoss.h"
 #include "query.h"
 #include "parse.h"
 #include "util.h"
@@ -108,7 +108,7 @@ void get_url_record(uint8_t *md5, uint8_t *record)
 	*record = 0;
 
 	/* Fetch record */
-	ldb_fetch_recordset(NULL, oss_url, md5, false, ldb_get_first_url_not_ignored, (void *) record);
+	fetch_recordset(oss_url, md5, ldb_get_first_url_not_ignored, (void *) record);
 }
 
 /**
@@ -200,7 +200,7 @@ int get_component_age(uint8_t *md5)
 	long age = 0;
 
 	if (ldb_table_exists(oss_purl.db, oss_purl.table)) //skip purl if the table is not present
-		ldb_fetch_recordset(NULL, oss_purl, md5, false, handle_get_component_age, &age);
+		fetch_recordset(oss_purl, md5, handle_get_component_age, &age);
 
 	return age;
 }
@@ -216,5 +216,13 @@ void purl_version_md5(uint8_t *out, char *purl, char *version)
 	char purl_version[MAX_ARGLN] = "\0";
 	sprintf(purl_version, "%s@%s", purl, version);
 	oss_purl.hash_calc((uint8_t *)purl_version, strlen(purl_version), out);
+}
+
+uint32_t fetch_recordset(struct ldb_table table, uint8_t *key, ldb_record_handler_t handler, void *ptr)
+ {
+	if (!key)
+		return 0;
+	ldb_sector_t sector = {.data = NULL, .size= 0, .id = *key};
+	return ldb_fetch_recordset(&sector, table, key, false, handler, ptr);
 }
 

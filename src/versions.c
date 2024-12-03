@@ -198,7 +198,7 @@ void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
 	/* Pass purl in version */
 	strcpy(release->version, purl);
 
-	ldb_fetch_recordset(NULL, oss_url, file_id, false, get_purl_version_handler, release);
+	fetch_recordset(oss_url, file_id, get_purl_version_handler, release);
 
 	/* If no version returned, clear version */
 	if (!strcmp(release->version, purl)) *release->version = 0;

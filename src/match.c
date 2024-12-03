@@ -47,7 +47,7 @@
 #include "match_list.h"
 #include "dependency.h"
 #include "ignorelist.h"
-
+#include "vulnerability.h"
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
 bool match_extensions = false;								  /** global match extension flag */
 bool path_table_present = false;
@@ -284,9 +284,14 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		if (result < 0)
 			return false;
 	}
+
+	/*if (strstr(a->file, "contrib") && !strstr(b->file, "contrib"))
+			return true;
+		if (!strstr(a->file, "contrib") && strstr(b->file, "contrib"))
+			return false;*/
 	
 	if ((engine_flags & ENABLE_PATH_HINT) && a->file_path_ref && b->file_path_ref)
-	{
+	{			
 		//evalute path rank for component a
 		evaluate_path_rank(a);
 		
@@ -354,7 +359,7 @@ list_update_t component_update(component_data_t *a, component_data_t *b)
 			return LIST_ITEM_UPDATE;
 		else
 		{
-			scanlog("--- Componen already exist: %s---\n", b->component);
+			scanlog("--- Componen already exist: %s--- %s vs %s\n", b->purls[0], b->release_date, a->release_date);
 			component_data_free(b);
 			return LIST_ITEM_FOUND;
 		}
@@ -367,7 +372,7 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 {
 	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
 
-	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)url_rec);
+	fetch_recordset(oss_url, url_id, get_oldest_url, (void *)url_rec);
 
 	/* Extract date from url_rec */
 	char date[MAX_ARGLN] = "0";
@@ -385,16 +390,21 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 		asset_declared(new_comp);
 		new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
 		new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
-		if (!component_list_update(component_list, new_comp, component_update))
+		list_update_t r = component_list_update(component_list, new_comp, component_update);
+		if (r == LIST_ITEM_NOT_FOUND)
 		{
 			scanlog("--- new comp %s---\n", new_comp->component);
 			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
 			{
-				scanlog("component rejected: %s\n", new_comp->purls[0]);
+				scanlog("component rejected: %s - %s\n", new_comp->purls[0], new_comp->release_date);
 				component_data_free(new_comp); /* Free if the componet was rejected */
 			}
 			else
-				scanlog("component accepted: %s - pathrank: %d\n", new_comp->purls[0], new_comp->path_rank);
+				scanlog("component accepted: %s - %s - pathrank: %d\n", new_comp->purls[0], new_comp->release_date, new_comp->path_rank);
+		}
+		else if (r == LIST_ITEM_UPDATE && component_list->headp.lh_first)
+		{
+			component_list_sort(component_list->headp.lh_first, component_hint_date_comparation);
 		}
 	}
 	else
@@ -420,7 +430,7 @@ bool path_query_handler(struct ldb_table * table, uint8_t * key, uint8_t * subke
 static char * path_query(uint8_t * file_id)
 {
 	char * path = NULL;
-	ldb_fetch_recordset(NULL, oss_path, file_id, false, path_query_handler, (void *) &path);
+	fetch_recordset(oss_path, file_id, path_query_handler, (void *) &path);
 	return path;
 }
 
@@ -537,13 +547,13 @@ bool load_matches(match_data_t *match)
 	uint32_t records = 0;
 
 	/*Query to url table looking for a url match, will add the components to component list */
-	records = ldb_fetch_recordset(NULL, oss_url, match->file_md5, false, handle_url_record, (void *)&match->component_list);
+	records = fetch_recordset(oss_url, match->file_md5, handle_url_record, (void *)&match->component_list);
 	scanlog("URL recordset contains %u records\n", records);
 
 	/*Collect all files from the files table matching with the match md5 being processed */
 	int files_records_max = ((engine_flags & ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 4 : FETCH_MAX_FILES);
 	files = calloc(files_records_max, sizeof(file_recordset));
-	records = ldb_fetch_recordset(NULL, oss_file, match->file_md5, false, component_from_file,(void *)&match->component_list);
+	records = fetch_recordset(oss_file, match->file_md5, component_from_file,(void *)&match->component_list);
 	scanlog("Found %d file entries\n", records);
 
 	/* Final optimization based on the available information for a component */
@@ -554,7 +564,10 @@ bool load_matches(match_data_t *match)
 		struct comp_entry *item = NULL;
 		LIST_FOREACH(item, &match->component_list.headp, entries)
 		{
-			scanlog("Dependency tiebreak\n");
+				/*Check if there are some purl's md5 missing. We could do this earlier, but this is a performance optimization*/	
+			component_purl_md5(item->component);
+			
+			scanlog("Tiebreak\n");
 			if (!item->entries.le_next || !item->entries.le_next->component)
 				break;
 			/* if the date of two components it's the same */
@@ -571,6 +584,24 @@ bool load_matches(match_data_t *match)
 					else if (print_dependencies(item->entries.le_next->component))
 					{
 						scanlog("Component permuted due to dependency tiebreak\n");
+						struct comp_entry *aux = item->entries.le_next->entries.le_next;
+						LIST_INSERT_HEAD(&match->component_list.headp, item->entries.le_next, entries);
+						item->entries.le_next = aux;
+						break;
+					}
+				}
+				/* If item has no vulnerabilities or depencencies are empty I must check the next one */
+				if(!item->component->vulnerabilities_text || strlen(item->component->vulnerabilities_text) < 4)	
+				{
+					scanlog("vulnerability tiebreak\n");
+					component_purl_md5(item->entries.le_next->component);
+					/* if item has dependencies, stop */
+					if(print_vulnerabilities(item->component))
+						break;
+					/*if the next component has dependencies, permute */
+					else if (print_vulnerabilities(item->entries.le_next->component))
+					{
+						scanlog("Component permuted due to vulnerability tiebreak\n");
 						struct comp_entry *aux = item->entries.le_next->entries.le_next;
 						LIST_INSERT_HEAD(&match->component_list.headp, item->entries.le_next, entries);
 						item->entries.le_next = aux;
@@ -677,6 +708,15 @@ void match_select_best(scan_data_t *scan)
 		struct entry *item = NULL;
 		LIST_FOREACH(item, &scan->matches_list_array[i]->headp, entries)
 		{
+			if (debug_on)
+			{
+				struct comp_entry *comp = NULL;
+				int comp_n = 0;
+				LIST_FOREACH(comp, &item->match->component_list.headp, entries)
+				{
+					scanlog("<<<%d %s - %s>>>\n", comp_n, comp->component->purls[0], comp->component->release_date);
+				}
+			}
 			if (find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
 				scan->matches_list_array[i]->best_match = item->match;
 		}

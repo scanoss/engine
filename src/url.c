@@ -260,7 +260,7 @@ void fetch_related_purls(component_data_t *component)
 		uint32_t CRC = string_crc32c(purl_type);
 		add_CRC(component->crclist, CRC);
 		
-		int purls = ldb_fetch_recordset(NULL, oss_purl, component->purls_md5[i], false, handle_purl_record, component);
+		int purls = fetch_recordset( oss_purl, component->purls_md5[i], handle_purl_record, component);
 		if (purls)
 			scanlog("Finding related PURLs for %s returned %d matches\n", component->purls[i], purls);
 		else
@@ -311,7 +311,7 @@ void purl_release_date(char *purl, char *date)
 	uint8_t purl_md5[oss_purl.key_ln];
 	oss_purl.hash_calc((uint8_t *)purl, strlen(purl), purl_md5);
 
-	ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) date);
+	fetch_recordset( oss_purl, purl_md5, get_purl_first_release, (void *) date);
 }
 
 
@@ -354,7 +354,7 @@ bool get_oldest_url(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uin
 			if ((!*purl_date_oldest && *purl_date_new)|| (*purl_date_new && strcmp(purl_date_new, purl_date_oldest) < 0))
 			{
 				replace = true;
-				scanlog("<<URL wins by purl date, %s - %s / %s -%s>>\n", purl_new, purl_date_new, purl_oldest ,purl_date_oldest);
+				scanlog("<<Release date tie: %s: URL wins by purl date, %s - %s / %s -%s>>\n", release_date, purl_new, purl_date_new, purl_oldest ,purl_date_oldest);
 			}
 		}
 		else if (!*release_date && !*oldest)

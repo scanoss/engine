@@ -363,10 +363,10 @@ void print_licenses(component_data_t *comp)
 
 	/* Look for component or file license */
 
-	records = ldb_fetch_recordset(NULL, oss_license, comp->file_md5_ref, false, print_licenses_item, comp);
+	records = fetch_recordset(oss_license, comp->file_md5_ref, print_licenses_item, comp);
 	scanlog("License for file_id license returns %d hits\n", records);
 
-	records = ldb_fetch_recordset(NULL, oss_license, comp->url_md5, false, print_licenses_item, comp);
+	records = fetch_recordset(oss_license, comp->url_md5, print_licenses_item, comp);
 	scanlog("License for url_id license returns %d hits\n", records);
 
 	for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
@@ -375,13 +375,13 @@ void print_licenses(component_data_t *comp)
 		uint8_t purlversion_md5[oss_purl.key_ln];
 		purl_version_md5(purlversion_md5, comp->purls[i], comp->version);
 
-		records = ldb_fetch_recordset(NULL, oss_license, purlversion_md5, false, print_licenses_item, comp);
+		records = fetch_recordset(oss_license, purlversion_md5, print_licenses_item, comp);
 		scanlog("License for %s@%s license returns %d hits\n", comp->purls[i], comp->version, records);
 
 		if (records)
 			break;
 
-		records = ldb_fetch_recordset(NULL, oss_license, comp->purls_md5[i], false, print_licenses_item, comp);
+		records = fetch_recordset(oss_license, comp->purls_md5[i], print_licenses_item, comp);
 		scanlog("License for %s license returns %d hits\n", comp->purls[i], records);
 		
 		if (records)

@@ -288,7 +288,7 @@ bool component_date_comparation(component_data_t *a, component_data_t *b)
 		return false;
 	if (!*a->release_date)
 		return true;
-
+scanlog("%s - %s vs %s - %s\n", a->purls[0], a->release_date, b->purls[0], b->release_date);
 	if (!a->purls_md5[0] && a->purls[0])
 	{
 		a->purls_md5[0] = malloc(oss_url.key_ln);
@@ -326,4 +326,19 @@ void component_item_free(component_item *comp_item)
 	free(comp_item->vendor);
 	free(comp_item->purl);
 	free(comp_item->version);
+}
+
+void component_purl_md5(component_data_t * component)
+{
+	if (component->purls_md5[0])
+		return;
+		
+	for (int i = 0; i < MAX_PURLS; i++)	
+	{
+		if (component->purls[i] && !component->purls_md5[i])
+		{
+			component->purls_md5[i] = malloc(oss_purl.key_ln);
+			oss_purl.hash_calc((uint8_t *)component->purls[i], strlen(component->purls[i]), component->purls_md5[i]);
+		}
+	}
 }

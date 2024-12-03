@@ -31,7 +31,7 @@
 #include "limits.h"
 
 #define MAX_FILE_PATH 1024
-#define FETCH_MAX_FILES 12000
+#define FETCH_MAX_FILES 20000
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
 #define CRC_LIST_LEN 1024 // list of crc checksums to avoid metadata duplicates
 #define SNIPPET_LINE_TOLERANCE 10
@@ -156,4 +156,7 @@ bool ignored_asset_match(uint8_t *url_record);
 void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
 
 int binary_scan(char * bfp);
+
+uint32_t fetch_recordset(struct ldb_table table, uint8_t *key, ldb_record_handler_t handler, void *ptr);
+
 #endif
