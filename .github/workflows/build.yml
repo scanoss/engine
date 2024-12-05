@@ -44,7 +44,7 @@ jobs:
       run: tar czvf scanoss.tar.gz scanoss LICENSES/GPL-2.0-only.txt
 
     - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: scanoss-${{ steps.version.outputs.version }}-amd64.tar.gz
         path: |
