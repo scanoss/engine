@@ -66,7 +66,7 @@ bool snippet_extension_discard(match_data_t * match)
 		return false;
 
 	if (*ext1 && *ext2 && strcmp(ext1, ext2))
-		if (!known_src_extension(ext2))
+	//	if (!known_src_extension(ext2))
 			discard = true;
 
 	if (discard)
@@ -417,7 +417,7 @@ uint32_t compile_ranges(match_data_t *match)
 		}
 
 		/* Exit if hits is below two */
-		if (reported_hits < 2)
+		if (reported_hits < min_match_hits)
 		{
 			scanlog("Discarted ranges brings hits count to %u\n", reported_hits);
 			return 0;
@@ -487,8 +487,8 @@ static void adjust_tolerance(scan_data_t *scan)
 
 	if (skip)
 	{
-		min_match_lines = 1;
-		min_match_hits = 4;
+		min_match_lines = 5;
+		min_match_hits = 2;
 	}
 	else
 	{
@@ -502,17 +502,16 @@ static void adjust_tolerance(scan_data_t *scan)
 		/* Min matched lines is the number of matched lines in total under which the result
 			 is ignored. This goes from 1 in small files to 10 in large files */
 
-		min_match_lines = 1 + floor(wfpcount / 193);
-		if (min_match_lines > 10)
-			min_match_lines = 10;
+		min_match_lines = 5 + floor(wfpcount / 193);
+		if (min_match_lines > 15)
+			min_match_lines = 15;
 		/* setup scan sensibility*/
-		min_match_hits = 2 + floor(wfpcount / 41);
-		if (min_match_hits > 6)
-			min_match_hits = 6;
-
+		min_match_hits = 1 + floor(wfpcount / 19);
+		if (min_match_hits > 9)
+			min_match_hits = 9;
 	}
 
-	scanlog("Tolerance: range=%d, lines=%d, wfpcount=%u\n", range_tolerance, min_match_lines, wfpcount);
+	scanlog("Match hits: %d, Tolerance: range=%d, lines=%d, wfpcount=%u\n", min_match_hits, range_tolerance, min_match_lines, wfpcount);
 }
 
 /**

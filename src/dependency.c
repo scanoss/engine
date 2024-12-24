@@ -161,6 +161,7 @@ int print_dependencies(component_data_t * comp)
 
 	free(comp->dependency_text);	
 	comp->dependency_text = aux;
+	comp->dependencies = records;
 	return records;
 }
 

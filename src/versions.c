@@ -144,6 +144,7 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
 		memcpy(release->url_id, key, LDB_KEY_LN);
 		memcpy(release->url_id + LDB_KEY_LN, subkey, subkey_ln);
 		found = true;
+		scanlog("found %s@%s %s\n", purl, version, date);
 	}
 
 	free(purl);
@@ -229,9 +230,10 @@ void add_versions(component_data_t *component, file_recordset *files, uint32_t r
 		{
 			if (!files[n].external) 
 				get_purl_version(&release, component->purls[0], files[n].url_id);
-				
 			if (*release.version) 
+			{
 				update_version_range(component, &release);
+			}
 		}
 	}
 }

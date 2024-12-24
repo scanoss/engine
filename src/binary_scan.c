@@ -111,8 +111,6 @@ static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, ui
 	
 	free(url_rec);
 	free(decrypted);
-	
-	//scanlog("#%d File %s\n", iteration, files[iteration].path);
 	return false;
 }
 

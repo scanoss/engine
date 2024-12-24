@@ -210,8 +210,6 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	free(decrypted);
 	
 	files[iteration].path_ln = dir_count(files[iteration].path);
-
-	//scanlog("#%d File %s\n", iteration, files[iteration].path);
 	return false;
 }
 

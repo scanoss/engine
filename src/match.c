@@ -47,6 +47,7 @@
 #include "match_list.h"
 #include "dependency.h"
 #include "ignorelist.h"
+#include "vulnerability.h"
 
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
 bool match_extensions = false;									  /** global match extension flag */
@@ -231,6 +232,9 @@ static void evaluate_path_rank(component_data_t *comp)
 	{
 		//generate the rank based on the similarity of the paths.
 		comp->path_rank = paths_compare(comp->file_path_ref, comp->file);
+		if (strstr(comp->file, "3rdparty"))  {
+			comp->path_rank += PATH_LEVEL_COMP_REF / 2;
+		}
 
 		//modulate the result based on component information-
 		if (comp->path_rank < PATH_LEVEL_COMP_REF && (strstr(comp->file_path_ref, comp->component) || strstr(comp->file_path_ref, comp->vendor)))
@@ -348,42 +352,34 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 
 bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id, char *path)
 {
-	uint8_t *url_rec = calloc(LDB_MAX_REC_LN, 1); /*Alloc memory for url records */
+	component_data_t *new_comp = NULL;
 
-	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)url_rec);
-
-	/* Extract date from url_rec */
-	char date[MAX_ARGLN] = "0";
-	extract_csv(date, (char *)url_rec, 4, MAX_ARGLN);
+	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)&new_comp);
+	if (!new_comp)
+		return false;
+		
+	fill_component_path(new_comp, path);
 	/* Create a new component and fill it from the url record */
-	component_data_t *new_comp = calloc(1, sizeof(*new_comp));
-	bool result = fill_component(new_comp, url_id, path, (uint8_t *)url_rec);
-	if (result)
-	{
-		new_comp->file_md5_ref = component_list->match_ref->file_md5;
-		/* If the component is valid add it to the component list */
-		/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
-		/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
-		new_comp->identified = IDENTIFIED_NONE;
-		asset_declared(new_comp);
-		new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
-		new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
-		scanlog("--- new comp ---\n");
-		if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
-		{
-			scanlog("component rejected: %s\n", new_comp->purls[0]);
-			component_data_free(new_comp); /* Free if the componet was rejected */
-		}
-		else
-			scanlog("component accepted: %s - pathrank: %d\n", new_comp->purls[0], new_comp->path_rank);
 
+	new_comp->file_md5_ref = component_list->match_ref->file_md5;
+	/* If the component is valid add it to the component list */
+	/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
+	/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
+	new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
+	new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
+
+	scanlog("--- new comp: %s@%s %s %d---\n", new_comp->purls[0], new_comp->version, new_comp->release_date, new_comp->identified);
+	if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
+	{
+		component_data_free(new_comp); /* Free if the componet was rejected */
 	}
 	else
 	{
-		scanlog("incomplete component: %s\n", new_comp->component);
-		component_data_free(new_comp);
+		char hex_url[MD5_LEN * 2 + 1];
+		ldb_bin_to_hex(new_comp->url_md5, MD5_LEN, hex_url);
+		scanlog("component accepted: %s@%s - pathrank: %d - %s - %s\n", new_comp->purls[0], new_comp->version, new_comp->path_rank, new_comp->file, hex_url);
 	}
-	free(url_rec);
+
 	return true;
 }
 
@@ -509,32 +505,39 @@ bool load_matches(match_data_t *match)
 		struct comp_entry *item = NULL;
 		LIST_FOREACH(item, &match->component_list.headp, entries)
 		{
-			scanlog("Dependency tiebreak\n");
 			if (!item->entries.le_next || !item->entries.le_next->component)
 				break;
-			/* if the date of two components it's the same */
-			if((!strcmp(item->component->release_date, item->entries.le_next->component->release_date) && 
-				item->component->identified <= item->entries.le_next->component->identified))
+			
+			if(!item->component->dependency_text || strlen(item->component->dependency_text) < 4)	
+				print_dependencies(item->component);
+			
+			if(!item->component->vulnerabilities_text || strlen(item->component->vulnerabilities_text) < 4)	
+				print_vulnerabilities(item->component);
+						
+			struct comp_entry *item2 = NULL;
+			for (item2 = item->entries.le_next; item2 != NULL; item2 = item2->entries.le_next)
 			{
-				/* If item has no dependencies or depencencies are empty I must check the next one */
-				if(!item->component->dependency_text || strlen(item->component->dependency_text) < 4)	
+				if(!item2->component->dependency_text || strlen(item2->component->dependency_text) < 4)	
+					print_dependencies(item2->component);
+			
+				if(!item->component->vulnerabilities_text || strlen(item->component->vulnerabilities_text) < 4)	
+					print_vulnerabilities(item2->component);
+				
+				if (!item2->component->vulnerabilities && !item2->component->dependencies)
+					continue;
+				
+				scanlog("%s vs %s tiebreak\n", item->component->purls[0], item2->component->purls[0]);
+
+				if ((!item->component->dependencies && item2->component->dependencies) ||
+					(!item->component->vulnerabilities && item2->component->vulnerabilities))
 				{
-					/* if item has dependencies, stop */
-					if(print_dependencies(item->component))
-						break;
-					/*if the next component has dependencies, permute */
-					else if (print_dependencies(item->entries.le_next->component))
-					{
-						scanlog("Component permuted due to dependency tiebreak\n");
-						struct comp_entry *aux = item->entries.le_next->entries.le_next;
-						LIST_INSERT_HEAD(&match->component_list.headp, item->entries.le_next, entries);
-						item->entries.le_next = aux;
-						break;
-					}
+					scanlog("Component permuted due to dependency/vulnerabilities tiebreak\n");
+					component_data_t * aux = item->component;
+					item->component = item2->component;
+					item2->component = aux;
+					break;
 				}
 			}
-			else
-				break;
 		}
 	}
 
@@ -650,14 +653,15 @@ void match_select_best(scan_data_t *scan)
 			if (!item->match->component_list.headp.lh_first)
 				continue;
 
+			component_data_t  * best_match_component = scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component;
+			component_data_t * match_component = item->match->component_list.headp.lh_first->component;
 			scanlog("%s -%s - %d VS %s - %s - %d\n",
-					scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component->purls[0],
-					scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component->release_date,
+					best_match_component->purls[0],
+					best_match_component->release_date,
 					scan->matches_list_array[i]->best_match->hits,
-					item->match->component_list.headp.lh_first->component->purls[0], item->match->component_list.headp.lh_first->component->release_date, item->match->hits);
-
-			if (!strcmp(scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component->purls[0],
-						item->match->component_list.headp.lh_first->component->purls[0]))
+					match_component->purls[0], match_component->release_date, item->match->hits);
+			
+			if (!strcmp(best_match_component->purls[0],match_component->purls[0]))
 			{
 				if (abs(scan->matches_list_array[i]->best_match->hits - item->match->hits) <= 2 &&
 					find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
@@ -677,6 +681,12 @@ void match_select_best(scan_data_t *scan)
 				scanlog("Hits are lower than the best match, no more comparations are needed. Exiting...\n");
 				break;
 			}
+
+			if (!best_match_component->identified && match_component->identified)
+			{
+				scanlog("Replacing best match for a prefered component\n");
+				scan->matches_list_array[i]->best_match = item->match;
+			}	
 		}
 	}
 
