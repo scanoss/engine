@@ -38,7 +38,7 @@
 #include "snippets.h"
 #include "decrypt.h"
 #include "ignorelist.h"
-
+#include "versions.h"
 /**
  * @brief Handle url query in th KB. 
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
@@ -341,7 +341,8 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 			return false;
 		}
 		comp->identified = IDENTIFIED_NONE;
-		asset_declared(comp);	
+		asset_declared(comp);
+		purl_latest_version_add(comp);
 
 		if (!comp_oldest) {
 			

@@ -141,8 +141,6 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
 		normalise_version(version, component);
 		strcpy(release->version, version);
 		strcpy(release->date, date);
-		memcpy(release->url_id, key, LDB_KEY_LN);
-		memcpy(release->url_id + LDB_KEY_LN, subkey, subkey_ln);
 		found = true;
 		scanlog("found %s@%s %s\n", purl, version, date);
 	}
@@ -154,6 +152,69 @@ static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_l
 
 	return found;
 }
+
+static char * purl_indirection_reference[FETCH_MAX_FILES];
+static int purl_indirection_index = 0;
+static release_version * purl_version_list[FETCH_MAX_FILES];
+
+void purl_latest_version_add(component_data_t * component)
+{
+	if (!component->purls[0] || !component->release_date || !component->version || purl_indirection_index == FETCH_MAX_FILES)
+		return;
+
+	for (int i = 0; i < purl_indirection_index; i++)
+	{
+		if (!strcmp(component->purls[0], purl_indirection_reference[i]))
+		{
+			if (strcmp(component->release_date, purl_version_list[i]->date) > 0)
+			{
+				strcpy(purl_version_list[i]->date, component->release_date);
+				strcpy(purl_version_list[i]->version, component->version);
+				scanlog("update purl version: %s update latest version to %s\n", component->purls[0], component->version);
+			}
+			return;
+		}
+	}
+	purl_indirection_reference[purl_indirection_index] = strdup(component->purls[0]);
+	purl_version_list[purl_indirection_index] = calloc(1, sizeof(release_version));
+	strcpy(purl_version_list[purl_indirection_index]->date, component->release_date);
+	strcpy(purl_version_list[purl_indirection_index]->version, component->version);
+	purl_indirection_index++;
+}
+
+void purl_latest_version_search(component_data_t * component)
+{
+	if (!component->purls[0])
+		return;
+	
+	for (int i = 0; i < purl_indirection_index; i++)
+	{
+		if (!strcmp(component->purls[0], purl_indirection_reference[i]))
+		{
+			release_version * release = purl_version_list[i];
+			if (!component->latest_release_date || strcmp(release->date, component->latest_release_date) > 0)
+			{
+				scanlog("update_version_range() %s > %s, %s <- %s\n", release->date, component->release_date, component->version, release->version);
+				free(component->latest_version);
+				component->latest_version = strdup(release->version);
+				free(component->latest_release_date);
+				component->latest_release_date = strdup(release->date);
+			}
+			return;
+		}
+	}
+}
+
+void purl_latest_version_free()
+{
+	for (int i = 0; i < purl_indirection_index; i++)
+	{
+		free(purl_version_list[i]);
+		free(purl_indirection_reference[i]);
+	}
+	purl_indirection_index = 0;
+}
+
 
 /**
  * @brief Compare version and, if needed, update range (version-latest)
@@ -172,10 +233,8 @@ void update_version_range(component_data_t *component, release_version *release)
 		component->version = strdup(release->version);
 		free(component->release_date);
 		component->release_date = strdup(release->date);
-		memcpy(component->url_md5, release->url_id, MD5_LEN);
 	}
 	
-
 	if (!component->latest_release_date || strcmp(release->date, component->latest_release_date) > 0)
 	{
 		scanlog("update_version_range() %s > %s, %s <- %s\n", release->date, component->release_date, component->version, release->version);
@@ -222,7 +281,7 @@ void add_versions(component_data_t *component, file_recordset *files, uint32_t r
 	}
 	else
 	{
-		release_version release = {"\0", "\0", "\0"};;
+		release_version release = {"\0", "\0"};;
 
 		*release.version = 0;
 		*release.date = 0;
