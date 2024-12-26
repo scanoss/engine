@@ -328,4 +328,38 @@ void free_and_null(void * pr)
     pr = NULL;
 }
 
+bool path_is_third_party(const char* path) 
+{
+    // Array de patrones comunes
+    const char* patterns[] = {
+        "third_party",
+        "3rdparty",
+        "vendor",
+        "external",
+        "lib",
+        "libs",
+        "dependencies",
+        "ext",
+        "contrib",
+        "packages",
+        "externals",
+        "third-party",
+		"node_modules"
+    };
+    
+    // Número de patrones a verificar
+    const int numPatterns = sizeof(patterns) / sizeof(patterns[0]);
+    
+    // Verificar cada patrón
+    for (int i = 0; i < numPatterns; i++) 
+	{
+        if (strstr(path, patterns[i]) != NULL) 
+		{
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 

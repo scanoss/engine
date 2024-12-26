@@ -62,4 +62,7 @@ char * str_cat_realloc(char **a, char * b);
  void flip_slashes(char *data);
 
 void free_and_null(void * pr);
+
+bool path_is_third_party(const char* path);
+
 #endif

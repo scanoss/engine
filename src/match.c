@@ -319,6 +319,12 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		return false;
 	if (!*a->release_date)
 		return true;
+	
+	if (!path_is_third_party(a->file) && path_is_third_party(b->file) && !(engine_flags & ENABLE_PATH_HINT))
+	{
+		scanlog("Component rejected by third party filter\n");
+		return false;
+	}
 	/*if the relese date is the same untie with the component age (purl)*/
 	if (!strcmp(b->release_date, a->release_date))
 	{
@@ -354,7 +360,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		if ((!a->age && b->age) || b->age > a->age)
 			return true;
 
-		if (b->age == a->age && !strcmp(a->component, b->component) &&strcmp(a->version, b->version) > 0)
+		if (b->age == a->age && !strcmp(a->component, b->component) && strcmp(a->version, b->version) > 0)
 			return true;
 	}
 	/*select the oldest release date */
@@ -554,14 +560,12 @@ bool load_matches(match_data_t *match)
 		struct comp_entry *item = NULL;
 		LIST_FOREACH(item, &match->component_list.headp, entries)
 		{
-			//add_versions(item->component, files, records < files_records_max ? records : files_records_max);
 			purl_latest_version_search(item->component);
 		}
 	}
 
 	else if (match->component_list.items && match->component_list.headp.lh_first->component)
 	{
-		//add_versions(match->component_list.headp.lh_first->component, files, records < files_records_max ? records : files_records_max);
 		purl_latest_version_search(match->component_list.headp.lh_first->component);
 	}
 	purl_latest_version_free();
