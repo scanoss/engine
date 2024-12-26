@@ -271,7 +271,8 @@ bool print_json_component(component_data_t * component)
 
 	if (!(engine_flags & DISABLE_HEALTH))
 	{
-		print_health(component);
+		if (!component->health_text)
+			print_health(component);
 		if (component->health_text)
 			printf(",%s", json_remove_invalid_char(component->health_text));
 	}	

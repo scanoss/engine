@@ -364,18 +364,16 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 				replace = true;
 			else if (*comp->release_date && strcmp(comp->release_date, comp_oldest->release_date) == 0)
 			{
-				char purl_oldest[MAX_ARGLN];
 				char purl_new[MAX_ARGLN];
-				char purl_date_oldest[MAX_ARGLN];
 				char purl_date_new[MAX_ARGLN];
+				char purl_date_oldest[MAX_ARGLN];
 				extract_csv(purl_new, (char *) url , 6, MAX_ARGLN);
-				extract_csv(purl_oldest, (char *) ptr , 6, MAX_ARGLN);
 				purl_release_date(purl_new, purl_date_new);
-				purl_release_date(purl_oldest, purl_date_oldest);
+				purl_release_date(comp_oldest->purls[0], purl_date_oldest);
 				if ((!*purl_date_oldest && *purl_date_new)|| (*purl_date_new && strcmp(purl_date_new, purl_date_oldest) < 0))
 				{
 					replace = true;
-					scanlog("<<URL wins by purl date, %s - %s / %s -%s>>\n", purl_new, purl_date_new, purl_oldest ,purl_date_oldest);
+					scanlog("<<URL wins by purl date, %s - %s / %s -%s>>\n", purl_new, purl_date_new, comp_oldest->purls[0] ,purl_date_oldest);
 				}
 			}
 			else if (!*comp->release_date && !*comp_oldest->release_date)

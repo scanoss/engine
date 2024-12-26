@@ -48,6 +48,7 @@
 #include "dependency.h"
 #include "ignorelist.h"
 #include "vulnerability.h"
+#include "health.h"
 
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
 bool match_extensions = false;									  /** global match extension flag */
@@ -321,6 +322,21 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	/*if the relese date is the same untie with the component age (purl)*/
 	if (!strcmp(b->release_date, a->release_date))
 	{
+		if (strstr(b->purls[0],"github") && !strstr(a->purls[0],"github"))
+		{
+			scanlog("Component prefereded by source\n");
+			return true;
+		}
+
+		print_health(a);
+		print_health(b);
+
+		if (b->health_stats[0] > a->health_stats[0])
+		{
+			scanlog("Component accepted by health\n");
+			return true;
+		}
+		
 		if (!a->purls_md5[0] && a->purls[0])
 		{
 			a->purls_md5[0] = malloc(MD5_LEN);
@@ -338,7 +354,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		if ((!a->age && b->age) || b->age > a->age)
 			return true;
 
-		if (b->age == a->age && !strcmp(a->component, b->component) &&	strcmp(a->version, b->version) > 0)
+		if (b->age == a->age && !strcmp(a->component, b->component) &&strcmp(a->version, b->version) > 0)
 			return true;
 	}
 	/*select the oldest release date */
