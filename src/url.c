@@ -38,7 +38,7 @@
 #include "snippets.h"
 #include "decrypt.h"
 #include "ignorelist.h"
-
+#include "versions.h"
 /**
  * @brief Handle url query in th KB. 
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
@@ -315,6 +315,7 @@ void purl_release_date(char *purl, char *date)
 }
 
 
+
 /**
  * @brief Handler function for getting the oldest URL.
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
@@ -326,49 +327,108 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		return false;
 
 	/* Get oldest */
-	char oldest[MAX_ARGLN + 1] = "\0";
-	extract_csv(oldest, (char *) ptr, 4, MAX_ARGLN);
-
+	component_data_t **comp_address = ptr;
+	component_data_t * comp_oldest = *comp_address;
 	/* Skip ignored records (-b SBOM.json) */
 	if (!ignored_asset_match((uint8_t *)url))
 	{
-
-		/* Extract date */
-		char release_date[MAX_ARGLN + 1] = "\0";
-		extract_csv(release_date, (char *) url , 4, MAX_ARGLN);
-		
-		bool replace = false;
-		/* If it is older, then we copy to oldest */
-		if ((!*oldest && *release_date) || (*release_date && (strcmp(release_date, oldest) < 0)))
-			replace = true;
-		else if (*release_date && strcmp(release_date, oldest) == 0)
+		component_data_t * comp = calloc(1, sizeof(*comp));
+		bool result = fill_component(comp, key, NULL, (uint8_t *)url);
+		if (!result)
 		{
-			char purl_oldest[MAX_ARGLN];
-			char purl_new[MAX_ARGLN];
-			char purl_date_oldest[MAX_ARGLN];
-			char purl_date_new[MAX_ARGLN];
-			extract_csv(purl_new, (char *) url , 6, MAX_ARGLN);
-			extract_csv(purl_oldest, (char *) ptr , 6, MAX_ARGLN);
-			purl_release_date(purl_new, purl_date_new);
-			purl_release_date(purl_oldest, purl_date_oldest);
-			if ((!*purl_date_oldest && *purl_date_new)|| (*purl_date_new && strcmp(purl_date_new, purl_date_oldest) < 0))
+			free(url);
+			component_data_free(comp);
+			return false;
+		}
+		comp->identified = IDENTIFIED_NONE;
+		asset_declared(comp);
+		purl_latest_version_add(comp);
+
+		if (!comp_oldest) {
+			
+			*comp_address = comp;
+			free(url);
+			return false;
+		}
+	
+		bool replace = false;
+		if (comp->identified > comp_oldest->identified)
+		{
+			scanlog("Url wins by asset identified\n");
+			replace = true;
+		}
+		/* If it is older, then we copy to oldest */
+		else if(comp->identified == comp_oldest->identified)
+		{
+			if ((!*comp_oldest->release_date && *comp->release_date) || 
+				(*comp->release_date && (strcmp(comp->release_date, comp_oldest->release_date) < 0)))
+				replace = true;
+			else if (*comp->release_date && strcmp(comp->release_date, comp_oldest->release_date) == 0)
+			{
+				char purl_new[MAX_ARGLN];
+				char purl_date_new[MAX_ARGLN];
+				char purl_date_oldest[MAX_ARGLN];
+				extract_csv(purl_new, (char *) url , 6, MAX_ARGLN);
+				purl_release_date(purl_new, purl_date_new);
+				purl_release_date(comp_oldest->purls[0], purl_date_oldest);
+				if ((!*purl_date_oldest && *purl_date_new)|| (*purl_date_new && strcmp(purl_date_new, purl_date_oldest) < 0))
+				{
+					replace = true;
+					scanlog("<<URL wins by purl date, %s - %s / %s -%s>>\n", purl_new, purl_date_new, comp_oldest->purls[0] ,purl_date_oldest);
+				}
+			}
+			else if (!*comp->release_date && !*comp_oldest->release_date)
 			{
 				replace = true;
-				scanlog("<<URL wins by purl date, %s - %s / %s -%s>>\n", purl_new, purl_date_new, purl_oldest ,purl_date_oldest);
+				scanlog("URL without release date accepted");
 			}
-		}
-		else if (!*release_date && !*oldest)
-		{
-			replace = true;
-			scanlog("URL without release date accepted");
 		}
 
 		if (replace)
 		{
-			memcpy((uint8_t *) ptr, url, datalen + 1);
+			component_data_free(*comp_address);
+			*comp_address = comp;
 		}
-
+		else
+		{
+			component_data_free(comp);
+		}
 	}
 	free(url);
 	return false;
+}
+
+bool purl_vendor_component_check(component_data_t * component)
+{
+    char *a, *b;
+
+    if (!component->vendor || !component->component || !component->purls[0])
+        return false;
+   
+    a = strstr(component->purls[0], component->vendor);
+    b = strstr(component->purls[0], component->component);
+    
+    if (a && b)
+    {
+        if (a == b)
+            return false;
+        return true;
+    }
+    return false;
+}
+
+int purl_source_check(component_data_t * component)
+{
+			// check the match source
+	const char * sources[] = {
+    				"github",
+    				"gitlab",
+					"bitbucket"};
+ 	const int sources_number = sizeof(sources) / sizeof(sources[0]);
+	for (int i = 0; i < sources_number; i++)
+	{
+		if (strstr(component->purls[0], sources[i]))
+			return i;
+	}
+	return 9999;
 }

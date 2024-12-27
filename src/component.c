@@ -84,7 +84,10 @@ component_data_t *component_data_copy(component_data_t *in)
     out->vendor = strdup(in->vendor);
     out->version = strdup(in->version);
     out->release_date = strdup(in->release_date);
-    out->file = strdup(in->file);
+	
+	if (in->file)
+   		out->file = strdup(in->file);
+		
     out->file_md5_ref = in->file_md5_ref;
     out->identified = in->identified;
 	if(in->latest_release_date)
@@ -203,6 +206,13 @@ static char * look_for_version(char *in)
 	return in;
 }
 
+void fill_component_path(component_data_t *component, char *file_path)
+{
+	component->file = strdup(look_for_version(file_path));
+	component->path_ln = strlen(file_path);
+	flip_slashes(component->file);
+}
+
 /**
  * @brief Fill the match structure
  * @param url_key md5 of the match url
@@ -229,9 +239,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 		memcpy(component->url_md5, url_key, MD5_LEN);
 		if (file_path)
 		{
-			component->file = strdup(look_for_version(file_path));
-			component->path_ln = strlen(file_path);
-			flip_slashes(component->file);
+			fill_component_path(component, file_path);
 		}
 	}
 
@@ -273,10 +281,12 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	component->license = strdup(license);
 	component->url = strdup(url);
 	component->latest_version = strdup(latest_version);
-
+	component->latest_release_date = strdup(component->release_date);
 	if (*purl)
 	{
 		component->purls[0] = strdup(purl);
+		component->purls_md5[0] = malloc(MD5_LEN);
+		MD5((uint8_t *)component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
 	}
 	component->age = -1;
 	return true;
@@ -326,4 +336,19 @@ void component_item_free(component_item *comp_item)
 	free(comp_item->vendor);
 	free(comp_item->purl);
 	free(comp_item->version);
+}
+
+void component_purl_md5(component_data_t * component)
+{
+	if (component->purls_md5[0])
+		return;
+		
+	for (int i = 0; i < MAX_PURLS; i++)	
+	{
+		if (component->purls[i] && !component->purls_md5[i])
+		{
+			component->purls_md5[i] = malloc(oss_purl.key_ln);
+			MD5((uint8_t *)component->purls[i], strlen(component->purls[i]), component->purls_md5[i]);
+		}
+	}
 }

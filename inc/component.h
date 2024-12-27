@@ -29,6 +29,7 @@ typedef struct component_data_t
 	char *purls[MAX_PURLS]; /* PURLs array */
 	uint8_t *purls_md5[MAX_PURLS]; /*PURLs md5*/
 	int vulnerabilities; /*component vulnerabilities number */
+	int dependencies;
 	int identified; /* was this component indentified in a provided SBOM: 0 = pending, 1 = identified without version, 2= identified with version */
 	int path_ln; /* component path lenght: number of subdirectories in the path*/
 	uint8_t url_md5[MD5_LEN]; /*url md5*/
@@ -44,6 +45,7 @@ typedef struct component_data_t
 	char * file_path_ref;
 	int path_rank;
 	int url_stats[5];
+	int health_stats[3];
 } component_data_t;
 
 component_data_t * component_init(void);
@@ -53,5 +55,5 @@ bool component_date_comparation(component_data_t * a, component_data_t * b);
 component_data_t * component_data_copy(component_data_t * in);
 int asset_declared(component_data_t * comp);
 void component_item_free(component_item * comp_item);
-
+void fill_component_path(component_data_t *component, char *file_path);
 #endif

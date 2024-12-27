@@ -19,4 +19,9 @@ bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
 
 void purl_release_date(char *purl, char *date);
 
+bool purl_vendor_component_check(component_data_t * component);
+
+int purl_source_check(component_data_t * component);
+
+
 #endif

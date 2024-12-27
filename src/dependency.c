@@ -58,8 +58,6 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 {
 	char *CSV = decrypt_data(data, datalen, oss_dependency, key, subkey);
 	component_data_t * comp = (component_data_t *) ptr;
-	scanlog("Dependency: %s\n", CSV);
-
 	char *source = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *vendor = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *component = calloc(MAX_JSON_VALUE_LEN, 1);
@@ -161,6 +159,7 @@ int print_dependencies(component_data_t * comp)
 
 	free(comp->dependency_text);	
 	comp->dependency_text = aux;
+	comp->dependencies = records;
 	return records;
 }
 

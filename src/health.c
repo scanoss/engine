@@ -80,6 +80,10 @@ bool print_health_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
     extract_csv(forks_count, decrypted, 6, MAX_FIELD_LN);
 	extract_csv(provenance, decrypted, 7, MAX_FIELD_LN);
 
+	match->health_stats[0] = atoi(forks_count);
+	match->health_stats[1] = atoi(issues_count);
+	match->health_stats[2] = atoi(watchers_count);
+
    	char result[MAX_FIELD_LN * 7] = "\0";
 	
 	int len = 0;

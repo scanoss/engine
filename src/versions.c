@@ -97,141 +97,64 @@ char * version_cleanup(char *  version, char * component)
 	return strdup(cleaned);
 }
 
-/**
- * @brief get purl version handler.
- * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
- * @param key //TODO
- * @param subkey //TODO
- * @param subkey_ln //TODO
- * @param data //TODO
- * @param datalen //TODO
- * @param iteration //TODO
- * @param ptr //TODO
- * @return //TODO
- */
-static bool get_purl_version_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+static char * purl_indirection_reference[FETCH_MAX_FILES];
+static int purl_indirection_index = 0;
+static release_version * purl_version_list[FETCH_MAX_FILES];
+
+void purl_latest_version_add(component_data_t * component)
 {
-	release_version *release = ptr;
-
-	if (!datalen) 
-		return false;
-
-	char *CSV = decrypt_data(data, datalen, oss_url, key, subkey);
-
-	if (!CSV)
-		return false;
-	
-
-	char *purl = calloc(MAX_JSON_VALUE_LEN, 1);
-	char *version = calloc(MAX_JSON_VALUE_LEN, 1);
-	char *component = calloc(MAX_JSON_VALUE_LEN, 1);
-	char *date = calloc(MAX_JSON_VALUE_LEN, 1);
-
-	extract_csv(component, CSV, 1, MAX_JSON_VALUE_LEN);
-	extract_csv(version, CSV, 3, MAX_JSON_VALUE_LEN);
-	extract_csv(date, CSV, 4, MAX_JSON_VALUE_LEN);
-	extract_csv(purl, CSV, 6, MAX_JSON_VALUE_LEN);
-	free(CSV);
-
-	bool found = false;
-
-	if (!strcmp(purl, release->version))
-	{
-		/* Copy release version, date and urlid */
-		normalise_version(version, component);
-		strcpy(release->version, version);
-		strcpy(release->date, date);
-		memcpy(release->url_id, key, LDB_KEY_LN);
-		memcpy(release->url_id + LDB_KEY_LN, subkey, subkey_ln);
-		found = true;
-	}
-
-	free(purl);
-	free(version);
-	free(component);
-	free(date);
-
-	return found;
-}
-
-/**
- * @brief Compare version and, if needed, update range (version-latest)
- * @param match pointer to match to br processed
- * @param release pointer to release version structure
- */
-void update_version_range(component_data_t *component, release_version *release)
-{
-	if (!*release->date) return;
-
-
-	if (strcmp(release->date, component->release_date) < 0)
-	{
-		scanlog("update_version_range() %s < %s, %s <- %s\n", release->date, component->release_date, component->version, release->version);
-		free(component->version);
-		component->version = strdup(release->version);
-		free(component->release_date);
-		component->release_date = strdup(release->date);
-		memcpy(component->url_md5, release->url_id, MD5_LEN);
-	}
-	
-
-	if (!component->latest_release_date || strcmp(release->date, component->latest_release_date) > 0)
-	{
-		scanlog("update_version_range() %s > %s, %s <- %s\n", release->date, component->release_date, component->version, release->version);
-		free(component->latest_version);
-		component->latest_version = strdup(release->version);
-		free(component->latest_release_date);
-		component->latest_release_date = strdup(release->date);
-	}
-}
-
-/**
- * @brief Get ṕurl version
- * @param release[out] will be completed with the purl version
- * @param purl purl string
- * @param file_id file md5
- */
-void get_purl_version(release_version *release, char *purl, uint8_t *file_id)
-{
-	/* Pass purl in version */
-	strcpy(release->version, purl);
-
-	ldb_fetch_recordset(NULL, oss_url, file_id, false, get_purl_version_handler, release);
-
-	/* If no version returned, clear version */
-	if (!strcmp(release->version, purl)) *release->version = 0;
-}
-
-/**
- * @brief Add version range to first match
- * @param scan scan data pointer
- * @param matches pointer to matches list
- * @param files pointer to files recordset list
- * @param records records number
- */
-void add_versions(component_data_t *component, file_recordset *files, uint32_t records)
-{
-	if (!component)
+	if (!component->purls[0] || !component->release_date || !component->version || purl_indirection_index == FETCH_MAX_FILES)
 		return;
-		
-	if (component->identified == IDENTIFIED_PURL_VERSION)	
-	{
-		free(component->latest_version);
-		component->latest_version = strdup(component->version);
-	}
-	else
-	{
-		release_version release = {"\0", "\0", "\0"};;
 
-		*release.version = 0;
-		*release.date = 0;
-		for (int n = 0; n < records; n++)
+	for (int i = 0; i < purl_indirection_index; i++)
+	{
+		if (!strcmp(component->purls[0], purl_indirection_reference[i]))
 		{
-			if (!files[n].external) 
-				get_purl_version(&release, component->purls[0], files[n].url_id);
-				
-			if (*release.version) 
-				update_version_range(component, &release);
+			if (strcmp(component->release_date, purl_version_list[i]->date) > 0)
+			{
+				strcpy(purl_version_list[i]->date, component->release_date);
+				strcpy(purl_version_list[i]->version, component->version);
+				scanlog("update purl version: %s update latest version to %s\n", component->purls[0], component->version);
+			}
+			return;
 		}
 	}
+	purl_indirection_reference[purl_indirection_index] = strdup(component->purls[0]);
+	purl_version_list[purl_indirection_index] = calloc(1, sizeof(release_version));
+	strcpy(purl_version_list[purl_indirection_index]->date, component->release_date);
+	strcpy(purl_version_list[purl_indirection_index]->version, component->version);
+	purl_indirection_index++;
+}
+
+void purl_latest_version_search(component_data_t * component)
+{
+	if (!component->purls[0])
+		return;
+	
+	for (int i = 0; i < purl_indirection_index; i++)
+	{
+		if (!strcmp(component->purls[0], purl_indirection_reference[i]))
+		{
+			release_version * release = purl_version_list[i];
+			if (!component->latest_release_date || strcmp(release->date, component->latest_release_date) > 0)
+			{
+				scanlog("update_version_range() %s > %s, %s <- %s\n", release->date, component->release_date, component->version, release->version);
+				free(component->latest_version);
+				component->latest_version = strdup(release->version);
+				free(component->latest_release_date);
+				component->latest_release_date = strdup(release->date);
+			}
+			return;
+		}
+	}
+}
+
+void purl_latest_version_free()
+{
+	for (int i = 0; i < purl_indirection_index; i++)
+	{
+		free(purl_version_list[i]);
+		free(purl_indirection_reference[i]);
+	}
+	purl_indirection_index = 0;
 }
