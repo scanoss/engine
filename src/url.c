@@ -392,3 +392,38 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 	free(url);
 	return false;
 }
+
+bool purl_vendor_component_check(component_data_t * component)
+{
+    char *a, *b;
+
+    if (!component->vendor || !component->component || !component->purls[0])
+        return false;
+   
+    a = strstr(component->purls[0], component->vendor);
+    b = strstr(component->purls[0], component->component);
+    
+    if (a && b)
+    {
+        if (a == b)
+            return false;
+        return true;
+    }
+    return false;
+}
+
+int purl_source_check(component_data_t * component)
+{
+			// check the match source
+	const char * sources[] = {
+    				"github",
+    				"gitlab",
+					"bitbucket"};
+ 	const int sources_number = sizeof(sources) / sizeof(sources[0]);
+	for (int i = 0; i < sources_number; i++)
+	{
+		if (strstr(component->purls[0], sources[i]))
+			return i;
+	}
+	return 9999;
+}

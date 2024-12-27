@@ -319,27 +319,36 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		return false;
 	if (!*a->release_date)
 		return true;
-	
+		
 	if (!path_is_third_party(a->file) && path_is_third_party(b->file) && !(engine_flags & ENABLE_PATH_HINT))
 	{
 		scanlog("Component rejected by third party filter\n");
 		return false;
 	}
+	
 	/*if the relese date is the same untie with the component age (purl)*/
 	if (!strcmp(b->release_date, a->release_date))
-	{
-		if (strstr(b->purls[0],"github") && !strstr(a->purls[0],"github"))
+	{	
+		if (purl_source_check(a) > purl_source_check(b))
 		{
-			scanlog("Component prefereded by source\n");
+			scanlog("Component prefered by vsource\n");
 			return true;
 		}
 
+		if (!purl_vendor_component_check(a) && purl_vendor_component_check(b))
+		{
+			scanlog("Component prefered by vendor+component=purl\n");
+			return true;
+		}
+		//Look for available health information
 		print_health(a);
 		print_health(b);
+		int health_a = a->health_stats[0] + a->health_stats[2]; //add forks and watchers
+		int health_b = b->health_stats[0] + b->health_stats[2];
 
-		if (b->health_stats[0] > a->health_stats[0])
+		if (health_b > health_a)
 		{
-			scanlog("Component accepted by health\n");
+			scanlog("Component prefered by health: %s = %d vs %s = %d\n", b->purls[0], health_b, a->purls[0], health_a);
 			return true;
 		}
 		
@@ -522,30 +531,23 @@ bool load_matches(match_data_t *match)
 			if (!item->entries.le_next || !item->entries.le_next->component)
 				break;
 			
-			if(!item->component->dependency_text || strlen(item->component->dependency_text) < 4)	
-				print_dependencies(item->component);
-			
 			if(!item->component->vulnerabilities_text || strlen(item->component->vulnerabilities_text) < 4)	
 				print_vulnerabilities(item->component);
 						
 			struct comp_entry *item2 = NULL;
 			for (item2 = item->entries.le_next; item2 != NULL; item2 = item2->entries.le_next)
 			{
-				if(!item2->component->dependency_text || strlen(item2->component->dependency_text) < 4)	
-					print_dependencies(item2->component);
-			
-				if(!item->component->vulnerabilities_text || strlen(item->component->vulnerabilities_text) < 4)	
+				if(!item2->component->vulnerabilities_text || strlen(item2->component->vulnerabilities_text) < 4)	
 					print_vulnerabilities(item2->component);
 				
-				if (!item2->component->vulnerabilities && !item2->component->dependencies)
+				if (!item2->component->vulnerabilities)
 					continue;
 				
 				scanlog("%s vs %s tiebreak\n", item->component->purls[0], item2->component->purls[0]);
 
-				if ((!item->component->dependencies && item2->component->dependencies) ||
-					(!item->component->vulnerabilities && item2->component->vulnerabilities))
+				if (!item->component->vulnerabilities && item2->component->vulnerabilities)
 				{
-					scanlog("Component permuted due to dependency/vulnerabilities tiebreak\n");
+					scanlog("Component permuted due to vulnerabilities tiebreak\n");
 					component_data_t * aux = item->component;
 					item->component = item2->component;
 					item2->component = aux;
