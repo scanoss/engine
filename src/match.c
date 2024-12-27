@@ -531,7 +531,7 @@ bool load_matches(match_data_t *match)
 			if (!item->entries.le_next || !item->entries.le_next->component)
 				break;
 			
-			if(!item->component->vulnerabilities_text || strlen(item->component->vulnerabilities_text) < 4)	
+			if(!item->component->vulnerabilities_text || strlen(item->component->vulnerabilities_text) < 4)
 				print_vulnerabilities(item->component);
 						
 			struct comp_entry *item2 = NULL;

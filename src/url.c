@@ -337,7 +337,7 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		if (!result)
 		{
 			free(url);
-			free(comp);
+			component_data_free(comp);
 			return false;
 		}
 		comp->identified = IDENTIFIED_NONE;
@@ -385,9 +385,14 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		}
 
 		if (replace)
-			**comp_address = *comp;
-
-		free(comp);
+		{
+			component_data_free(*comp_address);
+			*comp_address = comp;
+		}
+		else
+		{
+			component_data_free(comp);
+		}
 	}
 	free(url);
 	return false;
