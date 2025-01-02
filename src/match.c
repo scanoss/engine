@@ -51,7 +51,6 @@
 #include "health.h"
 
 const char *matchtypes[] = {"none", "file", "snippet", "binary"}; /** describe the availables kinds of match */
-bool match_extensions = false;								  /** global match extension flag */
 bool path_table_present = false;
 char *component_hint = NULL;
 

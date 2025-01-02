@@ -115,7 +115,6 @@ typedef struct component_item
 
 extern long microseconds_start;
 extern int map_rec_len;
-extern bool match_extensions;
 
 /*component hint hold the last component matched/guessed */
 extern char * component_hint;
