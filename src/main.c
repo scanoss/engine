@@ -412,10 +412,6 @@ int main(int argc, char **argv)
 				exit(EXIT_SUCCESS);
 				break;
 
-			case 'e':
-				match_extensions = true;
-				break;
-
 			case 'q':
 				engine_flags = engine_flags_cmd_line;
 				debug_on = true;

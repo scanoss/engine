@@ -46,18 +46,16 @@ Results are displayed in JSON format through STDOUT.\n\
 Syntax: scanoss [parameters] [TARGET]\n\
 \n\
 Configuration:\n\
--w         Process TARGET as a .wfp file, regardless of its actual extension.\n\
--H         Enable High Precision Snippet Match mode (requires 'libhpsm.so' in the system).\n\
--e         Match only files with identical extensions as the scanned file (default: off).\n\
--M NUMBER  Search for up to NUMBER different components in each file (maximum: 9).\n\
--T NUMBER  Set snippet scanning tolerance percentage (default: 0.1).\n\
--s SBOM    Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
--b SBOM    Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\
--B SBOM    Same as \"-b\" but with forced snippet scanning.\n\
--a SBOM    Show attribution notices for the provided SBOM.json file.\n\
--c HINT    Add a component HINT to guide scan results.\n\
--k KEY     Show contents of the specified KEY file from MZ sources archive.\n\
--l LICENSE Display OSADL metadata for the given SPDX license ID.\n\
+-w         Treats TARGET as a .wfp file regardless of the actual file extension.\n\
+-H         High Precision Snippet Match mode, 'libhpsm.so' must be present in the system.\n\
+-M NUMBER  Looks for NUMBER of different components in a file (MAX 9).\n\
+-s SBOM    Use assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification.\n\
+-b SBOM    Ignore matches to assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format).\n\
+-B SBOM    Same than \"-b\" but forcing snippet scan.\n\
+-a SBOM    Displays attribution notices for provided SBOM.json.\n\
+-c HINT    Provide a component HINT to influence scan results.\n\
+-k KEY     Displays contents of file KEY from MZ sources archive.\n\
+-l LICENSE Displays OSADL metadata for the provided SPDX license ID.\n\
 \n\
 Options:\n\
 -t  Run engine performance tests.\n\
