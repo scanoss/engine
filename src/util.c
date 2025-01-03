@@ -294,7 +294,7 @@ void free_and_null(void * pr)
     pr = NULL;
 }
 
-bool path_is_third_party(const char* path) 
+bool path_is_third_party(const char *path)
 {
     const char* patterns[] = {
         "third_party",
@@ -354,5 +354,3 @@ bool path_is_third_party(const char* path)
     
     return false;
 }
-
-

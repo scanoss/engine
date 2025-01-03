@@ -406,46 +406,31 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 {
 	component_data_t *new_comp = NULL;
 
-	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)url_rec);
-
-	/* Extract date from url_rec */
-	char date[MAX_ARGLN] = "0";
-	extract_csv(date, (char *)url_rec, 4, MAX_ARGLN);
-	/* Create a new component and fill it from the url record */
-	component_data_t *new_comp = calloc(1, sizeof(*new_comp));
-	bool result = fill_component(new_comp, url_id, path, (uint8_t *)url_rec);
-	if (result)
+	fetch_recordset(oss_url, url_id, get_oldest_url, (void *)&new_comp);
+	if (!new_comp)
+		return false;
+	fill_component_path(new_comp, path);
+	new_comp->file_md5_ref = component_list->match_ref->file_md5;
+	/* If the component is valid add it to the component list */
+	/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
+	/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
+	new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
+	new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
+	list_update_t r = component_list_update(component_list, new_comp, component_update);
+	if (r == LIST_ITEM_NOT_FOUND)
 	{
-		new_comp->file_md5_ref = component_list->match_ref->file_md5;
-		/* If the component is valid add it to the component list */
-		/* The component list is a fixed size list, of size 3 by default, this means the list will keep the free oldest components*/
-		/* The oldest component will be the first in the list, if two components have the same age the purl date will untie */
-		new_comp->identified = IDENTIFIED_NONE;
-		asset_declared(new_comp);
-		new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
-		new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
-		list_update_t r = component_list_update(component_list, new_comp, component_update);
-		if (r == LIST_ITEM_NOT_FOUND)
+		scanlog("--- new comp %s---\n", new_comp->component);
+		if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
 		{
-			scanlog("--- new comp %s---\n", new_comp->component);
-			if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
-			{
-				scanlog("component rejected: %s - %s\n", new_comp->purls[0], new_comp->release_date);
-				component_data_free(new_comp); /* Free if the componet was rejected */
-			}
-			else
-				scanlog("component accepted: %s - %s - pathrank: %d\n", new_comp->purls[0], new_comp->release_date, new_comp->path_rank);
+			scanlog("component rejected: %s - %s\n", new_comp->purls[0], new_comp->release_date);
+			component_data_free(new_comp); /* Free if the componet was rejected */
 		}
-		else if (r == LIST_ITEM_UPDATE && component_list->headp.lh_first)
-		{
-			component_list_sort(component_list->headp.lh_first, component_hint_date_comparation);
-		}
+		else
+			scanlog("component accepted: %s - %s - pathrank: %d\n", new_comp->purls[0], new_comp->release_date, new_comp->path_rank);
 	}
-	else
+	else if (r == LIST_ITEM_UPDATE && component_list->headp.lh_first)
 	{
-		char hex_url[MD5_LEN * 2 + 1];
-		ldb_bin_to_hex(new_comp->url_md5, MD5_LEN, hex_url);
-		scanlog("component accepted: %s@%s - pathrank: %d - %s - %s\n", new_comp->purls[0], new_comp->version, new_comp->path_rank, new_comp->file, hex_url);
+		component_list_sort(component_list->headp.lh_first, component_hint_date_comparation);
 	}
 
 	return true;
@@ -481,7 +466,7 @@ static char * path_query(uint8_t * file_id)
  * @return false
  */
 
-bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+bool component_from_file(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	/*Iterations must be doubled if high accuracy is enabled*/
 	int iteration_max = ((engine_flags & ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 4 : FETCH_MAX_FILES);

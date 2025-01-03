@@ -238,7 +238,6 @@ bool print_json_component(component_data_t * component)
 	char url_id[oss_url.key_ln * 2 + 1];
     ldb_bin_to_hex(component->url_md5, oss_url.key_ln, url_id);
 	printf("\"url_hash\": \"%s\"", url_id);
-	free(url_id);
 
 	if (!(engine_flags & DISABLE_LICENSES))
 	{
