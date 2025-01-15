@@ -372,7 +372,8 @@ bool path_is_third_party(const char* path)
         "local_packages",
         "managed",
         "3rd",
-        "thirdparty"
+        "thirdparty",
+		"LibResources"
     };
     
     // Número de patrones a verificar
