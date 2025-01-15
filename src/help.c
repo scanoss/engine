@@ -38,41 +38,42 @@
  */
 void help ()
 {
-	printf ("ScanOSS Engine v%s\n", SCANOSS_VERSION);
-	printf ("\n\
-This program performs an OSS inventory for the given TARGET comparing against the ScanOSS Knowledgebase.\n\
-Results are printed in STDOUT in JSON format\n\
+  printf ("ScanOSS Engine v%s\n", SCANOSS_VERSION);
+  printf ("\n\
+This program performs an OSS inventory scan of the specified TARGET by comparing it against the ScanOSS Knowledgebase.\n\
+Results are displayed in JSON format through STDOUT.\n\
 \n\
 Syntax: scanoss [parameters] [TARGET]\n\
 \n\
 Configuration:\n\
--w         Treats TARGET as a .wfp file regardless of the actual file extension.\n\
--H         High Precision Snippet Match mode, 'libhpsm.so' must be present in the system.\n\
--e         Expect matching extensions to equal the file extension being scanned (default: off).\n\
--M NUMBER  Looks for NUMBER of different components in a file (MAX 9).\n\
--s SBOM    Use assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification.\n\
--b SBOM    Ignore matches to assets specified in JSON SBOM (CycloneDX/SPDX2.2 JSON format).\n\
--B SBOM    Same than \"-b\" but forcing snippet scan.\n\
--a SBOM    Displays attribution notices for provided SBOM.json.\n\
--c HINT    Provide a component HINT to influence scan results.\n\
--k KEY     Displays contents of file KEY from MZ sources archive.\n\
--l LICENSE Displays OSADL metadata for the provided SPDX license ID.\n\
+-w         Process TARGET as a .wfp file, regardless of its actual extension.\n\
+-H         Enable High Precision Snippet Match mode (requires 'libhpsm.so' in the system).\n\
+-e         Match only files with identical extensions as the scanned file (default: off).\n\
+-M NUMBER  Search for up to NUMBER different components in each file (maximum: 9).\n\
+-T NUMBER  Set snippet scanning tolerance percentage (default: 3.5).\n\
+-s SBOM    Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
+-b SBOM    Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\
+-B SBOM    Same as \"-b\" but with forced snippet scanning.\n\
+-a SBOM    Show attribution notices for the provided SBOM.json file.\n\
+-c HINT    Add a component HINT to guide scan results.\n\
+-k KEY     Show contents of the specified KEY file from MZ sources archive.\n\
+-l LICENSE Display OSADL metadata for the given SPDX license ID.\n\
 \n\
 Options:\n\
--t  Tests engine performance.\n\
--v  Display version and exit.\n\
--n  Specify DB name (default: oss).\n\
--h  Display this help and exit.\n\
--d  Save debugging information to disk (/tmp).\n\
--q  Produces no JSON output. Only debugging info via STDERR.\n\
+-t  Run engine performance tests.\n\
+-v  Show version information and exit.\n\
+-n  Set database name (default: oss).\n\
+-h  Display this help information and exit.\n\
+-d  Store debugging information to disk (/tmp).\n\
+-q  Suppress JSON output (show only debugging info via STDERR).\n\
 \n\
-Enviroment variables:\n\
-SCANOSS_MATCHMAP_MAX: define the snippet scanning match map size, %d by default.\n\
-SCANOSS_API_URL: defines the API url, %s by default.\n\
+Environment variables:\n\
+SCANOSS_MATCHMAP_MAX: Set the snippet scanning match map size (default: %d).\n\
+SCANOSS_API_URL: Define the API endpoint URL (default: %s).\n\
 \n\
 Engine scanning flags:\n\
-The scanning engine can be configured by passing configuration flags with the -F parameter.\n\
-Alternatively, these value can be written in %s\n\
+Configure the scanning engine using flags with the -F parameter.\n\
+These settings can also be specified in %s\n\
 +-------+-------------------------------------------------------+\n\
 | Flag  | Setting                                               |\n\
 +-------+-------------------------------------------------------+\n\
@@ -83,7 +84,7 @@ Alternatively, these value can be written in %s\n\
 |   16  | Disable copyrights (default: enabled)                 |\n\
 |   32  | Disable vulnerabilities (default: enabled)            |\n\
 |   64  | Disable quality (default: enabled)                    |\n\
-|  128  | Disable cryptography (defalt: enabled)                |\n\
+|  128  | Disable cryptography (default: enabled)               |\n\
 |  256  | Disable best match only (default: enabled)            |\n\
 |  512  | Hide identified files (default: disabled)             |\n\
 | 1024  | Enable download_url (default: disabled)               |\n\
@@ -92,8 +93,7 @@ Alternatively, these value can be written in %s\n\
 | 8192  | Disable health layer (default: enabled)               |\n\
 | 16384 | Enable high accuracy, slower scan (default: disabled) |\n\
 +-------+-------------------------------------------------------+\n\
-Example: scanoss -F 12 DIRECTORY (scans DIRECTORY disabling license and dependency data)\n\
+Example: scanoss -F 12 DIRECTORY (scan DIRECTORY without license and dependency data)\n\
 \n\
 Copyright (C) 2018-2022 SCANOSS.COM\n", DEFAULT_MATCHMAP_FILES, API_URL, ENGINE_FLAGS_FILE);
-
 }

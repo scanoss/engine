@@ -9,6 +9,7 @@
 #include "component.h"
 
 int list_size = 0;
+static float match_list_tolerance = MATCH_LIST_TOLERANCE;
 
 void component_list_destroy(component_list_t *list)
 {
@@ -210,10 +211,19 @@ bool component_list_add_binary(component_list_t *list, component_data_t *new_com
     return false;
 }
 
+void match_list_tolerance_set(float in)
+{
+    if (in > 99)
+        in = 99;
+    
+    match_list_tolerance = 100.0-in;
+    scanlog("setting match list tolerance to %.1f\n", match_list_tolerance);
+}
+
 bool tolerance_eval(int a, int b)
 {
     int relative_error = (abs(a - b) * 100) / ((a + b) / 2);
-    if (100 - relative_error >= MATCH_LIST_TOLERANCE)
+    if (100 - relative_error >= match_list_tolerance)
         return true;
     else
         return false;

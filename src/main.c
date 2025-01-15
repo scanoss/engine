@@ -291,7 +291,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
-	while ((option = getopt(argc, argv, ":f:s:b:B:c:k:a:F:l:n:M:N:wtvhedqH")) != -1)
+	while ((option = getopt(argc, argv, ":T:s:b:B:c:k:a:F:l:n:M:N:wtvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -354,6 +354,9 @@ int main(int argc, char **argv)
 				break;
 			case 'N':
 				scan_max_components = atol(optarg);
+				break;
+			case 'T':
+				match_list_tolerance_set(atof(optarg));
 				break;
 			case 'w':
 				force_wfp = true;
