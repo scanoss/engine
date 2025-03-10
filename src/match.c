@@ -320,7 +320,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	if (!*a->release_date)
 		return true;
 		
-	if (!path_is_third_party(a->file) && path_is_third_party(b->file) && !(engine_flags & ENABLE_PATH_HINT))
+	if (!path_is_third_party(a->file) && path_is_third_party(b->file))
 	{
 		scanlog("Component rejected by third party filter\n");
 		return false;
@@ -331,7 +331,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	{	
 		if (purl_source_check(a) > purl_source_check(b))
 		{
-			scanlog("Component prefered by vsource\n");
+			scanlog("Component prefered by source\n");
 			return true;
 		}
 
@@ -471,39 +471,15 @@ bool load_matches(match_data_t *match)
 {
 	scanlog("Load matches\n");
 
-	/* Compile match ranges and fill up matched percent */
-	int hits = 100;
-	int matched_percent = 100;
 
-	/* Get matching line ranges (snippet match) */
-	if (match->type == MATCH_SNIPPET)
-	{
-		hits = compile_ranges(match);
-		scanlog("compile_ranges returns %d hits\n", hits);
-
-		if (hits < min_match_hits)
-		{
-			match->type = MATCH_NONE;
-			return false;
-		}
-		
-		float percent = (hits * 100) / match->scan_ower->total_lines;
-		if (hits)
-			matched_percent = floor(percent);
-		if (matched_percent > 99)
-			matched_percent = 99;
-		if (matched_percent < 1)
-			matched_percent = 1;
-
-		asprintf(&match->matched_percent, "%u%%", matched_percent);
-	}
-	else if (match->type == MATCH_BINARY)
+	
+	if (match->type == MATCH_BINARY)
 	{
 		asprintf(&match->line_ranges, "n/a");
 		asprintf(&match->oss_ranges, "n/a");
 		asprintf(&match->matched_percent, "%d functions matched", match->hits);
 	}
-	else
+	else if (match->type == MATCH_FILE)
 	{
 		asprintf(&match->line_ranges, "all");
 		asprintf(&match->oss_ranges, "all");
@@ -696,11 +672,13 @@ void match_select_best(scan_data_t *scan)
 				break;
 			}
 
-			if (!best_match_component->identified && match_component->identified)
+			if ((!best_match_component->identified && match_component->identified) ||
+				(strcmp(best_match_component->vendor,best_match_component->component) && !strcmp(match_component->vendor, match_component->component)) ||
+				(path_is_third_party(best_match_component->file) && !path_is_third_party(match_component->file)))
 			{
 				scanlog("Replacing best match for a prefered component\n");
 				scan->matches_list_array[i]->best_match = item->match;
-			}	
+			}
 		}
 	}
 

@@ -376,10 +376,8 @@ bool path_is_third_party(const char* path)
 		"LibResources"
     };
     
-    // Número de patrones a verificar
     const int numPatterns = sizeof(patterns) / sizeof(patterns[0]);
     
-    // Verificar cada patrón
     for (int i = 0; i < numPatterns; i++) 
 	{
         if (strstr(path, patterns[i]) != NULL) 

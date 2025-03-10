@@ -50,7 +50,7 @@ Configuration:\n\
 -H         Enable High Precision Snippet Match mode (requires 'libhpsm.so' in the system).\n\
 -e         Match only files with identical extensions as the scanned file (default: off).\n\
 -M NUMBER  Search for up to NUMBER different components in each file (maximum: 9).\n\
--T NUMBER  Set snippet scanning tolerance percentage (default: 3.5).\n\
+-T NUMBER  Set snippet scanning tolerance percentage (default: 0.1).\n\
 -s SBOM    Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
 -b SBOM    Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\
 -B SBOM    Same as \"-b\" but with forced snippet scanning.\n\
