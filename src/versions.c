@@ -55,10 +55,10 @@ void normalise_version(char *version, char *component)
 		return;
 
 	char aux[MAX_FIELD_LN] = "\0";
+	int compt_len = strlen(component);
 	/* Remove leading component name from version */
-	if ((version && component) && stristart(version, component))
+	if ((version && component) && stristart(version, component) && strlen(version) > compt_len + 1)
 	{
-		int compt_len = strlen(component);
 		sprintf(aux, "%s",version + compt_len + 1);
 	}
 

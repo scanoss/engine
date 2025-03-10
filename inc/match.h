@@ -13,6 +13,7 @@ typedef struct match_data_t
 	component_list_t component_list; /*Component list object */ 
 	match_t type; /*math type (none, snippet, file) */
     int hits; /*match hits number, more hits equal bigger snippet matching*/
+	int lines_matched; /*number of matched lines*/
 	char * line_ranges; /*input snippet line ranges */
 	char * oss_ranges; /* kb snippet line ranges */
 	char * matched_percent; /* matched percent */

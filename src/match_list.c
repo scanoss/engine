@@ -311,11 +311,11 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         }
         /* in autolimit mode the list doesnt have a fix size, it will accept all the matchest until a 75% of the fist element (the biggest) */
         //TODO: this part of the code should be in the function pointer or I need to re-evaluate the archtecture of this function */
-        if (list->autolimit && !tolerance_eval(list->headp.lh_first->match->hits, list->last_element->match->hits))
+        if (list->autolimit && !tolerance_eval(list->headp.lh_first->match->lines_matched, list->last_element->match->lines_matched))
         {    
             np = list->headp.lh_first;
             /*We have to find and remove the unwanted elements */
-            for (; np->entries.le_next != NULL && tolerance_eval(list->headp.lh_first->match->hits, np->entries.le_next->match->hits); np = np->entries.le_next)
+            for (; np->entries.le_next != NULL && tolerance_eval(list->headp.lh_first->match->lines_matched, np->entries.le_next->match->lines_matched); np = np->entries.le_next)
             {
 
             }
@@ -401,6 +401,18 @@ bool match_list_print(match_list_t *list, bool (*printer)(match_data_t *fpa), ch
         return false;
 
     return true;
+}
+
+bool match_list_eval(match_list_t *list, match_data_t * in,  bool (*eval)(match_data_t *fpa, match_data_t *fpb))
+{
+    int i = 0;
+    for (struct entry *np = list->headp.lh_first; np != NULL && i<list->items; np = np->entries.le_next)
+    {
+        if(eval(np->match, in))
+            return true;
+        i++;
+    }
+    return false;
 }
 
 void component_list_print(component_list_t *list, bool (*printer)(component_data_t *fpa), char *separator)

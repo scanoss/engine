@@ -50,7 +50,7 @@ Configuration:\n\
 -H         Enable High Precision Snippet Match mode (requires 'libhpsm.so' in the system).\n\
 -e         Match only files with identical extensions as the scanned file (default: off).\n\
 -M NUMBER  Search for up to NUMBER different components in each file (maximum: 9).\n\
--T NUMBER  Set snippet scanning tolerance percentage (default: 3.5).\n\
+-T NUMBER  Set snippet scanning tolerance percentage (default: 0.1).\n\
 -s SBOM    Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
 -b SBOM    Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\
 -B SBOM    Same as \"-b\" but with forced snippet scanning.\n\
@@ -69,7 +69,7 @@ Options:\n\
 \n\
 Environment variables:\n\
 SCANOSS_MATCHMAP_MAX: Set the snippet scanning match map size (default: %d).\n\
-SCANOSS_API_URL: Define the API endpoint URL (default: %s).\n\
+SCANOSS_FILE_CONTENTS_URL: Define the API URL endpoint for sources. Source url wont be reported if it's not defined.\n\
 \n\
 Engine scanning flags:\n\
 Configure the scanning engine using flags with the -F parameter.\n\
@@ -95,5 +95,5 @@ These settings can also be specified in %s\n\
 +-------+-------------------------------------------------------+\n\
 Example: scanoss -F 12 DIRECTORY (scan DIRECTORY without license and dependency data)\n\
 \n\
-Copyright (C) 2018-2022 SCANOSS.COM\n", DEFAULT_MATCHMAP_FILES, API_URL, ENGINE_FLAGS_FILE);
+Copyright (C) 2018-2022 SCANOSS.COM\n", DEFAULT_MATCHMAP_FILES, ENGINE_FLAGS_FILE);
 }
