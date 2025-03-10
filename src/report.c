@@ -344,6 +344,9 @@ bool print_json_match(struct match_data_t * match)
 		else
 			printf(",\"file_url\": \"%s\"", match->component_list.headp.lh_first->component->url);
 	}
+	else //return an empty string
+		printf(",\"file_url\": \" \"");
+
 
 	free(file_id);
 	

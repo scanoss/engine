@@ -330,10 +330,10 @@ void free_and_null(void * pr)
 
 bool path_is_third_party(const char* path) 
 {
-    // Array de patrones comunes
     const char* patterns[] = {
         "third_party",
         "3rdparty",
+		"site-packages",
         "vendor",
         "external",
         "dependencies",
