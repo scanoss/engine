@@ -48,6 +48,7 @@
 #include <dlfcn.h>
 
 struct ldb_table oss_url;
+struct ldb_table oss_pivot;
 struct ldb_table oss_file;
 struct ldb_table oss_path;
 struct ldb_table oss_wfp;
@@ -198,6 +199,10 @@ void initialize_ldb_tables(char *name)
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "notices");
 	oss_notices = ldb_read_cfg(dbtable);
 	oss_notices.hash_calc = hash_function_select(oss_notices.key_ln);
+
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "pivot");
+	oss_pivot = ldb_read_cfg(dbtable);
+	oss_pivot.hash_calc = hash_function_select(oss_pivot.key_ln);
 
 	kb_version_get();
 	osadl_load_file();
@@ -399,6 +404,11 @@ int main(int argc, char **argv)
 			case 't':
 				initialize_ldb_tables(ldb_db_name);
 				scan_benchmark();
+				exit(EXIT_SUCCESS);
+				break;
+			case 'p':
+				initialize_ldb_tables(ldb_db_name);
+				get_project_files(optarg);
 				exit(EXIT_SUCCESS);
 				break;
 

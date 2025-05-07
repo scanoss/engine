@@ -286,7 +286,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	{
 		component->purls[0] = strdup(purl);
 		component->purls_md5[0] = malloc(MD5_LEN);
-		MD5((uint8_t *)component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
+		oss_purl.hash_calc( (unsigned char *) component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
 	}
 	component->age = -1;
 	return true;
