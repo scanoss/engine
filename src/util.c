@@ -341,6 +341,7 @@ bool path_is_third_party(const char* path)
         "contrib",
         "externals",
         "third-party",
+		"subprojects",
         "node_modules",
         "components",
         "deps",
