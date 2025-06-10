@@ -627,10 +627,6 @@ void match_select_best(scan_data_t *scan)
 		{
 			if (find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
 				scan->matches_list_array[i]->best_match = item->match;
-			
-			scanlog("	current purl %s / best match:  %s\n", item->match->component_list.headp.lh_first->component->purls[0], 
-									scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component->purls[0]);
-
 		}
 	}
 
