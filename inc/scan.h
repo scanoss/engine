@@ -40,6 +40,7 @@ typedef struct matchmap_entry
 typedef struct scan_data_t
 {
 	uint8_t md5[MD5_LEN]; /* file md5 */
+	uint8_t md5_fh2[MD5_LEN]; /*file md5 for windows format*/
 	char *file_path; /* file path */
 	char *file_size; /* file size */ //TODO remove if it is unused.
 	char source_md5[MD5_LEN * 2 + 1];  /* source file md5 in hex format */
@@ -64,6 +65,7 @@ typedef struct scan_data_t
 	int max_components_to_show; //TODO
 	int max_matchmap_size;
 	bool printed_succed;
+	bool windows_line_endings;
 } scan_data_t;
 
 extern bool force_snippet_scan;

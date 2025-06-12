@@ -645,6 +645,9 @@ void match_select_best(scan_data_t *scan)
 
 			component_data_t  * best_match_component = scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component;
 			component_data_t * match_component = item->match->component_list.headp.lh_first->component;
+			if (path_is_third_party(match_component->file))
+				continue;
+
 			scanlog("%s -%s - %d VS %s - %s - %d\n",
 					best_match_component->purls[0],
 					best_match_component->release_date,
@@ -674,7 +677,7 @@ void match_select_best(scan_data_t *scan)
 
 			if ((!best_match_component->identified && match_component->identified) ||
 				(strcmp(best_match_component->vendor,best_match_component->component) && !strcmp(match_component->vendor, match_component->component)) ||
-				(path_is_third_party(best_match_component->file) && !path_is_third_party(match_component->file)))
+				(path_is_third_party(best_match_component->file)))
 			{
 				scanlog("Replacing best match for a prefered component\n");
 				scan->matches_list_array[i]->best_match = item->match;
@@ -801,6 +804,19 @@ void compile_matches(scan_data_t *scan)
 		if (!match_list_add(scan->matches_list_array[0], match_new, NULL, false))
 		{
 			match_data_free(match_new);
+		}
+
+		if (scan->windows_line_endings)
+		{
+			match_data_t *match_new = calloc(1, sizeof(match_data_t));
+			match_new->type = scan->match_type;
+			strcpy(match_new->source_md5, scan->source_md5);
+			memcpy(match_new->file_md5, scan->md5_fh2, MD5_LEN);
+			match_new->scan_ower = scan;
+			if (!match_list_add(scan->matches_list_array[0], match_new, NULL, false))
+			{
+				match_data_free(match_new);
+			}
 		}
 	}
 

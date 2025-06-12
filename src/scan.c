@@ -121,7 +121,7 @@ static match_t ldb_scan_file(scan_data_t * scan) {
 	
 	match_t match_type = MATCH_NONE;
 
-	if (ldb_key_exists(oss_url, scan->md5) || ldb_key_exists(oss_file, scan->md5)) 
+	if (ldb_key_exists(oss_url, scan->md5) || ldb_key_exists(oss_file, scan->md5) || (scan->windows_line_endings && ldb_key_exists(oss_file, scan->md5_fh2))) 
 	{
 		match_type = MATCH_FILE;
 	}
@@ -244,18 +244,31 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 		trim(line);
 
 		bool is_file = (memcmp(line, "file=", 5) == 0);
+		bool is_fh2 = (memcmp(line, "fh2=", 4) == 0);
 		bool is_hpsm = (memcmp(line, "hpsm=", 5) == 0);
 		bool is_bin = (memcmp(line, "bin=", 4) == 0);
-		bool is_wfp = (!is_file && !is_hpsm && !is_bin);
+		bool is_wfp = (!is_file && !is_hpsm && !is_bin && !is_fh2);
 
 		if (is_hpsm) 
 		{
 			hpsm_enabled = hpsm_lib_load();
 			hpsm_crc_lines = strdup(&line[5]);
+			continue;
 		}
 
-		if (is_bin)
+		if (is_bin) 
+		{
 			binary_scan(&line[4]);
+			continue;
+		}
+
+		if (is_fh2 && scan  && strlen(line) == MD5_LEN_HEX + 4) 
+		{
+			ldb_hex_to_bin(&line[4], MD5_LEN_HEX, scan->md5_fh2);
+			scan->windows_line_endings = true;
+			scanlog("Winodws line endings hash detected\n");
+			continue;
+		}
 
 		/* Parse file information with format: file=MD5(32),file_size,file_path */
 		if (is_file)
@@ -288,6 +301,7 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			scanlog("File md5 to be scanned: %s\n", hexmd5);
 			ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
 			free(hexmd5);
+			continue;
 		}
 
 		/* Save hash/es to memory. Parse file information with format:
