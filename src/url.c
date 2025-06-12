@@ -79,6 +79,8 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 		new_comp->url_match = true;
 		new_comp->file = strdup(new_comp->url);
 		new_comp->file_md5_ref = component_list->match_ref->file_md5;
+		new_comp->identified = IDENTIFIED_NONE;
+		asset_declared(new_comp);
 		component_list_add(component_list, new_comp, component_date_comparation, true);
 	}
 	else
