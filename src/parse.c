@@ -237,7 +237,7 @@ component_item *get_components(char *filepath)
 		exit(EXIT_FAILURE);
 	}
 
-	component_item *out = calloc(MAX_SBOM_ITEMS * sizeof(component_item), 1);
+	component_item *out = calloc((MAX_SBOM_ITEMS+10) * sizeof(component_item), 1);
 	int component_index = -1;
 	work_json_value(&component_index, value, 0, out);
 
