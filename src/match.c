@@ -640,11 +640,17 @@ void match_select_best(scan_data_t *scan)
 
 		LIST_FOREACH(item, &scan->matches_list_array[i]->headp, entries)
 		{
-			if (!item->match->component_list.headp.lh_first)
-				continue;
+			match_data_t * match = item->match;
 
-			component_data_t  * best_match_component = scan->matches_list_array[i]->best_match->component_list.headp.lh_first->component;
-			component_data_t * match_component = item->match->component_list.headp.lh_first->component;
+			if (!match->component_list.headp.lh_first)
+				continue;
+			component_data_t * match_component = match->component_list.headp.lh_first->component;
+
+			scanlog("%s\n",match_component->purls[0]);
+
+			match_data_t * best_match = scan->matches_list_array[i]->best_match;
+			component_data_t  * best_match_component = best_match->component_list.headp.lh_first->component;
+
 			if (path_is_third_party(match_component->file))
 				continue;
 
@@ -653,33 +659,31 @@ void match_select_best(scan_data_t *scan)
 					best_match_component->release_date,
 					scan->matches_list_array[i]->best_match->hits,
 					match_component->purls[0], match_component->release_date, item->match->hits);
-			
-			if (!strcmp(best_match_component->purls[0],match_component->purls[0]))
-			{
-				if (abs(scan->matches_list_array[i]->best_match->hits - item->match->hits) <= 2 &&
-					find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
-				{
-					scanlog("Replacing best match for an older version with equal hits\n");
-					scan->matches_list_array[i]->best_match = item->match;
-				}
-				else if (scan->matches_list_array[i]->best_match->hits + 1 < item->match->hits)
-				{
-					scanlog("Replacing best match for a newers version with more hits\n");
-					scan->matches_list_array[i]->best_match = item->match;
-				}
 
-			}
-			else if (scan->matches_list_array[i]->best_match->hits > item->match->hits)
-			{
-				scanlog("Hits are lower than the best match, no more comparations are needed. Exiting...\n");
-				break;
-			}
-
+			//If the best match is not good or is not identified be prefer the candidate.
 			if ((!best_match_component->identified && match_component->identified) ||
-				(strcmp(best_match_component->vendor,best_match_component->component) && !strcmp(match_component->vendor, match_component->component)) ||
 				(path_is_third_party(best_match_component->file)))
 			{
 				scanlog("Replacing best match for a prefered component\n");
+				scan->matches_list_array[i]->best_match = item->match;
+				continue;
+			}
+
+			//If best match has 20% more of hits do nothing.
+			if (best_match->hits >= match->hits * 1.2)
+				continue;
+
+			//if cantidate has 10% more of hits do not consider dates and switch
+			if (match->hits > best_match->hits * 1.1)
+			{
+				scanlog("Replacing best match due to big hits difference\n");
+				scan->matches_list_array[i]->best_match = item->match;
+			} 
+			// if the hit numbers are close, select the oldest.
+			else if (abs(scan->matches_list_array[i]->best_match->hits - item->match->hits) <= 2 &&
+					find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
+			{
+				scanlog("Replacing best match for an older version with equal hits\n");
 				scan->matches_list_array[i]->best_match = item->match;
 			}
 		}
