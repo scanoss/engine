@@ -327,7 +327,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
-	while ((option = getopt(argc, argv, ":T:s:b:B:c:k:a:F:l:n:M:N:wtvhedqH")) != -1)
+	while ((option = getopt(argc, argv, ":p:T:s:b:B:c:k:a:F:l:n:M:N:wtvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)

@@ -701,6 +701,8 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
  */
 match_t ldb_scan_snippets(scan_data_t *scan)
 {
+	if (!ldb_table_exists(oss_wfp.db, oss_wfp.table)) //skip purl if the table is not present
+		return MATCH_NONE;
 
 	scanlog("ldb_scan_snippets\n");
 	if (!scan->hash_count)
