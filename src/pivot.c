@@ -7,8 +7,9 @@ struct out_buffer_s {
 };
 
 struct get_path_s {
-	char * path;
+	char **paths;
 	uint8_t * url_key;
+	int paths_index;
 };
 
 bool get_path(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
@@ -34,7 +35,9 @@ bool get_file_path_hash(struct ldb_table * table, uint8_t *key, uint8_t *subkey,
 	uint8_t * path_key = &data[table->key_ln];
 	char * path = NULL;
 	fetch_recordset(oss_path, path_key, get_path, (void *)&path);
-	get_path_url->path = path;
+	get_path_url->paths = realloc(get_path_url->paths, (get_path_url->paths_index + 1) * sizeof(char*));
+	get_path_url->paths[get_path_url->paths_index] = path;
+	get_path_url->paths_index++;
 	return true;
 }
 
@@ -42,21 +45,22 @@ bool get_file_path_hash(struct ldb_table * table, uint8_t *key, uint8_t *subkey,
 bool get_project_hashes(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t * file_key = data;
-	struct get_path_s get_path = {.url_key = key, .path = NULL};
+	struct get_path_s get_path = {.url_key = key, .paths = NULL, .paths_index = 0};
 	char key_hex[17];
 	ldb_bin_to_hex(file_key,table->key_ln,key_hex);
 
 	fetch_recordset(oss_file, file_key, get_file_path_hash, (void *)&get_path);
 	char * output = ptr;
 	char * line = NULL;
-	if (get_path.path)
+	for (int i = 0; i < get_path.paths_index; i++)
 	{
-		asprintf(&line, "%s,%s\n", key_hex, get_path.path);
+		asprintf(&line, "%s,%s\n", key_hex, get_path.paths[i]);
+		free(get_path.paths[i]);
 		strcat(output, line);
 		free(line);
 	}
 
-	free(get_path.path);
+	free(get_path.paths);
 	return false;
 }
 
