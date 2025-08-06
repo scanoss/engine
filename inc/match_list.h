@@ -78,7 +78,8 @@
 #define SCAN_MAX_SNIPPETS_DEFAULT 	1
 #define SCAN_MAX_COMPONENTS_DEFAULT 3
 
-#define MATCH_LIST_TOLERANCE 95
+#define MATCH_LIST_TOLERANCE 99.9
+
 typedef struct match_data_t match_data_t; /* Forward declaration */
 
 typedef enum
@@ -153,6 +154,7 @@ void component_list_print(component_list_t * list, bool (*printer) (component_da
 void component_list_destroy(component_list_t *list);
 bool component_list_add_binary(component_list_t *list, component_data_t *new_comp, bool (*val)(component_data_t *a, component_data_t *b), bool remove_a);
 bool match_list_eval(match_list_t *list, match_data_t * in,  bool (*eval)(match_data_t *fpa, match_data_t *fpb));
+void match_list_tolerance_set(float in);
 list_update_t component_list_update(component_list_t *list, component_data_t * in, list_update_t (*eval)(component_data_t *fpa, component_data_t *fpb));
 void component_list_sort(struct comp_entry *np, bool (*val)(component_data_t *a, component_data_t *b));
 

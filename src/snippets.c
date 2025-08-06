@@ -93,7 +93,7 @@ static bool hit_test(match_data_t *a, match_data_t *b)
 		return false;
 }
 
- bool ranges_intersection(match_data_t *a, match_data_t *b)
+bool ranges_intersection(match_data_t *a, match_data_t *b)
 {
 	for (int i = 0; i < a->matchmap_reg->ranges_number; i++)
 	{
@@ -119,7 +119,7 @@ void biggest_snippet(scan_data_t *scan)
 		scan->matches_list_array_indirection[i] = -1;
 
 	/*Fill the matches list with the files from the matchmap */
-	for (int sector = 0; sector < 255; sector++)
+	for (int sector = 0; sector < 256; sector++)
 	{
 		int j = scan->matchmap_rank_by_sector[sector];
 		
@@ -144,17 +144,21 @@ void biggest_snippet(scan_data_t *scan)
 				continue;
 			}
 
-			int hits = compile_ranges(match_new);
-			if (hits < min_match_hits)
+			int matched_lines = compile_ranges(match_new);
+			if (matched_lines < min_match_lines) {
+				match_data_free(match_new); 
 				continue;
+			}
 
-			float percent = (hits * 100) / match_new->scan_ower->total_lines;
+			float percent = (matched_lines * 100) / match_new->scan_ower->total_lines;
 			int matched_percent = floor(percent);
 			if (matched_percent > 99)
 				matched_percent = 99;
 			if (matched_percent < 1)
 				matched_percent = 1;
 			asprintf(&match_new->matched_percent, "%u%%", matched_percent);
+			match_new->lines_matched = matched_lines;
+
 			//match_new->hits = hits;
 
 			do /*Check if there is already a list for this line ranges */
@@ -200,6 +204,7 @@ void biggest_snippet(scan_data_t *scan)
 		}
 	}
 }
+
 
 /**
  * @brief Handler function to collect all file ids.
@@ -376,6 +381,9 @@ matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size)
 			{
 				if(out_ranges_index >= 0 && (ranges[i].from - tolerance <= out_ranges[out_ranges_index].to))
 				{
+					if (out_ranges[out_ranges_index].to > ranges[i].to)
+						continue;
+
 					out_ranges[out_ranges_index].to = ranges[i].to;
 					//scanlog("join range %d with %d\n", i, out_ranges_index);
 				}
@@ -425,35 +433,7 @@ uint32_t compile_ranges(match_data_t *match)
 		return 0;
 	}
 
-	uint16_t reported_hits = match->matchmap_reg->hits;
 	int hits = 0;
-	/* Revise hits and decrease if needed */
-	for (uint32_t i = 0; i < match->matchmap_reg->ranges_number; i++)
-	{
-		long from =  match->matchmap_reg->range[i].from;
-		long to = match->matchmap_reg->range[i].to;
-		long delta = to - from;
-
-		if (to < 1)
-			break;
-
-		/* Ranges to be ignored (under min_match_lines) should decrease hits counter */
-		if (delta < min_match_lines)
-		{
-			/* Single-line range decreases by 1, otherwise decrease by 2 (from and to) */
-			reported_hits -= ((delta == 0) ? 1 : 2);
-		}
-
-		/* Exit if hits is below two */
-		if (reported_hits < min_match_hits)
-		{
-			scanlog("Discarted ranges brings hits count to %u (MIN MATCH HITS: %d)\n", reported_hits, min_match_hits);
-			return reported_hits;
-		}
-
-		//scanlog("compile_ranges #%d = %ld to %ld - OSS from: %d\n", i, from, to, match->matchmap_reg->range[i].oss_line);
-	}
-	
 	/* Add tolerances and assemble line ranges */
 	ranges_sort(match->matchmap_reg->range, match->matchmap_reg->ranges_number);
 
@@ -722,6 +702,8 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
  */
 match_t ldb_scan_snippets(scan_data_t *scan)
 {
+	if (!ldb_table_exists(oss_wfp.db, oss_wfp.table)) //skip purl if the table is not present
+		return MATCH_NONE;
 
 	scanlog("ldb_scan_snippets\n");
 	if (!scan->hash_count)
@@ -840,7 +822,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 			}
 			if (cat_limit > scan->max_matchmap_size)
 			{
-				if ((hashes_to_process < scan->hash_count / 10 || (float) lines_coverage / scan->hash_count < 0.6) && cat_limit < MAX_MATCHMAP_FILES)
+				if ((hashes_to_process < scan->hash_count / 10 || (float) lines_coverage / scan->hash_count < MIN_LINES_COVERAGE) && cat_limit < MAX_MATCHMAP_FILES)
 				{
 					scan->max_matchmap_size += map[map_indirection[i][j]].size;
 				}
@@ -911,13 +893,16 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 						break;
 					}
 
-					int pos = add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], last_sector_aux, &sector_max, &scan->matchmap_rank_by_sector[sector]);
-					/*if (pos >= 0 && debug_on)
+					add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], last_sector_aux, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+          //uncomment for debugging
+					/*int pos = add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], last_sector_aux, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+					if (pos >= 0 && debug_on)
 					{
 						char key_hex[(MD5_LEN+2)*2 + 1];
 						ldb_bin_to_hex(&md5s[wfp_p], MD5_LEN+2, key_hex);
 						printf("%02x%02x%02x%02x,%s\n", map[i].wfp[0], map[i].wfp[1], map[i].wfp[2], map[i].wfp[3], key_hex);
 					}*/
+
 					
 				}
 			}	

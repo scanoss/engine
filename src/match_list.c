@@ -9,6 +9,7 @@
 #include "component.h"
 
 int list_size = 0;
+static float match_list_tolerance = MATCH_LIST_TOLERANCE;
 
 void component_list_destroy(component_list_t *list)
 {
@@ -215,10 +216,19 @@ bool component_list_add_binary(component_list_t *list, component_data_t *new_com
     return false;
 }
 
+void match_list_tolerance_set(float in)
+{
+    if (in > 99)
+        in = 99;
+    
+    match_list_tolerance = 100.0-in;
+    scanlog("setting match list tolerance to %.1f\n", match_list_tolerance);
+}
+
 bool tolerance_eval(int a, int b)
 {
     int relative_error = (abs(a - b) * 100) / ((a + b) / 2);
-    if (100 - relative_error >= MATCH_LIST_TOLERANCE)
+    if (100 - relative_error >= match_list_tolerance)
         return true;
     else
         return false;
@@ -306,11 +316,11 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         }
         /* in autolimit mode the list doesnt have a fix size, it will accept all the matchest until a 75% of the fist element (the biggest) */
         //TODO: this part of the code should be in the function pointer or I need to re-evaluate the archtecture of this function */
-        if (list->autolimit && !tolerance_eval(list->headp.lh_first->match->hits, list->last_element->match->hits))
+        if (list->autolimit && !tolerance_eval(list->headp.lh_first->match->lines_matched, list->last_element->match->lines_matched))
         {    
             np = list->headp.lh_first;
             /*We have to find and remove the unwanted elements */
-            for (; np->entries.le_next != NULL && tolerance_eval(list->headp.lh_first->match->hits, np->entries.le_next->match->hits); np = np->entries.le_next)
+            for (; np->entries.le_next != NULL && tolerance_eval(list->headp.lh_first->match->lines_matched, np->entries.le_next->match->lines_matched); np = np->entries.le_next)
             {
 
             }

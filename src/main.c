@@ -48,6 +48,7 @@
 #include <dlfcn.h>
 
 struct ldb_table oss_url;
+struct ldb_table oss_pivot;
 struct ldb_table oss_file;
 struct ldb_table oss_path;
 struct ldb_table oss_wfp;
@@ -199,6 +200,10 @@ void initialize_ldb_tables(char *name)
 	oss_notices = ldb_read_cfg(dbtable);
 	oss_notices.hash_calc = hash_function_select(oss_notices.key_ln);
 
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "pivot");
+	oss_pivot = ldb_read_cfg(dbtable);
+	oss_pivot.hash_calc = hash_function_select(oss_pivot.key_ln);
+
 	kb_version_get();
 	osadl_load_file();
 
@@ -322,7 +327,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
-	while ((option = getopt(argc, argv, ":f:s:b:B:c:k:a:F:l:n:M:N:wtvhdqH")) != -1)
+	while ((option = getopt(argc, argv, ":p:T:s:b:B:c:k:a:F:l:n:M:N:wtvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -386,6 +391,9 @@ int main(int argc, char **argv)
 			case 'N':
 				scan_max_components = atol(optarg);
 				break;
+			case 'T':
+				match_list_tolerance_set(atof(optarg));
+				break;
 			case 'w':
 				force_wfp = true;
 				break;
@@ -396,6 +404,11 @@ int main(int argc, char **argv)
 			case 't':
 				initialize_ldb_tables(ldb_db_name);
 				scan_benchmark();
+				exit(EXIT_SUCCESS);
+				break;
+			case 'p':
+				initialize_ldb_tables(ldb_db_name);
+				get_project_files(optarg);
 				exit(EXIT_SUCCESS);
 				break;
 

@@ -38,12 +38,11 @@
 
 #define WFP_LN 4
 /* Log files */
-#define SCANOSS_VERSION "5.4.9"
+#define SCANOSS_VERSION "5.4.10"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
 
-#define API_URL "https://api.osskb.org"
 #define DEFAULT_OSS_DB_NAME "oss"
 
 /* Engine configuration flags */
@@ -123,6 +122,7 @@ extern char * component_hint;
 
 /* DB tables */
 extern struct ldb_table oss_url;
+extern struct ldb_table oss_pivot;
 extern struct ldb_table oss_file;
 extern struct ldb_table oss_path;
 extern struct ldb_table oss_wfp;
@@ -157,5 +157,6 @@ void ldb_get_first_record(struct ldb_table table, uint8_t* key, void *void_ptr);
 int binary_scan(char * bfp);
 
 uint32_t fetch_recordset(struct ldb_table table, uint8_t *key, ldb_record_handler_t handler, void *ptr);
+void get_project_files(char * url_key);
 
 #endif

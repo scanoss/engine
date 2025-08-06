@@ -296,62 +296,61 @@ void free_and_null(void * pr)
 
 bool path_is_third_party(const char *path)
 {
-  if (!path)
-    return true;
-
-  // Array de patrones comunes
-  const char *patterns[] = {
-      "third_party",
-      "3rdparty",
-      "vendor",
-      "external",
-      "dependencies",
-      "ext",
-      "contrib",
-      "externals",
-      "third-party",
-      "node_modules",
-      "components",
-      "deps",
-      "modules",
-      "nuget",
-      "imported",
-      "foreign",
-      "extern",
-      "bundle",
-      "pip_packages",
-      "bower_components",
-      "jspm_packages",
-      "site-packages",
-      "jars",
-      "assemblies",
-      "assets/vendor",
-      "published",
-      "packages.lock",
-      "pod",
-      "Pods",
-      "cargo_home",
-      "gems",
-      "composer/vendor",
-      "_vendor",
-      "go/pkg",
-      "vendors",
-      "extern",
-      "extlib",
-      "local_packages",
-      "managed",
-      "3rd",
-      "thirdparty"};
-
-  // Número de patrones a verificar
-  const int numPatterns = sizeof(patterns) / sizeof(patterns[0]);
-
-  // Verificar cada patrón
-  for (int i = 0; i < numPatterns; i++)
-  {
-    if (strstr(path, patterns[i]) != NULL)
-      return true;
-  }
-
-  return false;
+    const char* patterns[] = {
+        "third_party",
+        "3rdparty",
+		"site-packages",
+        "vendor",
+        "external",
+        "dependencies",
+        "ext",
+        "contrib",
+        "externals",
+        "third-party",
+        "node_modules",
+        "components",
+        "deps",
+        "modules",
+        "nuget",
+        "imported",
+        "foreign",
+        "extern",
+        "bundle",
+        "pip_packages",
+        "bower_components",
+        "jspm_packages",
+        "site-packages",
+        "jars",
+        "assemblies",
+        "assets/vendor",
+        "published",
+        "packages.lock",
+        "pod",
+        "Pods",
+        "cargo_home",
+        "gems",
+        "composer/vendor",
+        "_vendor",
+        "go/pkg",
+        "vendors",
+        "extern",
+        "extlib",
+        "local_packages",
+        "managed",
+        "3rd",
+        "thirdparty",
+		"LibResources"
+    };
+    
+    const int numPatterns = sizeof(patterns) / sizeof(patterns[0]);
+    
+    for (int i = 0; i < numPatterns; i++) 
+	{
+        if (strstr(path, patterns[i]) != NULL) 
+		{
+            return true;
+        }
+    }
+    
+    return false;
 }

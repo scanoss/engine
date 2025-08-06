@@ -13,6 +13,7 @@ typedef struct match_data_t
 	component_list_t component_list; /*Component list object */ 
 	match_t type; /*math type (none, snippet, file) */
     int hits; /*match hits number, more hits equal bigger snippet matching*/
+	int lines_matched; /*number of matched lines*/
 	char * line_ranges; /*input snippet line ranges */
 	char * oss_ranges; /* kb snippet line ranges */
 	char * matched_percent; /* matched percent */
@@ -34,6 +35,4 @@ void output_matches_json(scan_data_t *scan);
 void compile_matches(scan_data_t *scan);
 match_list_t * match_select_m_best(scan_data_t * scan);
 match_list_t * match_select_m_component_best(scan_data_t * scan);
-bool component_from_file(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr);
-
 #endif

@@ -58,7 +58,7 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components)
 	scan_data_t * scan = calloc(1, sizeof(*scan));
 	scan->file_path = strdup(target);
 	scan->file_size = malloc(32);
-	scan->hashes = malloc(MAX_FILE_SIZE);
+	scan->hashes = calloc(MAX_FILE_SIZE,1);
 	scan->lines  = malloc(MAX_FILE_SIZE);
 	scan->match_type = MATCH_NONE;
 

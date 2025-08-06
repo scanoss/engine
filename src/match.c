@@ -324,7 +324,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	if (!*a->release_date)
 		return true;
 		
-	if (!path_is_third_party(a->file) && path_is_third_party(b->file) && !(engine_flags & ENABLE_PATH_HINT))
+	if (!path_is_third_party(a->file) && path_is_third_party(b->file))
 	{
 		scanlog("Component rejected by third party filter\n");
 		return false;
@@ -335,7 +335,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	{	
 		if (purl_source_check(a) > purl_source_check(b))
 		{
-			scanlog("Component prefered by vsource\n");
+			scanlog("Component prefered by source\n");
 			return true;
 		}
 
@@ -436,24 +436,6 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	return true;
 }
 
-bool path_query_handler(struct ldb_table * table, uint8_t * key, uint8_t * subkey, uint8_t * data, uint32_t datalen, int record_number, void * ptr)
-{
-	char **path = ptr;
-	/* Decrypt data */
-	char * decrypted = decrypt_data(data, datalen, *table, key, subkey);
-	if (!decrypted || !*decrypted)
-		return false;
-	
-	*path = decrypted;
-	return true;
-}
-static char * path_query(uint8_t * file_id)
-{
-	char * path = NULL;
-	fetch_recordset(oss_path, file_id, path_query_handler, (void *) &path);
-	return path;
-}
-
 /**
  * @brief Load componentes for a match processing the file recordset list.
  * For each file in the recordset we will query for the oldest url in the url table.
@@ -517,41 +499,14 @@ bool component_from_file(struct ldb_table * table, uint8_t *key, uint8_t *subkey
 bool load_matches(match_data_t *match)
 {
 	scanlog("Load matches\n");
-
-	/* Compile match ranges and fill up matched percent */
-	int hits = 100;
-	int matched_percent = 100;
-
-	/* Get matching line ranges (snippet match) */
-	if (match->type == MATCH_SNIPPET)
-	{
-				scanlog("compile_ranges returns %d hits\n", hits);
-
-	/*	hits = compile_ranges(match);
-
-		if (hits < min_match_hits)
-		{
-			match->type = MATCH_NONE;
-			return false;
-		}
-		
-		float percent = (hits * 100) / match->scan_ower->total_lines;
-		if (hits)
-			matched_percent = floor(percent);
-		if (matched_percent > 99)
-			matched_percent = 99;
-		if (matched_percent < 1)
-			matched_percent = 1;
-
-		asprintf(&match->matched_percent, "%u%%", matched_percent);*/
-	}
-	else if (match->type == MATCH_BINARY)
+	
+	if (match->type == MATCH_BINARY)
 	{
 		asprintf(&match->line_ranges, "n/a");
 		asprintf(&match->oss_ranges, "n/a");
 		asprintf(&match->matched_percent, "%d functions matched", match->hits);
 	}
-	else
+	else if (match->type == MATCH_FILE)
 	{
 		asprintf(&match->line_ranges, "all");
 		asprintf(&match->oss_ranges, "all");
@@ -757,11 +712,13 @@ void match_select_best(scan_data_t *scan)
 				break;
 			}
 
-			if (!best_match_component->identified && match_component->identified)
+			if ((!best_match_component->identified && match_component->identified) ||
+				(strcmp(best_match_component->vendor,best_match_component->component) && !strcmp(match_component->vendor, match_component->component)) ||
+				(path_is_third_party(best_match_component->file) && !path_is_third_party(match_component->file)))
 			{
 				scanlog("Replacing best match for a prefered component\n");
 				scan->matches_list_array[i]->best_match = item->match;
-			}	
+			}
 		}
 	}
 

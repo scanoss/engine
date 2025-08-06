@@ -38,10 +38,10 @@
  */
 void help ()
 {
-	printf ("ScanOSS Engine v%s\n", SCANOSS_VERSION);
-	printf ("\n\
-This program performs an OSS inventory for the given TARGET comparing against the ScanOSS Knowledgebase.\n\
-Results are printed in STDOUT in JSON format\n\
+  printf ("ScanOSS Engine v%s\n", SCANOSS_VERSION);
+  printf ("\n\
+This program performs an OSS inventory scan of the specified TARGET by comparing it against the ScanOSS Knowledgebase.\n\
+Results are displayed in JSON format through STDOUT.\n\
 \n\
 Syntax: scanoss [parameters] [TARGET]\n\
 \n\
@@ -56,22 +56,23 @@ Configuration:\n\
 -c HINT    Provide a component HINT to influence scan results.\n\
 -k KEY     Displays contents of file KEY from MZ sources archive.\n\
 -l LICENSE Displays OSADL metadata for the provided SPDX license ID.\n\
+-p URL_HASH Returns a list with the md5 and path for each project file (pivot table is requeried).\n\
 \n\
 Options:\n\
--t  Tests engine performance.\n\
--v  Display version and exit.\n\
--n  Specify DB name (default: oss).\n\
--h  Display this help and exit.\n\
--d  Save debugging information to disk (/tmp).\n\
--q  Produces no JSON output. Only debugging info via STDERR.\n\
+-t  Run engine performance tests.\n\
+-v  Show version information and exit.\n\
+-n  Set database name (default: oss).\n\
+-h  Display this help information and exit.\n\
+-d  Store debugging information to disk (/tmp).\n\
+-q  Suppress JSON output (show only debugging info via STDERR).\n\
 \n\
-Enviroment variables:\n\
-SCANOSS_MATCHMAP_MAX: define the snippet scanning match map size, %d by default.\n\
-SCANOSS_API_URL: defines the API url, %s by default.\n\
+Environment variables:\n\
+SCANOSS_MATCHMAP_MAX: Set the snippet scanning match map size (default: %d).\n\
+SCANOSS_FILE_CONTENTS_URL: Define the API URL endpoint for sources. Source url wont be reported if it's not defined.\n\
 \n\
 Engine scanning flags:\n\
-The scanning engine can be configured by passing configuration flags with the -F parameter.\n\
-Alternatively, these value can be written in %s\n\
+Configure the scanning engine using flags with the -F parameter.\n\
+These settings can also be specified in %s\n\
 +-------+-------------------------------------------------------+\n\
 | Flag  | Setting                                               |\n\
 +-------+-------------------------------------------------------+\n\
@@ -82,7 +83,7 @@ Alternatively, these value can be written in %s\n\
 |   16  | Disable copyrights (default: enabled)                 |\n\
 |   32  | Disable vulnerabilities (default: enabled)            |\n\
 |   64  | Disable quality (default: enabled)                    |\n\
-|  128  | Disable cryptography (defalt: enabled)                |\n\
+|  128  | Disable cryptography (default: enabled)               |\n\
 |  256  | Disable best match only (default: enabled)            |\n\
 |  512  | Hide identified files (default: disabled)             |\n\
 | 1024  | Enable download_url (default: disabled)               |\n\
@@ -91,8 +92,7 @@ Alternatively, these value can be written in %s\n\
 | 8192  | Disable health layer (default: enabled)               |\n\
 | 16384 | Enable high accuracy, slower scan (default: disabled) |\n\
 +-------+-------------------------------------------------------+\n\
-Example: scanoss -F 12 DIRECTORY (scans DIRECTORY disabling license and dependency data)\n\
+Example: scanoss -F 12 DIRECTORY (scan DIRECTORY without license and dependency data)\n\
 \n\
-Copyright (C) 2018-2022 SCANOSS.COM\n", DEFAULT_MATCHMAP_FILES, API_URL, ENGINE_FLAGS_FILE);
-
+Copyright (C) 2018-2022 SCANOSS.COM\n", DEFAULT_MATCHMAP_FILES, ENGINE_FLAGS_FILE);
 }

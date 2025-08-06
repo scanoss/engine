@@ -260,3 +260,32 @@ char *get_file_extension(uint8_t *md5)
 	fetch_recordset(oss_file, md5, get_first_file, out);
 	return out;
 }
+
+static bool path_query_handler(struct ldb_table * table, uint8_t * key, uint8_t * subkey, uint8_t * data, uint32_t datalen, int record_number, void * ptr)
+{
+	char **path = ptr;
+	/* Decrypt data */
+	char * decrypted = decrypt_data(data, datalen, *table, key, subkey);
+	if (!decrypted || !*decrypted)
+		return false;
+	
+	*path = decrypted;
+	return true;
+}
+/**
+ * @brief Get the file path from the path table.
+ * @param md5 input path md5
+ * @return string with the path
+ */
+char * path_query(uint8_t * file_id)
+{
+	char * path = NULL;
+	if (!path_table_present)
+	{
+		scanlog("path_query: path table must be present to use this query\n");
+		return NULL;
+	}
+
+	fetch_recordset(oss_path, file_id, path_query_handler, (void *) &path);
+	return path;
+}

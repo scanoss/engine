@@ -326,18 +326,19 @@ bool print_json_match(struct match_data_t * match)
 	printf(",\"source_hash\": \"%s\"", match->source_md5);
 
 	/* Output file_url (same as url when match type = url) */
-	char * file_url_enabled = getenv("SCANOSS_FILE_CONTENTS");
-	if (!file_url_enabled || strcmp(file_url_enabled, "false"))
+	char * file_contents_url = getenv("SCANOSS_FILE_CONTENTS_URL");
+	if (file_contents_url && *file_contents_url && strcmp(file_contents_url, "false"))
 	{
 		if (!match->component_list.headp.lh_first->component->url_match)
 		{
-			char *custom_url = getenv("SCANOSS_API_URL");
-			printf(",\"file_url\": \"%s/file_contents/%s\"", custom_url ? custom_url : API_URL, file_id);
+			printf(",\"file_url\": \"%s/%s\"", file_contents_url, file_id);
 		}
 		else
 			printf(",\"file_url\": \"%s\"", match->component_list.headp.lh_first->component->url);
 	}
-	
+	else //return an empty string
+		printf(",\"file_url\": \" \"");
+
 	if (!(engine_flags & DISABLE_QUALITY))
 	{
 		print_quality(match);

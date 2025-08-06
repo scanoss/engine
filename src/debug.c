@@ -210,7 +210,7 @@ void scan_benchmark()
 			scan->hashes[i] = rand() % 256 + (rand() % 256) * 256 + (rand() % 256) * 256 * 256 + (rand() % 256) * 256 * 256 * 256;
 		}
 		scan->hash_count = total_hashes;
-
+		scan->total_lines = 10;
 		ldb_scan_snippets(scan);
 		scan_data_free(scan);
 	}
