@@ -36,5 +36,4 @@ void compile_matches(scan_data_t *scan);
 match_list_t * match_select_m_best(scan_data_t * scan);
 match_list_t * match_select_m_component_best(scan_data_t * scan);
 bool component_from_file(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr);
-
 #endif

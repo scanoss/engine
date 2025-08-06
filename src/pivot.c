@@ -1,6 +1,8 @@
 #include "scanoss.h"
 #include <stdio.h>
 #include "decrypt.h"
+#include "debug.h"
+#include "file.h"
 struct out_buffer_s {
 	char * buffer;
 	int pos;
@@ -12,16 +14,6 @@ struct get_path_s {
 	int paths_index;
 };
 
-bool get_path(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
-{
-	char * path = decrypt_data(data, datalen, *table, key, subkey);
-	if (!path) {
-		return false;
-	}
-	char ** out = (char**) ptr;
-	*out = path;
-	return true;
-}
 
 bool get_file_path_hash(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
@@ -32,11 +24,21 @@ bool get_file_path_hash(struct ldb_table * table, uint8_t *key, uint8_t *subkey,
 	if (memcmp(get_path_url->url_key, data, table->key_ln))
 		return false;
 
-	uint8_t * path_key = &data[table->key_ln];
-	char * path = NULL;
-	fetch_recordset(oss_path, path_key, get_path, (void *)&path);
+	char * decrypted = NULL;
+	
+	if (path_table_present)
+	{
+		decrypted = path_query(&data[table->key_ln]);
+	}
+	else
+	{
+		/* Decrypt data */
+		decrypted = decrypt_data(data, datalen, *table, key, subkey);
+	}
+	
+	
 	get_path_url->paths = realloc(get_path_url->paths, (get_path_url->paths_index + 1) * sizeof(char*));
-	get_path_url->paths[get_path_url->paths_index] = path;
+	get_path_url->paths[get_path_url->paths_index] = decrypted;
 	get_path_url->paths_index++;
 	return true;
 }
@@ -46,7 +48,7 @@ bool get_project_hashes(struct ldb_table * table, uint8_t *key, uint8_t *subkey,
 {
 	uint8_t * file_key = data;
 	struct get_path_s get_path = {.url_key = key, .paths = NULL, .paths_index = 0};
-	char key_hex[17];
+	char key_hex[oss_url.key_ln*2+1];
 	ldb_bin_to_hex(file_key,table->key_ln,key_hex);
 
 	fetch_recordset(oss_file, file_key, get_file_path_hash, (void *)&get_path);
@@ -66,8 +68,14 @@ bool get_project_hashes(struct ldb_table * table, uint8_t *key, uint8_t *subkey,
 
 void get_project_files(char * url_key_hex)
 {
-	uint8_t url_key[8];
-	ldb_hex_to_bin(url_key_hex, 16, url_key);
+	uint8_t url_key[oss_url.key_ln];
+	scanlog("Reconstructing project structure for url %s\n",url_key_hex);
+	if (!ldb_table_exists(oss_pivot.db, oss_pivot.table))
+	{
+		printf("the pivot table must be present to use this functionality\n");
+		exit(EXIT_FAILURE);
+	}
+	ldb_hex_to_bin(url_key_hex, oss_url.key_ln*2, url_key);
 	char * out = calloc(1,1024*1024*500);
 	fetch_recordset(oss_pivot, url_key, get_project_hashes, (void *)out);
 	printf("%s", out);

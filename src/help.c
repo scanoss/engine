@@ -56,6 +56,7 @@ Configuration:\n\
 -c HINT    Provide a component HINT to influence scan results.\n\
 -k KEY     Displays contents of file KEY from MZ sources archive.\n\
 -l LICENSE Displays OSADL metadata for the provided SPDX license ID.\n\
+-p URL_HASH Returns a list with the md5 and path for each project file (pivot table is requeried).\n\
 \n\
 Options:\n\
 -t  Run engine performance tests.\n\
