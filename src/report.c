@@ -339,7 +339,6 @@ bool print_json_match(struct match_data_t * match)
 	else //return an empty string
 		printf(",\"file_url\": \" \"");
 
-	
 	if (!(engine_flags & DISABLE_QUALITY))
 	{
 		print_quality(match);

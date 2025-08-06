@@ -158,6 +158,7 @@ void biggest_snippet(scan_data_t *scan)
 				matched_percent = 1;
 			asprintf(&match_new->matched_percent, "%u%%", matched_percent);
 			match_new->lines_matched = matched_lines;
+
 			//match_new->hits = hits;
 
 			do /*Check if there is already a list for this line ranges */
@@ -436,7 +437,7 @@ uint32_t compile_ranges(match_data_t *match)
 	/* Add tolerances and assemble line ranges */
 	ranges_sort(match->matchmap_reg->range, match->matchmap_reg->ranges_number);
 
-	if (debug_on)
+	/*if (debug_on)
 	{
 		scanlog("Accepted ranges (min lines range = %d):\n", min_match_lines);
 		for (uint32_t i = 0; i < match->matchmap_reg->ranges_number; i++)
@@ -445,7 +446,7 @@ uint32_t compile_ranges(match_data_t *match)
 				scanlog("	%d = %ld to %ld - OSS from: %d\n", i, match->matchmap_reg->range[i].from,match->matchmap_reg->range[i].to, 
 																match->matchmap_reg->range[i].oss_line);
 		}
-	}
+	}*/
 
 	matchmap_range *ranges = ranges_join_overlapping(match->matchmap_reg->range,  match->matchmap_reg->ranges_number);
 	
@@ -460,7 +461,7 @@ uint32_t compile_ranges(match_data_t *match)
 		}
 	}
 		
-	if (debug_on)
+	/*if (debug_on)
 	{
 		scanlog("Final ranges:\n");
 		for (uint32_t i = 0; i < MATCHMAP_RANGES; i++)
@@ -468,7 +469,7 @@ uint32_t compile_ranges(match_data_t *match)
 		if ( ranges[i].from && ranges[i].to)
 				scanlog("	%d = %ld to %ld - OSS from: %d\n", i, ranges[i].from, ranges[i].to, ranges[i].oss_line);
 		}
-	}
+	}*/
 	hits = ranges_assemble(ranges, line_ranges, oss_ranges);
 	match->line_ranges = strdup(line_ranges);
 	match->oss_ranges = strdup(oss_ranges);
@@ -893,6 +894,15 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 					}
 
 					add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], last_sector_aux, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+          //uncomment for debugging
+					/*int pos = add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], last_sector_aux, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+					if (pos >= 0 && debug_on)
+					{
+						char key_hex[(MD5_LEN+2)*2 + 1];
+						ldb_bin_to_hex(&md5s[wfp_p], MD5_LEN+2, key_hex);
+						printf("%02x%02x%02x%02x,%s\n", map[i].wfp[0], map[i].wfp[1], map[i].wfp[2], map[i].wfp[3], key_hex);
+					}*/
+
 					
 				}
 			}	

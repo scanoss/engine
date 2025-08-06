@@ -79,6 +79,7 @@
 #define SCAN_MAX_COMPONENTS_DEFAULT 3
 
 #define MATCH_LIST_TOLERANCE 99.9
+
 typedef struct match_data_t match_data_t; /* Forward declaration */
 
 typedef enum

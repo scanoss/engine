@@ -436,6 +436,24 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	return true;
 }
 
+bool path_query_handler(struct ldb_table * table, uint8_t * key, uint8_t * subkey, uint8_t * data, uint32_t datalen, int record_number, void * ptr)
+{
+	char **path = ptr;
+	/* Decrypt data */
+	char * decrypted = decrypt_data(data, datalen, *table, key, subkey);
+	if (!decrypted || !*decrypted)
+		return false;
+	
+	*path = decrypted;
+	return true;
+}
+static char * path_query(uint8_t * file_id)
+{
+	char * path = NULL;
+	fetch_recordset(oss_path, file_id, path_query_handler, (void *) &path);
+	return path;
+}
+
 /**
  * @brief Load componentes for a match processing the file recordset list.
  * For each file in the recordset we will query for the oldest url in the url table.
@@ -499,8 +517,6 @@ bool component_from_file(struct ldb_table * table, uint8_t *key, uint8_t *subkey
 bool load_matches(match_data_t *match)
 {
 	scanlog("Load matches\n");
-
-
 	
 	if (match->type == MATCH_BINARY)
 	{
