@@ -29,6 +29,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include "limits.h"
+#include <ldb.h>
 
 #define MAX_FILE_PATH 1024
 #define FETCH_MAX_FILES 20000
@@ -38,7 +39,7 @@
 
 #define WFP_LN 4
 /* Log files */
-#define SCANOSS_VERSION "5.4.10"
+#define SCANOSS_VERSION "5.5.0-beta"
 #define SCAN_LOG "/tmp/scanoss_scan.log"
 #define MAP_DUMP "/tmp/scanoss_map.dump"
 #define SLOW_QUERY_LOG "/tmp/scanoss_slow_query.log"
@@ -117,9 +118,6 @@ extern int map_rec_len;
 
 /*component hint hold the last component matched/guessed */
 extern char * component_hint;
-
-#include "ldb.h"
-
 /* DB tables */
 extern struct ldb_table oss_url;
 extern struct ldb_table oss_pivot;

@@ -320,6 +320,7 @@ void purl_release_date(char *purl, char *date)
  * @brief Handler function for getting the oldest URL.
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
 **/
+int url_rank_max = -1; //Max url rank accepted
 bool get_oldest_url(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	char * url = decrypt_data(data, datalen, *table, key, subkey);
@@ -334,7 +335,7 @@ bool get_oldest_url(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uin
 	{
 		component_data_t * comp = calloc(1, sizeof(*comp));
 		bool result = fill_component(comp, key, NULL, (uint8_t *)url);
-		if (!result)
+		if (!result || (url_rank_max > 0 && comp->rank > url_rank_max))
 		{
 			free(url);
 			component_data_free(comp);
@@ -360,7 +361,12 @@ bool get_oldest_url(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uin
 		/* If it is older, then we copy to oldest */
 		else if(comp->identified == comp_oldest->identified)
 		{
-			if ((!*comp_oldest->release_date && *comp->release_date) || 
+			if (comp->rank > 0) //lower rank component will be prefered
+			{
+				if (comp_oldest->rank < 1 || comp->rank < comp_oldest->rank) //lowest rank is 1.
+					replace = true;
+			}
+			else if ((!*comp_oldest->release_date && *comp->release_date) || 
 				(*comp->release_date && (strcmp(comp->release_date, comp_oldest->release_date) < 0)))
 				replace = true;
 			else if (*comp->release_date && strcmp(comp->release_date, comp_oldest->release_date) == 0)

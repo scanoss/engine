@@ -4,6 +4,8 @@
 #include "scanoss.h"
 #include "match_list.h"
 
+extern int url_rank_max;
+
 bool handle_url_record(struct ldb_table * table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr);
 
 /* Calculates a main project URL from the PURL */

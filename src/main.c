@@ -42,7 +42,7 @@
 #include "scan.h"
 #include "scanoss.h"
 #include "util.h"
-
+#include "url.h"
 #include <decrypt.h>
 #include "hpsm.h"
 #include <dlfcn.h>
@@ -327,7 +327,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
-	while ((option = getopt(argc, argv, ":p:T:s:b:B:c:k:a:F:l:n:M:N:wtvhedqH")) != -1)
+	while ((option = getopt(argc, argv, ":r:p:T:s:b:B:c:k:a:F:l:n:M:N:wtvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -434,7 +434,9 @@ int main(int argc, char **argv)
 				debug_on = true;
 				scanlog(""); // Log time stamp
 				break;
-
+			case 'r':
+				url_rank_max = atoi(optarg);
+				break;
 			case ':':
 				printf("Missing value for parameter\n");
 				invalid_argument = true;

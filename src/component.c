@@ -230,6 +230,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	char license[MAX_FIELD_LN];
 	char url[MAX_FILE_PATH];
 	char purl[MAX_FILE_PATH];
+	char rank[MAX_FIELD_LN];
 	// component->path_ln = 0;
 	if (!component)
 		return false;
@@ -251,6 +252,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	extract_csv(license, (char *)url_record, 5, sizeof(license));
 	extract_csv(purl, (char *)url_record, 6, sizeof(purl));
 	extract_csv(url, (char *)url_record, 7, sizeof(url));
+	extract_csv(rank, (char *)url_record, 13, sizeof(url));
 	/* Fill url stats if these are available*/
 	for (int i = 0; i < 5; i++) {
 		char stat[16] = "\0";
@@ -289,6 +291,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 		oss_purl.hash_calc( (unsigned char *) component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
 	}
 	component->age = -1;
+	component->rank = atoi(rank);
 	return true;
 }
 

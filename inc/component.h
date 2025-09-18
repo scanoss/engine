@@ -46,6 +46,7 @@ typedef struct component_data_t
 	int path_rank;
 	int url_stats[5];
 	int health_stats[3];
+	int rank;
 } component_data_t;
 
 component_data_t * component_init(void);

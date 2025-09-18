@@ -319,6 +319,22 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		else if (a->path_rank < PATH_LEVEL_COMP_REF / 3 + 1)
 			return false;
 	}
+	
+	//lower rank selection logic
+	if (b->rank > 0)
+	{
+		if (a->rank < 1 || b->rank < a->rank)
+		{
+			scanlog("%s wins %s by rank %d/%d\n", b->purls[0],  a->purls[0], b->rank, a->rank);
+			return true;
+		}
+		else if (b->rank > a->rank)
+		{
+			scanlog("%s rejected by rank %d\n", b->purls[0], b->rank);
+			return false;
+		}
+	}
+
 	if (!*b->release_date)
 		return false;
 	if (!*a->release_date)
@@ -419,7 +435,7 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	list_update_t r = component_list_update(component_list, new_comp, component_update);
 	if (r == LIST_ITEM_NOT_FOUND)
 	{
-		scanlog("--- new comp %s---\n", new_comp->component);
+		scanlog("--- new comp %s with rank %d---\n", new_comp->component, new_comp->rank);
 		if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
 		{
 			scanlog("component rejected: %s - %s\n", new_comp->purls[0], new_comp->release_date);
