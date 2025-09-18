@@ -315,6 +315,22 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		else if (a->path_rank < PATH_LEVEL_COMP_REF / 3 + 1)
 			return false;
 	}
+
+	//lower rank selection logic
+	if (b->rank < COMPONENT_DEFAULT_RANK)
+	{
+		if (b->rank < a->rank)
+		{
+			scanlog("%s wins %s by rank %d/%d\n", b->purls[0],  a->purls[0], b->rank, a->rank);
+			return true;
+		}
+		else if (b->rank > a->rank)
+		{
+			scanlog("%s rejected by rank %d\n", b->purls[0], b->rank);
+			return false;
+		}
+	}
+
 	if (!*b->release_date)
 		return false;
 	if (!*a->release_date)

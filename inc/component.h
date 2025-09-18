@@ -2,6 +2,9 @@
 #define __COMPONENT_H
 
 #include "scanoss.h"
+
+#define COMPONENT_DEFAULT_RANK 999 //default rank for components without rank information
+extern int component_rank_max;
 /**
  * @brief Component object definition.
  * 
@@ -43,9 +46,10 @@ typedef struct component_data_t
 	char * health_text; /* used in json output generation */
 	int hits; /*used in binary analysis*/
 	char * file_path_ref;
-	int path_rank;
-	int url_stats[5];
-	int health_stats[3];
+	int path_rank; /* Path ranking index*/
+	int url_stats[5]; /* url stats: quantity of file */
+	int health_stats[3]; /* health stats: forks, watchers, contributors */
+	int rank; /* purl ranking - optional*/
 } component_data_t;
 
 component_data_t * component_init(void);
