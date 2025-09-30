@@ -365,10 +365,11 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 
 			if (comp->rank < comp_oldest->rank) //lowest rank is 1.
 				replace = true;
-			
-			if ((!*comp_oldest->release_date && *comp->release_date) || 
+			else if ((!*comp_oldest->release_date && *comp->release_date) || 
 				(*comp->release_date && (strcmp(comp->release_date, comp_oldest->release_date) < 0)))
+			{
 				replace = true;
+			}
 			else if (*comp->release_date && strcmp(comp->release_date, comp_oldest->release_date) == 0)
 			{
 				char purl_new[MAX_ARGLN];

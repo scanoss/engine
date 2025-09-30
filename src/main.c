@@ -262,7 +262,7 @@ uint64_t read_flags()
 }
 
 
-int component_rank_max = COMPONENT_DEFAULT_RANK; /*Used defined max component rank accepted*/
+int component_rank_max = COMPONENT_DEFAULT_RANK + 1; /*Used defined max component rank accepted*/
 /**
  * @brief //TODO
  * @param argc //TODO

@@ -450,7 +450,10 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	
 	/*Return we high accuracy it is not enabled*/
 	if (iteration > iteration_max)
+	{
+		scanlog("Max file iterations reached: %d\n", iteration_max);
 		return true;
+	}
 
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
