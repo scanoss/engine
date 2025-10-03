@@ -30,69 +30,11 @@
 
 #include <stdio.h>
 #include <sys/time.h>
-#include "scanoss.h"
 #include "limits.h"
 #include "debug.h"
-#include "scan.h"
 
-bool debug_on; //= false; //set debug mode from main.
-bool quiet;
 
 double progress_timer = 0;
-long microseconds_start;
-
-/**
- * @brief //Calculate the time of execution
- * @return //time in ms  
- */
-long microseconds_now()
-{
-	struct timeval now; gettimeofday(&now, NULL);
-	return (now.tv_sec*(int)1e6+now.tv_usec);
-}
-
-/**
- * @brief Print the logs in stderr
- * @param fmt string to be printed  
- * @param ... //TODO
- */
-void scanlog(const char *fmt, ...)
-{
-	if (!debug_on) return;
-
-    va_list args;
-    va_start(args, fmt);
-
-	if (quiet)
-	{
-		if (*fmt)
-		{
-			fprintf(stderr, "%06ld ", microseconds_now() - microseconds_start);
-			vfprintf(stderr, fmt, args);
-		}
-		return;
-	}
-
-	FILE *log = fopen(SCAN_LOG, "a");
-	if (!log)
-	{
-		fprintf(stderr, "Warning: Cannot access the log file\n");
-		return;
-	}
-	/* Add entry to log */
-	if (*fmt) vfprintf(log, fmt, args);
-
-	/* Log time stamp if fmt is empty */
-	else
-	{
-		time_t now;
-		time(&now);
-		fprintf(log, "\n>>>>>> %s", ctime(&now));
-	}
-
-	fclose(log);
-	va_end(args);
-}
 
 /**
  * @brief Calculate  the progress % of the operation 
