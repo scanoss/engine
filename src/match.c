@@ -316,7 +316,18 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			return false;
 	}
 
-	//lower rank selection logic
+	if (!*b->release_date)
+		return false;
+	if (!*a->release_date)
+		return true;
+		
+	if (!path_is_third_party(a->file) && path_is_third_party(b->file))
+	{
+		scanlog("Component rejected by third party filter\n");
+		return false;
+	}
+	
+		//lower rank selection logic
 	if (b->rank < COMPONENT_DEFAULT_RANK)
 	{
 		if (b->rank < a->rank)
@@ -329,17 +340,6 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			scanlog("%s rejected by rank %d\n", b->purls[0], b->rank);
 			return false;
 		}
-	}
-
-	if (!*b->release_date)
-		return false;
-	if (!*a->release_date)
-		return true;
-		
-	if (!path_is_third_party(a->file) && path_is_third_party(b->file))
-	{
-		scanlog("Component rejected by third party filter\n");
-		return false;
 	}
 	
 	/*if the relese date is the same untie with the component age (purl)*/
@@ -675,11 +675,11 @@ void match_select_best(scan_data_t *scan)
 			if (path_is_third_party(match_component->file))
 				continue;
 
-			scanlog("%s -%s - %d VS %s - %s - %d\n",
+			scanlog("%s - %s - %d - %d VS %s - %s - %d - %d\n",
 					best_match_component->purls[0],
 					best_match_component->release_date,
-					scan->matches_list_array[i]->best_match->hits,
-					match_component->purls[0], match_component->release_date, item->match->hits);
+					scan->matches_list_array[i]->best_match->hits,best_match_component->rank,
+					match_component->purls[0], match_component->release_date, item->match->hits, match_component->rank);
 
 			//If the best match is not good or is not identified be prefer the candidate.
 			if ((!best_match_component->identified && match_component->identified) ||

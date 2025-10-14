@@ -252,7 +252,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	extract_csv(license, (char *)url_record, 5, sizeof(license));
 	extract_csv(purl, (char *)url_record, 6, sizeof(purl));
 	extract_csv(url, (char *)url_record, 7, sizeof(url));
-	extract_csv(rank, (char *)url_record, 13, sizeof(url)); //extracts the rank field if available
+	extract_csv(rank, (char *)url_record, 13, sizeof(rank)); //extracts the rank field if available
 	/* Fill url stats if these are available*/
 	for (int i = 0; i < 5; i++) {
 		char stat[16] = "\0";
