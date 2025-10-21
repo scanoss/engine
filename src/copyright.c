@@ -97,7 +97,6 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 
 	clean_copyright(copyright, skip_first_comma((char *) CSV));
 	free(CSV);
-	scanlog("Found copytight: %s\n",copyright);
 	/* Calculate CRC to avoid duplicates */
 	uint32_t CRC = string_crc32c(source) + string_crc32c(copyright);
 	bool dup = add_CRC(comp->crclist, CRC);
@@ -109,12 +108,13 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 
 	if (!dup && (*copyright) && (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0]))))
 	{
-		if (iteration) len += sprintf(result+len,",");
+		if (comp->copyright_text) 
+			len += sprintf(result+len,",");
 		len += sprintf(result+len,"{\"name\": \"%s\",", copyright);
 		len += sprintf(result+len,"\"source\": \"%s\"}", copyright_sources[atoi(source)]);
 	}
-
-	str_cat_realloc(&comp->copyright_text, result);
+	if (*result)
+		str_cat_realloc(&comp->copyright_text, result);
 
 	free(source);
 	free(copyright);
