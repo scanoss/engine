@@ -64,7 +64,7 @@ typedef struct wrapper_scan_result {
 
 wrapper_scan_result_t* snippets_wrapper_scan(wrapper_scan_input_t *input);
 void snippets_wrapper_free_result(wrapper_scan_result_t *result);
-void snippets_wrapper_init(const char *oss_db_name, bool enable_debug);
+bool snippets_wrapper_init(const char *oss_db_name, bool enable_debug);
 void snippets_wrapper_cleanup();
 
 #endif

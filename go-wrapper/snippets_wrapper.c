@@ -48,7 +48,7 @@ int range_tolerance = 5;
 uint64_t engine_flags = 0;
 char *extension = NULL;
 
-void snippets_wrapper_init(const char *oss_db_name, bool enable_debug) {
+bool snippets_wrapper_init(const char *oss_db_name, bool enable_debug) {
     debug_on = enable_debug;
     quiet = enable_debug;  // Use quiet mode for stderr output
 
@@ -73,9 +73,11 @@ void snippets_wrapper_init(const char *oss_db_name, bool enable_debug) {
     if (oss_wfp.keys == 0) {
         fprintf(stderr, "Warning: LDB table 'wfp' not initialized properly\n");
         fprintf(stderr, "Make sure the LDB database exists at: %s\n", dbtable);
+        return false;
     }
 
     scanlog("snippets_wrapper_init END\n");
+    return true;
 }
 
 void snippets_wrapper_cleanup() {
