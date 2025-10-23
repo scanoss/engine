@@ -42,7 +42,7 @@
 #include "scan.h"
 #include "scanoss.h"
 #include "util.h"
-
+#include "component.h"
 #include <decrypt.h>
 #include "hpsm.h"
 #include <dlfcn.h>
@@ -261,6 +261,8 @@ uint64_t read_flags()
 	return 0;
 }
 
+
+int component_rank_max = COMPONENT_DEFAULT_RANK + 1; /*Used defined max component rank accepted*/
 /**
  * @brief //TODO
  * @param argc //TODO
@@ -291,7 +293,7 @@ int main(int argc, char **argv)
 	int option;
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
-	while ((option = getopt(argc, argv, ":T:s:b:B:c:k:a:F:l:n:M:N:wtvhedqH")) != -1)
+	while ((option = getopt(argc, argv, ":r:T:s:b:B:c:k:a:F:l:n:M:N:wtLvhedqH")) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -317,6 +319,9 @@ int main(int argc, char **argv)
 
 			case 'c':
 				component_hint = strdup(optarg);
+				break;
+			case 'r':
+				component_rank_max = atoi(optarg);
 				break;
 
 			case 'k':
@@ -345,7 +350,9 @@ int main(int argc, char **argv)
 				print_osadl_license_data(optarg);
 				exit(EXIT_SUCCESS);
 				break;
-
+			case 'L':
+				full_license_report = true;
+				break;
 			case 'n':
 				ldb_db_name = strdup(optarg);
 				break;

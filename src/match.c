@@ -315,6 +315,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		else if (a->path_rank < PATH_LEVEL_COMP_REF / 3 + 1)
 			return false;
 	}
+
 	if (!*b->release_date)
 		return false;
 	if (!*a->release_date)
@@ -324,6 +325,21 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	{
 		scanlog("Component rejected by third party filter\n");
 		return false;
+	}
+	
+		//lower rank selection logic
+	if (b->rank < COMPONENT_DEFAULT_RANK)
+	{
+		if (b->rank < a->rank)
+		{
+			scanlog("%s wins %s by rank %d/%d\n", b->purls[0],  a->purls[0], b->rank, a->rank);
+			return true;
+		}
+		else if (b->rank > a->rank)
+		{
+			scanlog("%s rejected by rank %d\n", b->purls[0], b->rank);
+			return false;
+		}
 	}
 	
 	/*if the relese date is the same untie with the component age (purl)*/
@@ -403,13 +419,12 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
 	{
 		component_data_free(new_comp); /* Free if the componet was rejected */
+		return false;
 	}
-	else
-	{
-		char hex_url[MD5_LEN * 2 + 1];
-		ldb_bin_to_hex(new_comp->url_md5, MD5_LEN, hex_url);
-		scanlog("component accepted: %s@%s - pathrank: %d - %s - %s\n", new_comp->purls[0], new_comp->version, new_comp->path_rank, new_comp->file, hex_url);
-	}
+
+	char hex_url[MD5_LEN * 2 + 1];
+	ldb_bin_to_hex(new_comp->url_md5, MD5_LEN, hex_url);
+	scanlog("component accepted: %s@%s - pathrank: %d - %s - %s\n", new_comp->purls[0], new_comp->version, new_comp->path_rank, new_comp->file, hex_url);
 
 	return true;
 }
@@ -425,15 +440,20 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
  * @return true
  * @return false
  */
-
+/*Iterations must be doubled if high accuracy is enabled*/
+int iteration_max = FETCH_MAX_FILES;
 bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	/*Iterations must be doubled if high accuracy is enabled*/
-	int iteration_max = ((engine_flags & ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 4 : FETCH_MAX_FILES);
+	if (iteration == 0)
+		iteration_max = ((engine_flags & ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 4 : FETCH_MAX_FILES);
 	
 	/*Return we high accuracy it is not enabled*/
-	if (iteration > iteration_max * 2 && !(engine_flags & ENABLE_HIGH_ACCURACY))
+	if (iteration > iteration_max)
+	{
+		scanlog("Max file iterations reached: %d\n", iteration_max);
 		return true;
+	}
 
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
@@ -456,7 +476,8 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	strncpy(path, decrypted, MAX_FILE_PATH);
 	//check the ignore list only if the match type is MATCH_SNIPPET. TODO: remove this after remine everything.
 	if (!(component_list->match_ref->type == MATCH_SNIPPET && ignored_extension(path)))
-		add_component_from_urlid(component_list, url_id, path);
+		if (!add_component_from_urlid(component_list, url_id, path))
+			iteration_max++; //allow one more iteration if the component was rejected.
 
 	free(decrypted);
 	return false;
@@ -654,11 +675,11 @@ void match_select_best(scan_data_t *scan)
 			if (path_is_third_party(match_component->file))
 				continue;
 
-			scanlog("%s -%s - %d VS %s - %s - %d\n",
+			scanlog("%s - %s - %d - %d VS %s - %s - %d - %d\n",
 					best_match_component->purls[0],
 					best_match_component->release_date,
-					scan->matches_list_array[i]->best_match->hits,
-					match_component->purls[0], match_component->release_date, item->match->hits);
+					scan->matches_list_array[i]->best_match->hits,best_match_component->rank,
+					match_component->purls[0], match_component->release_date, item->match->hits, match_component->rank);
 
 			//If the best match is not good or is not identified be prefer the candidate.
 			if ((!best_match_component->identified && match_component->identified) ||

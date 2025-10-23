@@ -10,3 +10,5 @@ test
 *%
 doc
 docs/build
+*.a
+_obj

@@ -71,7 +71,7 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	component_data_t * new_comp = calloc(1, sizeof(*new_comp));
 	bool result = fill_component(new_comp, NULL, NULL, (uint8_t*) data);
 	scanlog("URL MATCH: %s\n", data);
-	if (result)
+	if (result && new_comp->rank <= component_rank_max)
 	{
 		/* Save match component id */
 		memcpy(new_comp->url_md5, key, LDB_KEY_LN);
@@ -336,7 +336,7 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 	{
 		component_data_t * comp = calloc(1, sizeof(*comp));
 		bool result = fill_component(comp, key, NULL, (uint8_t *)url);
-		if (!result)
+		if (!result || comp->rank > component_rank_max)
 		{
 			free(url);
 			component_data_free(comp);
@@ -362,9 +362,14 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		/* If it is older, then we copy to oldest */
 		else if(comp->identified == comp_oldest->identified)
 		{
-			if ((!*comp_oldest->release_date && *comp->release_date) || 
-				(*comp->release_date && (strcmp(comp->release_date, comp_oldest->release_date) < 0)))
+
+			if (comp->rank < comp_oldest->rank) //lowest rank is 1.
 				replace = true;
+			else if ((!*comp_oldest->release_date && *comp->release_date) || 
+				(*comp->release_date && (strcmp(comp->release_date, comp_oldest->release_date) < 0)))
+			{
+				replace = true;
+			}
 			else if (*comp->release_date && strcmp(comp->release_date, comp_oldest->release_date) == 0)
 			{
 				char purl_new[MAX_ARGLN];

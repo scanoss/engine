@@ -332,6 +332,7 @@ bool path_is_third_party(const char* path)
 {
     const char* patterns[] = {
         "third_party",
+		"ThirdParty",
         "3rdparty",
 		"site-packages",
         "vendor",

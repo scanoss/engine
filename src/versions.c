@@ -75,28 +75,6 @@ void normalise_version(char *version, char *component)
 		strcpy(version, aux);
 }
 
-/**
- * @brief Normalize versions for a match
- * @param match match to be processed
- */
-void clean_versions(component_data_t *component)
-{
-	normalise_version(component->version, component->component);
-	normalise_version(component->latest_version, component->component);
-}
-
-char * version_cleanup(char *  version, char * component)
-{
-	if (!version)
-		return NULL;
-		
-	char cleaned[MAX_FIELD_LN] = "\0";
-	strcpy(cleaned, version);
-	normalise_version(cleaned, component);
-
-	return strdup(cleaned);
-}
-
 static char * purl_indirection_reference[FETCH_MAX_FILES];
 static int purl_indirection_index = 0;
 static release_version * purl_version_list[FETCH_MAX_FILES];
