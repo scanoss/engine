@@ -58,6 +58,7 @@ Configuration:\n\
 -c HINT    Add a component HINT to guide scan results.\n\
 -k KEY     Show contents of the specified KEY file from MZ sources archive.\n\
 -l LICENSE Display OSADL metadata for the given SPDX license ID.\n\
+-L         Enable license full reort.\n\
 \n\
 Options:\n\
 -t  Run engine performance tests.\n\

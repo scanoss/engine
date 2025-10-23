@@ -355,16 +355,13 @@ void print_licenses(component_data_t *comp)
 	struct licenses_s license_result = { .crclist = crclist, .license_by_type = calloc(license_types, sizeof(char *)) };
 
 	/* Print URL license */
-
 	if (comp->license && strlen(comp->license) > 2)
 	{
-		char comp_lic[MAX_FIELD_LN] = "\0";
 		bool first_record = true;
-		license_to_json(crclist, comp_lic, comp->license, 0, &first_record);
-		comp->license_text = strdup(comp_lic);
-		scanlog("License present in URL table");
+		license_to_json(crclist, license_result.license_by_type[0], comp->license, 0, &first_record);
+			scanlog("License present in URL table");
 		/* Add license to CRC list (to avoid duplicates) */
-		add_CRC(crclist, string_crc32c(comp->license));
+		add_CRC(license_result.crclist, string_crc32c(comp->license));
 	}
 	else
 	{
@@ -372,10 +369,11 @@ void print_licenses(component_data_t *comp)
 	}
 
 	/* Look for component or file license */
-
 	records = ldb_fetch_recordset(NULL, oss_license, comp->url_md5, false, print_licenses_item, &license_result);
 	scanlog("License for url_id license returns %d hits\n", records);
-
+	
+	records = ldb_fetch_recordset(NULL, oss_license, comp->file_md5_ref, false, print_licenses_item, &license_result);
+	scanlog("License for file_id license returns %d hits\n", records);
 	for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
 	{
 		/* Calculate purl@version md5 */
@@ -395,10 +393,7 @@ void print_licenses(component_data_t *comp)
 			break;
 	}
 
-	records = ldb_fetch_recordset(NULL, oss_license, comp->file_md5_ref, false, print_licenses_item, &license_result);
-	scanlog("License for file_id license returns %d hits\n", records);
-
-		/* Open licenses structure */
+	/* Open licenses structure */
 	char result[MAX_FIELD_LN * 10] = "\0";
 	int len = 0;
 
@@ -422,7 +417,6 @@ void print_licenses(component_data_t *comp)
 					break;
 				len += sprintf(result + len, ",");
 			}
-			
 			first = false;
 			len += sprintf(result + len, "%s", license_result.license_by_type[i]);
 			free(license_result.license_by_type[i]);
