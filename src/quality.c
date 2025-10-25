@@ -57,13 +57,14 @@ bool print_quality_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 {
 	
 	match_data_t * match  = (match_data_t*) ptr;
-	char *CSV = (char*) data;
+	char *CSV = strdup((char*) data);
+	CSV[datalen] = '\0';
 	char *source  = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *quality = calloc(MAX_JSON_VALUE_LEN, 1);
 
 	extract_csv(source, CSV, 1, MAX_JSON_VALUE_LEN);
 	extract_csv(quality, CSV, 2, MAX_JSON_VALUE_LEN);
-
+	free(CSV);
 	int src = atoi(source);
 
 	scanlog("Fetched quality %s\n", quality);

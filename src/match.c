@@ -351,20 +351,27 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			return true;
 		}
 
-		if (!purl_vendor_component_check(a) && purl_vendor_component_check(b))
-		{
-			scanlog("Component prefered by vendor+component=purl\n");
-			return true;
-		}
 		//Look for available health information
 		print_health(a);
 		print_health(b);
 		int health_a = a->health_stats[0] + a->health_stats[2]; //add forks and watchers
 		int health_b = b->health_stats[0] + b->health_stats[2];
 
+
 		if (health_b > health_a)
 		{
 			scanlog("Component prefered by health: %s = %d vs %s = %d\n", b->purls[0], health_b, a->purls[0], health_a);
+			return true;
+		}
+		else if (health_a > health_b)
+		{
+			return false;
+		}
+		
+
+		if (!purl_vendor_component_check(a) && purl_vendor_component_check(b))
+		{
+			scanlog("Component %s prefered over %s by vendor+component=purl\n", b->purls[0], a->purls[0]);
 			return true;
 		}
 		
@@ -383,10 +390,16 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		}
 		
 		if ((!a->age && b->age) || b->age > a->age)
+		{
+			scanlog("Component %s prefered over %s by purl date\n", b->purls[0], a->purls[0]);
 			return true;
+		}
 
 		if (b->age == a->age && !strcmp(a->component, b->component) && strcmp(a->version, b->version) > 0)
+		{
+			scanlog("Component %s prefered over %s by version\n", b->purls[0], a->purls[0]);
 			return true;
+		}
 	}
 	/*select the oldest release date */
 	if (strcmp(b->release_date, a->release_date) < 0)
