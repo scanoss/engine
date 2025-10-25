@@ -418,8 +418,8 @@ bool purl_vendor_component_check(component_data_t * component)
     if (a && b)
     {
         if (a == b)
-            return false;
-        return true;
+            return true;
+        return false;
     }
     return false;
 }

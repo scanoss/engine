@@ -395,7 +395,7 @@ void print_licenses(component_data_t *comp)
 	}
 
 	/* Open licenses structure */
-	char result[MAX_FIELD_LN * 10] = "\0";
+	char * result = calloc(MAX_FIELD_LN * 100, 1);
 	int len = 0;
 
 	len += sprintf(result + len, "\"licenses\": [");
@@ -426,4 +426,5 @@ void print_licenses(component_data_t *comp)
 
 	asprintf(&comp->license_text, "%s]", result);
 	free(license_result.license_by_type);
+	free(result);
 }
