@@ -65,15 +65,15 @@ void match_data_free(match_data_t *data)
     if (!data)
         return;
 
-    free_and_null(data->snippet_ids);
-    free_and_null(data->line_ranges);
-    free_and_null(data->oss_ranges);
-    free_and_null(data->matched_percent);
-    free_and_null(data->crytography_text);
-    free_and_null(data->quality_text);
+    free_and_null((void **)&data->snippet_ids);
+    free_and_null((void **)&data->line_ranges);
+    free_and_null((void **)&data->oss_ranges);
+    free_and_null((void **)&data->matched_percent);
+    free_and_null((void **)&data->crytography_text);
+    free_and_null((void **)&data->quality_text);
     component_list_destroy(&data->component_list);
-    
-    free_and_null(data);
+
+    free_and_null((void **)&data);
 }
 
 /**
