@@ -322,10 +322,13 @@ char * str_cat_realloc(char **a, char * b)
 	return *a;
 }
 
-void free_and_null(void * pr)
+void free_and_null(void ** pr)
 {
-    free(pr);
-    pr = NULL;
+    if (pr && *pr)
+    {
+        free(*pr);
+        *pr = NULL;
+    }
 }
 
 bool path_is_third_party(const char* path) 

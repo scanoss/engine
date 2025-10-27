@@ -26,7 +26,6 @@ char *datestamp(void);
 /* Prints a "created" JSON element with the current datestamp */
 void print_datestamp(void);
 
-//void file_md5(char *filepath, uint8_t *md5_result);
 
 /* Returns a string with a hex representation of md5 */
 char *md5_hex(uint8_t *md5);
@@ -61,7 +60,7 @@ char * str_cat_realloc(char **a, char * b);
 
  void flip_slashes(char *data);
 
-void free_and_null(void * pr);
+void free_and_null(void ** pr);
 
 bool path_is_third_party(const char* path);
 

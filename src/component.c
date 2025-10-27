@@ -45,28 +45,28 @@ void component_data_free(component_data_t *data)
     if (!data)
         return;
 
-    free_and_null(data->vendor);
-    free_and_null(data->component);
-    free_and_null(data->version);
-    free_and_null(data->release_date);
-    free_and_null(data->latest_release_date);
-    free_and_null(data->latest_version);
-    free_and_null(data->license);
-    free_and_null(data->url);
-    free_and_null(data->file);
-    free_and_null(data->main_url);
-    free_and_null(data->license_text);
-    free_and_null(data->dependency_text);
-    free_and_null(data->vulnerabilities_text);
-    free_and_null(data->copyright_text);
-    free_and_null(data->health_text);
+    free_and_null((void **)&data->vendor);
+    free_and_null((void **)&data->component);
+    free_and_null((void **)&data->version);
+    free_and_null((void **)&data->release_date);
+    free_and_null((void **)&data->latest_release_date);
+    free_and_null((void **)&data->latest_version);
+    free_and_null((void **)&data->license);
+    free_and_null((void **)&data->url);
+    free_and_null((void **)&data->file);
+    free_and_null((void **)&data->main_url);
+    free_and_null((void **)&data->license_text);
+    free_and_null((void **)&data->dependency_text);
+    free_and_null((void **)&data->vulnerabilities_text);
+    free_and_null((void **)&data->copyright_text);
+    free_and_null((void **)&data->health_text);
 
     for (int i = 0; i < MAX_PURLS; i++)
     {
-        free_and_null(data->purls[i]);
-        free_and_null(data->purls_md5[i]);
+        free_and_null((void **)&data->purls[i]);
+        free_and_null((void **)&data->purls_md5[i]);
     }
-    free_and_null(data);
+    free_and_null((void **)&data);
 }
 
 /**

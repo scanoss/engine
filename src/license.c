@@ -358,7 +358,7 @@ void print_licenses(component_data_t *comp)
 	if (comp->license && strlen(comp->license) > 2)
 	{
 		bool first_record = true;
-		license_result.license_by_type[0] = calloc(MAX_FIELD_LN, 1);
+		license_result.license_by_type[0] = calloc(MAX_FIELD_LN * 10, 1);
 		license_to_json(crclist, license_result.license_by_type[0], comp->license, 0, &first_record);
 		scanlog("License present in URL table");
 		/* Add license to CRC list (to avoid duplicates) */
