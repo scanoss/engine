@@ -680,12 +680,12 @@ void match_select_best(scan_data_t *scan)
 				continue;
 			component_data_t * match_component = match->component_list.headp.lh_first->component;
 
-			scanlog("%s\n",match_component->purls[0]);
+			scanlog("Current purl%s\n",match_component->purls[0]);
 
 			match_data_t * best_match = scan->matches_list_array[i]->best_match;
 			component_data_t  * best_match_component = best_match->component_list.headp.lh_first->component;
 
-			if (path_is_third_party(match_component->file))
+			if (path_is_third_party(match_component->file) || !strcmp(match_component->release_date, "9999-99-99"))
 				continue;
 
 			scanlog("%s - %s - %d - %d VS %s - %s - %d - %d\n",
@@ -693,6 +693,13 @@ void match_select_best(scan_data_t *scan)
 					best_match_component->release_date,
 					scan->matches_list_array[i]->best_match->hits,best_match_component->rank,
 					match_component->purls[0], match_component->release_date, item->match->hits, match_component->rank);
+			
+			if (best_match_component->identified < match_component->identified)
+			{
+				scanlog("Replacing best match for an identified component\n");
+				scan->matches_list_array[i]->best_match = item->match;
+				continue;
+			}
 
 			//If the best match is not good or is not identified be prefer the candidate.
 			if ((!best_match_component->identified && match_component->identified) ||

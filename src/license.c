@@ -54,11 +54,37 @@
 const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header", "license_file", "scancode", "scancode-file", "osselot"};
 bool full_license_report = false;
 
-struct licenses_s 
+
+struct license_list
 {
-	char **license_by_type;
-	uint32_t * crclist;
+	char **licenses;
+	int count;
 };
+
+bool license_add_to_list(struct license_list * ptr, char * license)
+{
+	if (!ptr || !license || strlen(license) < 2)
+		return false;
+	ptr->licenses = realloc(ptr->licenses, sizeof(char *) * (ptr->count + 1));
+	if (!ptr->licenses)
+		return false;
+	ptr->licenses[ptr->count] = strdup(license);
+	ptr->count++;
+	return true;
+}
+
+void license_free_list(struct license_list * ptr)
+{
+	if (!ptr || !ptr->licenses)
+		return;
+	for (int i = 0; i < ptr->count; i++)
+	{
+		free(ptr->licenses[i]);
+	}
+	free(ptr->licenses);
+	ptr->licenses = NULL;
+	ptr->count = 0;
+}
 
 /**
  * @brief Remove invalid characters from a license name
@@ -249,12 +275,12 @@ static char *split_in_json_array(uint32_t *crclist, char *buffer, char *license,
 	return buffer;
 }
 
-void license_to_json(uint32_t *crclist, char *buffer, char *license, int src, bool *first_record)
+char *  license_to_json(uint32_t *crclist, char *buffer, char *license, int src, bool *first_record)
 {
 	if (!strchr(license, '/'))
-		json_from_license(crclist, buffer, license, src, first_record);
+		return json_from_license(crclist, buffer, license, src, first_record);
 	else
-		split_in_json_array(crclist, buffer, license, src, first_record);
+		return split_in_json_array(crclist, buffer, license, src, first_record);
 }
 
 /**
@@ -292,7 +318,7 @@ bool get_first_license_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_
  */
 bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	struct licenses_s * license_results = ptr;
+	struct license_list * licenses = ptr;
 
 	if (!datalen)
 		return false;
@@ -312,16 +338,10 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	int src = atoi(source);
 
 	scanlog("Fetched license %s\n", license);
-	char result[MAX_FIELD_LN * 10] = "\0";
-	int len = 0;
 
 	if (strlen(license) > 2 && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
-	{
-		bool first_record = !(license_results->license_by_type[src] && *license_results->license_by_type[src]);
-		license_to_json(license_results->crclist, result + len, license, src, &first_record);
-		str_cat_realloc(&license_results->license_by_type[src], result);
+		license_add_to_list(&licenses[src], license);
 
-	}
 	free(source);
 	free(license);
 
@@ -347,22 +367,18 @@ void print_licenses(component_data_t *comp)
 	/* CRC list (used to avoid duplicates) */
 	uint32_t crclist[CRC_LIST_LEN];
 	memset(crclist, 0, sizeof(crclist));
-	comp->crclist = crclist;
 	uint32_t records = 0;
 	comp->license_text = NULL;
 
 	int license_types = sizeof(license_sources) / sizeof(license_sources[0]);
-	struct licenses_s license_result = { .crclist = crclist, .license_by_type = calloc(license_types, sizeof(char *)) };
+	struct license_list licenses_by_type[license_types];
+	memset(licenses_by_type, 0, sizeof(licenses_by_type));
 
 	/* Print URL license */
 	if (comp->license && strlen(comp->license) > 2)
 	{
-		bool first_record = true;
-		license_result.license_by_type[0] = calloc(MAX_FIELD_LN * 10, 1);
-		license_to_json(crclist, license_result.license_by_type[0], comp->license, 0, &first_record);
+		license_add_to_list(&licenses_by_type[0], comp->license);
 		scanlog("License present in URL table");
-		/* Add license to CRC list (to avoid duplicates) */
-		add_CRC(license_result.crclist, string_crc32c(comp->license));
 	}
 	else
 	{
@@ -370,10 +386,10 @@ void print_licenses(component_data_t *comp)
 	}
 
 	/* Look for component or file license */
-	records = ldb_fetch_recordset(NULL, oss_license, comp->url_md5, false, print_licenses_item, &license_result);
+	records = ldb_fetch_recordset(NULL, oss_license, comp->url_md5, false, print_licenses_item, &licenses_by_type);
 	scanlog("License for url_id license returns %d hits\n", records);
 	
-	records = ldb_fetch_recordset(NULL, oss_license, comp->file_md5_ref, false, print_licenses_item, &license_result);
+	records = ldb_fetch_recordset(NULL, oss_license, comp->file_md5_ref, false, print_licenses_item, &licenses_by_type);
 	scanlog("License for file_id license returns %d hits\n", records);
 	for (int i = 0; i < MAX_PURLS && comp->purls[i]; i++)
 	{
@@ -381,13 +397,13 @@ void print_licenses(component_data_t *comp)
 		uint8_t purlversion_md5[MD5_LEN];
 		purl_version_md5(purlversion_md5, comp->purls[i], comp->version);
 
-		records = ldb_fetch_recordset(NULL, oss_license, purlversion_md5, false, print_licenses_item, &license_result);
+		records = ldb_fetch_recordset(NULL, oss_license, purlversion_md5, false, print_licenses_item, &licenses_by_type);
 		scanlog("License for %s@%s license returns %d hits\n", comp->purls[i], comp->version, records);
 
 		if (records)
 			break;
 
-		records = ldb_fetch_recordset(NULL, oss_license, comp->purls_md5[i], false, print_licenses_item, &license_result);
+		records = ldb_fetch_recordset(NULL, oss_license, comp->purls_md5[i], false, print_licenses_item, &licenses_by_type);
 		scanlog("License for %s license returns %d hits\n", comp->purls[i], records);
 		
 		if (records)
@@ -396,35 +412,33 @@ void print_licenses(component_data_t *comp)
 
 	/* Open licenses structure */
 	char * result = calloc(MAX_FIELD_LN * 100, 1);
+	char * buffer = result;
 	int len = 0;
 
 	len += sprintf(result + len, "\"licenses\": [");
+	buffer = result + len;
 	bool first = true;
-
-	if (comp->license_text)
-	{
-		len += sprintf(result + len, "%s", comp->license_text);
-		free(comp->license_text);
-		first = false;
-	}
 
 	for (int i = 0; i < license_types; i++)
 	{
-		if (license_result.license_by_type[i] && *license_result.license_by_type[i])
+		if (licenses_by_type[i].count > 0)
 		{
-			if (!first)
+			if (i > 3 && !full_license_report)
+				break;
+			for (int j = 0; j < licenses_by_type[i].count; j++)
 			{
-				if (i > 3 && !full_license_report)
-					break;
-				len += sprintf(result + len, ",");
+				buffer = license_to_json(crclist, buffer, licenses_by_type[i].licenses[j], i, &first);
 			}
-			first = false;
-			len += sprintf(result + len, "%s", license_result.license_by_type[i]);
-			free(license_result.license_by_type[i]);
 		}
 	}
 
-	asprintf(&comp->license_text, "%s]", result);
-	free(license_result.license_by_type);
-	free(result);
+	len = buffer - result;
+	len += sprintf(result + len, "]");
+	comp->license_text = result;
+
+	/* Free all license lists */
+	for (int i = 0; i < license_types; i++)
+	{
+		license_free_list(&licenses_by_type[i]);
+	}
 }

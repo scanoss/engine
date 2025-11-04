@@ -44,36 +44,6 @@
 #include "decrypt.h"
 #include "versions.h"
 
-/**
- * @brief Normalize component version
- * @param version version string to be processed
- * @param component component string
- */
-void normalise_version(char *version, char *component)
-{
-	if (!version)
-		return;
-
-	char aux[MAX_FIELD_LN] = "\0";
-	int compt_len = strlen(component);
-	/* Remove leading component name from version */
-	if ((version && component) && stristart(version, component) && strlen(version) > compt_len + 1)
-	{
-		sprintf(aux, "%s",version + compt_len + 1);
-	}
-
-	/* Remove unwanted leading characters from the version */
-	if (version && (((*version == 'v' || *version =='r') && isdigit(version[1])) || !isalnum(*version)))
-	{
-		sprintf(aux, "%s",version + 1);
-	} 
-
-	/* Remove trailing ".orig" from version */
-	char *orig = strstr(aux, ".orig");
-	if (orig) *orig = 0;
-	if (*aux)
-		strcpy(version, aux);
-}
 
 static char * purl_indirection_reference[FETCH_MAX_FILES];
 static int purl_indirection_index = 0;
@@ -135,4 +105,49 @@ void purl_latest_version_free()
 		free(purl_indirection_reference[i]);
 	}
 	purl_indirection_index = 0;
+}
+
+char* normalise_version(const char* input_string, char* result) {
+    if (input_string == NULL || result == NULL) {
+        if (result != NULL) result[0] = '\0';
+        return result;
+    }
+    
+    // 1. Find first digit (strip non-digits from beginning)
+    const char* start = input_string;
+    while (*start && !isdigit(*start)) {
+        start++;
+    }
+    
+    // If no digits found, return empty string
+    if (*start == '\0') {
+        result[0] = '\0';
+        return result;
+    }
+    
+    // 2. Find last digit (strip non-digits from end)
+    const char* end = input_string + strlen(input_string) - 1;
+    while (end > start && !isdigit(*end)) {
+        end--;
+    }
+    
+    // 3. Copy digits and replace non-digit sequences with a single dot
+    char* dest = result;
+    int in_non_digit_sequence = 0;
+    
+    for (const char* p = start; p <= end; p++) {
+        if (isdigit(*p)) {
+            *dest++ = *p;
+            in_non_digit_sequence = 0;
+        } else {
+            // Only add one dot per sequence of non-digits
+            if (!in_non_digit_sequence) {
+                *dest++ = '.';
+                in_non_digit_sequence = 1;
+            }
+        }
+    }
+    
+    *dest = '\0';
+    return result;
 }
