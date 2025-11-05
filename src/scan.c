@@ -291,7 +291,17 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components)
 			
 			rec = (uint8_t*) strdup(line + tagln + (MD5_LEN * 2) + 1);
 			char * target = field_n(2, (char *)rec);
-			
+
+			/* Validate that the WFP file has the correct format */
+			if (!target)
+			{
+				fprintf(stderr, "Error: Malformed WFP file. Missing target field in line: %s\n", line);
+				fprintf(stderr, "Expected format: file=<md5>,<size>,<path>\n");
+				free(rec);
+				free(hexmd5);
+				exit(EXIT_FAILURE);
+			}
+
 			/*Init a new scan object for the next file to be scanned */
 			scan = scan_data_init(target, scan_max_snippets, scan_max_components);
 			strcpy(scan->source_md5, tmp_md5_hex);

@@ -1,9 +1,10 @@
 #ifndef __UTIL_H
     #define __UTIL_H
-    
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <scanoss.h>
+#include "component.h"
 
 /* Reverse an uint32 number  */
 void uint32_reverse(uint8_t *data);
@@ -62,6 +63,12 @@ char * str_cat_realloc(char **a, char * b);
 
 void free_and_null(void ** pr);
 
-bool path_is_third_party(const char* path);
+int path_is_third_party(const char* path);
+
+/* Counts the number of '/' characters in a path string */
+int path_depth(char* path);
+
+/* Detects binary file type and validates if PURL matches file extension */
+bool binary_file_to_purl(component_data_t *comp);
 
 #endif

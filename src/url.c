@@ -363,7 +363,7 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		else if(comp->identified == comp_oldest->identified)
 		{
 
-			if (comp->rank < comp_oldest->rank) //lowest rank is 1.
+			if (comp->rank < comp_oldest->rank && comp->path_depth <= comp_oldest->path_depth) //lowest rank is 1.
 				replace = true;
 			else if ((!*comp_oldest->release_date && *comp->release_date) || 
 				(*comp->release_date && (strcmp(comp->release_date, comp_oldest->release_date) < 0)))

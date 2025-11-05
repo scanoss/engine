@@ -320,28 +320,59 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		return false;
 	if (!*a->release_date)
 		return true;
-		
-	if (!path_is_third_party(a->file) && path_is_third_party(b->file))
+
+	// Third-party path evaluation
+	int tp_a = path_is_third_party(a->file);
+	int tp_b = path_is_third_party(b->file);
+
+	if (tp_a > tp_b)
 	{
-		scanlog("Component rejected by third party filter\n");
+		scanlog("Component rejected by third party path filter (%s=%d > %s=%d)\n", a->purls[0], tp_a, b->purls[0], tp_b);
 		return false;
 	}
-	
-		//lower rank selection logic
-	if (b->rank < COMPONENT_DEFAULT_RANK)
+	else if (tp_a < tp_b)
 	{
-		if (b->rank < a->rank)
+		scanlog("Component accepted by third party path filter (%s=%d < %s=%d)\n",  a->purls[0], tp_a,  b->purls[0], tp_b);
+		return true;
+	}
+	//when the url ranking is enabled
+	if (b->rank < COMPONENT_DEFAULT_RANK || a->rank < COMPONENT_DEFAULT_RANK)
+	{
+		//shorter path lenght are prefered
+		if (b->rank < a->rank &&b->path_depth < a->path_depth/2)
+			return true;
+		else if (b->rank > a->rank && a->path_depth < b->path_depth/2)
+			return false;
+		
+		bool good_purl_a = binary_file_to_purl(a);
+		bool good_purl_b = binary_file_to_purl(b);
+		if (good_purl_b && !good_purl_a)
 		{
-			scanlog("%s wins %s by rank %d/%d\n", b->purls[0],  a->purls[0], b->rank, a->rank);
+			scanlog("Component %s prefered over %s by binary purl match\n", b->purls[0], a->purls[0]);
 			return true;
 		}
-		else if (b->rank > a->rank)
+		else if (good_purl_a && !good_purl_b)
 		{
-			scanlog("%s rejected by rank %d\n", b->purls[0], b->rank);
+			scanlog("Component %s rejected by binary purl match\n", b->purls[0]);
 			return false;
 		}
-	}
 	
+		//lower rank selection logic
+		if (b->rank < COMPONENT_RANK_SELECTION_MAX && b->path_depth <= a->path_depth)
+		{
+			scanlog("path lenght: %s - %d vs  %s - %d\n", b->file, b->path_depth, a->file, a->path_depth);
+			if (b->rank < a->rank)
+			{
+				scanlog("%s wins %s by rank %d/%d\n", b->purls[0],  a->purls[0], b->rank, a->rank);
+				return true;
+			}
+			else if (b->rank > a->rank)
+			{
+				scanlog("%s rejected by rank %d\n", b->purls[0], b->rank);
+				return false;
+			}
+		}
+	}
 	/*if the relese date is the same untie with the component age (purl)*/
 	if (!strcmp(b->release_date, a->release_date))
 	{	
@@ -404,6 +435,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	/*select the oldest release date */
 	if (strcmp(b->release_date, a->release_date) < 0)
 	{
+		scanlog("Component %s prefered over %s by release date\n", b->purls[0], a->purls[0]);
 		return true;
 	}
 
@@ -680,12 +712,14 @@ void match_select_best(scan_data_t *scan)
 				continue;
 			component_data_t * match_component = match->component_list.headp.lh_first->component;
 
-			scanlog("%s\n",match_component->purls[0]);
-
 			match_data_t * best_match = scan->matches_list_array[i]->best_match;
 			component_data_t  * best_match_component = best_match->component_list.headp.lh_first->component;
 
-			if (path_is_third_party(match_component->file))
+			scanlog("Current purl %s - current best %s\n",match_component->purls[0], best_match_component->purls[0]);
+			if (match_component == best_match_component)
+				continue;
+
+			if (path_is_third_party(match_component->file) < path_is_third_party(best_match_component->file) || !strcmp(match_component->release_date, "9999-99-99"))
 				continue;
 
 			scanlog("%s - %s - %d - %d VS %s - %s - %d - %d\n",
@@ -693,10 +727,17 @@ void match_select_best(scan_data_t *scan)
 					best_match_component->release_date,
 					scan->matches_list_array[i]->best_match->hits,best_match_component->rank,
 					match_component->purls[0], match_component->release_date, item->match->hits, match_component->rank);
+			
+			if (best_match_component->identified < match_component->identified)
+			{
+				scanlog("Replacing best match for an identified component\n");
+				scan->matches_list_array[i]->best_match = item->match;
+				continue;
+			}
 
 			//If the best match is not good or is not identified be prefer the candidate.
 			if ((!best_match_component->identified && match_component->identified) ||
-				(path_is_third_party(best_match_component->file)))
+				(path_is_third_party(best_match_component->file) < path_is_third_party(match_component->file)))
 			{
 				scanlog("Replacing best match for a prefered component\n");
 				scan->matches_list_array[i]->best_match = item->match;
