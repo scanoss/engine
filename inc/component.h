@@ -4,7 +4,15 @@
 #include "scanoss.h"
 
 #define COMPONENT_DEFAULT_RANK 999 //default rank for components without rank information
+#define COMPONENT_RANK_SELECTION_MAX 8 //max rank to be considered in component selection
+
 extern int component_rank_max;
+
+// Third-party confidence thresholds for path_is_third_party()
+#define TP_THRESHOLD_HIGH 12    // 0-11: high confidence third-party (node_modules, vendor, etc.)
+#define TP_THRESHOLD_MED  27    // 12-26: medium confidence (external, dependencies, etc.)
+                                // 27-31: medium-low confidence (dist, contrib, etc.)
+                                // 32+: not third-party
 /**
  * @brief Component object definition.
  * 
@@ -50,6 +58,7 @@ typedef struct component_data_t
 	int url_stats[5]; /* url stats: quantity of file */
 	int health_stats[3]; /* health stats: forks, watchers, contributors */
 	int rank; /* purl ranking - optional*/
+	int path_depth; /* depth of the matched file path*/
 } component_data_t;
 
 component_data_t * component_init(void);

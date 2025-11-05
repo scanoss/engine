@@ -31,6 +31,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/time.h>
 
 #include "util.h"
@@ -331,67 +332,265 @@ void free_and_null(void ** pr)
     }
 }
 
-bool path_is_third_party(const char* path) 
+int path_is_third_party(const char* path)
 {
     const char* patterns[] = {
-        "third_party",
-		"ThirdParty",
-        "3rdparty",
-		"site-packages",
-        "vendor",
-        "external",
-        "dependencies",
-        "ext",
-        "contrib",
-        "externals",
-        "third-party",
-		"subprojects",
-        "node_modules",
-        "components",
-        "deps",
-        "modules",
-        "nuget",
-        "imported",
-        "foreign",
-        "extern",
-        "bundle",
-        "pip_packages",
-        "bower_components",
-        "jspm_packages",
-        "site-packages",
-        "jars",
-        "assemblies",
-        "assets/vendor",
-        "published",
-        "packages.lock",
-        "pod",
-        "Pods",
-        "cargo_home",
-        "gems",
-        "composer/vendor",
-        "_vendor",
-        "go/pkg",
-        "vendors",
-        "extern",
-        "extlib",
-        "local_packages",
-        "managed",
-        "3rd",
-        "thirdparty",
-		"LibResources"
+        // Explicit third-party naming
+        "third_party",       // Covers third_party, ThirdParty, third-party via strcasestr
+        "thirdparty",        // Alternative spelling
+        "3rdparty",          // Alternative naming
+
+        // Package manager directories - very high confidence
+        "node_modules",      // npm (JavaScript)
+        "site-packages",     // pip (Python)
+        "vendor",            // Composer (PHP), Go modules, Ruby bundler
+        "gems",              // RubyGems
+        "cargo_home",        // Cargo (Rust)
+        "go/pkg",            // Go packages
+        "bower_components",  // Bower (JavaScript)
+        "jspm_packages",     // JSPM (JavaScript)
+
+        // Build/dependency management directories
+        "external",          // Maven, CMake external dependencies
+        "externals",         // Alternative
+        "dependencies",      // Generic dependency directories
+        "dep",              // Short form
+        "packages",          // NuGet, Generic (covers packages.lock)
+
+        // Language-specific package directories
+        "pod",               // CocoaPods (iOS) - covers pod, Pods
+        "composer",          // PHP Composer
+        "nuget",             // .NET NuGet
+        "jars",              // Java JAR libraries
+        "assemblies",        // .NET assemblies
+
+        // Common third-party conventions
+        "extern",            // External code convention
+        "extlib",            // External libraries
+        "_vendor",           // Vendor variant
+        "imported",          // Imported code
+        "foreign",           // Foreign code
+
+        // Build output that may contain third-party
+        "dist",              // Distribution builds
+        "release",           // Release builds
+        "bundle",            // Bundled dependencies
+
+        // Contribution/extension directories
+        "contrib",           // Contributed/third-party code
+        "plugin",            // Plugins (often third-party)
+
+        "lib", "components", "modules", "ext",
+        "test", "fixtures", "examples",
+        "files", "assets", "runtime",
+        "subprojects", "managed", "local_packages", "published",
+        "driver", "libresources", "offloading"
     };
-    
+
     const int numPatterns = sizeof(patterns) / sizeof(patterns[0]);
-    
-    for (int i = 0; i < numPatterns; i++) 
+
+    for (int i = 0; i < numPatterns; i++)
 	{
-        if (strstr(path, patterns[i]) != NULL) 
+        if (strcasestr(path, patterns[i]) != NULL)
 		{
-            return true;
+            return i;
         }
     }
-    
-    return false;
+
+    return numPatterns + 1;
 }
 
+/**
+ * @brief Counts the number of '/' characters in a path string
+ * @param path input path string
+ * @return number of '/' characters found, or 0 if none
+ */
+int path_depth(char* path)
+{
+	if (!path)
+		return 0;
+
+	int count = 0;
+	char *p = path;
+
+	while (*p)
+	{
+		if (*p == '/')
+			count++;
+		p++;
+	}
+	if (count == 0)
+		scanlog("No '/' found in path: %s\n", path);
+	return count;
+}
+
+/**
+ * @brief Detects if a file is binary based on extension and checks if the recommended PURL matches comp->purls[0]
+ * @param comp Component data containing file path and PURL information
+ * @return true if the recommended PURL matches comp->purls[0], false otherwise
+ */
+bool binary_file_to_purl(component_data_t *comp)
+{
+	char * path = comp->file;
+	if (!path)
+		path = comp->url;
+	if (!comp || !path || !comp->purls[0])
+		return false;
+
+	const char *recommended_purl = NULL;
+
+	/* Find the last dot for extension */
+	const char* ext = strrchr(path, '.');
+	if (!ext)
+	{
+		/* No extension - treat as generic binary */
+		recommended_purl = NULL;
+	}
+	else
+	{
+		/* Skip the dot */
+		ext++;
+
+		/* Map binary extensions to package manager PURLs */
+
+		/* Java ecosystem (Maven/Gradle) */
+		if (strcasecmp(ext, "jar") == 0 || strcasecmp(ext, "war") == 0 ||
+		    strcasecmp(ext, "ear") == 0 || strcasecmp(ext, "aar") == 0)
+			recommended_purl = "pkg:maven/";
+
+		/* .NET ecosystem */
+		else if (strcasecmp(ext, "dll") == 0 || strcasecmp(ext, "exe") == 0 ||
+		    strcasecmp(ext, "nupkg") == 0)
+			recommended_purl = "pkg:nuget/";
+
+		/* Python ecosystem */
+		else if (strcasecmp(ext, "whl") == 0 || strcasecmp(ext, "egg") == 0 ||
+		    strcasecmp(ext, "pyz") == 0 || strcasecmp(ext, "pex") == 0)
+			recommended_purl = "pkg:pypi/";
+
+		/* Ruby ecosystem */
+		else if (strcasecmp(ext, "gem") == 0)
+			recommended_purl = "pkg:gem/";
+
+		/* Rust ecosystem */
+		else if (strcasecmp(ext, "rlib") == 0 || strcasecmp(ext, "rmeta") == 0)
+			recommended_purl = "pkg:cargo/";
+
+		/* Go ecosystem */
+		else if (strcasecmp(ext, "a") == 0)
+		{
+			/* Check if path contains go-related patterns */
+			if (strcasestr(path, "/go/") || strcasestr(path, "/golang/") || strcasestr(path, "GOPATH"))
+				recommended_purl = "pkg:golang/";
+			/* Otherwise could be C/C++ static library */
+			else
+				recommended_purl = "pkg:generic/";
+		}
+
+		/* Node.js/JavaScript ecosystem */
+		else if (strcasecmp(ext, "node") == 0 || strcasecmp(ext, "napi") == 0)
+			recommended_purl = "pkg:npm/";
+
+		/* PHP ecosystem */
+		else if (strcasecmp(ext, "phar") == 0)
+			recommended_purl = "pkg:composer/";
+
+		/* Debian/Ubuntu packages */
+		else if (strcasecmp(ext, "deb") == 0)
+			recommended_purl = "pkg:deb/";
+
+		/* RPM-based (Red Hat, Fedora, CentOS) */
+		else if (strcasecmp(ext, "rpm") == 0)
+			recommended_purl = "pkg:rpm/";
+
+		/* Alpine Linux / Android */
+		else if (strcasecmp(ext, "apk") == 0)
+		{
+			/* Android packages use Maven coordinates */
+			if (strcasestr(path, "android"))
+				recommended_purl = "pkg:maven/";
+			else
+				recommended_purl = "pkg:apk/";
+		}
+
+		/* macOS/iOS */
+		else if (strcasecmp(ext, "framework") == 0 || strcasecmp(ext, "dylib") == 0 ||
+		    strcasecmp(ext, "bundle") == 0)
+			recommended_purl = "pkg:cocoapods/";
+
+		/* Swift Package Manager */
+		else if (strcasecmp(ext, "swiftmodule") == 0)
+			recommended_purl = "pkg:swift/";
+
+		/* Objective-C/C++ */
+		else if (strcasecmp(ext, "o") == 0)
+			recommended_purl = "pkg:generic/";
+
+		/* Shared libraries */
+		else if (strcasecmp(ext, "so") == 0)
+			recommended_purl = "pkg:generic/";
+
+		/* Windows shared libraries */
+		else if (strcasecmp(ext, "pyd") == 0)
+			recommended_purl = "pkg:pypi/";  /* Python extension module */
+
+		/* Erlang/Elixir */
+		else if (strcasecmp(ext, "beam") == 0 || strcasecmp(ext, "ez") == 0)
+			recommended_purl = "pkg:hex/";
+
+		/* Docker images */
+		else if (strcasecmp(ext, "tar") == 0 || strcasecmp(ext, "tar.gz") == 0)
+		{
+			if (strcasestr(path, "docker") || strcasestr(path, "container"))
+				recommended_purl = "pkg:docker/";
+			else
+				recommended_purl = "pkg:generic/";
+		}
+
+		/* OCI/Container images */
+		else if (strcasecmp(ext, "oci") == 0)
+			recommended_purl = "pkg:oci/";
+
+		/* Generic binary extensions */
+		else if (strcasecmp(ext, "bin") == 0 || strcasecmp(ext, "dat") == 0 ||
+		    strcasecmp(ext, "class") == 0)
+			recommended_purl = "pkg:generic/";
+
+		/* WebAssembly */
+		else if (strcasecmp(ext, "wasm") == 0)
+			recommended_purl = "pkg:generic/";
+	}
+
+	/* If no recommended PURL was found, return false */
+	if (!recommended_purl)
+		return false;
+
+	/* Normalize the PURL for case-insensitive comparison */
+	char *purl_lower = strdup(comp->purls[0]);
+	if (!purl_lower)
+		return false;
+
+	for (char *p = purl_lower; *p; p++)
+		*p = tolower(*p);
+
+	/* Create lowercase version of recommended PURL for comparison */
+	char *recommended_lower = strdup(recommended_purl);
+	if (!recommended_lower)
+	{
+		free(purl_lower);
+		return false;
+	}
+
+	for (char *p = recommended_lower; *p; p++)
+		*p = tolower(*p);
+
+	/* Check if purl_lower starts with the recommended PURL namespace */
+	bool result = (strncmp(purl_lower, recommended_lower, strlen(recommended_lower)) == 0);
+
+	/* Free allocated memory */
+	free(purl_lower);
+	free(recommended_lower);
+
+	return result;
+}
 

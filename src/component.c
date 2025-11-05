@@ -298,6 +298,8 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	}
 	else
 		component->rank = COMPONENT_DEFAULT_RANK;
+	
+	component->path_depth = path_depth(component->file);
 
 	return true;
 }
