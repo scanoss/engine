@@ -423,7 +423,7 @@ void print_licenses(component_data_t *comp)
 	{
 		if (licenses_by_type[i].count > 0)
 		{
-			if (i > 3 && !full_license_report)
+			if (i > 3 && !first && !full_license_report)
 				break;
 			for (int j = 0; j < licenses_by_type[i].count; j++)
 			{
