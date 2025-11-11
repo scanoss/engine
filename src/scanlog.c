@@ -48,8 +48,24 @@ long microseconds_now()
 }
 
 /**
+ * @brief Initialize the log file as blank
+ * @return true if successful, false otherwise
+ */
+bool scanlog_init()
+{
+	FILE *log = fopen(SCAN_LOG, "w");
+	if (!log)
+	{
+		fprintf(stderr, "Warning: Cannot create/initialize the log file\n");
+		return false;
+	}
+	fclose(log);
+	return true;
+}
+
+/**
  * @brief Print the logs in stderr
- * @param fmt string to be printed  
+ * @param fmt string to be printed
  * @param ... //TODO
  */
 void scanlog(const char *fmt, ...)

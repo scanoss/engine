@@ -51,7 +51,7 @@
 	 4 = Scancode detection 
 	 5 = Scancode detection at mining time
 	 6 = osslot */
-const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header", "license_file", "scancode", "scancode-file", "osselot"};
+const char *license_sources[] = {"component_declared", "file_spdx_tag", "file_header", "license_file", "scancode-file", "scancode", "osselot"};
 bool full_license_report = false;
 
 
@@ -337,8 +337,6 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 	int src = atoi(source);
 
-	scanlog("Fetched license %s\n", license);
-
 	if (strlen(license) > 2 && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
 		license_add_to_list(&licenses[src], license);
 
@@ -401,8 +399,30 @@ void print_licenses(component_data_t *comp)
 		scanlog("License for %s@%s license returns %d hits\n", comp->purls[i], comp->version, records);
 
 		if (records)
-			break;
+		{
+			//Look if someone of the prefered liceses ids already has a match
+			for (int i = 0; i < 4; i++)
+			{
+				if (licenses_by_type[i].count > 0)
+				{
+					scanlog("Stop searching for licenses\n");
+					break;
+				}
+			}
+		}
 
+		if (strcmp(comp->version, comp->latest_version) != 0)
+		{
+			/* Calculate purl@latest_version md5 */
+			purl_version_md5(purlversion_md5, comp->purls[i], comp->latest_version);
+
+			records = ldb_fetch_recordset(NULL, oss_license, purlversion_md5, false, print_licenses_item, &licenses_by_type);
+			scanlog("License for %s@%s license returns %d hits\n", comp->purls[i], comp->latest_version, records);
+
+			if (records)
+				break;
+		}
+		/* Unversioned purl license */
 		records = ldb_fetch_recordset(NULL, oss_license, comp->purls_md5[i], false, print_licenses_item, &licenses_by_type);
 		scanlog("License for %s license returns %d hits\n", comp->purls[i], records);
 		
