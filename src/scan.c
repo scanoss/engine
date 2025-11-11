@@ -449,6 +449,10 @@ void ldb_scan(scan_data_t *scan)
 		exit(EXIT_FAILURE);
 	}
 
+	// Clean up the log file
+	if (debug_on)
+		scanlog_init();
+
 	scan->matchmap_size = 0;
 	scan->match_type = MATCH_NONE;
 	scan->timer = microseconds_now();

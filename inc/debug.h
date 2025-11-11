@@ -32,6 +32,7 @@ extern bool debug_on; //= false; //set debug mode from main.
 extern bool quiet;
 
 
+bool scanlog_init(void);
 void scanlog(const char *fmt, ...);
 void map_dump(scan_data_t *scan);
 long microseconds_now(void);
