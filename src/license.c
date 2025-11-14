@@ -272,7 +272,7 @@ static char *split_in_json_array(uint32_t *crclist, char *buffer, char *license,
 
 	} while (next_lic);
 
-	return buffer;
+	return r;  // Return the updated buffer pointer, not the original
 }
 
 char *  license_to_json(uint32_t *crclist, char *buffer, char *license, int src, bool *first_record)
