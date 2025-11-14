@@ -68,7 +68,6 @@ void match_data_free(match_data_t *data)
     free_and_null((void **)&data->snippet_ids);
     free_and_null((void **)&data->line_ranges);
     free_and_null((void **)&data->oss_ranges);
-    free_and_null((void **)&data->matched_percent);
     free_and_null((void **)&data->crytography_text);
     free_and_null((void **)&data->quality_text);
     component_list_destroy(&data->component_list);
@@ -91,7 +90,7 @@ match_data_t * match_data_copy(match_data_t * in)
     out->type = in->type;
     out->line_ranges = strdup(in->line_ranges);
     out->oss_ranges = strdup(in->oss_ranges);
-    out->matched_percent = strdup(in->matched_percent);
+    out->matched_percent = in->matched_percent;
     out->snippet_ids = strdup(in->snippet_ids);
     strcpy(out->source_md5, in->source_md5);
     return out;
@@ -339,7 +338,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	if (b->rank < COMPONENT_DEFAULT_RANK || a->rank < COMPONENT_DEFAULT_RANK)
 	{
 		//shorter path lenght are prefered
-		if (b->rank < a->rank &&b->path_depth < a->path_depth/2)
+		if (b->rank < a->rank && b->path_depth < a->path_depth/2)
 			return true;
 		else if (b->rank > a->rank && a->path_depth < b->path_depth/2)
 			return false;
@@ -450,8 +449,8 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	if (!new_comp)
 		return false;
 		
-	fill_component_path(new_comp, path);
 	/* Create a new component and fill it from the url record */
+	fill_component_path(new_comp, path);
 
 	new_comp->file_md5_ref = component_list->match_ref->file_md5;
 	/* If the component is valid add it to the component list */
@@ -543,13 +542,13 @@ bool load_matches(match_data_t *match)
 	{
 		asprintf(&match->line_ranges, "n/a");
 		asprintf(&match->oss_ranges, "n/a");
-		asprintf(&match->matched_percent, "%d functions matched", match->hits);
+		match->matched_percent = -1;
 	}
 	else if (match->type == MATCH_FILE)
 	{
 		asprintf(&match->line_ranges, "all");
 		asprintf(&match->oss_ranges, "all");
-		asprintf(&match->matched_percent, "100%%");
+		match->matched_percent = 100;
 	}
 
 	uint32_t records = 0;
@@ -745,7 +744,7 @@ void match_select_best(scan_data_t *scan)
 			}
 
 			//If best match has 20% more of hits do nothing.
-			if (best_match->hits >= match->hits * 1.2)
+			if (best_match->hits >= match->hits * 1.2 && best_match_component->path_depth < match_component->path_depth)
 				continue;
 
 			//if cantidate has 10% more of hits do not consider dates and switch
@@ -753,13 +752,18 @@ void match_select_best(scan_data_t *scan)
 			{
 				scanlog("Replacing best match due to big hits difference\n");
 				scan->matches_list_array[i]->best_match = item->match;
+				continue;
 			} 
 			// if the hit numbers are close, select the oldest.
-			else if (abs(scan->matches_list_array[i]->best_match->hits - item->match->hits) <= 2 &&
-					find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
+			int diff = abs(best_match->matched_percent - match->matched_percent);
+
+			if (diff <= 10)
 			{
-				scanlog("Replacing best match for an older version with equal hits\n");
-				scan->matches_list_array[i]->best_match = item->match;
+				if (component_date_comparation(best_match_component, match_component))
+				{
+					scanlog("Replacing best match for an older version with similar hits\n");
+					scan->matches_list_array[i]->best_match = item->match;
+				}
 			}
 		}
 	}
@@ -792,10 +796,9 @@ void match_select_best(scan_data_t *scan)
 						{
 							free(scan->matches_list_array[i]->best_match->line_ranges);
 							free(scan->matches_list_array[i]->best_match->oss_ranges);
-							free(scan->matches_list_array[i]->best_match->matched_percent);
 							scan->matches_list_array[i]->best_match->line_ranges = r.local;
 							scan->matches_list_array[i]->best_match->oss_ranges = r.remote;
-							scan->matches_list_array[i]->best_match->matched_percent = r.matched;
+							scan->matches_list_array[i]->best_match->matched_percent = atoi(r.matched);
 
 							max_hits = scan->matches_list_array[i]->best_match->hits;
 							index = i;

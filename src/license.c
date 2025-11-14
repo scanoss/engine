@@ -220,7 +220,7 @@ static char *json_from_license(uint32_t *crclist, char *buffer, char *license, i
 	string_clean(license);
 	int len = 0;
 
-	if (strlen(license) < 2)
+	if (!*license || strlen(license) < 2)
 		return buffer;
 	/* Calculate CRC to avoid duplicates */
 	uint32_t CRC = string_crc32c(license);
@@ -337,7 +337,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 
 	int src = atoi(source);
 
-	if (strlen(license) > 2 && (src < (sizeof(license_sources) / sizeof(license_sources[0]))))
+	if (src < (sizeof(license_sources) / sizeof(license_sources[0])))
 		license_add_to_list(&licenses[src], license);
 
 	free(source);
@@ -431,7 +431,7 @@ void print_licenses(component_data_t *comp)
 	}
 
 	/* Open licenses structure */
-	char * result = calloc(MAX_FIELD_LN * 100, 1);
+	char * result = calloc(MAX_FIELD_LN * 1024, 1);
 	char * buffer = result;
 	int len = 0;
 

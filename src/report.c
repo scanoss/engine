@@ -321,7 +321,7 @@ bool print_json_match(struct match_data_t * match)
 	printf("\"id\": \"%s\"", matchtypes[match->type]);	
 	printf(",\"lines\": \"%s\"", match->line_ranges);
 	printf(",\"oss_lines\": \"%s\"", match->oss_ranges);
-	printf(",\"matched\": \"%s\"", match->matched_percent);
+	printf(",\"matched\": \"%d%%\"", match->matched_percent);
 	
 	if ((engine_flags & ENABLE_SNIPPET_IDS) && match->type == MATCH_SNIPPET)
 	{

@@ -151,7 +151,7 @@ void biggest_snippet(scan_data_t *scan)
 				matched_percent = 99;
 			if (matched_percent < 1)
 				matched_percent = 1;
-			asprintf(&match_new->matched_percent, "%u%%", matched_percent);
+			match_new->matched_percent = matched_percent;
 			match_new->lines_matched = matched_lines;
 			//match_new->hits = hits;
 

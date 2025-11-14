@@ -380,7 +380,7 @@ int path_is_third_party(const char* path)
         "contrib",           // Contributed/third-party code
         "plugin",            // Plugins (often third-party)
 
-        "lib", "components", "modules", "ext",
+        "utils","lib", "components", "modules", "ext",
         "test", "fixtures", "examples",
         "files", "assets", "runtime",
         "subprojects", "managed", "local_packages", "published",

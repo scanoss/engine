@@ -209,8 +209,9 @@ static char * look_for_version(char *in)
 void fill_component_path(component_data_t *component, char *file_path)
 {
 	component->file = strdup(look_for_version(file_path));
-	component->path_ln = strlen(file_path);
+	component->path_ln = strlen(component->file);
 	flip_slashes(component->file);
+	component->path_depth = path_depth(component->file);
 }
 
 /**
@@ -298,9 +299,6 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	}
 	else
 		component->rank = COMPONENT_DEFAULT_RANK;
-	
-	component->path_depth = path_depth(component->file);
-
 	return true;
 }
 
