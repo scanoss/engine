@@ -332,9 +332,17 @@ void free_and_null(void ** pr)
     }
 }
 
-int path_is_third_party(const char* path)
+int path_is_third_party(component_data_t *comp)
 {
-    const char* patterns[] = {
+    if (comp->third_party_rank > 0)
+		return comp->third_party_rank;
+	
+	if (!comp->file)
+		return 0;
+	
+	char * path = comp->file;
+
+	const char* patterns[] = {
         // Explicit third-party naming
         "third_party",       // Covers third_party, ThirdParty, third-party via strcasestr
         "thirdparty",        // Alternative spelling
@@ -381,10 +389,10 @@ int path_is_third_party(const char* path)
         "plugin",            // Plugins (often third-party)
 
         "utils","lib", "components", "modules", "ext",
-        "test", "fixtures", "examples",
+        "fixtures", "examples",
         "files", "assets", "runtime",
         "subprojects", "managed", "local_packages", "published",
-        "driver", "libresources", "offloading"
+        "driver", "libresources", "offloading","documentation", "test"
     };
 
     const int numPatterns = sizeof(patterns) / sizeof(patterns[0]);

@@ -63,7 +63,7 @@ char * str_cat_realloc(char **a, char * b);
 
 void free_and_null(void ** pr);
 
-int path_is_third_party(const char* path);
+int path_is_third_party(component_data_t *comp);
 
 /* Counts the number of '/' characters in a path string */
 int path_depth(char* path);

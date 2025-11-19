@@ -336,6 +336,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	free(CSV);
 
 	int src = atoi(source);
+	scanlog("Fetched License %s - source ID %d\n", license, src);
 
 	if (src < (sizeof(license_sources) / sizeof(license_sources[0])))
 		license_add_to_list(&licenses[src], license);
