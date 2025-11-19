@@ -59,6 +59,7 @@ typedef struct component_data_t
 	int health_stats[3]; /* health stats: forks, watchers, contributors */
 	int rank; /* purl ranking - optional*/
 	int path_depth; /* depth of the matched file path*/
+	int third_party_rank; /* Saves third party ranking*/
 } component_data_t;
 
 component_data_t * component_init(void);

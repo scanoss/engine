@@ -151,7 +151,7 @@ void biggest_snippet(scan_data_t *scan)
 				matched_percent = 99;
 			if (matched_percent < 1)
 				matched_percent = 1;
-			asprintf(&match_new->matched_percent, "%u%%", matched_percent);
+			match_new->matched_percent = matched_percent;
 			match_new->lines_matched = matched_lines;
 			//match_new->hits = hits;
 
@@ -262,6 +262,9 @@ int ranges_assemble(matchmap_range *ranges, char *line_ranges, char *oss_ranges)
 				strcat(line_ranges, ",");
 			if (*oss_ranges)
 				strcat(oss_ranges, ",");
+			//discard snippets below the limit of detection
+			if (to - from < min_match_lines)
+				continue;
 
 			/* Add from-to values */
 			sprintf(line_ranges + strlen(line_ranges), "%d-%d", from, to);

@@ -16,7 +16,7 @@ typedef struct match_data_t
 	int lines_matched; /*number of matched lines*/
 	char * line_ranges; /*input snippet line ranges */
 	char * oss_ranges; /* kb snippet line ranges */
-	char * matched_percent; /* matched percent */
+	int matched_percent; /* matched percent */
 	int  path_ln; /*file path lenght*/ //TODO check if this is needed.
 	uint8_t file_md5[MD5_LEN]; /* file md5 */
 	char source_md5[MD5_LEN * 2 + 1]; /*matched file md5 in hex format */

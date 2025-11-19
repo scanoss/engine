@@ -68,7 +68,6 @@ void match_data_free(match_data_t *data)
     free_and_null((void **)&data->snippet_ids);
     free_and_null((void **)&data->line_ranges);
     free_and_null((void **)&data->oss_ranges);
-    free_and_null((void **)&data->matched_percent);
     free_and_null((void **)&data->crytography_text);
     free_and_null((void **)&data->quality_text);
     component_list_destroy(&data->component_list);
@@ -91,7 +90,7 @@ match_data_t * match_data_copy(match_data_t * in)
     out->type = in->type;
     out->line_ranges = strdup(in->line_ranges);
     out->oss_ranges = strdup(in->oss_ranges);
-    out->matched_percent = strdup(in->matched_percent);
+    out->matched_percent = in->matched_percent;
     out->snippet_ids = strdup(in->snippet_ids);
     strcpy(out->source_md5, in->source_md5);
     return out;
@@ -313,37 +312,41 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			}
 		}
 		else if (a->path_rank < PATH_LEVEL_COMP_REF / 3 + 1)
+		{
+			scanlog("%s rejected, %s wins by path rank %d\n", b->purls[0], a->purls[0], a->path_rank);
 			return false;
+		}
 	}
 
 	if (!*b->release_date)
-		return false;
-	if (!*a->release_date)
-		return true;
-
-	// Third-party path evaluation
-	int tp_a = path_is_third_party(a->file);
-	int tp_b = path_is_third_party(b->file);
-
-	if (tp_a > tp_b)
 	{
-		scanlog("Component rejected by third party path filter (%s=%d > %s=%d)\n", a->purls[0], tp_a, b->purls[0], tp_b);
+		scanlog("%s rejected due to empty release date\n", b->purls[0]);
 		return false;
 	}
-	else if (tp_a < tp_b)
+	if (!*a->release_date)
+	{
+		scanlog("%s accepted, %s has empty release date\n", b->purls[0], a->purls[0]);
+		return true;
+	}
+
+	// Third-party path evaluation
+	int tp_a = path_is_third_party(a);
+	int tp_b = path_is_third_party(b);
+
+	if (tp_a - tp_b > 4)
+	{
+		scanlog("Component rejected by third party path filter (%s=%d=%s > %s=%d=%s)\n", a->purls[0], tp_a,a->file, b->purls[0], tp_b, b->file);
+		return false;
+	}
+	else if (tp_b - tp_a > 4)
 	{
 		scanlog("Component accepted by third party path filter (%s=%d < %s=%d)\n",  a->purls[0], tp_a,  b->purls[0], tp_b);
 		return true;
 	}
+
 	//when the url ranking is enabled
 	if (b->rank < COMPONENT_DEFAULT_RANK || a->rank < COMPONENT_DEFAULT_RANK)
-	{
-		//shorter path lenght are prefered
-		if (b->rank < a->rank &&b->path_depth < a->path_depth/2)
-			return true;
-		else if (b->rank > a->rank && a->path_depth < b->path_depth/2)
-			return false;
-		
+	{		
 		bool good_purl_a = binary_file_to_purl(a);
 		bool good_purl_b = binary_file_to_purl(b);
 		if (good_purl_b && !good_purl_a)
@@ -356,11 +359,35 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			scanlog("Component %s rejected by binary purl match\n", b->purls[0]);
 			return false;
 		}
+
+		if (b->rank >= COMPONENT_RANK_SELECTION_MAX && a->rank < COMPONENT_RANK_SELECTION_MAX)
+		{
+			scanlog("%s rejected by rank threshold %d >= %d\n", b->purls[0], b->rank, COMPONENT_RANK_SELECTION_MAX);
+			return false;
+		}
 	
 		//lower rank selection logic
-		if (b->rank < COMPONENT_RANK_SELECTION_MAX && b->path_depth <= a->path_depth)
+		if (b->rank <= COMPONENT_RANK_SELECTION_MAX)
 		{
 			scanlog("path lenght: %s - %d vs  %s - %d\n", b->file, b->path_depth, a->file, a->path_depth);
+						//shorter path lenght are prefered
+		if (b->path_depth < a->path_depth/2)
+		{
+			scanlog("%s accepted by shorter path depth %d vs %d\n", b->purls[0], b->path_depth, a->path_depth);
+			return true;
+		}
+		else if (a->path_depth < b->path_depth/2)
+		{
+			scanlog("%s rejected by longer path depth %d vs %d\n", b->purls[0], b->path_depth, a->path_depth);
+			return false;
+		}
+
+			if(b->path_depth > a->path_depth+1)
+			{
+				scanlog("%s rejected by deeper path in rank selection %d > %d\n", b->purls[0], b->path_depth, a->path_depth);
+				return false;
+			}
+
 			if (b->rank < a->rank)
 			{
 				scanlog("%s wins %s by rank %d/%d\n", b->purls[0],  a->purls[0], b->rank, a->rank);
@@ -378,8 +405,13 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	{	
 		if (purl_source_check(a) > purl_source_check(b))
 		{
-			scanlog("Component prefered by source\n");
+			scanlog("%s accepted over %s by source check\n", b->purls[0], a->purls[0]);
 			return true;
+		}
+		else if (purl_source_check(b) > purl_source_check(a))
+		{
+			scanlog("%s rejected by source check\n", b->purls[0]);
+			return false;
 		}
 
 		//Look for available health information
@@ -405,6 +437,11 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			scanlog("Component %s prefered over %s by vendor+component=purl\n", b->purls[0], a->purls[0]);
 			return true;
 		}
+		else if (purl_vendor_component_check(a) && !purl_vendor_component_check(b))
+		{
+			scanlog("Component %s rejected, %s wins by vendor+component=purl\n", b->purls[0], a->purls[0]);
+			return false;
+		}
 		
 		if (!a->purls_md5[0] && a->purls[0])
 		{
@@ -422,8 +459,13 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		
 		if ((!a->age && b->age) || b->age > a->age)
 		{
-			scanlog("Component %s prefered over %s by purl date\n", b->purls[0], a->purls[0]);
+			scanlog("Component %s prefered over %s by purl date (age: %ld vs %ld)\n", b->purls[0], a->purls[0], b->age, a->age);
 			return true;
+		}
+		else if ((!b->age && a->age) || a->age > b->age)
+		{
+			scanlog("Component %s rejected by purl date (age: %ld vs %ld)\n", b->purls[0], b->age, a->age);
+			return false;
 		}
 
 		if (b->age == a->age && !strcmp(a->component, b->component) && strcmp(a->version, b->version) > 0)
@@ -431,14 +473,25 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			scanlog("Component %s prefered over %s by version\n", b->purls[0], a->purls[0]);
 			return true;
 		}
+		else if (b->age == a->age && !strcmp(a->component, b->component) && strcmp(b->version, a->version) > 0)
+		{
+			scanlog("Component %s rejected by version comparison\n", b->purls[0]);
+			return false;
+		}
 	}
 	/*select the oldest release date */
 	if (strcmp(b->release_date, a->release_date) < 0)
 	{
-		scanlog("Component %s prefered over %s by release date\n", b->purls[0], a->purls[0]);
+		scanlog("Component %s (rank %d) prefered over %s (rank %d) by release date\n", b->purls[0],b->rank, a->purls[0], a->rank);
 		return true;
 	}
+	else if (strcmp(b->release_date, a->release_date) > 0)
+	{
+		scanlog("Component %s (rank %d) rejected, %s (rank %d) wins by older release date\n", b->purls[0], b->rank, a->purls[0], a->rank);
+		return false;
+	}
 
+	scanlog("Component %s rejected, no criteria matched\n", b->purls[0]);
 	return false;
 }
 
@@ -450,8 +503,8 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	if (!new_comp)
 		return false;
 		
-	fill_component_path(new_comp, path);
 	/* Create a new component and fill it from the url record */
+	fill_component_path(new_comp, path);
 
 	new_comp->file_md5_ref = component_list->match_ref->file_md5;
 	/* If the component is valid add it to the component list */
@@ -543,13 +596,13 @@ bool load_matches(match_data_t *match)
 	{
 		asprintf(&match->line_ranges, "n/a");
 		asprintf(&match->oss_ranges, "n/a");
-		asprintf(&match->matched_percent, "%d functions matched", match->hits);
+		match->matched_percent = -1;
 	}
 	else if (match->type == MATCH_FILE)
 	{
 		asprintf(&match->line_ranges, "all");
 		asprintf(&match->oss_ranges, "all");
-		asprintf(&match->matched_percent, "100%%");
+		match->matched_percent = 100;
 	}
 
 	uint32_t records = 0;
@@ -719,7 +772,7 @@ void match_select_best(scan_data_t *scan)
 			if (match_component == best_match_component)
 				continue;
 
-			if (path_is_third_party(match_component->file) < path_is_third_party(best_match_component->file) || !strcmp(match_component->release_date, "9999-99-99"))
+			if (path_is_third_party(match_component) < path_is_third_party(best_match_component) || !strcmp(match_component->release_date, "9999-99-99"))
 				continue;
 
 			scanlog("%s - %s - %d - %d VS %s - %s - %d - %d\n",
@@ -737,7 +790,7 @@ void match_select_best(scan_data_t *scan)
 
 			//If the best match is not good or is not identified be prefer the candidate.
 			if ((!best_match_component->identified && match_component->identified) ||
-				(path_is_third_party(best_match_component->file) < path_is_third_party(match_component->file)))
+				(path_is_third_party(best_match_component) < path_is_third_party(match_component)))
 			{
 				scanlog("Replacing best match for a prefered component\n");
 				scan->matches_list_array[i]->best_match = item->match;
@@ -745,7 +798,7 @@ void match_select_best(scan_data_t *scan)
 			}
 
 			//If best match has 20% more of hits do nothing.
-			if (best_match->hits >= match->hits * 1.2)
+			if (best_match->hits >= match->hits * 1.2 && best_match_component->path_depth <= match_component->path_depth)
 				continue;
 
 			//if cantidate has 10% more of hits do not consider dates and switch
@@ -753,13 +806,18 @@ void match_select_best(scan_data_t *scan)
 			{
 				scanlog("Replacing best match due to big hits difference\n");
 				scan->matches_list_array[i]->best_match = item->match;
+				continue;
 			} 
 			// if the hit numbers are close, select the oldest.
-			else if (abs(scan->matches_list_array[i]->best_match->hits - item->match->hits) <= 2 &&
-					find_oldest_match(scan->matches_list_array[i]->best_match, item->match))
+			int diff = abs(best_match->matched_percent - match->matched_percent);
+
+			if (diff <= 10)
 			{
-				scanlog("Replacing best match for an older version with equal hits\n");
-				scan->matches_list_array[i]->best_match = item->match;
+				if (component_date_comparation(best_match_component, match_component))
+				{
+					scanlog("Replacing best match for an older version with similar hits\n");
+					scan->matches_list_array[i]->best_match = item->match;
+				}
 			}
 		}
 	}
@@ -792,10 +850,9 @@ void match_select_best(scan_data_t *scan)
 						{
 							free(scan->matches_list_array[i]->best_match->line_ranges);
 							free(scan->matches_list_array[i]->best_match->oss_ranges);
-							free(scan->matches_list_array[i]->best_match->matched_percent);
 							scan->matches_list_array[i]->best_match->line_ranges = r.local;
 							scan->matches_list_array[i]->best_match->oss_ranges = r.remote;
-							scan->matches_list_array[i]->best_match->matched_percent = r.matched;
+							scan->matches_list_array[i]->best_match->matched_percent = atoi(r.matched);
 
 							max_hits = scan->matches_list_array[i]->best_match->hits;
 							index = i;
