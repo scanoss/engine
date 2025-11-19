@@ -262,6 +262,9 @@ int ranges_assemble(matchmap_range *ranges, char *line_ranges, char *oss_ranges)
 				strcat(line_ranges, ",");
 			if (*oss_ranges)
 				strcat(oss_ranges, ",");
+			//discard snippets below the limit of detection
+			if (to - from < min_match_lines)
+				continue;
 
 			/* Add from-to values */
 			sprintf(line_ranges + strlen(line_ranges), "%d-%d", from, to);

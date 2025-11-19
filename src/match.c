@@ -798,7 +798,7 @@ void match_select_best(scan_data_t *scan)
 			}
 
 			//If best match has 20% more of hits do nothing.
-			if (best_match->hits >= match->hits * 1.2 && best_match_component->path_depth < match_component->path_depth)
+			if (best_match->hits >= match->hits * 1.2 && best_match_component->path_depth <= match_component->path_depth)
 				continue;
 
 			//if cantidate has 10% more of hits do not consider dates and switch
