@@ -340,7 +340,7 @@ int path_is_third_party(component_data_t *comp)
 	if (!comp->file)
 		return 0;
 	
-	char * path = comp->file;
+	char * path = dirname(comp->file);
 
 	const char* patterns[] = {
         // Explicit third-party naming
@@ -396,6 +396,9 @@ int path_is_third_party(component_data_t *comp)
     };
 
     const int numPatterns = sizeof(patterns) / sizeof(patterns[0]);
+
+	if (!strcmp(path, comp->file))
+		return  numPatterns;
 
     for (int i = 0; i < numPatterns; i++)
 	{
