@@ -46,6 +46,7 @@
 #include <decrypt.h>
 #include "hpsm.h"
 #include <dlfcn.h>
+#include <getopt.h>
 
 struct ldb_table oss_url;
 struct ldb_table oss_file;
@@ -263,6 +264,34 @@ uint64_t read_flags()
 
 
 int component_rank_max = COMPONENT_DEFAULT_RANK + 1; /*Used defined max component rank accepted*/
+
+/* Long options structure for getopt_long */
+static struct option long_options[] = {
+	{"rank",              required_argument, 0, 'r'},
+	{"tolerance",         required_argument, 0, 'T'},
+	{"sbom",              required_argument, 0, 's'},
+	{"blacklist",         required_argument, 0, 'b'},
+	{"force-snippet",     required_argument, 0, 256}, /* Long option only, no short form */
+	{"component",         required_argument, 0, 'c'},
+	{"key",               required_argument, 0, 'k'},
+	{"attribution",       required_argument, 0, 'a'},
+	{"flags",             required_argument, 0, 'F'},
+	{"license",           required_argument, 0, 'l'},
+	{"full-license",      no_argument,       0, 'L'},
+	{"name",              required_argument, 0, 'n'},
+	{"max-snippets",      required_argument, 0, 'M'},
+	{"max-components",    required_argument, 0, 'N'},
+	{"wfp",               no_argument,       0, 'w'},
+	{"test",              no_argument,       0, 't'},
+	{"version",           no_argument,       0, 'v'},
+	{"help",              no_argument,       0, 'h'},
+	{"extension",         no_argument,       0, 'e'},
+	{"debug",             no_argument,       0, 'd'},
+	{"quiet",             no_argument,       0, 'q'},
+	{"hpsm",              no_argument,       0, 'H'},
+	{0, 0, 0, 0}
+};
+
 /**
  * @brief //TODO
  * @param argc //TODO
@@ -291,9 +320,10 @@ int main(int argc, char **argv)
 
 	/* Parse arguments */
 	int option;
+	int option_index = 0;
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
-	while ((option = getopt(argc, argv, ":r:T:s:b:B:c:k:a:F:l:n:M:N:wtLvhedqH")) != -1)
+	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:wtLvhedqH", long_options, &option_index)) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -368,8 +398,7 @@ int main(int argc, char **argv)
 			case 'w':
 				force_wfp = true;
 				break;
-			case 'B':
-				ignore_components = get_components(optarg);
+			case 256: /* --force-snippet (long option only) */
 				force_snippet_scan = true;
 				break;
 			case 't':

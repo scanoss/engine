@@ -32,6 +32,8 @@
 #include "help.h"
 #include "scanoss.h"
 #include "limits.h"
+#include "match_list.h"
+#include "component.h"
 
 /**
  * @brief Print the help
@@ -46,34 +48,37 @@ Results are displayed in JSON format through STDOUT.\n\
 Syntax: scanoss [parameters] [TARGET]\n\
 \n\
 Configuration:\n\
--w         Process TARGET as a .wfp file, regardless of its actual extension.\n\
--H         Enable High Precision Snippet Match mode (requires 'libhpsm.so' in the system).\n\
--e         Match only files with identical extensions as the scanned file (default: off).\n\
--M NUMBER  Search for up to NUMBER different components in each file (maximum: 9).\n\
--T NUMBER  Set snippet scanning tolerance percentage (default: 0.1).\n\
--s SBOM    Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
--b SBOM    Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\
--B SBOM    Same as \"-b\" but with forced snippet scanning.\n\
--a SBOM    Show attribution notices for the provided SBOM.json file.\n\
--c HINT    Add a component HINT to guide scan results.\n\
--k KEY     Show contents of the specified KEY file from MZ sources archive.\n\
--l LICENSE Display OSADL metadata for the given SPDX license ID.\n\
--L         Enable license full reort.\n\
+-w, --wfp                Process TARGET as a .wfp file, regardless of its actual extension.\n\
+-H, --hpsm               Enable High Precision Snippet Match mode (requires 'libhpsm.so' in the system).\n\
+-e, --extension          Match only files with identical extensions as the scanned file (default: off).\n\
+-M, --max-snippets NUM   Search for up to NUM different components in each file (maximum: 9).\n\
+-N, --max-components NUM Set maximum number of components (default: %d).\n\
+-T, --tolerance NUM      Set snippet scanning tolerance percentage (default: 0.1).\n\
+-r, --rank NUM           Set maximum component rank accepted (default: %d).\n\
+-s, --sbom FILE          Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
+-b, --blacklist FILE     Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\
+    --force-snippet FILE Force snippet scanning even for full file matches.\n\
+-a, --attribution FILE   Show attribution notices for the provided SBOM.json file.\n\
+-c, --component HINT     Add a component HINT to guide scan results.\n\
+-k, --key KEY            Show contents of the specified KEY file from MZ sources archive.\n\
+-l, --license LICENSE    Display OSADL metadata for the given SPDX license ID.\n\
+-L, --full-license       Enable full license report.\n\
+-F, --flags FLAGS        Set engine scanning flags (see below).\n\
 \n\
 Options:\n\
--t  Run engine performance tests.\n\
--v  Show version information and exit.\n\
--n  Set database name (default: oss).\n\
--h  Display this help information and exit.\n\
--d  Store debugging information to disk (/tmp).\n\
--q  Suppress JSON output (show only debugging info via STDERR).\n\
+-t, --test               Run engine performance tests.\n\
+-v, --version            Show version information and exit.\n\
+-n, --name NAME          Set database name (default: oss).\n\
+-h, --help               Display this help information and exit.\n\
+-d, --debug              Store debugging information to disk (/tmp).\n\
+-q, --quiet              Suppress JSON output (show only debugging info via STDERR).\n\
 \n\
 Environment variables:\n\
 SCANOSS_MATCHMAP_MAX: Set the snippet scanning match map size (default: %d).\n\
-SCANOSS_FILE_CONTENTS_URL: Define the API URL endpoint for sources. Source url wont be reported if it's not defined.\n\
+SCANOSS_FILE_CONTENTS_URL: Define the API URL endpoint for sources. Source URL won't be reported if not defined.\n\
 \n\
 Engine scanning flags:\n\
-Configure the scanning engine using flags with the -F parameter.\n\
+Configure the scanning engine using flags with the -F/--flags parameter.\n\
 These settings can also be specified in %s\n\
 +-------+-------------------------------------------------------+\n\
 | Flag  | Setting                                               |\n\
@@ -94,7 +99,10 @@ These settings can also be specified in %s\n\
 | 8192  | Disable health layer (default: enabled)               |\n\
 | 16384 | Enable high accuracy, slower scan (default: disabled) |\n\
 +-------+-------------------------------------------------------+\n\
-Example: scanoss -F 12 DIRECTORY (scan DIRECTORY without license and dependency data)\n\
+Examples:\n\
+  scanoss -F 12 DIRECTORY              Scan DIRECTORY without license and dependency data\n\
+  scanoss --flags 12 DIRECTORY         Same as above using long option\n\
+  scanoss --sbom my_sbom.json TARGET   Scan TARGET including SBOM assets\n\
 \n\
-Copyright (C) 2018-2022 SCANOSS.COM\n", DEFAULT_MATCHMAP_FILES, ENGINE_FLAGS_FILE);
+Copyright (C) 2018-2022 SCANOSS.COM\n", SCAN_MAX_COMPONENTS_DEFAULT, COMPONENT_DEFAULT_RANK + 1, DEFAULT_MATCHMAP_FILES, ENGINE_FLAGS_FILE);
 }
