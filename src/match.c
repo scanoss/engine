@@ -539,12 +539,12 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
  * @return false
  */
 /*Iterations must be doubled if high accuracy is enabled*/
-int iteration_max = FETCH_MAX_FILES;
+int iteration_max = DEFAULT_MATCHMAP_FILES;
 bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	/*Iterations must be doubled if high accuracy is enabled*/
 	if (iteration == 0)
-		iteration_max = ((engine_flags & ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 4 : FETCH_MAX_FILES);
+		iteration_max = ((engine_flags & ENABLE_HIGH_ACCURACY) ? fetch_max_files * 4 : fetch_max_files);
 	
 	/*Return we high accuracy it is not enabled*/
 	if (iteration > iteration_max)
@@ -588,10 +588,8 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
  */
 bool load_matches(match_data_t *match)
 {
-	scanlog("Load matches\n");
+	scanlog("Loading matches - fetch_max_files: %d\n", fetch_max_files);
 
-
-	
 	if (match->type == MATCH_BINARY)
 	{
 		asprintf(&match->line_ranges, "n/a");

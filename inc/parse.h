@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "scanoss.h"
+#include "component.h"
 
 void extract_csv(char *out, char *in, int n, long limit);
 void lowercase(char *word);

@@ -45,13 +45,13 @@
 #include "versions.h"
 
 
-static char * purl_indirection_reference[FETCH_MAX_FILES];
+static char * purl_indirection_reference[FETCH_MAX_FILES_DEFAULT];
 static int purl_indirection_index = 0;
-static release_version * purl_version_list[FETCH_MAX_FILES];
+static release_version * purl_version_list[FETCH_MAX_FILES_DEFAULT];
 
 void purl_latest_version_add(component_data_t * component)
 {
-	if (!component->purls[0] || !component->release_date || !component->version || purl_indirection_index == FETCH_MAX_FILES)
+	if (!component->purls[0] || !component->release_date || !component->version || purl_indirection_index == fetch_max_files)
 		return;
 
 	for (int i = 0; i < purl_indirection_index; i++)

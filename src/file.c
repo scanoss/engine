@@ -192,8 +192,8 @@ int dir_count(char *path)
 bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 
-	/* Leave if FETCH_MAX_FILES is reached */
-	if (iteration >= FETCH_MAX_FILES) return true;
+	/* Leave if fetch_max_files is reached */
+	if (iteration >= fetch_max_files) return true;
 
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
@@ -231,7 +231,7 @@ bool count_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_
 
 	int * count = ptr;
 	*count = iteration;
-	if (iteration >= FETCH_MAX_FILES)
+	if (iteration >= fetch_max_files)
 	{
 		return true;
 	}

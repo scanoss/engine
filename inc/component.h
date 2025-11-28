@@ -2,6 +2,7 @@
 #define __COMPONENT_H
 
 #include "scanoss.h"
+#include "limits.h"
 
 #define COMPONENT_DEFAULT_RANK 999 //default rank for components without rank information
 #define COMPONENT_RANK_SELECTION_MAX 8 //max rank to be considered in component selection
@@ -61,6 +62,40 @@ typedef struct component_data_t
 	int path_depth; /* depth of the matched file path*/
 	int third_party_rank; /* Saves third party ranking*/
 } component_data_t;
+
+typedef struct keywords
+{
+	int  count;
+	char word[MAX_FIELD_LN];
+} keywords;
+
+
+typedef struct file_recordset
+{
+	uint8_t url_id[MD5_LEN];
+	char path[MAX_FILE_PATH];
+	int path_ln;
+	bool external;
+} file_recordset;
+
+typedef struct len_rank
+{
+	int id;
+	int len;
+} len_rank;
+
+typedef struct  component_item
+{
+	char * vendor;
+	char * component;
+	char * purl;
+	char * version;
+	char * license;
+} component_item;
+
+extern component_item *ignore_components;
+extern component_item *declared_components;
+
 
 component_data_t * component_init(void);
 void component_data_free(component_data_t * data);

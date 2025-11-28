@@ -55,9 +55,12 @@ Configuration:\n\
 -N, --max-components NUM Set maximum number of components (default: %d).\n\
 -T, --tolerance NUM      Set snippet scanning tolerance percentage (default: 0.1).\n\
 -r, --rank NUM           Set maximum component rank accepted (default: %d).\n\
+    --max-files NUM      Set maximum number of files to fetch during matching (default: 12000).\n\
+    --min-match-hits NUM Set minimum snippet ID hits for a match (default: 4).\n\
+    --min-match-lines NUM Set minimum matched lines for a range (default: 10).\n\
 -s, --sbom FILE          Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
 -b, --blacklist FILE     Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\
-    --force-snippet FILE Force snippet scanning even for full file matches.\n\
+    --force-snippet FILE Same as \"-b\" but with forced snippet scanning.\n\
 -a, --attribution FILE   Show attribution notices for the provided SBOM.json file.\n\
 -c, --component HINT     Add a component HINT to guide scan results.\n\
 -k, --key KEY            Show contents of the specified KEY file from MZ sources archive.\n\

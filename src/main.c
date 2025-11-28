@@ -281,6 +281,9 @@ static struct option long_options[] = {
 	{"name",              required_argument, 0, 'n'},
 	{"max-snippets",      required_argument, 0, 'M'},
 	{"max-components",    required_argument, 0, 'N'},
+	{"max-files",         required_argument, 0, 257}, /* Long option only */
+	{"min-match-hits",    required_argument, 0, 258}, /* Long option only */
+	{"min-match-lines",   required_argument, 0, 259}, /* Long option only */
 	{"wfp",               no_argument,       0, 'w'},
 	{"test",              no_argument,       0, 't'},
 	{"version",           no_argument,       0, 'v'},
@@ -443,7 +446,19 @@ int main(int argc, char **argv)
 				printf("Unsupported option: %c\n", optopt);
 				invalid_argument = true;
 				break;
-			
+
+			case 257: /* --max-files */
+				fetch_max_files = atoi(optarg);
+				break;
+
+			case 258: /* --min-match-hits */
+				min_match_hits = atoi(optarg);
+				break;
+
+			case 259: /* --min-match-lines */
+				min_match_lines = atoi(optarg);
+				break;
+
 			case 'H':
 				if (hpsm_lib_load())
 					hpsm_enabled = true;

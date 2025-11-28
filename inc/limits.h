@@ -34,6 +34,11 @@
 #define MAX_QUERY_RESPONSE (1024 * 1024 * 8)
 #define SLOW_QUERY_LIMIT_IN_USEC 2000000
 #define MAX_JSON_VALUE_LEN 4096
+#define MAX_FILE_PATH 1024
+#define FETCH_MAX_FILES_DEFAULT 12000
+#define MIN_FILE_SIZE 256 // files below this size will be ignored
+#define CRC_LIST_LEN 1024 // list of crc checksums to avoid metadata duplicates
+#define SNIPPET_LINE_TOLERANCE 10
 
 /* Snippets */
 #define DEFAULT_MATCHMAP_FILES 10000     // Default number of files evaluated in snippet matching
@@ -54,5 +59,6 @@ extern int consecutive_threshold;
 extern int range_tolerance;  // A maximum number of non-matched lines tolerated inside a matching range
 extern int min_match_lines; // Minimum number of lines matched for a match range to be acepted
 extern int min_match_hits;  // Minimum number of snippet ID hits to produce a snippet match
+extern int fetch_max_files; // Maximum number of files to fetch during component matching
 
 #endif

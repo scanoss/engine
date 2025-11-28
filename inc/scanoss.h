@@ -30,12 +30,6 @@
 #include <unistd.h>
 #include "limits.h"
 
-#define MAX_FILE_PATH 1024
-#define FETCH_MAX_FILES 12000
-#define MIN_FILE_SIZE 256 // files below this size will be ignored
-#define CRC_LIST_LEN 1024 // list of crc checksums to avoid metadata duplicates
-#define SNIPPET_LINE_TOLERANCE 10
-
 #define WFP_LN 4
 #define WFP_REC_LN 18
 
@@ -84,37 +78,6 @@ extern const char *dependency_sources[];
 
 typedef enum {MATCH_NONE, MATCH_FILE, MATCH_SNIPPET, MATCH_BINARY} match_t;
 
-typedef struct keywords
-{
-	int  count;
-	char word[MAX_FIELD_LN];
-} keywords;
-
-
-typedef struct file_recordset
-{
-	uint8_t url_id[MD5_LEN];
-	char path[MAX_FILE_PATH];
-	int path_ln;
-	bool external;
-} file_recordset;
-
-typedef struct len_rank
-{
-	int id;
-	int len;
-} len_rank;
-
-typedef struct component_item
-{
-	char * vendor;
-	char * component;
-	char * purl;
-	char * version;
-	char * license;
-} component_item;
-
-
 extern long microseconds_start;
 extern int map_rec_len;
 extern bool match_extensions;
@@ -144,9 +107,6 @@ extern bool first_file;
 extern int max_vulnerabilities;
 
 extern char *ignored_assets;
-extern component_item *ignore_components;
-extern component_item *declared_components;
-
 
 /* Prototype declarations */
 
