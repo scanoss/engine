@@ -68,7 +68,15 @@ bool license_add_to_list(struct license_list * ptr, char * license)
 	ptr->licenses = realloc(ptr->licenses, sizeof(char *) * (ptr->count + 1));
 	if (!ptr->licenses)
 		return false;
-	ptr->licenses[ptr->count] = strdup(license);
+
+	/* Allocate with extra padding for CRC32C hardware reads (8-byte blocks) */
+	size_t len = strlen(license);
+	size_t padded_len = ((len + 8) / 8) * 8;  /* Round up to next 8-byte boundary */
+	ptr->licenses[ptr->count] = calloc(1, padded_len);
+	if (!ptr->licenses[ptr->count])
+		return false;
+	strcpy(ptr->licenses[ptr->count], license);
+
 	ptr->count++;
 	return true;
 }

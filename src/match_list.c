@@ -96,12 +96,12 @@ bool component_list_add(component_list_t *list, component_data_t *new_comp, bool
         {
             if (list->items >= list->max_items)
                 return false;
-            
+
             struct comp_entry *nn = calloc(1, sizeof(struct comp_entry)); /* Insert after. */
-            nn->component = new_comp; 
+            nn->component = new_comp;
             LIST_INSERT_AFTER(list->last_element, nn, entries);
             list->last_element_aux = list->last_element;
-            list->last_element = nn; 
+            list->last_element = nn;
             list->items++;
             return true;
         }

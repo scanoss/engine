@@ -339,8 +339,8 @@ int path_is_third_party(component_data_t *comp)
 	
 	if (!comp->file)
 		return 0;
-	
-	char * path = dirname(comp->file);
+	char * full_path = strdup(comp->file);
+	char * path = dirname(full_path);
 
 	const char* patterns[] = {
         // Explicit third-party naming
@@ -360,7 +360,6 @@ int path_is_third_party(component_data_t *comp)
 
         // Build/dependency management directories
         "external",          // Maven, CMake external dependencies
-        "externals",         // Alternative
         "dependencies",      // Generic dependency directories
         "dep",              // Short form
         "packages",          // NuGet, Generic (covers packages.lock)
@@ -388,26 +387,29 @@ int path_is_third_party(component_data_t *comp)
         "contrib",           // Contributed/third-party code
         "plugin",            // Plugins (often third-party)
 
-        "utils","lib", "components", "modules", "ext",
-        "fixtures", "examples",
-        "files", "assets", "runtime",
+        "utils", "common", "components", "modules", "ext",
+        "fixtures", "examples","assets", "runtime",
         "subprojects", "managed", "local_packages", "published",
-        "driver", "libresources", "offloading","documentation", "test"
+        "libresources", "offloading", "media","lib", "documentation", "test", "service","driver", "files"
     };
 
     const int numPatterns = sizeof(patterns) / sizeof(patterns[0]);
 
-	if (!strcmp(path, comp->file))
+	if (!strcmp(path, "."))
+	{
+		free(full_path);
 		return  numPatterns;
+	}
 
     for (int i = 0; i < numPatterns; i++)
 	{
         if (strcasestr(path, patterns[i]) != NULL)
 		{
-            return i;
+			free(full_path);
+			return i;
         }
     }
-
+	free(full_path);
     return numPatterns + 1;
 }
 

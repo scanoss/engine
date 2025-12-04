@@ -77,7 +77,9 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 		memcpy(new_comp->url_md5, key, LDB_KEY_LN);
 		memcpy(new_comp->url_md5 + LDB_KEY_LN, subkey, subkey_ln);
 		new_comp->url_match = true;
-		new_comp->file = strdup(new_comp->url);
+		char * file_name = strdup(new_comp->url);
+		new_comp->file = strdup(basename(file_name));
+		free(file_name);
 		new_comp->file_md5_ref = component_list->match_ref->file_md5;
 		new_comp->identified = IDENTIFIED_NONE;
 		asset_declared(new_comp);
