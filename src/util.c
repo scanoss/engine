@@ -361,7 +361,7 @@ int path_is_third_party(component_data_t *comp)
         // Build/dependency management directories
         "external",          // Maven, CMake external dependencies
         "dependencies",      // Generic dependency directories
-        "dep",              // Short form
+        "deps",              // Short form
         "packages",          // NuGet, Generic (covers packages.lock)
 
         // Language-specific package directories
@@ -378,19 +378,17 @@ int path_is_third_party(component_data_t *comp)
         "imported",          // Imported code
         "foreign",           // Foreign code
 
-        // Build output that may contain third-party
-        "dist",              // Distribution builds
-        "release",           // Release builds
-        "bundle",            // Bundled dependencies
-
         // Contribution/extension directories
         "contrib",           // Contributed/third-party code
         "plugin",            // Plugins (often third-party)
 
-        "utils", "common", "components", "modules", "ext",
+        "utils", "components", "modules", "ext",
         "fixtures", "examples","assets", "runtime",
         "subprojects", "managed", "local_packages", "published",
-        "libresources", "offloading", "media","lib", "documentation", "test", "service","driver", "files"
+        "libresources", "offloading", "compile", "release", "bundle",   
+		"media", "documentation", "test", 
+		"service","lib","dist",
+		"driver", "common","files"
     };
 
     const int numPatterns = sizeof(patterns) / sizeof(patterns[0]);
@@ -410,7 +408,7 @@ int path_is_third_party(component_data_t *comp)
         }
     }
 	free(full_path);
-    return numPatterns + 1;
+    return numPatterns;
 }
 
 /**

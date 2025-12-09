@@ -412,12 +412,12 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	int tp_b = path_is_third_party(b);
 	int tp_diff = tp_a - tp_b;
 
-	if (tp_diff > 6)
+	if (tp_diff > 7)
 	{
 		scanlog("Component rejected by third party path filter (%s=%d=%s > %s=%d=%s)\n", a->purls[0], tp_a,a->file, b->purls[0], tp_b, b->file);
 		return false;
 	}
-	if (tp_diff < - 6)
+	if (tp_diff < -7)
 	{
 		scanlog("Component accepted by third party path filter (%s=%d=%s < %s=%d=%s)\n",  a->purls[0], tp_a, a->file,  b->purls[0], tp_b, b->file);
 		return true;
@@ -492,12 +492,6 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 				if (a->path_depth + 2 < b->path_depth/2)
 				{
 					scanlog("%s rejected by longer path depth %d vs %d\n", b->purls[0], b->path_depth, a->path_depth);
-					return false;
-				}
-
-				if(b->path_depth > a->path_depth+1)
-				{
-					scanlog("%s rejected by deeper path in rank selection %d > %d\n", b->purls[0], b->path_depth, a->path_depth);
 					return false;
 				}
 			}
