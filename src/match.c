@@ -319,32 +319,49 @@ int compare_file_extension(component_data_t *a, component_data_t *b)
 }
 
 /**
- * @brief Funtion to be called as pointer when a new compoent has to be loaded in to the list
+ * @brief Component comparison function for determining insertion order in the component list
  *
- * @param a existent component in the list
- * @param b new component to be added
- * @return true b has to be included in the list before "a"
- * @return false "a" wins, compare with the next component.
+ * This function implements the component selection logic using multiple hierarchical criteria:
+ * 1. Declared components (SBOM) evaluation
+ * 2. Component hints (purl and component name matching)
+ * 3. Path rank hint evaluation (file path similarity)
+ * 4. Release date validation
+ * 5. File extension matching
+ * 6. Third-party path evaluation
+ * 7. URL ranking and binary purl matching
+ * 8. Tiebreakers for equal release dates (source check, health metrics, vendor check, component age, version comparison)
+ * 9. Final selection based on oldest release date
+ *
+ * @param a Existing component in the list to compare against
+ * @param b New candidate component to be added
+ * @return true If component 'b' should be inserted before 'a' (b wins)
+ * @return false If component 'a' wins, continue comparing with the next component
  */
 
 static bool component_hint_date_comparation(component_data_t *a, component_data_t *b)
 {
 	// 1. Declared components (SBOM) evaluation
+	// Prioritize components that are declared in the SBOM (Software Bill of Materials)
+	// identified > 0 means the component was declared/identified in the SBOM
 	if (declared_components)
 	{
 		scanlog("ASSETS eval- %d / %d\n", a->identified,  b->identified);
 		if (a->identified != b->identified)
 		{
+			// Keep component 'a' if it's identified and 'b' is not
 			if (a->identified > b->identified)
 			{
 				scanlog("Reject component %s@%s by SBOM\n", b->purls[0], b->version);
 				return false;
 			}
+			// Accept component 'b' if it's identified and 'a' is not
 			scanlog("Accept component %s@%s by SBOM\n", b->purls[0], b->version);
 			return true;
 		}
 	}
 	// 2. Component hint evaluation
+	// Apply user-provided component hints to influence selection
+	// Hints can match against purl or component names
 	else if (component_hint)
 	{
 		scanlog("hint eval\n");
@@ -352,8 +369,10 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		if (hint_result != 0)
 			return hint_result > 0;
 	}
-	
+
 	// 3. Path rank hint evaluation
+	// Compare file path similarity between scanned file and component file paths
+	// Lower rank means better similarity (more matching path components)
 	if ((engine_flags & ENABLE_PATH_HINT) && a->file_path_ref && b->file_path_ref)
 	{
 		evaluate_path_rank(a);
@@ -361,21 +380,25 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 
 		const int rank_threshold = PATH_LEVEL_COMP_REF / 3 + 1;
 
-		// Path rank is used as hint only when it has a reasonable value
+		// Path rank is used as hint only when it has a reasonable value (below threshold)
+		// This prevents poor matches from being selected based on path alone
 		if (b->path_rank < rank_threshold)
 		{
 			int rank_diff = b->path_rank - a->path_rank;
+			// Component 'b' has better path similarity than 'a'
 			if (rank_diff < 0)
 			{
 				scanlog("%s wins %s by path rank %d\n", b->purls[0], a->purls[0], b->path_rank);
 				return true;
 			}
+			// Component 'a' has better path similarity than 'b'
 			if (rank_diff > 0)
 			{
 				scanlog("%s - %s loses %s by path rank %d/%d\n", b->purls[0],b->file,  a->purls[0], b->path_rank, a->path_rank);
 				return false;
 			}
 		}
+		// If only 'a' has a good path rank, keep it
 		else if (a->path_rank < rank_threshold)
 		{
 			scanlog("%s rejected, %s wins by path rank %d\n", b->purls[0], a->purls[0], a->path_rank);
@@ -384,6 +407,8 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	}
 
 	// 4. Release date validation
+	// Reject components without valid release dates
+	// Components must have release date information to be considered
 	if (!*b->release_date)
 	{
 		scanlog("%s rejected due to empty release date\n", b->purls[0]);
@@ -395,42 +420,55 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		return true;
 	}
 
+	// 5. File extension matching
+	// Prefer components where the file extension matches the scanned file
 	int file_extension_comp = compare_file_extension(a, b);
 	if (file_extension_comp < 0)
 	{
+		// Component 'a' has matching extension, 'b' does not
 		scanlog("%s rejected by file extension match\n", b->purls[0]);
 		return false;
 	}
 	else if (file_extension_comp > 0)
 	{
+		// Component 'b' has matching extension, 'a' does not
 		scanlog("%s accepted by file extension mismatch\n", b->purls[0]);
 		return true;
 	}
 
-	// 5. Third-party path evaluation
+	// 6. Third-party path evaluation
+	// Prefer components from third-party directories (vendor, external, 3rdparty, etc.)
+	// Higher score means more likely to be a third-party component
 	int tp_a = path_is_third_party(a);
 	int tp_b = path_is_third_party(b);
 	int tp_diff = tp_a - tp_b;
 
+	// If 'a' is significantly more third-party than 'b' (difference > 7), reject 'b'
 	if (tp_diff > 7)
 	{
 		scanlog("Component rejected by third party path filter (%s=%d=%s > %s=%d=%s)\n", a->purls[0], tp_a,a->file, b->purls[0], tp_b, b->file);
 		return false;
 	}
+	// If 'b' is significantly more third-party than 'a' (difference < -7), accept 'b'
 	if (tp_diff < -7)
 	{
 		scanlog("Component accepted by third party path filter (%s=%d=%s < %s=%d=%s)\n",  a->purls[0], tp_a, a->file,  b->purls[0], tp_b, b->file);
 		return true;
 	}
 
-	//when the url ranking is enabled
+	// 7. URL ranking and binary purl matching
+	// When URL ranking is enabled (rank < COMPONENT_DEFAULT_RANK), use ranking metrics
+	// Lower rank values indicate higher quality/more authoritative sources
 	if (b->rank < COMPONENT_DEFAULT_RANK || a->rank < COMPONENT_DEFAULT_RANK)
-	{		
+	{
+		// 7.1. Binary file to purl matching
+		// Check if the component's purl matches what would be expected for a binary file
 		bool good_purl_a = binary_file_to_purl(a);
 		bool good_purl_b = binary_file_to_purl(b);
 
 		if (good_purl_b != good_purl_a)
 		{
+			// Prefer component with matching binary purl
 			if (good_purl_b)
 			{
 				scanlog("Component %s prefered over %s by binary purl match\n", b->purls[0], a->purls[0]);
@@ -439,9 +477,11 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			scanlog("Component %s rejected by binary purl match\n", b->purls[0]);
 			return false;
 		}
+		// If both have good binary purls, check vendor+component match
 		else if (good_purl_b && good_purl_a)
 		{
-			// 7.3. Vendor component check
+			// 7.2. Vendor component check for binary purls
+			// Verify if vendor and component names align with the purl
 			bool vendor_check_a = purl_vendor_component_check(a);
 			bool vendor_check_b = purl_vendor_component_check(b);
 
@@ -457,18 +497,22 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			}
 		}
 
+		// 7.3. Rank threshold check
+		// Reject components with rank above the maximum selection threshold
 		if (b->rank >= COMPONENT_RANK_SELECTION_MAX && a->rank < COMPONENT_RANK_SELECTION_MAX)
 		{
 			scanlog("%s rejected by rank threshold %d >= %d\n", b->purls[0], b->rank, COMPONENT_RANK_SELECTION_MAX);
 			return false;
 		}
-	
-		// Lower rank selection logic
+
+		// 7.4. Lower rank selection logic
+		// For components with acceptable ranks (below max threshold), apply additional criteria
 		if (b->rank <= COMPONENT_RANK_SELECTION_MAX)
 		{
 			bool same_component = !strcmp(a->component, b->component);
 
-			// If both components are the same, the best ranked purl must win
+			// 7.4.1. Same component comparison - prefer better ranked purl
+			// When comparing different sources of the same component, rank is decisive
 			if (same_component && b->rank != a->rank)
 			{
 				if (b->rank < a->rank)
@@ -480,21 +524,26 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 				return false;
 			}
 
-			// Shorter path lengths are preferred for rank difference not so big
+			// 7.4.2. Path depth comparison for similar ranks
+			// When ranks are close (difference < 5), prefer shorter file paths
+			// Shorter paths often indicate more direct/canonical locations
 			if (abs(b->rank - a->rank) < 5)
-			{	
+			{
 				scanlog("path lenght: %s - %d vs  %s - %d\n", b->file, b->path_depth, a->file, a->path_depth);
+				// Component 'b' has significantly shorter path (less than half of 'a')
 				if (b->path_depth + 2 < a->path_depth/2)
 				{
 					scanlog("%s accepted by shorter path depth %d vs %d\n", b->purls[0], b->path_depth, a->path_depth);
 					return true;
 				}
+				// Component 'a' has significantly shorter path (less than half of 'b')
 				if (a->path_depth + 2 < b->path_depth/2)
 				{
 					scanlog("%s rejected by longer path depth %d vs %d\n", b->purls[0], b->path_depth, a->path_depth);
 					return false;
 				}
 			}
+			// 7.4.3. Final rank comparison if no other criteria applied
 			if (b->rank != a->rank)
 			{
 				if (b->rank < a->rank)
@@ -507,10 +556,13 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			}
 		}
 	}
-	// 7. If release dates are equal, use tiebreakers
+	// 8. Tiebreakers for equal release dates
+	// When release dates are identical, use additional criteria to select the best component
 	if (!strcmp(b->release_date, a->release_date))
 	{
-		// 7.1. Source check
+		// 8.1. Source check
+		// Prefer components from more authoritative sources (official repos, etc.)
+		// Lower source value is better (prefer_higher = false)
 		int source_a = purl_source_check(a);
 		int source_b = purl_source_check(b);
 		int source_cmp = compare_int_values(source_a, source_b, false);
@@ -526,7 +578,9 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			return false;
 		}
 
-		// 7.2. Health information
+		// 8.2. Health information
+		// Prefer components from healthier projects (more forks + watchers)
+		// Higher health value is better (prefer_higher = true)
 		print_health(a);
 		print_health(b);
 		int health_a = a->health_stats[0] + a->health_stats[2]; // forks + watchers
@@ -541,7 +595,8 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		if (health_cmp < 0)
 			return false;
 
-		// 7.3. Vendor component check
+		// 8.3. Vendor component check
+		// Verify if vendor and component names align with the purl
 		bool vendor_check_a = purl_vendor_component_check(a);
 		bool vendor_check_b = purl_vendor_component_check(b);
 
@@ -555,8 +610,10 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			scanlog("Component %s rejected, %s wins by vendor+component=purl\n", b->purls[0], a->purls[0]);
 			return false;
 		}
-		
-		// 7.4. Component age (lazy initialization)
+
+		// 8.4. Component age (lazy initialization)
+		// Prefer older components (first appearance in package repositories)
+		// Higher age value means the component was published earlier
 		initialize_component_age(a);
 		initialize_component_age(b);
 
@@ -571,7 +628,9 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			return false;
 		}
 
-		// 7.5. Version comparison (only if same component and age)
+		// 8.5. Version comparison (only if same component and age)
+		// For the same component with same age, use lexicographic version comparison
+		// Lower version string is preferred (usually represents older/more stable versions)
 		if (b->age == a->age && !strcmp(a->component, b->component))
 		{
 			int version_cmp = strcmp(a->version, b->version);
@@ -587,19 +646,24 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 			}
 		}
 	}
-	// 8. Select the oldest release date
+	// 9. Final decision: Select the oldest release date
+	// When no other criteria has decided, prefer the component with the earlier release date
+	// This implements the fundamental principle of preferring older, more established versions
 	int date_cmp = strcmp(b->release_date, a->release_date);
 	if (date_cmp < 0)
 	{
+		// Component 'b' has an earlier release date (date_cmp < 0 means b->release_date < a->release_date)
 		scanlog("Component %s (rank %d) prefered over %s (rank %d) by release date\n", b->purls[0],b->rank, a->purls[0], a->rank);
 		return true;
 	}
 	if (date_cmp > 0)
 	{
+		// Component 'a' has an earlier release date
 		scanlog("Component %s (rank %d) rejected, %s (rank %d) wins by older release date\n", b->purls[0], b->rank, a->purls[0], a->rank);
 		return false;
 	}
 
+	// No criteria matched or all criteria were equal - reject component 'b'
 	scanlog("Component %s rejected, no criteria matched\n", b->purls[0]);
 	return false;
 }
