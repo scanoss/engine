@@ -326,6 +326,7 @@ int main(int argc, char **argv)
 	int option_index = 0;
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
+
 	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:wtLvhedqH", long_options, &option_index)) != -1)
 	{
 		/* Check valid alpha is entered */
@@ -355,6 +356,7 @@ int main(int argc, char **argv)
 				break;
 			case 'r':
 				component_rank_max = atoi(optarg);
+				scanlog("Max component rank set to %d\n", component_rank_max);
 				break;
 
 			case 'k':
@@ -434,7 +436,7 @@ int main(int argc, char **argv)
 			case 'd':
 				engine_flags = engine_flags_cmd_line;
 				debug_on = true;
-				scanlog(""); // Log time stamp
+				scanlog_init();
 				break;
 
 			case ':':

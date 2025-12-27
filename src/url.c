@@ -86,10 +86,11 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 		component_list_add(component_list, new_comp, component_date_comparation, true);
 	}
 	else
+	{
+		scanlog("ignoring component with rank %d\n", new_comp->rank);
 		component_data_free(new_comp);
-	
+	}
 	free(data);
-
 	return false;
 }
 
@@ -330,6 +331,8 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 	if (!url) 
 		return false;
 
+	//scanlog("url: %s\n", url);
+
 	/* Get oldest */
 	component_data_t **comp_address = ptr;
 	component_data_t * comp_oldest = *comp_address;
@@ -340,6 +343,7 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		bool result = fill_component(comp, key, NULL, (uint8_t *)url);
 		if (!result || comp->rank > component_rank_max)
 		{
+			scanlog("ignoring component with rank %d\n", comp->rank);
 			free(url);
 			component_data_free(comp);
 			return false;

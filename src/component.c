@@ -253,7 +253,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	extract_csv(license, (char *)url_record, 5, sizeof(license));
 	extract_csv(purl, (char *)url_record, 6, sizeof(purl));
 	extract_csv(url, (char *)url_record, 7, sizeof(url));
-	extract_csv(rank, (char *)url_record, 13, sizeof(rank)); //extracts the rank field if available
+	extract_csv(rank, (char *)url_record, 14, sizeof(rank)); //extracts the rank field if available
 	/* Fill url stats if these are available*/
 	for (int i = 0; i < 5; i++) {
 		char stat[16] = "\0";
@@ -292,10 +292,10 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 		MD5((uint8_t *)component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
 	}
 	component->age = -1;
-	if (*rank && strlen(rank) < 3)
+	if (*rank)
 	{
 		component->rank = atoi(rank);
-		//scanlog("Component rank from DB: %d\n", component->rank);
+		//scanlog("Component rank from DB: %s- %d\n", rank, component->rank);
 	}
 	else
 		component->rank = COMPONENT_DEFAULT_RANK;
