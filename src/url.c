@@ -51,6 +51,8 @@
  * @param ptr //TODO
  * @return //TODO
  */
+int component_rank_max = COMPONENT_DEFAULT_RANK + 1; /*Used defined max component rank accepted*/
+
 bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen && datalen >= MAX_PATH) return false;
@@ -71,7 +73,12 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	component_data_t * new_comp = calloc(1, sizeof(*new_comp));
 	bool result = fill_component(new_comp, NULL, NULL, (uint8_t*) data);
 	scanlog("URL MATCH: %s\n", data);
-	if (result && new_comp->rank <= component_rank_max)
+	if (!result || (component_rank_max > 0 && new_comp->rank > component_rank_max))
+	{
+		scanlog("ignoring component with rank %d\n", new_comp->rank);
+		component_data_free(new_comp);
+	}
+	else 
 	{
 		/* Save match component id */
 		memcpy(new_comp->url_md5, key, LDB_KEY_LN);
@@ -84,11 +91,6 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 		new_comp->identified = IDENTIFIED_NONE;
 		asset_declared(new_comp);
 		component_list_add(component_list, new_comp, component_date_comparation, true);
-	}
-	else
-	{
-		scanlog("ignoring component with rank %d\n", new_comp->rank);
-		component_data_free(new_comp);
 	}
 	free(data);
 	return false;
@@ -341,7 +343,7 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 	{
 		component_data_t * comp = calloc(1, sizeof(*comp));
 		bool result = fill_component(comp, key, NULL, (uint8_t *)url);
-		if (!result || comp->rank > component_rank_max)
+		if (!result || (component_rank_max > 0 && comp->rank > component_rank_max))
 		{
 			scanlog("ignoring component with rank %d\n", comp->rank);
 			free(url);

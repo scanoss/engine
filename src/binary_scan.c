@@ -270,7 +270,7 @@ int binary_scan(char * input)
 		char  * file_name = field_n(3,input);
 		int target_len = strchr(file_name,',') - file_name;
 		char * target = strndup(file_name, target_len);
-		scan_data_t * scan =  scan_data_init(target, 1, 1);
+		scan_data_t * scan =  scan_data_init(target, 1, 1, true, false, 3, 5, false);
 		free(target);
 		memcpy(scan->md5, bin_md5, MD5_LEN);
 		scan->match_type = MATCH_FILE;

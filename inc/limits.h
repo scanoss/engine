@@ -38,7 +38,6 @@
 #define FETCH_MAX_FILES_DEFAULT 12000
 #define MIN_FILE_SIZE 256 // files below this size will be ignored
 #define CRC_LIST_LEN 1024 // list of crc checksums to avoid metadata duplicates
-#define SNIPPET_LINE_TOLERANCE 10
 
 /* Snippets */
 #define DEFAULT_MATCHMAP_FILES 10000     // Default number of files evaluated in snippet matching
@@ -46,12 +45,13 @@
 #define MIN_LINES_COVERAGE 0.8
 #define SKIP_SNIPPETS_IF_FILE_BIGGER (1024 * 1024 * 4)
 #define MAX_SNIPPETS_SCANNED 2500
-
+#define SNIPPETS_DEFAULT_RANGE_TOLERANCE  5  /** A maximum number of non-matched lines tolerated inside a matching range */
+#define SNIPPETS_DEFAULT_MIN_MATCH_LINES 5 /** Minimum number of lines matched for a match range to be acepted */
+#define SNIPPETS_DEFAULT_MIN_MATCH_HITS 2  /** Minimum number of snippet ID hits to produce a snippet match*/
+#define SNIPPETS_DEFAULT_ADJUST_TOLERANCE true /** Adjust tolerance based on file size */
+#define SNIPPETS_DEFAULT_HONOR_FILE_EXTENSION true /** Honor file extension during snippet matching */
+#define DEFAULT_FETCH_MAX_FILES 12000 /** Maximum number of files to fetch during component matching */
 /* Variables */
-
-extern int range_tolerance;  // A maximum number of non-matched lines tolerated inside a matching range
-extern int min_match_lines; // Minimum number of lines matched for a match range to be acepted
-extern int min_match_hits;  // Minimum number of snippet ID hits to produce a snippet match
 extern int fetch_max_files; // Maximum number of files to fetch during component matching
 
 #endif

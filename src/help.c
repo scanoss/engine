@@ -50,14 +50,14 @@ Syntax: scanoss [parameters] [TARGET]\n\
 Configuration:\n\
 -w, --wfp                Process TARGET as a .wfp file, regardless of its actual extension.\n\
 -H, --hpsm               Enable High Precision Snippet Match mode (requires 'libhpsm.so' in the system).\n\
--e, --extension          Match only files with identical extensions as the scanned file (default: off).\n\
 -M, --max-snippets NUM   Search for up to NUM different components in each file (maximum: 9).\n\
 -N, --max-components NUM Set maximum number of components (default: %d).\n\
 -T, --tolerance NUM      Set snippet scanning tolerance percentage (default: 0.1).\n\
 -r, --rank NUM           Set maximum component rank accepted (default: %d).\n\
     --max-files NUM      Set maximum number of files to fetch during matching (default: 12000).\n\
-    --min-match-hits NUM Set minimum snippet ID hits for a match (default: 4).\n\
-    --min-match-lines NUM Set minimum matched lines for a range (default: 10).\n\
+    --min-match-hits NUM Set minimum snippet ID hits for a match (default: 3, disables auto-adjust).\n\
+    --min-match-lines NUM Set minimum matched lines for a range (default: 10, disables auto-adjust).\n\
+    --ignore-file-ext    Ignore file extension during snippet matching (default: honor extension).\n\
 -s, --sbom FILE          Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
 -b, --blacklist FILE     Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\
     --force-snippet FILE Same as \"-b\" but with forced snippet scanning.\n\

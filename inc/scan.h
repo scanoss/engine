@@ -66,16 +66,22 @@ typedef struct scan_data_t
 	int max_matchmap_size;
 	bool printed_succed;
 	bool windows_line_endings;
+	bool snippet_adjust_tolerance; // Enable adjust snippet tolerance based on file size
+	int component_ranking_threshold; //-1 = disable ranking. 0 = all accepted
+	int snippet_min_hits;
+	int snippet_min_lines;
+	int snippet_range_tolerance;
+	int snippet_honor_file_extension;
 } scan_data_t;
 
 extern bool force_snippet_scan;
 
-scan_data_t * scan_data_init(char *target, int max_snippets, int max_components);
+scan_data_t * scan_data_init(char *target, int max_snippets, int max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, bool snippet_honor_file_extension);
 void scan_data_free (scan_data_t * scan);
 
 void ldb_scan(scan_data_t * scan);
 match_t ldb_scan_snippets(scan_data_t *scan_ptr);
-int wfp_scan(char * path, int scan_max_snippets, int scan_max_components);
-int hash_scan(char *path, int scan_max_snippets, int scan_max_components);
+int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, bool snippet_honor_file_extension);
+int hash_scan(char *path, int scan_max_snippets, int scan_max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, bool snippet_honor_file_extension);
 
 #endif

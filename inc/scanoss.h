@@ -80,7 +80,6 @@ typedef enum {MATCH_NONE, MATCH_FILE, MATCH_SNIPPET, MATCH_BINARY} match_t;
 
 extern long microseconds_start;
 extern int map_rec_len;
-extern bool match_extensions;
 
 /*component hint hold the last component matched/guessed */
 extern char * component_hint;
@@ -104,7 +103,6 @@ extern struct ldb_table oss_notices;
 
 
 extern bool first_file;
-extern int max_vulnerabilities;
 
 extern char *ignored_assets;
 

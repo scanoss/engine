@@ -43,16 +43,83 @@ You can create your own knowledgebase with the minr command, available at https:
 
 Syntax: scanoss [parameters] [TARGET]
 
-Configuration:
-* -w       Treats TARGET as a .wfp file regardless of the actual file extension
-* -s FILE  Use assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format) as input to identification
-* -b FILE  Ignore matches to assets specified in the provided JSON SBOM (CycloneDX/SPDX2.2 JSON format)
+## Configuration Options
 
-Options:
-* -t  Tests engine performance
-* -v  Display version and exit
-* -h  Display this help and exit
-* -d  Enable debugging information
+### Basic Configuration
+* `-w, --wfp` - Process TARGET as a .wfp file, regardless of its actual extension
+* `-H, --hpsm` - Enable High Precision Snippet Match mode (requires 'libhpsm.so' in the system)
+* `-M, --max-snippets NUM` - Search for up to NUM different components in each file (maximum: 9)
+* `-N, --max-components NUM` - Set maximum number of components (default: 5)
+* `-T, --tolerance NUM` - Set snippet scanning tolerance percentage (default: 0.1)
+* `-r, --rank NUM` - Set maximum component rank accepted (default: 11)
+* `--max-files NUM` - Set maximum number of files to fetch during matching (default: 12000)
+* `--min-match-hits NUM` - Set minimum snippet ID hits for a match (default: 3, disables auto-adjust)
+* `--min-match-lines NUM` - Set minimum matched lines for a range (default: 10, disables auto-adjust)
+* `--ignore-file-ext` - Ignore file extension during snippet matching (default: honor extension)
+
+### SBOM and Filtering
+* `-s, --sbom FILE` - Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification
+* `-b, --blacklist FILE` - Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format)
+* `--force-snippet` - Same as "-b" but with forced snippet scanning
+* `-c, --component HINT` - Add a component HINT to guide scan results
+
+### Attribution and Licenses
+* `-a, --attribution FILE` - Show attribution notices for the provided SBOM.json file
+* `-k, --key KEY` - Show contents of the specified KEY file from MZ sources archive
+* `-l, --license LICENSE` - Display OSADL metadata for the given SPDX license ID
+* `-L, --full-license` - Enable full license report
+* `-F, --flags FLAGS` - Set engine scanning flags (see Engine Flags section below)
+
+### General Options
+* `-t, --test` - Run engine performance tests
+* `-v, --version` - Show version information and exit
+* `-n, --name NAME` - Set database name (default: oss)
+* `-h, --help` - Display help information and exit
+* `-d, --debug` - Store debugging information to disk (/tmp)
+* `-q, --quiet` - Suppress JSON output (show only debugging info via STDERR)
+
+## Environment Variables
+
+* `SCANOSS_MATCHMAP_MAX` - Set the snippet scanning match map size (default: 10000)
+* `SCANOSS_FILE_CONTENTS_URL` - Define the API URL endpoint for sources. Source URL won't be reported if not defined
+
+## Engine Scanning Flags
+
+Configure the scanning engine using flags with the `-F/--flags` parameter. These settings can also be specified in `/etc/scanoss_flags.cfg`
+
+| Flag  | Setting                                               |
+|-------|-------------------------------------------------------|
+|    1  | Disable snippet matching (default: enabled)           |
+|    2  | Enable snippet_ids (default: disabled)                |
+|    4  | Disable dependencies (default: enabled)               |
+|    8  | Disable licenses (default: enabled)                   |
+|   16  | Disable copyrights (default: enabled)                 |
+|   32  | Disable vulnerabilities (default: enabled)            |
+|   64  | Disable quality (default: enabled)                    |
+|  128  | Disable cryptography (default: enabled)               |
+|  256  | Disable best match only (default: enabled)            |
+|  512  | Hide identified files (default: disabled)             |
+| 1024  | Enable download_url (default: disabled)               |
+| 2048  | Enable "use path hint" logic (default: disabled)      |
+| 4096  | Disable extended server stats (default: enabled)      |
+| 8192  | Disable health layer (default: enabled)               |
+| 16384 | Enable high accuracy, slower scan (default: disabled) |
+
+### Examples:
+```bash
+# Scan DIRECTORY without license and dependency data
+scanoss -F 12 DIRECTORY
+scanoss --flags 12 DIRECTORY
+
+# Scan TARGET including SBOM assets
+scanoss --sbom my_sbom.json TARGET
+
+# Scan with custom snippet matching parameters
+scanoss --min-match-hits 5 --min-match-lines 15 TARGET
+
+# Ignore file extensions during matching
+scanoss --ignore-file-ext TARGET
+```
 
 # File matching logic
 

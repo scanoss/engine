@@ -64,6 +64,12 @@ struct ldb_table oss_notices;
 component_item *ignore_components;
 component_item *declared_components;
 
+int scan_min_match_lines = SNIPPETS_DEFAULT_MIN_MATCH_LINES; // Minimum number of lines matched for a match range to be acepted
+int scan_min_match_hits = SNIPPETS_DEFAULT_MIN_MATCH_HITS;  // Minimum number of snippet ID hits to produce a snippet match
+bool scan_adjust_tolerance = SNIPPETS_DEFAULT_ADJUST_TOLERANCE; /** Adjust tolerance based on file size */
+int scan_ranking_threshold = 0; //enabled, all accepted by default
+bool scan_honor_file_extension = SNIPPETS_DEFAULT_HONOR_FILE_EXTENSION;
+
 bool lib_encoder_present = false;
 #define LDB_VER_MIN "4.1.0"
 
@@ -208,10 +214,12 @@ void recurse_directory(char *name)
 			if (extension(path)) if (!strcmp(extension(path), "wfp")) wfp = true;
 		
 			if (wfp)
-				wfp_scan(path, scan_max_snippets, scan_max_components);
+				wfp_scan(path, scan_max_snippets, scan_max_components, scan_adjust_tolerance, 
+					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_honor_file_extension);
 			else
 			{
-				scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components);
+				scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components, scan_adjust_tolerance, 
+					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_honor_file_extension);
 				ldb_scan(scan);
 			}
 
@@ -262,9 +270,6 @@ uint64_t read_flags()
 	return 0;
 }
 
-
-int component_rank_max = COMPONENT_DEFAULT_RANK + 1; /*Used defined max component rank accepted*/
-
 /* Long options structure for getopt_long */
 static struct option long_options[] = {
 	{"rank",              required_argument, 0, 'r'},
@@ -284,6 +289,7 @@ static struct option long_options[] = {
 	{"max-files",         required_argument, 0, 257}, /* Long option only */
 	{"min-match-hits",    required_argument, 0, 258}, /* Long option only */
 	{"min-match-lines",   required_argument, 0, 259}, /* Long option only */
+	{"ignore-file-ext",   no_argument,		 0, 260}, /* Long option only */
 	{"wfp",               no_argument,       0, 'w'},
 	{"test",              no_argument,       0, 't'},
 	{"version",           no_argument,       0, 'v'},
@@ -327,7 +333,7 @@ int main(int argc, char **argv)
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
 
-	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:wtLvhedqH", long_options, &option_index)) != -1)
+	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:wtLvhdqH", long_options, &option_index)) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -355,8 +361,8 @@ int main(int argc, char **argv)
 				component_hint = strdup(optarg);
 				break;
 			case 'r':
-				component_rank_max = atoi(optarg);
-				scanlog("Max component rank set to %d\n", component_rank_max);
+				scan_ranking_threshold = atoi(optarg);
+				scanlog("Max component rank set to %d\n", scan_ranking_threshold);
 				break;
 
 			case 'k':
@@ -422,10 +428,6 @@ int main(int argc, char **argv)
 				exit(EXIT_SUCCESS);
 				break;
 
-			case 'e':
-				match_extensions = true;
-				break;
-
 			case 'q':
 				engine_flags = engine_flags_cmd_line;
 				debug_on = true;
@@ -451,14 +453,23 @@ int main(int argc, char **argv)
 
 			case 257: /* --max-files */
 				fetch_max_files = atoi(optarg);
+				scanlog("Max files to fetch set to %d\n", fetch_max_files);
 				break;
 
 			case 258: /* --min-match-hits */
-				min_match_hits = atoi(optarg);
+				scan_min_match_hits = atoi(optarg);
+				scan_adjust_tolerance = false;
+				scanlog("Min match hits set to %d (auto-adjust disabled)\n", scan_min_match_hits);
 				break;
 
 			case 259: /* --min-match-lines */
-				min_match_lines = atoi(optarg);
+				scan_min_match_lines = atoi(optarg);
+				scan_adjust_tolerance = false;
+				scanlog("Min match lines set to %d (auto-adjust disabled)\n", scan_min_match_lines);
+				break;
+			case 260: /* --ignore-file-ext */
+				scan_honor_file_extension = false;
+				scanlog("File extension matching disabled\n");
 				break;
 
 			case 'H':
@@ -528,7 +539,8 @@ int main(int argc, char **argv)
 		{
 			/* Init scan structure */			
 			if (ishash) 
-				hash_scan(target, scan_max_snippets, scan_max_components);
+				hash_scan(target, scan_max_snippets, scan_max_components, scan_adjust_tolerance, 
+					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_honor_file_extension);
 			else
 			{
 				bool wfp_extension = false;
@@ -541,7 +553,8 @@ int main(int argc, char **argv)
 
 				/* Scan wfp file */
 				if (wfp_extension) 
-					wfp_scan(target, scan_max_snippets, scan_max_components);
+					wfp_scan(target, scan_max_snippets, scan_max_components, scan_adjust_tolerance, 
+						scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_honor_file_extension);
 
 				else if (bfp_extension) 
 					binary_scan(target);
@@ -550,12 +563,11 @@ int main(int argc, char **argv)
 				else 
 				{
 					scanlog("Scanning file %s\n", target);
-					scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components);
+					scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components, scan_adjust_tolerance, 
+						scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_honor_file_extension);
 					ldb_scan(scan);
 				}
 			}
-
-
 		}
 
 		/* Close main report structure */

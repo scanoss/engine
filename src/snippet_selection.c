@@ -121,7 +121,7 @@ void biggest_snippet(scan_data_t *scan)
 		if (j < 0)
 			continue;
 		
-		if (scan->matchmap[j].hits >= min_match_hits) /* Only consider file with more than min_match_hits */
+		if (scan->matchmap[j].hits >= scan->snippet_min_hits) /* Only consider file with more than min_match_hits */
 		{
 			match_data_t *match_new = calloc(1, sizeof(match_data_t)); /* Create a match object */
 			memcpy(match_new->file_md5, scan->matchmap[j].md5, oss_file.key_ln);
@@ -133,14 +133,14 @@ void biggest_snippet(scan_data_t *scan)
 			match_new->scan_ower = scan;
 			int i = 0;
 
-			if (snippet_extension_discard(match_new))
+			if (scan->snippet_honor_file_extension && snippet_extension_discard(match_new))
 			{
 				match_data_free(match_new); 
 				continue;
 			}
 
 			int matched_lines = compile_ranges(match_new);
-			if (matched_lines < min_match_lines) {
+			if (matched_lines < scan->snippet_min_lines) {
 				match_data_free(match_new); 
 				continue;
 			}
@@ -243,7 +243,7 @@ void add_snippet_ids(match_data_t *match, char *snippet_ids, long from, long to)
  * @param scan[out] pointer to scan data
  * @return hits
  */
-int ranges_assemble(matchmap_range *ranges, char *line_ranges, char *oss_ranges)
+int ranges_assemble(matchmap_range *ranges, char *line_ranges, char *oss_ranges, int min_match_lines)
 {
 	int out = 0;
 	/* Walk ranges */
@@ -257,14 +257,14 @@ int ranges_assemble(matchmap_range *ranges, char *line_ranges, char *oss_ranges)
 		{
 			if (from == 0)
 				from = 1;
+			//discard snippets below the limit of detection
+			if (to - from < min_match_lines)
+				continue;
 			/* Add commas unless it is the first range */
 			if (*line_ranges)
 				strcat(line_ranges, ",");
 			if (*oss_ranges)
 				strcat(oss_ranges, ",");
-			//discard snippets below the limit of detection
-			if (to - from < min_match_lines)
-				continue;
 
 			/* Add from-to values */
 			sprintf(line_ranges + strlen(line_ranges), "%d-%d", from, to);
@@ -291,7 +291,7 @@ int range_comp(const void *a, const void *b)
  * @brief Join overlapping ranges
  * @param ranges ranges list to process
  */
-matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size)
+matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size, int range_tolerance)
 {
 	matchmap_range *out_ranges = malloc(sizeof(matchmap_range) * MATCHMAP_RANGES);
 
@@ -368,7 +368,7 @@ uint32_t compile_ranges(match_data_t *match)
 
 	if (debug_on)
 	{
-		scanlog("Accepted ranges (min lines range = %d):\n", min_match_lines);
+		scanlog("Accepted ranges (min lines range = %d):\n", match->scan_ower->snippet_min_lines);
 		for (uint32_t i = 0; i < match->matchmap_reg->ranges_number; i++)
 		{
 			if ( match->matchmap_reg->range[i].from && match->matchmap_reg->range[i].to)
@@ -377,7 +377,7 @@ uint32_t compile_ranges(match_data_t *match)
 		}
 	}
 
-	matchmap_range *ranges = ranges_join_overlapping(match->matchmap_reg->range,  match->matchmap_reg->ranges_number);
+	matchmap_range *ranges = ranges_join_overlapping(match->matchmap_reg->range,  match->matchmap_reg->ranges_number, match->scan_ower->snippet_range_tolerance);
 	
 	if (engine_flags & ENABLE_SNIPPET_IDS)
 	{
@@ -399,7 +399,7 @@ uint32_t compile_ranges(match_data_t *match)
 				scanlog("	%d = %ld to %ld - OSS from: %d\n", i, ranges[i].from, ranges[i].to, ranges[i].oss_line);
 		}
 	}
-	hits = ranges_assemble(ranges, line_ranges, oss_ranges);
+	hits = ranges_assemble(ranges, line_ranges, oss_ranges, match->scan_ower->snippet_min_lines);
 	match->line_ranges = strdup(line_ranges);
 	match->oss_ranges = strdup(oss_ranges);
 	match->snippet_ids = strdup(snippet_ids);

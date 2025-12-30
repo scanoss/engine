@@ -95,11 +95,7 @@ bool skip_snippets(char *src, uint64_t srcln)
 		scanlog("Skipping snippets: Binary file\n");
 		return true; // is binary
 	}
-	/*if (unwanted_header(src))
-	{
-		scanlog("Skipping snippets: Ignored contents\n");
-		return true;
-	}*/
+
 	return false;
 }
 
@@ -111,18 +107,12 @@ static void adjust_tolerance(scan_data_t *scan)
 {
 	bool skip = false;
 	uint32_t wfpcount = scan->hash_count;
+	int range_tolerance = SNIPPETS_DEFAULT_RANGE_TOLERANCE;  /** A maximum number of non-matched lines tolerated inside a matching range */
+	int min_match_lines = SNIPPETS_DEFAULT_MIN_MATCH_LINES; /** Minimum number of lines matched for a match range to be acepted */
+	int min_match_hits  = SNIPPETS_DEFAULT_MIN_MATCH_HITS;  /** Minimum number of snippet ID hits to produce a snippet match*/
 
-	if (!wfpcount)
-		skip = true;
-	else if (scan->lines[wfpcount - 1] < 10)
-		skip = true;
-
-	if (skip)
-	{
-		min_match_lines = 5;
-		min_match_hits = 2;
-	}
-	else
+	
+	if (wfpcount && scan->lines[wfpcount - 1] > SNIPPETS_DEFAULT_MIN_MATCH_LINES * 2)
 	{
 		/* Range tolerance is the maximum amount of non-matched lines accepted
 			 within a matched range. This goes from 21 in small files to 5 in large files */
@@ -142,7 +132,9 @@ static void adjust_tolerance(scan_data_t *scan)
 		if (min_match_hits > 9)
 			min_match_hits = 9;
 	}
-
+	scan->snippet_min_hits = min_match_hits;
+	scan->snippet_min_lines = min_match_lines;
+	scan->snippet_range_tolerance = range_tolerance;
 	scanlog("Match hits: %d, Tolerance: range=%d, lines=%d, wfpcount=%u\n", min_match_hits, range_tolerance, min_match_lines, wfpcount);
 }
 
@@ -278,7 +270,7 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 		}
 
 		/* Increase range */
-		else if (gap < range_tolerance)
+		else if (gap < scan->snippet_range_tolerance)
 		{
 			range_found = true;
 			/* Update range start (from) */
@@ -338,7 +330,8 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 		return MATCH_NONE;
 
 	matchmap_setup(scan);
-	adjust_tolerance(scan);
+	if (scan->snippet_adjust_tolerance)
+		adjust_tolerance(scan);
 
 	/* First build a map with all the MD5s related with each WFP from the source file*/
 	matchmap_entry_t map[scan->hash_count];
@@ -381,7 +374,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	memset(map_indirection_index, 0, sizeof(map_indirection_index));
 
 	scanlog ("< Snippet scan setup: Total lines: %d ,Matchmap size: %d, Min hits: %d, Min lines: %d, Map max size = %d, Cat N = %d x %d, Cat size = %d >\n", 
-			scan->total_lines, scan->max_matchmap_size, min_match_hits, min_match_lines, map_max_size, MAP_INDIRECTION_CAT_NUMBER, map_indedirection_items_size, MAP_INDIRECTION_CAT_SIZE);
+			scan->total_lines, scan->max_matchmap_size, scan->snippet_min_hits, scan->snippet_min_lines, map_max_size, MAP_INDIRECTION_CAT_NUMBER, map_indedirection_items_size, MAP_INDIRECTION_CAT_SIZE);
 
 	for (int i =0; i < scan->hash_count; i++)
 	{
@@ -484,7 +477,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	for (int  sector = 0; sector < 256; sector++)
 	{
 		scan->matchmap_rank_by_sector[sector] = -1;
-		int sector_max = min_match_hits;
+		int sector_max = scan->snippet_min_hits;
 		for (int cat = 0; cat < cat_limit_index; cat++)
 		{
 			/* travel the cathegories map*/
@@ -555,7 +548,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 				{
 					int wfp_p = wfp_index * WFP_REC_LN;
 					int sector = md5s[wfp_p];
-					int sector_max = min_match_hits;
+					int sector_max = scan->snippet_min_hits;
 
 					if (scan->matchmap_rank_by_sector[sector] < 0)
 						continue;
