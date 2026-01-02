@@ -73,9 +73,8 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	component_data_t * new_comp = calloc(1, sizeof(*new_comp));
 	bool result = fill_component(new_comp, NULL, NULL, (uint8_t*) data);
 	scanlog("URL MATCH: %s\n", data);
-	if (!result || (component_rank_max > 0 && new_comp->rank > component_rank_max))
+	if (!result)
 	{
-		scanlog("ignoring component with rank %d\n", new_comp->rank);
 		component_data_free(new_comp);
 	}
 	else 
@@ -90,6 +89,12 @@ bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 		new_comp->file_md5_ref = component_list->match_ref->file_md5;
 		new_comp->identified = IDENTIFIED_NONE;
 		asset_declared(new_comp);
+		if (component_rank_max > 0 && new_comp->rank > component_rank_max)
+		{
+			scanlog("Setting component with rank %d as filtered\n", new_comp->rank);
+			new_comp->identified = IDENTIFIED_FILTERED;
+		}
+
 		component_list_add(component_list, new_comp, component_date_comparation, true);
 	}
 	free(data);
@@ -343,7 +348,7 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 	{
 		component_data_t * comp = calloc(1, sizeof(*comp));
 		bool result = fill_component(comp, key, NULL, (uint8_t *)url);
-		if (!result || (component_rank_max > 0 && comp->rank > component_rank_max))
+		if (!result)
 		{
 			scanlog("ignoring component with rank %d\n", comp->rank);
 			free(url);
@@ -353,6 +358,13 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		comp->identified = IDENTIFIED_NONE;
 		asset_declared(comp);
 		purl_latest_version_add(comp);
+
+		if (component_rank_max > 0 && comp->rank > component_rank_max)
+		{
+			scanlog("Setting component with rank %d as filtered\n", comp->rank);
+			comp->identified = IDENTIFIED_FILTERED;
+		}
+
 
 		if (!comp_oldest) {
 			

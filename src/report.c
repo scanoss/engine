@@ -214,6 +214,15 @@ bool print_json_component(component_data_t * component)
 		printf("{");
 	else
 		printf(",");
+	//if the component is filtered just report the rank without extra details.
+	if (component->identified == IDENTIFIED_FILTERED)
+	{
+		printf("\"status\": \"filtered\"");
+		printf(",\"rank\": %d", component->rank);
+		if (engine_flags & DISABLE_BEST_MATCH)	
+			printf("}");
+		return false;
+	}
 	/* Fetch related purls */
 	fetch_related_purls(component);
 

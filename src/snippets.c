@@ -105,7 +105,6 @@ bool skip_snippets(char *src, uint64_t srcln)
  */
 static void adjust_tolerance(scan_data_t *scan)
 {
-	bool skip = false;
 	uint32_t wfpcount = scan->hash_count;
 	int range_tolerance = SNIPPETS_DEFAULT_RANGE_TOLERANCE;  /** A maximum number of non-matched lines tolerated inside a matching range */
 	int min_match_lines = SNIPPETS_DEFAULT_MIN_MATCH_LINES; /** Minimum number of lines matched for a match range to be acepted */

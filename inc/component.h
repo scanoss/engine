@@ -19,10 +19,12 @@ extern int component_rank_max;
  * 
  */
 enum {
+	IDENTIFIED_FILTERED = -1,
 	IDENTIFIED_NONE = 0,
 	IDENTIFIED_PURL,
-	IDENTIFIED_PURL_VERSION
+	IDENTIFIED_PURL_VERSION,
 };
+
 
 typedef struct component_data_t
 {
