@@ -296,7 +296,6 @@ static struct option long_options[] = {
 	{"test",              no_argument,       0, 't'},
 	{"version",           no_argument,       0, 'v'},
 	{"help",              no_argument,       0, 'h'},
-	{"extension",         no_argument,       0, 'e'},
 	{"debug",             no_argument,       0, 'd'},
 	{"quiet",             no_argument,       0, 'q'},
 	{"hpsm",              no_argument,       0, 'H'},
@@ -477,6 +476,7 @@ int main(int argc, char **argv)
 
 			case 261: /* --range-tolerance */
 				scan_range_tolerance = atoi(optarg);
+				scan_adjust_tolerance = false;
 				scanlog("Range tolerance set to %d\n", scan_range_tolerance);
 				break;
 

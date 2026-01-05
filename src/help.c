@@ -57,6 +57,7 @@ Configuration:\n\
     --max-files NUM      Set maximum number of files to fetch during matching (default: 12000).\n\
     --min-match-hits NUM Set minimum snippet ID hits for a match (default: 3, disables auto-adjust).\n\
     --min-match-lines NUM Set minimum matched lines for a range (default: 10, disables auto-adjust).\n\
+    --range-tolerance NUM Set max non-matched lines tolerated in a range (default: 5).\n\
     --ignore-file-ext    Ignore file extension during snippet matching (default: honor extension).\n\
 -s, --sbom FILE          Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
 -b, --blacklist FILE     Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\

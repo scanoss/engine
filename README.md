@@ -55,6 +55,7 @@ Syntax: scanoss [parameters] [TARGET]
 * `--max-files NUM` - Set maximum number of files to fetch during matching (default: 12000)
 * `--min-match-hits NUM` - Set minimum snippet ID hits for a match (default: 3, disables auto-adjust)
 * `--min-match-lines NUM` - Set minimum matched lines for a range (default: 10, disables auto-adjust)
+* `--range-tolerance NUM` - Set max non-matched lines tolerated in a range (default: 5)
 * `--ignore-file-ext` - Ignore file extension during snippet matching (default: honor extension)
 
 ### SBOM and Filtering
@@ -116,6 +117,9 @@ scanoss --sbom my_sbom.json TARGET
 
 # Scan with custom snippet matching parameters
 scanoss --min-match-hits 5 --min-match-lines 15 TARGET
+
+# Scan with custom range tolerance
+scanoss --range-tolerance 10 TARGET
 
 # Ignore file extensions during matching
 scanoss --ignore-file-ext TARGET

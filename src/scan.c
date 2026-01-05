@@ -68,7 +68,7 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components,
 	scan->snippet_min_lines = snippet_min_lines;
 	scan->snippet_honor_file_extension = snippet_honor_file_extension;
 	scan->max_components_to_process = max_components;
-	scan->snippet_range_tolerance = snippet_range_tolerance;
+	scan->snippet_range_tolerance = snippet_range_tolerance > 0 ? snippet_range_tolerance : 1;
 	
 	scan->max_snippets_to_process = max_snippets > MAX_MULTIPLE_COMPONENTS ? MAX_MULTIPLE_COMPONENTS : max_snippets; 
 	scan->max_snippets_to_process = scan->max_snippets_to_process == 0 ? 1 : scan->max_snippets_to_process;
