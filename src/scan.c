@@ -53,7 +53,7 @@ char *ignored_assets = NULL;
     @param target File to scan
     @return Scan data
     */
-scan_data_t * scan_data_init(char *target, int max_snippets, int max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, bool snippet_honor_file_extension)
+scan_data_t * scan_data_init(char *target, int max_snippets, int max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, int snippet_range_tolerance, bool snippet_honor_file_extension)
 {
 	scanlog("Scan Init\n");
 	scan_data_t * scan = calloc(1, sizeof(*scan));
@@ -68,7 +68,7 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components,
 	scan->snippet_min_lines = snippet_min_lines;
 	scan->snippet_honor_file_extension = snippet_honor_file_extension;
 	scan->max_components_to_process = max_components;
-	scan->snippet_range_tolerance = SNIPPETS_DEFAULT_RANGE_TOLERANCE;
+	scan->snippet_range_tolerance = snippet_range_tolerance;
 	
 	scan->max_snippets_to_process = max_snippets > MAX_MULTIPLE_COMPONENTS ? MAX_MULTIPLE_COMPONENTS : max_snippets; 
 	scan->max_snippets_to_process = scan->max_snippets_to_process == 0 ? 1 : scan->max_snippets_to_process;
@@ -194,9 +194,9 @@ int asset_declared(component_data_t * comp)
  *   @param scan Scan data
  *   @return Scan result (SUCCESS/FAILURE)
 |**/
-int hash_scan(char *path, int scan_max_snippets, int scan_max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, bool snippet_honor_file_extension)
+int hash_scan(char *path, int scan_max_snippets, int scan_max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, int snippet_range_tolerance, bool snippet_honor_file_extension)
 {
-	scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components, adjust_tolerance, component_ranking_threshold, snippet_min_hits, snippet_min_lines, snippet_honor_file_extension);
+	scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components, adjust_tolerance, component_ranking_threshold, snippet_min_hits, snippet_min_lines, snippet_range_tolerance, snippet_honor_file_extension);
 	scan->preload = true;
 
 		/* Get file MD5 */
@@ -221,7 +221,7 @@ int hash_scan(char *path, int scan_max_snippets, int scan_max_components, bool a
  * @param scan_max_components Limit for component to be displayed. 1 by default.
  * @return EXIT_SUCCESS
  */
-int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, bool snippet_honor_file_extension)
+int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, int snippet_range_tolerance, bool snippet_honor_file_extension)
 {
 	scan_data_t * scan = NULL;
 	char * line = NULL;
@@ -308,7 +308,7 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 			}
 
 			/*Init a new scan object for the next file to be scanned */
-			scan = scan_data_init(target, scan_max_snippets, scan_max_components, adjust_tolerance, component_ranking_threshold, snippet_min_hits, snippet_min_lines, snippet_honor_file_extension);
+			scan = scan_data_init(target, scan_max_snippets, scan_max_components, adjust_tolerance, component_ranking_threshold, snippet_min_hits, snippet_min_lines, snippet_range_tolerance, snippet_honor_file_extension);
 			strcpy(scan->source_md5, tmp_md5_hex);
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
 			scan->preload = true;

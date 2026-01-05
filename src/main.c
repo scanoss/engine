@@ -66,6 +66,7 @@ component_item *declared_components;
 
 int scan_min_match_lines = SNIPPETS_DEFAULT_MIN_MATCH_LINES; // Minimum number of lines matched for a match range to be acepted
 int scan_min_match_hits = SNIPPETS_DEFAULT_MIN_MATCH_HITS;  // Minimum number of snippet ID hits to produce a snippet match
+int scan_range_tolerance = SNIPPETS_DEFAULT_RANGE_TOLERANCE; // Maximum number of non-matched lines tolerated inside a matching range
 bool scan_adjust_tolerance = SNIPPETS_DEFAULT_ADJUST_TOLERANCE; /** Adjust tolerance based on file size */
 int scan_ranking_threshold = 0; //enabled, all accepted by default
 bool scan_honor_file_extension = SNIPPETS_DEFAULT_HONOR_FILE_EXTENSION;
@@ -214,12 +215,12 @@ void recurse_directory(char *name)
 			if (extension(path)) if (!strcmp(extension(path), "wfp")) wfp = true;
 		
 			if (wfp)
-				wfp_scan(path, scan_max_snippets, scan_max_components, scan_adjust_tolerance, 
-					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_honor_file_extension);
+				wfp_scan(path, scan_max_snippets, scan_max_components, scan_adjust_tolerance,
+					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_range_tolerance, scan_honor_file_extension);
 			else
 			{
-				scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components, scan_adjust_tolerance, 
-					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_honor_file_extension);
+				scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components, scan_adjust_tolerance,
+					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_range_tolerance, scan_honor_file_extension);
 				ldb_scan(scan);
 			}
 
@@ -290,6 +291,7 @@ static struct option long_options[] = {
 	{"min-match-hits",    required_argument, 0, 258}, /* Long option only */
 	{"min-match-lines",   required_argument, 0, 259}, /* Long option only */
 	{"ignore-file-ext",   no_argument,		 0, 260}, /* Long option only */
+	{"range-tolerance",   required_argument, 0, 261}, /* Long option only */
 	{"wfp",               no_argument,       0, 'w'},
 	{"test",              no_argument,       0, 't'},
 	{"version",           no_argument,       0, 'v'},
@@ -467,9 +469,15 @@ int main(int argc, char **argv)
 				scan_adjust_tolerance = false;
 				scanlog("Min match lines set to %d (auto-adjust disabled)\n", scan_min_match_lines);
 				break;
+
 			case 260: /* --ignore-file-ext */
 				scan_honor_file_extension = false;
 				scanlog("File extension matching disabled\n");
+				break;
+
+			case 261: /* --range-tolerance */
+				scan_range_tolerance = atoi(optarg);
+				scanlog("Range tolerance set to %d\n", scan_range_tolerance);
 				break;
 
 			case 'H':
@@ -538,9 +546,9 @@ int main(int argc, char **argv)
 		else
 		{
 			/* Init scan structure */			
-			if (ishash) 
-				hash_scan(target, scan_max_snippets, scan_max_components, scan_adjust_tolerance, 
-					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_honor_file_extension);
+			if (ishash)
+				hash_scan(target, scan_max_snippets, scan_max_components, scan_adjust_tolerance,
+					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_range_tolerance, scan_honor_file_extension);
 			else
 			{
 				bool wfp_extension = false;
@@ -552,9 +560,9 @@ int main(int argc, char **argv)
 					if (force_bfp) bfp_extension = true;
 
 				/* Scan wfp file */
-				if (wfp_extension) 
-					wfp_scan(target, scan_max_snippets, scan_max_components, scan_adjust_tolerance, 
-						scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_honor_file_extension);
+				if (wfp_extension)
+					wfp_scan(target, scan_max_snippets, scan_max_components, scan_adjust_tolerance,
+						scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_range_tolerance, scan_honor_file_extension);
 
 				else if (bfp_extension) 
 					binary_scan(target);
@@ -563,8 +571,8 @@ int main(int argc, char **argv)
 				else 
 				{
 					scanlog("Scanning file %s\n", target);
-					scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components, scan_adjust_tolerance, 
-						scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_honor_file_extension);
+					scan_data_t * scan = scan_data_init(target, scan_max_snippets, scan_max_components, scan_adjust_tolerance,
+						scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_range_tolerance, scan_honor_file_extension);
 					ldb_scan(scan);
 				}
 			}

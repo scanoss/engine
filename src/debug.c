@@ -138,7 +138,7 @@ void scan_benchmark()
 
 	for (int f = 0; f < total_files ; f++)
 	{
-		scan_data_t * scan = scan_data_init("pseudo_file", 0, 0, true, false, 3, 5, false);
+		scan_data_t * scan = scan_data_init("pseudo_file", 0, 0, true, 0, 3, 5, SNIPPETS_DEFAULT_RANGE_TOLERANCE, false);
 		scan->preload = true;
 		memcpy(scan->md5, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", MD5_LEN);
 		strcpy(scan->file_size, "1024");
