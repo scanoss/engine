@@ -336,7 +336,10 @@ bool print_json_match(struct match_data_t * match)
 	if (match->scan_ower->component_ranking_threshold >= 0)
 		ranking_enabled = true;
 
-	printf("\"id\": \"%s\"", matchtypes[match->type]);	
+	printf("\"id\": \"%s\"", matchtypes[match->type]);
+	if (!match->scan_ower->snippet_adjust_tolerance && match->type == MATCH_SNIPPET)
+		printf(",\"hits\": %d", match->hits);
+
 	printf(",\"lines\": \"%s\"", match->line_ranges);
 	printf(",\"oss_lines\": \"%s\"", match->oss_ranges);
 	printf(",\"matched\": \"%d%%\"", match->matched_percent);

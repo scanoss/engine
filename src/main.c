@@ -288,8 +288,8 @@ static struct option long_options[] = {
 	{"max-snippets",      required_argument, 0, 'M'},
 	{"max-components",    required_argument, 0, 'N'},
 	{"max-files",         required_argument, 0, 257}, /* Long option only */
-	{"min-match-hits",    required_argument, 0, 258}, /* Long option only */
-	{"min-match-lines",   required_argument, 0, 259}, /* Long option only */
+	{"min-snippet-hits",    required_argument, 0, 258}, /* Long option only */
+	{"min-snippet-lines",   required_argument, 0, 259}, /* Long option only */
 	{"ignore-file-ext",   no_argument,		 0, 260}, /* Long option only */
 	{"range-tolerance",   required_argument, 0, 261}, /* Long option only */
 	{"wfp",               no_argument,       0, 'w'},
