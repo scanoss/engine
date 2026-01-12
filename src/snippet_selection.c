@@ -293,7 +293,6 @@ int range_comp(const void *a, const void *b)
 matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size, int range_tolerance, bool dynamic_ranges)
 {
 	int out_size = MATCHMAP_RANGES;
-	dynamic_ranges = false; // TODO: disable dynamic ranges for now
 	if (dynamic_ranges)
 		out_size = size;
 
@@ -385,7 +384,7 @@ uint32_t compile_ranges(match_data_t *match)
 																match->matchmap_reg->range[i].oss_line);
 		}
 	}
-
+	match->scan_ower->snippet_adjust_tolerance = true; //TODO we will disable dynamic ranges for now.
 	matchmap_range *ranges = ranges_join_overlapping(match->matchmap_reg->range,  match->matchmap_reg->ranges_number, match->scan_ower->snippet_range_tolerance, !match->scan_ower->snippet_adjust_tolerance);
 	int ranges_number = !match->scan_ower->snippet_adjust_tolerance ? match->matchmap_reg->ranges_number : MATCHMAP_RANGES;
 	if (engine_flags & ENABLE_SNIPPET_IDS)
