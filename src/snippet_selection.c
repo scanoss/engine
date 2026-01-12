@@ -242,7 +242,7 @@ void add_snippet_ids(match_data_t *match, char *snippet_ids, long from, long to)
  * @param scan[out] pointer to scan data
  * @return hits
  */
-int ranges_assemble(matchmap_range *ranges, char *line_ranges, char *oss_ranges, int min_match_lines, int ranges_number)
+int ranges_assemble(matchmap_range *ranges, char *line_ranges, char *oss_ranges, int min_range_lines, int ranges_number)
 {
 	int out = 0;
 	/* Walk ranges */
@@ -257,7 +257,7 @@ int ranges_assemble(matchmap_range *ranges, char *line_ranges, char *oss_ranges,
 			if (from == 0)
 				from = 1;
 			//discard snippets below the limit of detection
-			if (to - from < min_match_lines)
+			if (to - from < min_range_lines)
 				continue;
 			/* Add commas unless it is the first range */
 			if (*line_ranges)
@@ -290,10 +290,11 @@ int range_comp(const void *a, const void *b)
  * @brief Join overlapping ranges
  * @param ranges ranges list to process
  */
-matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size, int range_tolerance, bool fixed_ranges)
+matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size, int range_tolerance, bool dynamic_ranges)
 {
 	int out_size = MATCHMAP_RANGES;
-	if (fixed_ranges)
+	dynamic_ranges = false; // TODO: disable dynamic ranges for now
+	if (dynamic_ranges)
 		out_size = size;
 
 	matchmap_range *out_ranges = calloc(out_size, sizeof(matchmap_range));
@@ -321,7 +322,7 @@ matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size, int r
 				else
 				{
 					out_ranges_index++;
-					if (out_ranges_index == MATCHMAP_RANGES && !fixed_ranges)
+					if (out_ranges_index == MATCHMAP_RANGES && !dynamic_ranges)
 						break;
 					out_ranges[out_ranges_index].from = ranges[i].from;
 					out_ranges[out_ranges_index].to = ranges[i].to;
@@ -330,7 +331,7 @@ matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size, int r
 				processed++;
 			}
 		}
-		if (fixed_ranges)
+		if (dynamic_ranges)
 			break;
 		tolerance *= 2;
 	}	
