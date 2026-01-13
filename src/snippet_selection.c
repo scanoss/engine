@@ -124,6 +124,11 @@ void biggest_snippet(scan_data_t *scan)
 		if (scan->matchmap[j].hits >= scan->snippet_min_hits) /* Only consider file with more than min_match_hits */
 		{
 			match_data_t *match_new = calloc(1, sizeof(match_data_t)); /* Create a match object */
+			if (!match_new)
+			{
+				scanlog("Error allocating memory for match data\n");
+				return;
+			}
 			memcpy(match_new->file_md5, scan->matchmap[j].md5, oss_file.key_ln);
 			match_new->hits = scan->matchmap[j].hits;
 			match_new->matchmap_reg = &scan->matchmap[j];
@@ -297,6 +302,8 @@ matchmap_range * ranges_join_overlapping(matchmap_range *ranges, int size, int r
 		out_size = size;
 
 	matchmap_range *out_ranges = calloc(out_size, sizeof(matchmap_range));
+	if (!out_ranges)
+		return NULL;
 
 	int processed = 0;
 	int tolerance = range_tolerance > 0 ? range_tolerance : 1;
@@ -380,13 +387,14 @@ uint32_t compile_ranges(match_data_t *match)
 		for (uint32_t i = 0; i < match->matchmap_reg->ranges_number; i++)
 		{
 			if ( match->matchmap_reg->range[i].from && match->matchmap_reg->range[i].to)
-				scanlog("	%d = %ld to %ld - OSS from: %d\n", i, match->matchmap_reg->range[i].from,match->matchmap_reg->range[i].to, 
+				scanlog("	%d = %u to %u - OSS from: %d\n", i, match->matchmap_reg->range[i].from,match->matchmap_reg->range[i].to, 
 																match->matchmap_reg->range[i].oss_line);
 		}
 	}
 	//TODO: Re-enable dynamic ranges when feature is complete
 	// For now, we force adjust_tolerance to ensure stable behavior
 	match->scan_ower->snippet_adjust_tolerance = true;
+	scanlog("Snippet adjust tolerance flag is being ignored\n");
 	matchmap_range *ranges = ranges_join_overlapping(match->matchmap_reg->range,  match->matchmap_reg->ranges_number, match->scan_ower->snippet_range_tolerance, !match->scan_ower->snippet_adjust_tolerance);
 	int ranges_number = !match->scan_ower->snippet_adjust_tolerance ? match->matchmap_reg->ranges_number : MATCHMAP_RANGES;
 	if (engine_flags & ENABLE_SNIPPET_IDS)
@@ -406,7 +414,7 @@ uint32_t compile_ranges(match_data_t *match)
 		for (uint32_t i = 0; i < ranges_number; i++)
 		{
 		if ( ranges[i].from && ranges[i].to)
-				scanlog("	%d = %ld to %ld - OSS from: %d\n", i, ranges[i].from, ranges[i].to, ranges[i].oss_line);
+				scanlog("	%d = %u to %u - OSS from: %u\n", i, ranges[i].from, ranges[i].to, ranges[i].oss_line);
 		}
 	}
 	hits = ranges_assemble(ranges, line_ranges, oss_ranges, match->scan_ower->snippet_min_lines, ranges_number);

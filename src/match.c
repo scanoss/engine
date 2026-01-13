@@ -1104,6 +1104,11 @@ void compile_matches(scan_data_t *scan)
 		scan->matches_list_array[0] = match_list_init(true, scan->max_snippets_to_process);
 		scan->matches_list_array_index = 1;
 		match_data_t *match_new = calloc(1, sizeof(match_data_t));
+		if (!match_new)
+		{
+			scanlog("Error allocating memory for match data\n");
+			return;
+		}
 		match_new->type = scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
 		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);

@@ -271,7 +271,7 @@ static char *json_from_license(uint32_t *crclist, char *buffer, char *license, i
 	char * license_source_id = license_id_to_source_name(src);
 	if (!license_source_id)
 		return buffer;
-	//skip scancode licenses starting with "license-ref"	
+	//skip scancode licenses starting with "LicenseRef"	
 	if (!strncmp(license_source_id, "scancode", 8) && !strncmp(license, "LicenseRef", 10))
 		return buffer;
 	/* Calculate CRC to avoid duplicates */
