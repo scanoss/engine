@@ -384,7 +384,9 @@ uint32_t compile_ranges(match_data_t *match)
 																match->matchmap_reg->range[i].oss_line);
 		}
 	}
-	match->scan_ower->snippet_adjust_tolerance = true; //TODO we will disable dynamic ranges for now.
+	//TODO: Re-enable dynamic ranges when feature is complete
+	// For now, we force adjust_tolerance to ensure stable behavior
+	match->scan_ower->snippet_adjust_tolerance = true;
 	matchmap_range *ranges = ranges_join_overlapping(match->matchmap_reg->range,  match->matchmap_reg->ranges_number, match->scan_ower->snippet_range_tolerance, !match->scan_ower->snippet_adjust_tolerance);
 	int ranges_number = !match->scan_ower->snippet_adjust_tolerance ? match->matchmap_reg->ranges_number : MATCHMAP_RANGES;
 	if (engine_flags & ENABLE_SNIPPET_IDS)

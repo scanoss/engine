@@ -46,9 +46,14 @@
 
 bool full_license_report = false;
 
+struct license_type
+{
+	char * text;
+	int id;
+};
 struct license_list
 {
-	char **licenses;
+	struct license_type*licenses;
 	int count;
 };
 
@@ -91,22 +96,24 @@ static char * license_id_to_source_name(int id)
 	}
 }
 
-bool license_add_to_list(struct license_list * ptr, char * license)
+bool license_add_to_list(struct license_list * ptr, char * license, int license_id)
 {
 	if (!ptr || !license || strlen(license) < 2)
 		return false;
-	ptr->licenses = realloc(ptr->licenses, sizeof(char *) * (ptr->count + 1));
-	if (!ptr->licenses)
+
+	struct license_type *tmp = realloc(ptr->licenses, sizeof(struct license_type) * (ptr->count + 1));
+	if (!tmp)
 		return false;
+	ptr->licenses = tmp;
 
 	/* Allocate with extra padding for CRC32C hardware reads (8-byte blocks) */
 	size_t len = strlen(license);
 	size_t padded_len = ((len + 8) / 8) * 8;  /* Round up to next 8-byte boundary */
-	ptr->licenses[ptr->count] = calloc(1, padded_len);
-	if (!ptr->licenses[ptr->count])
+	ptr->licenses[ptr->count].text = calloc(1, padded_len);
+	if (!ptr->licenses[ptr->count].text)
 		return false;
-	strcpy(ptr->licenses[ptr->count], license);
-
+	strcpy(ptr->licenses[ptr->count].text, license);
+	ptr->licenses[ptr->count].id = license_id;
 	ptr->count++;
 	return true;
 }
@@ -117,7 +124,7 @@ void license_free_list(struct license_list * ptr)
 		return;
 	for (int i = 0; i < ptr->count; i++)
 	{
-		free(ptr->licenses[i]);
+		free(ptr->licenses[i].text);
 	}
 	free(ptr->licenses);
 	ptr->licenses = NULL;
@@ -383,7 +390,7 @@ bool print_licenses_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	int src = atoi(source);
 	scanlog("Fetched License %s - source ID %d\n", license, src);
 
-	license_add_to_list(licenses, license);
+	license_add_to_list(licenses, license, src);
 
 	free(source);
 	free(license);
@@ -418,7 +425,7 @@ void print_licenses(component_data_t *comp)
 	/* Print URL license */
 	if (comp->license && strlen(comp->license) > 2)
 	{
-		license_add_to_list(&licenses_by_type, comp->license);
+		license_add_to_list(&licenses_by_type, comp->license, 0);
 		scanlog("License present in URL table");
 	}
 	else
@@ -484,7 +491,7 @@ void print_licenses(component_data_t *comp)
 
 	for (int i = 0; i < licenses_by_type.count; i++)
 	{
-		buffer = license_to_json(crclist, buffer, licenses_by_type.licenses[i], i, &first);
+		buffer = license_to_json(crclist, buffer, licenses_by_type.licenses[i].text, licenses_by_type.licenses[i].id, &first);
 	}
 
 	len = buffer - result;

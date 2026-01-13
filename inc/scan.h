@@ -71,7 +71,7 @@ typedef struct scan_data_t
 	int snippet_min_hits;
 	int snippet_min_lines;
 	int snippet_range_tolerance;
-	int snippet_honor_file_extension;
+	bool snippet_honor_file_extension;
 } scan_data_t;
 
 extern bool force_snippet_scan;

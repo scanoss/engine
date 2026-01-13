@@ -51,7 +51,7 @@ static release_version * purl_version_list[FETCH_MAX_FILES_DEFAULT];
 
 void purl_latest_version_add(component_data_t * component)
 {
-	if (!component->purls[0] || !component->release_date || !component->version || purl_indirection_index == fetch_max_files)
+	if (!component->purls[0] || !component->release_date || !component->version || purl_indirection_index == FETCH_MAX_FILES_DEFAULT)
 		return;
 
 	for (int i = 0; i < purl_indirection_index; i++)
