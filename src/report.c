@@ -48,6 +48,7 @@
 
 uint64_t engine_flags = 0;
 char  kb_version[MAX_INPUT];
+static bool ranking_enabled = false;
 
 /**
  * @brief Open JSON report
@@ -213,6 +214,15 @@ bool print_json_component(component_data_t * component)
 		printf("{");
 	else
 		printf(",");
+	//if the component is filtered just report the rank without extra details.
+	if (component->identified == IDENTIFIED_FILTERED)
+	{
+		printf("\"status\": \"filtered\"");
+		printf(",\"rank\": %d", component->rank);
+		if (engine_flags & DISABLE_BEST_MATCH)	
+			printf("}");
+		return false;
+	}
 	/* Fetch related purls */
 	fetch_related_purls(component);
 
@@ -253,6 +263,10 @@ bool print_json_component(component_data_t * component)
 		if (component->license_text)
 			printf(",%s", json_remove_invalid_char(component->license_text));
 	}
+
+	if (ranking_enabled)
+		printf(",\"rank\": %d", component->rank);
+
 
 	if (!(engine_flags & DISABLE_HEALTH))
 	{
@@ -308,6 +322,7 @@ bool print_json_component(component_data_t * component)
 
 bool print_json_match(struct match_data_t * match)
 {
+
 	if (!match->component_list.headp.lh_first)
 	{
 		scanlog("Match with no components ignored: %s", match->source_md5);
@@ -318,7 +333,13 @@ bool print_json_match(struct match_data_t * match)
 	if (engine_flags & DISABLE_BEST_MATCH)
 		printf("{");
 
-	printf("\"id\": \"%s\"", matchtypes[match->type]);	
+	if (match->scan_ower->component_ranking_threshold >= 0)
+		ranking_enabled = true;
+
+	printf("\"id\": \"%s\"", matchtypes[match->type]);
+	if (!match->scan_ower->snippet_adjust_tolerance && match->type == MATCH_SNIPPET)
+		printf(",\"hits\": %d", match->hits);
+
 	printf(",\"lines\": \"%s\"", match->line_ranges);
 	printf(",\"oss_lines\": \"%s\"", match->oss_ranges);
 	printf(",\"matched\": \"%d%%\"", match->matched_percent);

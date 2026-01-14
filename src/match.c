@@ -253,71 +253,167 @@ static void evaluate_path_rank(component_data_t *comp)
 }
 
 /**
- * @brief Funtion to be called as pointer when a new compoent has to be loaded in to the list
- * 
- * @param a existent component in the list
- * @param b new component to be added
- * @return true b has to be included in the list before "a"
- * @return false "a" wins, compare with the next component.
+ * @brief Initialize component age by computing MD5 of purl and fetching age from database
+ * @param comp Component to initialize
+ */
+static inline void initialize_component_age(component_data_t *comp)
+{
+	if (!comp->purls_md5[0] && comp->purls[0])
+	{
+		comp->purls_md5[0] = malloc(MD5_LEN);
+		if (!comp->purls_md5[0])
+		{
+			scanlog("critical: MD5 memory allocation failed");
+			return;
+		}
+		MD5((uint8_t *)comp->purls[0], strlen(comp->purls[0]), comp->purls_md5[0]);
+		comp->age = get_component_age(comp->purls_md5[0]);
+	}
+}
+
+/**
+ * @brief Compare two integer values and return comparison result
+ * @param val_a Value from component a
+ * @param val_b Value from component b
+ * @param prefer_higher If true, higher value wins; if false, lower value wins
+ * @return 1 if b wins, -1 if a wins, 0 if tie
+ */
+static inline int compare_int_values(int val_a, int val_b, bool prefer_higher)
+{
+	if (val_a == val_b)
+		return 0;
+
+	if (prefer_higher)
+		return (val_b > val_a) ? 1 : -1;
+	else
+		return (val_b < val_a) ? 1 : -1;
+}
+
+int compare_file_extension(component_data_t *a, component_data_t *b)
+{
+	if (!a->file_path_ref)
+		return 0;
+		
+	char *ext_file = extension(a->file_path_ref);
+	if (!ext_file)	
+		return 0;
+
+	char *ext_a = extension(a->file);
+	char *ext_b = extension(b->file);
+
+	if (!ext_a && ext_b)
+		return 1;
+
+	if (ext_a && !ext_b)
+		return -1;
+	
+	if (!ext_a && !ext_b)
+		return 0;
+
+	int result_a = strcmp(ext_a, ext_file);
+	int result_b = strcmp(ext_b, ext_file);
+	
+	if (result_a == result_b)
+		return 0;
+	else if (!result_a)
+		return -1;
+	else  if (!result_b)
+		return 1;
+
+	return 0;
+}
+
+/**
+ * @brief Component comparison function for determining insertion order in the component list
+ *
+ * This function implements the component selection logic using multiple hierarchical criteria:
+ * 1. Declared components (SBOM) evaluation
+ * 2. Component hints (purl and component name matching)
+ * 3. Path rank hint evaluation (file path similarity)
+ * 4. Release date validation
+ * 5. File extension matching
+ * 6. Third-party path evaluation
+ * 7. URL ranking and binary purl matching
+ * 8. Tiebreakers for equal release dates (source check, health metrics, vendor check, component age, version comparison)
+ * 9. Final selection based on oldest release date
+ *
+ * @param a Existing component in the list to compare against
+ * @param b New candidate component to be added
+ * @return true If component 'b' should be inserted before 'a' (b wins)
+ * @return false If component 'a' wins, continue comparing with the next component
  */
 
 static bool component_hint_date_comparation(component_data_t *a, component_data_t *b)
 {
+	// 1. Declared components (SBOM) evaluation
+	// Prioritize components that are declared in the SBOM (Software Bill of Materials)
+	// identified > 0 means the component was declared/identified in the SBOM
 	if (declared_components)
 	{
 		scanlog("ASSETS eval- %d / %d\n", a->identified,  b->identified);
-		if (a->identified > b->identified)
+		if (a->identified != b->identified)
 		{
-			scanlog("Reject component %s@%s by SBOM\n", b->purls[0], b->version);
-			return false;
-		}
-		
-		if (b->identified > a->identified)
-		{
+			// Keep component 'a' if it's identified and 'b' is not
+			if (a->identified > b->identified)
+			{
+				scanlog("Reject component %s@%s by SBOM\n", b->purls[0], b->version);
+				return false;
+			}
+			// Accept component 'b' if it's identified and 'a' is not
 			scanlog("Accept component %s@%s by SBOM\n", b->purls[0], b->version);
 			return true;
 		}
 	}
-
+	// 2. Component hint evaluation
+	// Apply user-provided component hints to influence selection
+	// Hints can match against purl or component names
 	else if (component_hint)
 	{
 		scanlog("hint eval\n");
-		int result = hint_eval(a,b);
-		if (result > 0)
-			return true;
-		if (result < 0)
-			return false;
+		int hint_result = hint_eval(a,b);
+		if (hint_result != 0)
+			return hint_result > 0;
 	}
-	
+
+	// 3. Path rank hint evaluation
+	// Compare file path similarity between scanned file and component file paths
+	// Lower rank means better similarity (more matching path components)
 	if ((engine_flags & ENABLE_PATH_HINT) && a->file_path_ref && b->file_path_ref)
 	{
-		//evalute path rank for component a
 		evaluate_path_rank(a);
-		
-		//evalute path rank for component b
 		evaluate_path_rank(b);
 
-		//The path_rank will be used as hint only when it has a reasonable value, in other cases the critea will be ignored.
-		if (b->path_rank < PATH_LEVEL_COMP_REF / 3 + 1)
+		const int rank_threshold = PATH_LEVEL_COMP_REF / 3 + 1;
+
+		// Path rank is used as hint only when it has a reasonable value (below threshold)
+		// This prevents poor matches from being selected based on path alone
+		if (b->path_rank < rank_threshold)
 		{
-			if (b->path_rank - a->path_rank < 0)
+			int rank_diff = b->path_rank - a->path_rank;
+			// Component 'b' has better path similarity than 'a'
+			if (rank_diff < 0)
 			{
 				scanlog("%s wins %s by path rank %d\n", b->purls[0], a->purls[0], b->path_rank);
 				return true;
 			}
-			if (b->path_rank - a->path_rank > 0)
+			// Component 'a' has better path similarity than 'b'
+			if (rank_diff > 0)
 			{
 				scanlog("%s - %s loses %s by path rank %d/%d\n", b->purls[0],b->file,  a->purls[0], b->path_rank, a->path_rank);
 				return false;
 			}
 		}
-		else if (a->path_rank < PATH_LEVEL_COMP_REF / 3 + 1)
+		// If only 'a' has a good path rank, keep it
+		else if (a->path_rank < rank_threshold)
 		{
 			scanlog("%s rejected, %s wins by path rank %d\n", b->purls[0], a->purls[0], a->path_rank);
 			return false;
 		}
 	}
 
+	// 4. Release date validation
+	// Reject components without valid release dates
+	// Components must have release date information to be considered
 	if (!*b->release_date)
 	{
 		scanlog("%s rejected due to empty release date\n", b->purls[0]);
@@ -329,168 +425,250 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 		return true;
 	}
 
-	// Third-party path evaluation
+	// 5. File extension matching
+	// Prefer components where the file extension matches the scanned file
+	int file_extension_comp = compare_file_extension(a, b);
+	if (file_extension_comp < 0)
+	{
+		// Component 'a' has matching extension, 'b' does not
+		scanlog("%s rejected by file extension match\n", b->purls[0]);
+		return false;
+	}
+	else if (file_extension_comp > 0)
+	{
+		// Component 'b' has matching extension, 'a' does not
+		scanlog("%s accepted by file extension mismatch\n", b->purls[0]);
+		return true;
+	}
+
+	// 6. Third-party path evaluation
+	// Prefer components from third-party directories (vendor, external, 3rdparty, etc.)
+	// Higher score means more likely to be a third-party component
 	int tp_a = path_is_third_party(a);
 	int tp_b = path_is_third_party(b);
+	int tp_diff = tp_a - tp_b;
 
-	if (tp_a - tp_b > 4)
+	// If 'a' is significantly more third-party than 'b' (difference > 7), reject 'b'
+	if (tp_diff > 7)
 	{
 		scanlog("Component rejected by third party path filter (%s=%d=%s > %s=%d=%s)\n", a->purls[0], tp_a,a->file, b->purls[0], tp_b, b->file);
 		return false;
 	}
-	else if (tp_b - tp_a > 4)
+	// If 'b' is significantly more third-party than 'a' (difference < -7), accept 'b'
+	if (tp_diff < -7)
 	{
-		scanlog("Component accepted by third party path filter (%s=%d < %s=%d)\n",  a->purls[0], tp_a,  b->purls[0], tp_b);
+		scanlog("Component accepted by third party path filter (%s=%d=%s < %s=%d=%s)\n",  a->purls[0], tp_a, a->file,  b->purls[0], tp_b, b->file);
 		return true;
 	}
 
-	//when the url ranking is enabled
+	// 7. URL ranking and binary purl matching
+	// When URL ranking is enabled (rank < COMPONENT_DEFAULT_RANK), use ranking metrics
+	// Lower rank values indicate higher quality/more authoritative sources
 	if (b->rank < COMPONENT_DEFAULT_RANK || a->rank < COMPONENT_DEFAULT_RANK)
-	{		
+	{
+		// 7.1. Binary file to purl matching
+		// Check if the component's purl matches what would be expected for a binary file
 		bool good_purl_a = binary_file_to_purl(a);
 		bool good_purl_b = binary_file_to_purl(b);
-		if (good_purl_b && !good_purl_a)
+
+		if (good_purl_b != good_purl_a)
 		{
-			scanlog("Component %s prefered over %s by binary purl match\n", b->purls[0], a->purls[0]);
-			return true;
-		}
-		else if (good_purl_a && !good_purl_b)
-		{
+			// Prefer component with matching binary purl
+			if (good_purl_b)
+			{
+				scanlog("Component %s prefered over %s by binary purl match\n", b->purls[0], a->purls[0]);
+				return true;
+			}
 			scanlog("Component %s rejected by binary purl match\n", b->purls[0]);
 			return false;
 		}
+		// If both have good binary purls, check vendor+component match
+		else if (good_purl_b && good_purl_a)
+		{
+			// 7.2. Vendor component check for binary purls
+			// Verify if vendor and component names align with the purl
+			bool vendor_check_a = purl_vendor_component_check(a);
+			bool vendor_check_b = purl_vendor_component_check(b);
 
+			if (vendor_check_a != vendor_check_b)
+			{
+				if (vendor_check_b)
+				{
+					scanlog("Component %s prefered over %s by vendor+component=purl\n", b->purls[0], a->purls[0]);
+					return true;
+				}
+				scanlog("Component %s rejected, %s wins by vendor+component=purl\n", b->purls[0], a->purls[0]);
+				return false;
+			}
+		}
+
+		// 7.3. Rank threshold check
+		// Reject components with rank above the maximum selection threshold
 		if (b->rank >= COMPONENT_RANK_SELECTION_MAX && a->rank < COMPONENT_RANK_SELECTION_MAX)
 		{
 			scanlog("%s rejected by rank threshold %d >= %d\n", b->purls[0], b->rank, COMPONENT_RANK_SELECTION_MAX);
 			return false;
 		}
-	
-		//lower rank selection logic
+
+		// 7.4. Lower rank selection logic
+		// For components with acceptable ranks (below max threshold), apply additional criteria
 		if (b->rank <= COMPONENT_RANK_SELECTION_MAX)
 		{
-			scanlog("path lenght: %s - %d vs  %s - %d\n", b->file, b->path_depth, a->file, a->path_depth);
-						//shorter path lenght are prefered
-		if (b->path_depth < a->path_depth/2)
-		{
-			scanlog("%s accepted by shorter path depth %d vs %d\n", b->purls[0], b->path_depth, a->path_depth);
-			return true;
-		}
-		else if (a->path_depth < b->path_depth/2)
-		{
-			scanlog("%s rejected by longer path depth %d vs %d\n", b->purls[0], b->path_depth, a->path_depth);
-			return false;
-		}
+			bool same_component = !strcmp(a->component, b->component);
 
-			if(b->path_depth > a->path_depth+1)
+			// 7.4.1. Same component comparison - prefer better ranked purl
+			// When comparing different sources of the same component, rank is decisive
+			if (same_component && b->rank != a->rank)
 			{
-				scanlog("%s rejected by deeper path in rank selection %d > %d\n", b->purls[0], b->path_depth, a->path_depth);
+				if (b->rank < a->rank)
+				{
+					scanlog("%s wins %s by rank %d/%d\n", b->purls[0],  a->purls[0], b->rank, a->rank);
+					return true;
+				}
+				scanlog("%s rejected by rank %d\n", b->purls[0], b->rank);
 				return false;
 			}
 
-			if (b->rank < a->rank)
+			// 7.4.2. Path depth comparison for similar ranks
+			// When ranks are close (difference < 5), prefer shorter file paths
+			// Shorter paths often indicate more direct/canonical locations
+			if (abs(b->rank - a->rank) < 5)
 			{
-				scanlog("%s wins %s by rank %d/%d\n", b->purls[0],  a->purls[0], b->rank, a->rank);
-				return true;
+				scanlog("path lenght: %s - %d vs  %s - %d\n", b->file, b->path_depth, a->file, a->path_depth);
+				// Component 'b' has significantly shorter path (less than half of 'a')
+				if (b->path_depth + 2 < a->path_depth/2)
+				{
+					scanlog("%s accepted by shorter path depth %d vs %d\n", b->purls[0], b->path_depth, a->path_depth);
+					return true;
+				}
+				// Component 'a' has significantly shorter path (less than half of 'b')
+				if (a->path_depth + 2 < b->path_depth/2)
+				{
+					scanlog("%s rejected by longer path depth %d vs %d\n", b->purls[0], b->path_depth, a->path_depth);
+					return false;
+				}
 			}
-			else if (b->rank > a->rank)
+			// 7.4.3. Final rank comparison if no other criteria applied
+			if (b->rank != a->rank)
 			{
+				if (b->rank < a->rank)
+				{
+					scanlog("%s wins %s by rank %d/%d\n", b->purls[0],  a->purls[0], b->rank, a->rank);
+					return true;
+				}
 				scanlog("%s rejected by rank %d\n", b->purls[0], b->rank);
 				return false;
 			}
 		}
 	}
-	/*if the relese date is the same untie with the component age (purl)*/
+	// 8. Tiebreakers for equal release dates
+	// When release dates are identical, use additional criteria to select the best component
 	if (!strcmp(b->release_date, a->release_date))
-	{	
-		if (purl_source_check(a) > purl_source_check(b))
+	{
+		// 8.1. Source check
+		// Prefer components from more authoritative sources (official repos, etc.)
+		// Lower source value is better (prefer_higher = false)
+		int source_a = purl_source_check(a);
+		int source_b = purl_source_check(b);
+		int source_cmp = compare_int_values(source_a, source_b, false);
+
+		if (source_cmp > 0)
 		{
 			scanlog("%s accepted over %s by source check\n", b->purls[0], a->purls[0]);
 			return true;
 		}
-		else if (purl_source_check(b) > purl_source_check(a))
+		if (source_cmp < 0)
 		{
 			scanlog("%s rejected by source check\n", b->purls[0]);
 			return false;
 		}
 
-		//Look for available health information
+		// 8.2. Health information
+		// Prefer components from healthier projects (more forks + watchers)
+		// Higher health value is better (prefer_higher = true)
 		print_health(a);
 		print_health(b);
-		int health_a = a->health_stats[0] + a->health_stats[2]; //add forks and watchers
+		int health_a = a->health_stats[0] + a->health_stats[2]; // forks + watchers
 		int health_b = b->health_stats[0] + b->health_stats[2];
+		int health_cmp = compare_int_values(health_a, health_b, true);
 
-
-		if (health_b > health_a)
+		if (health_cmp > 0)
 		{
 			scanlog("Component prefered by health: %s = %d vs %s = %d\n", b->purls[0], health_b, a->purls[0], health_a);
 			return true;
 		}
-		else if (health_a > health_b)
-		{
+		if (health_cmp < 0)
 			return false;
-		}
-		
 
-		if (!purl_vendor_component_check(a) && purl_vendor_component_check(b))
+		// 8.3. Vendor component check
+		// Verify if vendor and component names align with the purl
+		bool vendor_check_a = purl_vendor_component_check(a);
+		bool vendor_check_b = purl_vendor_component_check(b);
+
+		if (vendor_check_a != vendor_check_b)
 		{
-			scanlog("Component %s prefered over %s by vendor+component=purl\n", b->purls[0], a->purls[0]);
-			return true;
-		}
-		else if (purl_vendor_component_check(a) && !purl_vendor_component_check(b))
-		{
+			if (vendor_check_b)
+			{
+				scanlog("Component %s prefered over %s by vendor+component=purl\n", b->purls[0], a->purls[0]);
+				return true;
+			}
 			scanlog("Component %s rejected, %s wins by vendor+component=purl\n", b->purls[0], a->purls[0]);
 			return false;
 		}
-		
-		if (!a->purls_md5[0] && a->purls[0])
-		{
-			a->purls_md5[0] = malloc(MD5_LEN);
-			MD5((uint8_t *)a->purls[0], strlen(a->purls[0]), a->purls_md5[0]);
-			a->age = get_component_age(a->purls_md5[0]);
-		}
-		
-		if (!b->purls_md5[0] && b->purls[0])
-		{
-			b->purls_md5[0] = malloc(MD5_LEN);
-			MD5((uint8_t *)b->purls[0], strlen(b->purls[0]), b->purls_md5[0]);
-			b->age = get_component_age(b->purls_md5[0]);
-		}
-		
+
+		// 8.4. Component age (lazy initialization)
+		// Prefer older components (first appearance in package repositories)
+		// Higher age value means the component was published earlier
+		initialize_component_age(a);
+		initialize_component_age(b);
+
 		if ((!a->age && b->age) || b->age > a->age)
 		{
 			scanlog("Component %s prefered over %s by purl date (age: %ld vs %ld)\n", b->purls[0], a->purls[0], b->age, a->age);
 			return true;
 		}
-		else if ((!b->age && a->age) || a->age > b->age)
+		if ((!b->age && a->age) || a->age > b->age)
 		{
 			scanlog("Component %s rejected by purl date (age: %ld vs %ld)\n", b->purls[0], b->age, a->age);
 			return false;
 		}
 
-		if (b->age == a->age && !strcmp(a->component, b->component) && strcmp(a->version, b->version) > 0)
+		// 8.5. Version comparison (only if same component and age)
+		// For the same component with same age, use lexicographic version comparison
+		// Lower version string is preferred (usually represents older/more stable versions)
+		if (b->age == a->age && !strcmp(a->component, b->component))
 		{
-			scanlog("Component %s prefered over %s by version\n", b->purls[0], a->purls[0]);
-			return true;
-		}
-		else if (b->age == a->age && !strcmp(a->component, b->component) && strcmp(b->version, a->version) > 0)
-		{
-			scanlog("Component %s rejected by version comparison\n", b->purls[0]);
-			return false;
+			int version_cmp = strcmp(a->version, b->version);
+			if (version_cmp > 0)
+			{
+				scanlog("Component %s prefered over %s by version\n", b->purls[0], a->purls[0]);
+				return true;
+			}
+			if (version_cmp < 0)
+			{
+				scanlog("Component %s rejected by version comparison\n", b->purls[0]);
+				return false;
+			}
 		}
 	}
-	/*select the oldest release date */
-	if (strcmp(b->release_date, a->release_date) < 0)
+	// 9. Final decision: Select the oldest release date
+	// When no other criteria has decided, prefer the component with the earlier release date
+	// This implements the fundamental principle of preferring older, more established versions
+	int date_cmp = strcmp(b->release_date, a->release_date);
+	if (date_cmp < 0)
 	{
+		// Component 'b' has an earlier release date (date_cmp < 0 means b->release_date < a->release_date)
 		scanlog("Component %s (rank %d) prefered over %s (rank %d) by release date\n", b->purls[0],b->rank, a->purls[0], a->rank);
 		return true;
 	}
-	else if (strcmp(b->release_date, a->release_date) > 0)
+	if (date_cmp > 0)
 	{
+		// Component 'a' has an earlier release date
 		scanlog("Component %s (rank %d) rejected, %s (rank %d) wins by older release date\n", b->purls[0], b->rank, a->purls[0], a->rank);
 		return false;
 	}
 
+	// No criteria matched or all criteria were equal - reject component 'b'
 	scanlog("Component %s rejected, no criteria matched\n", b->purls[0]);
 	return false;
 }
@@ -539,12 +717,12 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
  * @return false
  */
 /*Iterations must be doubled if high accuracy is enabled*/
-int iteration_max = FETCH_MAX_FILES;
+int iteration_max = DEFAULT_MATCHMAP_FILES;
 bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	/*Iterations must be doubled if high accuracy is enabled*/
 	if (iteration == 0)
-		iteration_max = ((engine_flags & ENABLE_HIGH_ACCURACY) ? FETCH_MAX_FILES * 4 : FETCH_MAX_FILES);
+		iteration_max = ((engine_flags & ENABLE_HIGH_ACCURACY) ? fetch_max_files * 4 : fetch_max_files);
 	
 	/*Return we high accuracy it is not enabled*/
 	if (iteration > iteration_max)
@@ -588,10 +766,8 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
  */
 bool load_matches(match_data_t *match)
 {
-	scanlog("Load matches\n");
+	scanlog("Loading matches - fetch_max_files: %d\n", fetch_max_files);
 
-
-	
 	if (match->type == MATCH_BINARY)
 	{
 		asprintf(&match->line_ranges, "n/a");
@@ -933,6 +1109,11 @@ void compile_matches(scan_data_t *scan)
 		scan->matches_list_array[0] = match_list_init(true, scan->max_snippets_to_process);
 		scan->matches_list_array_index = 1;
 		match_data_t *match_new = calloc(1, sizeof(match_data_t));
+		if (!match_new)
+		{
+			scanlog("Error allocating memory for match data\n");
+			return;
+		}
 		match_new->type = scan->match_type;
 		strcpy(match_new->source_md5, scan->source_md5);
 		memcpy(match_new->file_md5, scan->match_ptr, MD5_LEN);
