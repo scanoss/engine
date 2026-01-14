@@ -105,6 +105,8 @@ bool license_add_to_list(struct license_list * ptr, char * license, int license_
 	if (!tmp)
 		return false;
 	ptr->licenses = tmp;
+	ptr->licenses[ptr->count].text = NULL;
++	ptr->licenses[ptr->count].id = 0;
 
 	/* Allocate with extra padding for CRC32C hardware reads (8-byte blocks) */
 	size_t len = strlen(license);

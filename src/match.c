@@ -261,6 +261,11 @@ static inline void initialize_component_age(component_data_t *comp)
 	if (!comp->purls_md5[0] && comp->purls[0])
 	{
 		comp->purls_md5[0] = malloc(MD5_LEN);
+		if (!comp->purls_md5[0])
+		{
+			scanlog("critical: MD5 memory allocation failed");
+			return;
+		}
 		MD5((uint8_t *)comp->purls[0], strlen(comp->purls[0]), comp->purls_md5[0]);
 		comp->age = get_component_age(comp->purls_md5[0]);
 	}
