@@ -133,6 +133,23 @@ void license_free_list(struct license_list * ptr)
 	ptr->count = 0;
 }
 
+static int license_compare_by_id(const void *a, const void *b)
+{
+	const struct license_type *la = a;
+	const struct license_type *lb = b;
+
+	/* IDs 5 and 6 should go to the end */
+	bool a_is_last = (la->id == 5 || la->id == 6);
+	bool b_is_last = (lb->id == 5 || lb->id == 6);
+
+	if (a_is_last && !b_is_last)
+		return 1;
+	if (!a_is_last && b_is_last)
+		return -1;
+
+	return la->id - lb->id;
+}
+
 /**
  * @brief Remove invalid characters from a license name
  * @param license license string
@@ -490,6 +507,10 @@ void print_licenses(component_data_t *comp)
 	len += sprintf(result + len, "\"licenses\": [");
 	buffer = result + len;
 	bool first = true;
+
+	/* Sort licenses by id (ascending) */
+	if (licenses_by_type.count > 1)
+		qsort(licenses_by_type.licenses, licenses_by_type.count, sizeof(struct license_type), license_compare_by_id);
 
 	for (int i = 0; i < licenses_by_type.count; i++)
 	{
