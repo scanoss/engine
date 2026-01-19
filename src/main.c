@@ -68,7 +68,7 @@ int scan_min_match_lines = SNIPPETS_DEFAULT_MIN_MATCH_LINES; // Minimum number o
 int scan_min_match_hits = SNIPPETS_DEFAULT_MIN_MATCH_HITS;  // Minimum number of snippet ID hits to produce a snippet match
 int scan_range_tolerance = SNIPPETS_DEFAULT_RANGE_TOLERANCE; // Maximum number of non-matched lines tolerated inside a matching range
 bool scan_adjust_tolerance = SNIPPETS_DEFAULT_ADJUST_TOLERANCE; /** Adjust tolerance based on file size */
-int scan_ranking_threshold = 0; //enabled, all accepted by default
+int scan_ranking_threshold = -1; //disable by defaults
 bool scan_honor_file_extension = SNIPPETS_DEFAULT_HONOR_FILE_EXTENSION;
 
 bool lib_encoder_present = false;
@@ -351,8 +351,7 @@ int main(int argc, char **argv)
 			case 's':
 				if (declared_components) printf("Cannot combine -s and -a\n");
 				declared_components = get_components(optarg);
-				engine_flags|= ENABLE_HIGH_ACCURACY; //high accuracy is necessary in this mode
-				break;
+					break;
 
 			case 'b':
 				ignore_components = get_components(optarg);
@@ -437,7 +436,6 @@ int main(int argc, char **argv)
 				break;
 
 			case 'd':
-				engine_flags = engine_flags_cmd_line;
 				debug_on = true;
 				scanlog_init();
 				break;
