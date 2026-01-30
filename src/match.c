@@ -464,7 +464,7 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	// 7. URL ranking and binary purl matching
 	// When URL ranking is enabled (rank < COMPONENT_DEFAULT_RANK), use ranking metrics
 	// Lower rank values indicate higher quality/more authoritative sources
-	if (b->rank < COMPONENT_DEFAULT_RANK || a->rank < COMPONENT_DEFAULT_RANK)
+	if (component_rank_max >=0 && (b->rank < COMPONENT_DEFAULT_RANK || a->rank < COMPONENT_DEFAULT_RANK))
 	{
 		// 7.1. Binary file to purl matching
 		// Check if the component's purl matches what would be expected for a binary file

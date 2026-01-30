@@ -337,7 +337,7 @@ bool print_json_match(struct match_data_t * match)
 		ranking_enabled = true;
 
 	printf("\"id\": \"%s\"", matchtypes[match->type]);
-	if (!match->scan_ower->snippet_adjust_tolerance && match->type == MATCH_SNIPPET)
+	if  (match->type == MATCH_SNIPPET)
 		printf(",\"hits\": %d", match->hits);
 
 	printf(",\"lines\": \"%s\"", match->line_ranges);
