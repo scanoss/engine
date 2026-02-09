@@ -36,6 +36,15 @@
 #include "hpsm.h"
 #include "match_list.h"
 #include "report.h"
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
+#include <errno.h>
+#include <libgen.h>
+#include <limits.h>
+#include <string.h>
+#include <fcntl.h>
 
 /**
   @file scan.c
@@ -212,6 +221,74 @@ int hash_scan(char *path, int scan_max_snippets, int scan_max_components, bool a
 }
 
 /**
+ * @brief Extracts scan ID from file path (filename without extension)
+ * @param path File path
+ * @return Allocated string with scan ID, caller must free
+ */
+static char* extract_scanid_from_path(const char *path)
+{
+	if (!path) return NULL;
+
+	/* Get basename */
+	char *path_copy = strdup(path);
+	char *base = basename(path_copy);
+
+	/* Remove extension */
+	char *scanid = strdup(base);
+	char *dot = strrchr(scanid, '.');
+	if (dot) *dot = '\0';
+
+	free(path_copy);
+	return scanid;
+}
+
+/**
+ * @brief Writes progress JSON to status file
+ * @param status_path Path to the status file
+ * @param started Start timestamp
+ * @param status Status string ("scanning", "completed", "failed")
+ * @param progress Progress percentage (0-100)
+ */
+static void write_progress_to_file(const char *status_path, time_t started, const char *status, int progress)
+{
+	if (!status_path || !status) return;
+
+	FILE *fp = fopen(status_path, "w");
+	if (!fp) {
+		scanlog("Warning: Could not open status file %s: %s\n", status_path, strerror(errno));
+		return;
+	}
+
+	fprintf(fp, "{\"started\":%ld,\"status\":\"%s\",\"progress\":%d}\n",
+	        started, status, progress);
+	fclose(fp);
+}
+
+/**
+ * @brief Creates status file path and directories
+ * @param scanid Scan ID for this operation
+ * @param status_path_out Output buffer for status file path (must be at least PATH_MAX size)
+ * @return 0 on success, -1 on error
+ */
+static int create_status_file(const char *scanid, char *status_path_out)
+{
+	if (!scanid || !status_path_out) return -1;
+
+	/* Create directories recursively */
+	mkdir("/tmp/engine", 0755);
+	mkdir("/tmp/engine/batch-scan", 0755);
+
+	/* Build status file path */
+	snprintf(status_path_out, PATH_MAX, "/tmp/engine/batch-scan/%s", scanid);
+
+	/* Remove old file/pipe if exists (avoids blocking on old FIFOs) */
+	unlink(status_path_out);
+
+	scanlog("Status file path: %s\n", status_path_out);
+	return 0;
+}
+
+/**
  * @brief Performs a wfp scan.
  * Files with wfp extension will be scanned in this mode. 
  * Remember: wfp = Winnowings Finger Print.
@@ -221,21 +298,60 @@ int hash_scan(char *path, int scan_max_snippets, int scan_max_components, bool a
  * @param scan_max_components Limit for component to be displayed. 1 by default.
  * @return EXIT_SUCCESS
  */
-int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, int snippet_range_tolerance, bool snippet_honor_file_extension)
+int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, int snippet_range_tolerance, bool snippet_honor_file_extension, bool report_progress)
 {
 	scan_data_t * scan = NULL;
 	char * line = NULL;
 	size_t len = 0;
 	ssize_t lineln;
 	uint8_t *rec = NULL;
-	
+
+	/* Progress tracking variables */
+	char *scanid = NULL;
+	char status_path[PATH_MAX] = {0};
+	time_t started = time(NULL);
+	long total_lines = 0;
+	long current_line = 0;
+	int progress = 0;
+	bool status_enabled = false;
+
 	scanlog("--- WFP SCAN ---\n");
+
+	/* Create status file for progress reporting if enabled */
+	if (report_progress) {
+		scanid = extract_scanid_from_path(path);
+		if (scanid && create_status_file(scanid, status_path) == 0) {
+			status_enabled = true;
+			scanlog("Scan ID: %s\n", scanid);
+		}
+	}
+
 	/* Open WFP file */
 	FILE *fp = fopen(path, "r");
 	if (fp == NULL)
 	{
 		fprintf(stdout, "E017 Cannot open target");
+		if (status_enabled) {
+			write_progress_to_file(status_path, started, "failed", 0);
+		}
+		if (scanid) free(scanid);
 		return EXIT_FAILURE;
+	}
+
+	/* Count total lines first for progress calculation */
+	scanlog("Counting total lines...\n");
+	char *count_line = NULL;
+	size_t count_len = 0;
+	while (getline(&count_line, &count_len, fp) != -1) {
+		total_lines++;
+	}
+	if (count_line) free(count_line);
+	rewind(fp);
+	scanlog("Total lines: %ld\n", total_lines);
+
+	/* Write initial progress */
+	if (status_enabled) {
+		write_progress_to_file(status_path, started, "scanning", 0);
 	}
 
 	/* Get wfp MD5 hash */
@@ -247,6 +363,17 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 	while ((lineln = getline(&line, &len, fp)) != -1)
 	{
 		trim(line);
+
+		/* Update progress */
+		current_line++;
+		if (status_enabled && total_lines > 0) {
+			int new_progress = (int)((current_line * 100) / total_lines);
+			/* Update pipe every 1% change to avoid excessive writes */
+			if (new_progress != progress) {
+				progress = new_progress;
+				write_progress_to_file(status_path, started, "scanning", progress);
+			}
+		}
 
 		bool is_file = (memcmp(line, "file=", 5) == 0);
 		bool is_fh2 = (memcmp(line, "fh2=", 4) == 0);
@@ -357,10 +484,16 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 	/* Scan the last file */
 	ldb_scan(scan);
 
+	/* Report completion */
+	if (status_enabled) {
+		write_progress_to_file(status_path, started, "completed", 100);
+	}
+
 	fclose(fp);
 	if (line) free(line);
-	
+
 	free(tmp_md5_hex);
+	if (scanid) free(scanid);
 	return EXIT_SUCCESS;
 }
 

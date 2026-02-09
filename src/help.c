@@ -77,6 +77,13 @@ Options:\n\
 -d, --debug              Store debugging information to disk (/tmp).\n\
 -q, --quiet              Suppress JSON output (show only debugging info via STDERR).\n\
 \n\
+Batch Processing:\n\
+-R, --report             Enable batch mode: write progress to /tmp/engine/batch-scan/<scanid>\n\
+                         and results to /tmp/engine/batch-result/<scanid> instead of STDOUT.\n\
+-C, --clean              Clean completed status files older than 2 hours from batch-scan directory.\n\
+    --batch-status ID    Show scan progress/status for the given scan ID.\n\
+    --batch-result ID    Show scan results for the given scan ID (only if completed).\n\
+\n\
 Environment variables:\n\
 SCANOSS_MATCHMAP_MAX: Set the snippet scanning match map size (default: %d).\n\
 SCANOSS_FILE_CONTENTS_URL: Define the API URL endpoint for sources. Source URL won't be reported if not defined.\n\

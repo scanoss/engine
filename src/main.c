@@ -47,6 +47,9 @@
 #include "hpsm.h"
 #include <dlfcn.h>
 #include <getopt.h>
+#include <errno.h>
+#include <libgen.h>
+#include <sys/stat.h>
 
 struct ldb_table oss_url;
 struct ldb_table oss_file;
@@ -70,6 +73,7 @@ int scan_range_tolerance = SNIPPETS_DEFAULT_RANGE_TOLERANCE; // Maximum number o
 bool scan_adjust_tolerance = SNIPPETS_DEFAULT_ADJUST_TOLERANCE; /** Adjust tolerance based on file size */
 int scan_ranking_threshold = -1; //disable by defaults
 bool scan_honor_file_extension = SNIPPETS_DEFAULT_HONOR_FILE_EXTENSION;
+bool scan_report_progress = false;
 
 bool lib_encoder_present = false;
 #define LDB_VER_MIN "4.1.0"
@@ -216,7 +220,7 @@ void recurse_directory(char *name)
 		
 			if (wfp)
 				wfp_scan(path, scan_max_snippets, scan_max_components, scan_adjust_tolerance,
-					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_range_tolerance, scan_honor_file_extension);
+					scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_range_tolerance, scan_honor_file_extension, scan_report_progress);
 			else
 			{
 				scan_data_t * scan = scan_data_init(path, scan_max_snippets, scan_max_components, scan_adjust_tolerance,
@@ -246,6 +250,206 @@ bool validate_alpha(char *txt)
 	}
 
 	return true;
+}
+
+#define STATUS_DIR "/tmp/engine/batch-scan"
+#define RESULT_DIR "/tmp/engine/batch-result"
+#define MAX_AGE_SECONDS (2 * 60 * 60) /* 2 hours */
+
+/**
+ * @brief Extracts scan ID from file path (filename without extension)
+ * @param path File path
+ * @return Allocated string with scan ID, caller must free
+ */
+static char* get_scanid_from_path(const char *path)
+{
+	if (!path) return NULL;
+
+	/* Get basename */
+	char *path_copy = strdup(path);
+	char *base = basename(path_copy);
+
+	/* Remove extension */
+	char *scanid = strdup(base);
+	char *dot = strrchr(scanid, '.');
+	if (dot) *dot = '\0';
+
+	free(path_copy);
+	return scanid;
+}
+
+/**
+ * @brief Setup output redirection to batch result file
+ * @param scanid Scan ID for this operation
+ * @return 0 on success, -1 on error
+ */
+static int setup_batch_result_output(const char *scanid)
+{
+	if (!scanid) return -1;
+
+	/* Create directories */
+	mkdir("/tmp/engine", 0755);
+	mkdir(RESULT_DIR, 0755);
+
+	/* Build result file path */
+	char result_path[MAX_PATH];
+	snprintf(result_path, sizeof(result_path), "%s/%s", RESULT_DIR, scanid);
+
+	/* Redirect stdout to file */
+	if (freopen(result_path, "w", stdout) == NULL) {
+		fprintf(stderr, "Error: Could not redirect output to %s: %s\n", result_path, strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+/**
+ * @brief Show batch result file content to stdout
+ * Verifies scan status before returning results
+ * @param scanid Scan ID to retrieve
+ * @return 0 on success, -1 on error
+ */
+static int show_batch_result(const char *scanid)
+{
+	if (!scanid) {
+		fprintf(stderr, "Error: No scan ID provided\n");
+		return -1;
+	}
+
+	/* First check the status file */
+	char status_path[MAX_PATH];
+	snprintf(status_path, sizeof(status_path), "%s/%s", STATUS_DIR, scanid);
+
+	FILE *status_fp = fopen(status_path, "r");
+	if (!status_fp) {
+		printf("{\"message\":\"Scan not found\"}\n");
+		return -1;
+	}
+
+	char status_buffer[512];
+	bool is_completed = false;
+
+	if (fgets(status_buffer, sizeof(status_buffer), status_fp) != NULL) {
+		char *status_ptr = strstr(status_buffer, "\"status\":\"");
+		if (status_ptr && strncmp(status_ptr + 10, "completed", 9) == 0) {
+			is_completed = true;
+		}
+	}
+	fclose(status_fp);
+
+	/* If not completed, return the status file content directly */
+	if (!is_completed) {
+		printf("%s", status_buffer);
+		return 0;
+	}
+
+	/* Status is completed, return the result */
+	char result_path[MAX_PATH];
+	snprintf(result_path, sizeof(result_path), "%s/%s", RESULT_DIR, scanid);
+
+	FILE *fp = fopen(result_path, "r");
+	if (!fp) {
+		printf("{\"message\":\"Result file not found\"}\n");
+		return -1;
+	}
+
+	char buffer[4096];
+	size_t bytes;
+	while ((bytes = fread(buffer, 1, sizeof(buffer), fp)) > 0) {
+		fwrite(buffer, 1, bytes, stdout);
+	}
+
+	fclose(fp);
+	return 0;
+}
+
+/**
+ * @brief Show batch status file content to stdout
+ * @param scanid Scan ID to retrieve
+ * @return 0 on success, -1 on error
+ */
+static int show_batch_status(const char *scanid)
+{
+	if (!scanid) {
+		fprintf(stderr, "Error: No scan ID provided\n");
+		return -1;
+	}
+
+	char status_path[MAX_PATH];
+	snprintf(status_path, sizeof(status_path), "%s/%s", STATUS_DIR, scanid);
+
+	FILE *fp = fopen(status_path, "r");
+	if (!fp) {
+		fprintf(stderr, "Error: Status file not found: %s\n", status_path);
+		return -1;
+	}
+
+	char buffer[512];
+	if (fgets(buffer, sizeof(buffer), fp) != NULL) {
+		printf("%s", buffer);
+	}
+
+	fclose(fp);
+	return 0;
+}
+
+/**
+ * @brief Clean old completed status files from the batch-scan directory
+ * Removes files that have status "completed" and are older than 2 hours
+ * @return Number of files cleaned
+ */
+int clean_old_status_files(void)
+{
+	DIR *dir = opendir(STATUS_DIR);
+	if (!dir) {
+		printf("Status directory does not exist: %s\n", STATUS_DIR);
+		return 0;
+	}
+
+	struct dirent *entry;
+	int cleaned = 0;
+	time_t now = time(NULL);
+	char filepath[MAX_PATH];
+	char buffer[512];
+
+	while ((entry = readdir(dir)) != NULL) {
+		if (entry->d_name[0] == '.') continue;
+
+		snprintf(filepath, sizeof(filepath), "%s/%s", STATUS_DIR, entry->d_name);
+
+		FILE *fp = fopen(filepath, "r");
+		if (!fp) continue;
+
+		if (fgets(buffer, sizeof(buffer), fp) != NULL) {
+			/* Parse JSON: {"started":TIMESTAMP,"status":"STATUS","progress":NUM} */
+			char *status_ptr = strstr(buffer, "\"status\":\"");
+			char *started_ptr = strstr(buffer, "\"started\":");
+
+			if (status_ptr && started_ptr) {
+				/* Check if status is "completed" */
+				if (strncmp(status_ptr + 10, "completed", 9) == 0) {
+					/* Extract timestamp */
+					time_t started = atol(started_ptr + 10);
+
+					/* Check if older than MAX_AGE_SECONDS */
+					if ((now - started) >= MAX_AGE_SECONDS) {
+						fclose(fp);
+						if (unlink(filepath) == 0) {
+							cleaned++;
+							printf("Cleaned: %s\n", entry->d_name);
+						}
+						continue;
+					}
+				}
+			}
+		}
+		fclose(fp);
+	}
+
+	closedir(dir);
+	printf("Total files cleaned: %d\n", cleaned);
+	return cleaned;
 }
 
 /**
@@ -299,6 +503,10 @@ static struct option long_options[] = {
 	{"debug",             no_argument,       0, 'd'},
 	{"quiet",             no_argument,       0, 'q'},
 	{"hpsm",              no_argument,       0, 'H'},
+	{"report",            no_argument,       0, 'R'},
+	{"clean",             no_argument,       0, 'C'},
+	{"batch-result",      required_argument, 0, 262},
+	{"batch-status",      required_argument, 0, 263},
 	{0, 0, 0, 0}
 };
 
@@ -325,7 +533,7 @@ int main(int argc, char **argv)
 
 	bool force_wfp = false;
 	bool force_bfp = false;
-	
+
 	microseconds_start = microseconds_now();
 
 	/* Parse arguments */
@@ -334,7 +542,7 @@ int main(int argc, char **argv)
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
 
-	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:wtLvhdqH", long_options, &option_index)) != -1)
+	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:wtLvhdqHRC", long_options, &option_index)) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -487,6 +695,30 @@ int main(int argc, char **argv)
 					exit(EXIT_FAILURE);
 				}
 				break;
+
+			case 'R':
+				scan_report_progress = true;
+				scanlog("Progress reporting enabled\n");
+				break;
+
+			case 'C':
+				clean_old_status_files();
+				exit(EXIT_SUCCESS);
+				break;
+
+			case 262: /* --batch-result */
+				if (show_batch_result(optarg) == 0)
+					exit(EXIT_SUCCESS);
+				else
+					exit(EXIT_FAILURE);
+				break;
+
+			case 263: /* --batch-status */
+				if (show_batch_status(optarg) == 0)
+					exit(EXIT_SUCCESS);
+				else
+					exit(EXIT_FAILURE);
+				break;
 		}
 		if (invalid_argument) break;
 	}
@@ -533,6 +765,14 @@ int main(int argc, char **argv)
 		strcpy (target, argv[argc-1]);
 		for (int i=strlen(target)-1; i>=0; i--) if (target[i]=='/') target[i]=0; else break;
 
+		/* Redirect output to batch result file if report mode is enabled */
+		char *batch_scanid = NULL;
+		if (scan_report_progress) {
+			batch_scanid = get_scanid_from_path(target);
+			if (batch_scanid) {
+				setup_batch_result_output(batch_scanid);
+			}
+		}
 
 		/* Open main report structure */
 		json_open();
@@ -560,7 +800,7 @@ int main(int argc, char **argv)
 				/* Scan wfp file */
 				if (wfp_extension)
 					wfp_scan(target, scan_max_snippets, scan_max_components, scan_adjust_tolerance,
-						scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_range_tolerance, scan_honor_file_extension);
+						scan_ranking_threshold, scan_min_match_hits, scan_min_match_lines, scan_range_tolerance, scan_honor_file_extension, scan_report_progress);
 
 				else if (bfp_extension) 
 					binary_scan(target);
@@ -579,7 +819,8 @@ int main(int argc, char **argv)
 		/* Close main report structure */
 		json_close();
 
-		if (target) free (target);
+		if (target) free(target);
+		if (batch_scanid) free(batch_scanid);
 	}
 
 	if (ignore_components) 
