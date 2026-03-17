@@ -273,7 +273,7 @@ bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		return false;
 
 	*(char *)ptr = 0;
-	char *ext = file_extension((char *)file_data + MD5_LEN);
+	char *ext = file_extension((char *)file_data);
 	
 	if (ext)
 		strcpy((char *) ptr, ext);

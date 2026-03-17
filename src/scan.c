@@ -371,8 +371,8 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
  */
 void output_matches_json(scan_data_t *scan)
 {
-	flip_slashes(scan->file_path);
-
+	char * file_path = scape_slashes(scan->file_path);
+	
 	/* Log slow query, if needed */
 	slow_query_log(scan);
 
@@ -387,7 +387,7 @@ void output_matches_json(scan_data_t *scan)
 	if (scan->matches_list_array_index > 1 && scan->max_snippets_to_process > 1)
 	{
 		engine_flags |= DISABLE_BEST_MATCH;
-		printf("\"%s\": {\"matches\":[", scan->file_path);
+		printf("\"%s\": {\"matches\":[", file_path);
 		match_list_t *best_list = match_select_m_component_best(scan);
 		scanlog("<<<best list items: %d>>>\n", best_list->items);
 		if(!match_list_print(best_list, print_json_match, ","))
@@ -397,7 +397,7 @@ void output_matches_json(scan_data_t *scan)
 	}
 	else if (engine_flags & DISABLE_BEST_MATCH)
 	{
-		printf("\"%s\": [", scan->file_path);
+		printf("\"%s\": [", file_path);
 		bool first = true;
 		for (int i = 0; i < scan->matches_list_array_index; i++)
 		{
@@ -415,21 +415,22 @@ void output_matches_json(scan_data_t *scan)
 	/* prinf no match if the scan was evaluated as none */ // TODO must be unified with the "else" clause
 	else if (scan->match_type == MATCH_NONE)
 	{
-		printf("\"%s\": [{", scan->file_path);
+		printf("\"%s\": [{", file_path);
 		print_json_nomatch();
 	}
 	else if (scan->best_match && scan->best_match->component_list.items)
 	{
-		printf("\"%s\": [{", scan->file_path);
+		printf("\"%s\": [{", file_path);
 		print_json_match(scan->best_match);
 	}
 	else
 	{
-		printf("\"%s\": [{", scan->file_path);
+		printf("\"%s\": [{", file_path);
 		print_json_nomatch();
 	}
 
 	json_close_file(scan);
+	free(file_path);
 	engine_flags = engine_flags_aux;
 }
 
