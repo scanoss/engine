@@ -12,3 +12,4 @@ doc
 docs/build
 *.a
 _obj
+.DS_Store
