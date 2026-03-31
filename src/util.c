@@ -63,7 +63,7 @@ char * scape_slashes(char *data)
 		return strdup(data);
 
 	int len = strlen(data);
-	char * out = calloc(1, len*2);
+	char * out = calloc(1, len*2+1);
 	int j = 0;
 
 	for (int i = 0; i < len; i++)
