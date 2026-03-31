@@ -293,11 +293,12 @@ char *skip_first_slash(char *data)
 }
 
 /**
- * @brief Extracts the "n"th value from the comma separated "in" string
- * @param out[out] parsed string
- * @param in input buffer
- * @param n col number
- * @param limit string limit
+ * @brief Extracts the nth comma-separated field from the input string.
+ *        Use n = -1 to extract the last field.
+ * @param out[out] output buffer where the extracted field is stored
+ * @param in input comma-separated string
+ * @param n 1-based field index to extract, or -1 for the last field
+ * @param limit maximum number of bytes to write to out (including null terminator)
  */
 void extract_csv(char *out, char *in, int n, long limit)
 {
@@ -309,6 +310,14 @@ void extract_csv(char *out, char *in, int n, long limit)
 	if (strln < limit) limit = strln;
 
 	limit--; // need an extra byte for chr(0)
+
+	/* n == -1: resolve to the last field */
+	if (n == -1)
+	{
+		n = 1;
+		for (char *p = in; *p; p++)
+			if (*p == ',') n++;
+	}
 
 	char *tmp = in;
 	int n_counter = 1;

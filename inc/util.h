@@ -59,7 +59,10 @@ bool valid_md5(char *str);
 char * json_remove_invalid_char(char * input);
 char * str_cat_realloc(char **a, char * b);
 
- void flip_slashes(char *data);
+void flip_slashes(char *data);
+
+char * scape_slashes(char *data);
+
 
 void free_and_null(void ** pr);
 

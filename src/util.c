@@ -53,6 +53,35 @@
 			data[i] = '/';
 }
 
+
+ /** @brief This script replaces \ with /
+ * @param data input/output buffer
+ */
+char * scape_slashes(char *data)
+{
+	if (!strchr(data, '\\'))
+		return strdup(data);
+
+	int len = strlen(data);
+	char * out = calloc(1, len*2+1);
+	int j = 0;
+
+	for (int i = 0; i < len; i++)
+	{
+		if (data[i] == '\\')
+		{
+			out[j++] = '\\';
+			out[j++] = '\\';
+		}
+		else
+		{
+			out[j] = data[i];
+			j++;
+		}
+	}
+	return out;
+}
+
 /**
  * @brief Returns a pointer to field n in data
  * @param n field number
@@ -386,8 +415,8 @@ int path_is_third_party(component_data_t *comp)
         "fixtures", "examples","assets", "runtime",
         "subprojects", "managed", "local_packages", "published",
         "libresources", "offloading", "compile", "release", "bundle",   
-		"media", "documentation", "test", 
-		"service","lib","dist",
+		"media","lib","documentation", "test", 
+		"service","dist",
 		"driver", "common","files"
     };
 

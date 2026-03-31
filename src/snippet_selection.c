@@ -62,8 +62,7 @@ bool snippet_extension_discard(match_data_t * match)
 		return false;
 
 	if (*ext1 && *ext2 && strcmp(ext1, ext2))
-	//	if (!known_src_extension(ext2))
-			discard = true;
+		discard = true;
 
 	if (discard)
 		scanlog("Discarding matched extension %s for %s\n", ext2, ext1);
