@@ -102,6 +102,7 @@ These settings can also be specified in %s\n\
 | 4096  | Disable extended server stats (default: enabled)      |\n\
 | 8192  | Disable health layer (default: enabled)               |\n\
 | 16384 | Enable high accuracy, slower scan (default: disabled) |\n\
+| 32768 | Enable full license report (default: disabled)        |\n\
 +-------+-------------------------------------------------------+\n\
 Examples:\n\
   scanoss -F 12 DIRECTORY              Scan DIRECTORY without license and dependency data\n\
