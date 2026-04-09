@@ -549,12 +549,29 @@ void print_licenses(component_data_t *comp)
 	buffer = result + len;
 	bool first = true;
 	bool component_license = false;
+	int file_header_filter = 0;
+	int scancode_file_filter = 0;
 	/* Sort licenses by id (ascending) */
 	if (licenses_by_type.count > 1)
 		qsort(licenses_by_type.licenses, licenses_by_type.count, sizeof(struct license_type), license_compare_by_id);
 
 	for (int i = 0; i < licenses_by_type.count; i++)
 	{
+		//file header license and scancode_file liceses are limited to a maximum of 3.
+		if (licenses_by_type.licenses[i].id == 2)
+		{
+			file_header_filter++;
+			if (file_header_filter >=3 && !full_license_report)
+				continue;
+		}
+		
+		if (licenses_by_type.licenses[i].id == 4)
+		{
+			scancode_file_filter++;
+			if (scancode_file_filter >=3 && !full_license_report)
+				continue;
+		}
+
 		buffer = license_to_json(crclist, buffer, licenses_by_type.licenses[i].text, licenses_by_type.licenses[i].id, &first);
 		//just report component license if available
 		if (licenses_by_type.licenses[i].id == 0 && !first)
