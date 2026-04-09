@@ -314,8 +314,8 @@ static char *json_from_license(uint32_t *crclist, char *buffer, char *license, i
 	len += osadl_print_license(buffer + len, license, true);
 	len += sprintf(buffer + len, "\"source\": \"%s\"", license_source_id);
 
-	/* Check if license contains AND/OR operators */
-	if (strstr(license, " AND ") || strstr(license, " OR "))
+	/* Check if license contains AND/OR/WITH operators */
+	if (strstr(license, " AND ") || strstr(license, " OR ") || strstr(license, " WITH "))
 	{
 		/* Build "urls" object with each individual license mapped to its URL */
 		len += sprintf(buffer + len, ",\"urls\": {");
@@ -326,14 +326,14 @@ static char *json_from_license(uint32_t *crclist, char *buffer, char *license, i
 		char first_license[MAX_FIELD_LN] = "\0";
 		bool first_entry = true;
 		char *saveptr = NULL;
-		char *token = strtok_r(lic_copy, " ", &saveptr);
+		char *token = strtok_r(lic_copy, " ()", &saveptr);
 
 		while (token)
 		{
-			/* Skip AND/OR operators */
-			if (strcmp(token, "AND") == 0 || strcmp(token, "OR") == 0)
+			/* Skip AND/OR/WITH operators */
+			if (strcmp(token, "AND") == 0 || strcmp(token, "OR") == 0 || strcmp(token, "WITH") == 0)
 			{
-				token = strtok_r(NULL, " ", &saveptr);
+				token = strtok_r(NULL, " ()", &saveptr);
 				continue;
 			}
 			if (!first_entry)
@@ -344,7 +344,7 @@ static char *json_from_license(uint32_t *crclist, char *buffer, char *license, i
 				first_entry = false;
 			}
 			len += sprintf(buffer + len, "\"%s\": \"https://spdx.org/licenses/%s.html\"", token, token);
-			token = strtok_r(NULL, " ", &saveptr);
+			token = strtok_r(NULL, " ()", &saveptr);
 		}
 		len += sprintf(buffer + len, "}");
 
