@@ -549,6 +549,7 @@ void print_licenses(component_data_t *comp)
 	buffer = result + len;
 	bool first = true;
 	bool component_license = false;
+	bool scanoss_license = false;
 	int file_header_filter = 0;
 	int scancode_file_filter = 0;
 	/* Sort licenses by id (ascending) */
@@ -572,10 +573,16 @@ void print_licenses(component_data_t *comp)
 				continue;
 		}
 
+		if (licenses_by_type.licenses[i].id == 5 && scanoss_license && !full_license_report)
+			continue;
+
 		buffer = license_to_json(crclist, buffer, licenses_by_type.licenses[i].text, licenses_by_type.licenses[i].id, &first);
 		//just report component license if available
 		if (licenses_by_type.licenses[i].id == 0 && !first)
 			component_license = true;
+
+		else if (licenses_by_type.licenses[i].id > 0 && !first)
+			scanoss_license = true;
 		
 		if (i > 0 && component_license && !full_license_report)
 			break;
