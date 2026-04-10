@@ -133,19 +133,28 @@ void license_free_list(struct license_list * ptr)
 	ptr->count = 0;
 }
 
+static int license_priority(int id)
+{
+	static const int priority[] = {0, 31, 32, 33, 35, 3, 1, 2, 5};
+	static const int n = sizeof(priority) / sizeof(priority[0]);
+
+	for (int i = 0; i < n; i++)
+		if (priority[i] == id)
+			return i;
+
+	return n; /* unknown IDs go last */
+}
+
 static int license_compare_by_id(const void *a, const void *b)
 {
 	const struct license_type *la = a;
 	const struct license_type *lb = b;
 
-	/* IDs 5 and 6 should go to the end */
-	bool a_is_last = (la->id == 5 || la->id == 6);
-	bool b_is_last = (lb->id == 5 || lb->id == 6);
+	int pa = license_priority(la->id);
+	int pb = license_priority(lb->id);
 
-	if (a_is_last && !b_is_last)
-		return 1;
-	if (!a_is_last && b_is_last)
-		return -1;
+	if (pa != pb)
+		return pa - pb;
 
 	return la->id - lb->id;
 }
@@ -291,7 +300,7 @@ static char *json_from_license(uint32_t *crclist, char *buffer, char *license, i
 	if (!license_source_id)
 		return buffer;
 	//skip scancode licenses starting with "LicenseRef"	
-	if (!strncmp(license_source_id, "scancode", 8) && !strncmp(license, "LicenseRef", 10))
+	if (!strncmp(license_source_id, "scancode", 8) && strstr(license, "LicenseRef"))
 		return buffer;
 	/* Calculate CRC to avoid duplicates */
 	uint32_t CRC = string_crc32c(license);
@@ -313,8 +322,49 @@ static char *json_from_license(uint32_t *crclist, char *buffer, char *license, i
 	len += sprintf(buffer + len, "\"name\": \"%s\",", license);
 	len += osadl_print_license(buffer + len, license, true);
 	len += sprintf(buffer + len, "\"source\": \"%s\"", license_source_id);
-	if (!strstr(license, "LicenseRef"))
+
+	/* Check if license contains AND/OR/WITH operators */
+	if (strstr(license, " AND ") || strstr(license, " OR ") || strstr(license, " WITH "))
+	{
+		/* Build "urls" object with each individual license mapped to its URL */
+		len += sprintf(buffer + len, ",\"urls\": {");
+		char lic_copy[MAX_FIELD_LN];
+		strncpy(lic_copy, license, MAX_FIELD_LN - 1);
+		lic_copy[MAX_FIELD_LN - 1] = '\0';
+
+		char first_license[MAX_FIELD_LN] = "\0";
+		bool first_entry = true;
+		char *saveptr = NULL;
+		char *token = strtok_r(lic_copy, " ()", &saveptr);
+
+		while (token)
+		{
+			/* Skip AND/OR/WITH operators */
+			if (strcmp(token, "AND") == 0 || strcmp(token, "OR") == 0 || strcmp(token, "WITH") == 0)
+			{
+				token = strtok_r(NULL, " ()", &saveptr);
+				continue;
+			}
+			if (!first_entry)
+				len += sprintf(buffer + len, ",");
+			else
+			{
+				strncpy(first_license, token, MAX_FIELD_LN - 1);
+				first_entry = false;
+			}
+			len += sprintf(buffer + len, "\"%s\": \"https://spdx.org/licenses/%s.html\"", token, token);
+			token = strtok_r(NULL, " ()", &saveptr);
+		}
+		len += sprintf(buffer + len, "}");
+
+		/* "url" points to the first license only */
+		len += sprintf(buffer + len, ",\"url\": \"https://spdx.org/licenses/%s.html\"", first_license);
+	}
+	else
+	{
 		len += sprintf(buffer + len, ",\"url\": \"https://spdx.org/licenses/%s.html\"", license);
+	}
+
 	len += sprintf(buffer + len, "}");
 	return (buffer + len);
 }
@@ -507,7 +557,7 @@ void print_licenses(component_data_t *comp)
 	len += sprintf(result + len, "\"licenses\": [");
 	buffer = result + len;
 	bool first = true;
-
+	int last_id = -1;
 	/* Sort licenses by id (ascending) */
 	if (licenses_by_type.count > 1)
 		qsort(licenses_by_type.licenses, licenses_by_type.count, sizeof(struct license_type), license_compare_by_id);
@@ -515,6 +565,9 @@ void print_licenses(component_data_t *comp)
 	for (int i = 0; i < licenses_by_type.count; i++)
 	{
 		buffer = license_to_json(crclist, buffer, licenses_by_type.licenses[i].text, licenses_by_type.licenses[i].id, &first);
+		if (last_id >= 0 && last_id != licenses_by_type.licenses[i].id && !first && !full_license_report)
+			break;
+		last_id = licenses_by_type.licenses[i].id;
 	}
 
 	len = buffer - result;

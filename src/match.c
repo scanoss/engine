@@ -965,8 +965,10 @@ void match_select_best(scan_data_t *scan)
 			}
 
 			//If the best match is not good or is not identified be prefer the candidate.
-			if ((!best_match_component->identified && match_component->identified) ||
-				(path_is_third_party(best_match_component) < path_is_third_party(match_component)))
+			if (best_match_component->identified > match_component->identified)
+				continue;
+				
+			if (path_is_third_party(best_match_component) < path_is_third_party(match_component))
 			{
 				scanlog("Replacing best match for a prefered component\n");
 				scan->matches_list_array[i]->best_match = item->match;

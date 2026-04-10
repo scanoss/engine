@@ -384,6 +384,8 @@ int main(int argc, char **argv)
 			case 'F':
 				engine_flags_cmd_line = atol(optarg);
 				engine_flags |= engine_flags_cmd_line;
+				if (engine_flags & ENABLE_LICENSE_FULL_REPORT)
+					full_license_report = true;
 				break;
 
 			case 'l':

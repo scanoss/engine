@@ -33,7 +33,7 @@
 #define WFP_LN 4
 #define WFP_REC_LN 18
 
-#define SCANOSS_VERSION "5.4.23"
+#define SCANOSS_VERSION "5.4.24"
 
 /* Log files */
 #define SCAN_LOG "/tmp/scanoss_scan.log"
@@ -59,6 +59,7 @@
 #define DISABLE_SERVER_INFO 4096
 #define DISABLE_HEALTH 8192
 #define ENABLE_HIGH_ACCURACY 16384
+#define ENABLE_LICENSE_FULL_REPORT 32768
 
 #define MAX_SBOM_ITEMS 2000
 #define SHORTEST_PATHS_QTY 4000 // number of shortest path to evaluate
