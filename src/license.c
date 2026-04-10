@@ -133,19 +133,28 @@ void license_free_list(struct license_list * ptr)
 	ptr->count = 0;
 }
 
+static int license_priority(int id)
+{
+	static const int priority[] = {0, 31, 32, 33, 35, 3, 1, 2, 5};
+	static const int n = sizeof(priority) / sizeof(priority[0]);
+
+	for (int i = 0; i < n; i++)
+		if (priority[i] == id)
+			return i;
+
+	return n; /* unknown IDs go last */
+}
+
 static int license_compare_by_id(const void *a, const void *b)
 {
 	const struct license_type *la = a;
 	const struct license_type *lb = b;
 
-	/* IDs 5 and 6 should go to the end */
-	bool a_is_last = (la->id == 5 || la->id == 6);
-	bool b_is_last = (lb->id == 5 || lb->id == 6);
+	int pa = license_priority(la->id);
+	int pb = license_priority(lb->id);
 
-	if (a_is_last && !b_is_last)
-		return 1;
-	if (!a_is_last && b_is_last)
-		return -1;
+	if (pa != pb)
+		return pa - pb;
 
 	return la->id - lb->id;
 }
@@ -548,44 +557,17 @@ void print_licenses(component_data_t *comp)
 	len += sprintf(result + len, "\"licenses\": [");
 	buffer = result + len;
 	bool first = true;
-	bool component_license = false;
-	bool scanoss_license = false;
-	int file_header_filter = 0;
-	int scancode_file_filter = 0;
+	int last_id = -1;
 	/* Sort licenses by id (ascending) */
 	if (licenses_by_type.count > 1)
 		qsort(licenses_by_type.licenses, licenses_by_type.count, sizeof(struct license_type), license_compare_by_id);
 
 	for (int i = 0; i < licenses_by_type.count; i++)
 	{
-		//file header license and scancode_file liceses are limited to a maximum of 3.
-		if (licenses_by_type.licenses[i].id == 2)
-		{
-			file_header_filter++;
-			if (file_header_filter >=3 && !full_license_report)
-				continue;
-		}
-		
-		if (licenses_by_type.licenses[i].id == 4)
-		{
-			scancode_file_filter++;
-			if (scancode_file_filter >=3 && !full_license_report)
-				continue;
-		}
-
-		if (licenses_by_type.licenses[i].id == 5 && scanoss_license && !full_license_report)
-			continue;
-
 		buffer = license_to_json(crclist, buffer, licenses_by_type.licenses[i].text, licenses_by_type.licenses[i].id, &first);
-		//just report component license if available
-		if (licenses_by_type.licenses[i].id == 0 && !first)
-			component_license = true;
-
-		else if (licenses_by_type.licenses[i].id > 0 && !first)
-			scanoss_license = true;
-		
-		if (i > 0 && component_license && !full_license_report)
+		if (last_id >= 0 && last_id != licenses_by_type.licenses[i].id && !first && !full_license_report)
 			break;
+		last_id = licenses_by_type.licenses[i].id;
 	}
 
 	len = buffer - result;
