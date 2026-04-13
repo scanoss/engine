@@ -564,9 +564,9 @@ void print_licenses(component_data_t *comp)
 
 	for (int i = 0; i < licenses_by_type.count; i++)
 	{
-		buffer = license_to_json(crclist, buffer, licenses_by_type.licenses[i].text, licenses_by_type.licenses[i].id, &first);
 		if (last_id >= 0 && last_id != licenses_by_type.licenses[i].id && !first && !full_license_report)
 			break;
+		buffer = license_to_json(crclist, buffer, licenses_by_type.licenses[i].text, licenses_by_type.licenses[i].id, &first);
 		last_id = licenses_by_type.licenses[i].id;
 	}
 
