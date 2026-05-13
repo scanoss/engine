@@ -40,6 +40,7 @@
 #include "parse.h"
 #include "report.h"
 #include "scan.h"
+#include "purl_scan.h"
 #include "scanoss.h"
 #include "util.h"
 #include "component.h"
@@ -280,6 +281,7 @@ static struct option long_options[] = {
 	{"force-snippet",     required_argument, 0, 256}, /* Long option only, no short form */
 	{"component",         required_argument, 0, 'c'},
 	{"key",               required_argument, 0, 'k'},
+	{"purl",              required_argument, 0, 'P'},
 	{"attribution",       required_argument, 0, 'a'},
 	{"flags",             required_argument, 0, 'F'},
 	{"license",           required_argument, 0, 'l'},
@@ -334,7 +336,7 @@ int main(int argc, char **argv)
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
 
-	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:wtLvhdqH", long_options, &option_index)) != -1)
+	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:P:wtLvhdqH", long_options, &option_index)) != -1)
 	{
 		/* Check valid alpha is entered */
 		if (optarg)
@@ -369,6 +371,11 @@ int main(int argc, char **argv)
 				initialize_ldb_tables(ldb_db_name);
 				mz_get_key(oss_sources, optarg);
 				exit(EXIT_SUCCESS);
+				break;
+
+			case 'P':
+				initialize_ldb_tables(ldb_db_name);
+				exit(purl_scan(optarg));
 				break;
 
 			case 'a':
