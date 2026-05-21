@@ -335,10 +335,10 @@ void purl_release_date(char *purl, char *date)
 bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	char * url = decrypt_data(data, datalen, oss_url, key, subkey);
-	if (!url) 
+	if (!url)
 		return false;
 
-	//scanlog("url: %s\n", url);
+	scanlog("get_oldest_url iter=%d url_record='%s'\n", iteration, url);
 
 	/* Get oldest */
 	component_data_t **comp_address = ptr;
@@ -357,6 +357,9 @@ bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		}
 		comp->identified = IDENTIFIED_NONE;
 		asset_declared(comp);
+		scanlog("get_oldest_url iter=%d purl[0]=%s identified=%d rank=%d release=%s\n",
+			iteration, comp->purls[0] ? comp->purls[0] : "(null)", comp->identified, comp->rank,
+			comp->release_date ? comp->release_date : "(null)");
 		purl_latest_version_add(comp);
 
 		if (component_rank_max > 0 && comp->rank > component_rank_max)
