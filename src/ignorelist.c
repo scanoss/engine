@@ -46,10 +46,13 @@ char *extension(char *path)
 {
 	char *dot   = strrchr(path, '.');
 	char *slash = strrchr(path, '/');
+	if (!slash) slash = path;
 
-	if (!dot && !slash) return NULL;
+	/* No dot, or the last dot belongs to a parent directory (e.g. "a.b/file"):
+	   the file has no extension. Returning the basename here (as the previous
+	   implementation did) wrongly treated a plain filename as an extension. */
+	if (!dot) return NULL;
 	if (dot > slash) return dot + 1;
-	if (slash != path) return slash + 1;
 	return NULL;
 }
 

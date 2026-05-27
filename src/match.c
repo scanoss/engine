@@ -301,26 +301,19 @@ int compare_file_extension(component_data_t *a, component_data_t *b)
 	char *ext_a = extension(a->file);
 	char *ext_b = extension(b->file);
 
-	if (!ext_a && ext_b)
-		return 1;
+	/* A candidate is preferred only when its extension actually matches the
+	   scanned file's extension. The mere presence/absence of an extension is
+	   not a valid criterion: doing so would prefer any extended path over a
+	   plain filename even when neither matches the scanned file. */
+	bool match_a = ext_a && !strcmp(ext_a, ext_file);
+	bool match_b = ext_b && !strcmp(ext_b, ext_file);
 
-	if (ext_a && !ext_b)
-		return -1;
-	
-	if (!ext_a && !ext_b)
+	if (match_a == match_b)
 		return 0;
-
-	int result_a = strcmp(ext_a, ext_file);
-	int result_b = strcmp(ext_b, ext_file);
-	
-	if (result_a == result_b)
-		return 0;
-	else if (!result_a)
+	else if (match_a)
 		return -1;
-	else  if (!result_b)
+	else
 		return 1;
-
-	return 0;
 }
 
 /**
