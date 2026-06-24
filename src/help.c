@@ -65,6 +65,7 @@ Configuration:\n\
 -a, --attribution FILE   Show attribution notices for the provided SBOM.json file.\n\
 -c, --component HINT     Add a component HINT to guide scan results.\n\
 -k, --key KEY            Show contents of the specified KEY file from MZ sources archive.\n\
+    --max-file-content-size MB Set maximum file content size in MB printed by -k (default: 50).\n\
 -P, --purl MD5           Return the purls and versions related to the given file MD5 (JSON).\n\
 -C, --url-hash MD5       Return the details of the component identified by the given url hash (JSON).\n\
 -S, --snippet-scan WFP   Snippet-only scan: take a single-file WFP block as argument and return JSON with candidate\n\

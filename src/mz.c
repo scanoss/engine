@@ -36,6 +36,7 @@
 #include "decrypt.h"
 #include <ldb.h>
 #include "debug.h"
+#include "limits.h"
 #include <unistd.h>
 
 /**
@@ -99,6 +100,16 @@ void mz_get_key(struct ldb_table kb, char *key)
 			}
 			/* Decompress */
 			MZ_DEFLATE(&job);
+
+			/* Reject files whose content exceeds the configured maximum size */
+			if (job.data_ln > max_file_content_size)
+			{
+				fprintf(stderr, "File content size (%.2f MB) exceeds the maximum allowed (%lu MB). Use --max-file-content-size to change the limit.\n", (double) job.data_ln / (1024 * 1024), (unsigned long) (max_file_content_size / (1024 * 1024)));
+				free(job.data);
+				free(job.key);
+				free(job.mz);
+				exit(EXIT_FAILURE);
+			}
 
 			job.data[job.data_ln] = 0;
 			printf("%s", job.data);

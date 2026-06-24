@@ -10,3 +10,4 @@
   */
 
 int fetch_max_files = 12000; /** Maximum number of files to fetch during component matching */
+uint64_t max_file_content_size = MAX_FILE_CONTENT_SIZE_DEFAULT; /** Maximum file content size printed by -k */

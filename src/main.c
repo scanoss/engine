@@ -296,6 +296,7 @@ static struct option long_options[] = {
 	{"min-snippet-lines",   required_argument, 0, 259}, /* Long option only */
 	{"ignore-file-ext",   no_argument,		 0, 260}, /* Long option only */
 	{"range-tolerance",   required_argument, 0, 261}, /* Long option only */
+	{"max-file-content-size", required_argument, 0, 262}, /* Long option only */
 	{"wfp",               no_argument,       0, 'w'},
 	{"test",              no_argument,       0, 't'},
 	{"version",           no_argument,       0, 'v'},
@@ -488,6 +489,11 @@ int main(int argc, char **argv)
 				scan_range_tolerance = atoi(optarg);
 				scan_adjust_tolerance = false;
 				scanlog("Range tolerance set to %d\n", scan_range_tolerance);
+				break;
+
+			case 262: /* --max-file-content-size (value in MB) */
+				max_file_content_size = strtoull(optarg, NULL, 10) * 1024 * 1024;
+				scanlog("Max file content size set to %lu MB\n", (unsigned long) (max_file_content_size / (1024 * 1024)));
 				break;
 
 			case 'H':

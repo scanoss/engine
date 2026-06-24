@@ -52,7 +52,9 @@
 #define SNIPPETS_DEFAULT_ADJUST_TOLERANCE true /** Adjust tolerance based on file size */
 #define SNIPPETS_DEFAULT_HONOR_FILE_EXTENSION true /** Honor file extension during snippet matching */
 #define DEFAULT_FETCH_MAX_FILES 12000 /** Maximum number of files to fetch during component matching */
+#define MAX_FILE_CONTENT_SIZE_DEFAULT (1024ULL * 1024 * 50) /** Default maximum file content size (50MB) printed by -k */
 /* Variables */
 extern int fetch_max_files; // Maximum number of files to fetch during component matching
+extern uint64_t max_file_content_size; // Maximum file content size printed by -k
 
 #endif
