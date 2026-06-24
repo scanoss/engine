@@ -564,7 +564,9 @@ static int snippet_scan_stream(FILE *in)
 			/* The input WFP has no reliable extension, and oss_file lookup
 			   inside snippet_extension_discard would discard valid hits. */
 			scan->snippet_honor_file_extension = false;
-			strcpy(scan->file_size, size_field);
+			/* scan->file_size is a fixed 32-byte buffer; write the parsed
+			   numeric value, which always fits, instead of the raw field */
+			snprintf(scan->file_size, 32, "%llu", (unsigned long long) file_size);
 			ldb_hex_to_bin(file_md5_hex, MD5_LEN * 2, scan->md5);
 			strcpy(scan->source_md5, file_md5_hex);
 			free(rec);

@@ -37,16 +37,20 @@
 int purl_scan(char *file_md5_hex);
 
 /**
- * @brief Report the details of a single component identified by its url hash.
+ * @brief Report the details of one or more components identified by url hash.
  *
- * Looks up the url record for the given url_hash (url_id) in the KB and
- * prints the component details in JSON, reusing the same rendering used in
- * regular scan reports (print_json_component).
+ * Accepts a single url_hash (url_id) or a comma-separated list. Each hash is
+ * looked up in the KB and its component details are rendered in JSON, reusing
+ * the same rendering used in regular scan reports. Output is always an array
+ * under the "results" key, one entry per valid hash:
+ * {"results": [{"url_hash": "...", "component": {...}}, ...]}.
+ * Invalid hashes are skipped with a stderr warning.
  *
- * @param url_hash_hex url hash in hex (32 chars)
- * @return EXIT_SUCCESS on success, EXIT_FAILURE on invalid input
+ * @param url_hash_list comma-separated url hashes in hex (32 chars each)
+ * @return EXIT_SUCCESS if at least one valid hash was processed,
+ *         EXIT_FAILURE if input is null/empty or no hash was valid
  */
-int component_scan(char *url_hash_hex);
+int component_scan(char *url_hash_list);
 
 /**
  * @brief Run a snippet-only scan whose WFP input comes from stdin.
