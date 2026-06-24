@@ -65,6 +65,11 @@ Configuration:\n\
 -a, --attribution FILE   Show attribution notices for the provided SBOM.json file.\n\
 -c, --component HINT     Add a component HINT to guide scan results.\n\
 -k, --key KEY            Show contents of the specified KEY file from MZ sources archive.\n\
+-P, --purl MD5           Return the purls and versions related to the given file MD5 (JSON).\n\
+-C, --url-hash MD5       Return the details of the component identified by the given url hash (JSON).\n\
+-S, --snippet-scan WFP   Snippet-only scan: take a single-file WFP block as argument and return JSON with candidate\n\
+                         file_md5s and their line ranges, filtered by the tolerance set via -T (precede -S with -T\n\
+                         to apply). Use -S - to read the WFP from stdin instead of passing it as argument.\n\
 -l, --license LICENSE    Display OSADL metadata for the given SPDX license ID.\n\
 -L, --full-license       Enable full license report.\n\
 -F, --flags FLAGS        Set engine scanning flags (see below).\n\

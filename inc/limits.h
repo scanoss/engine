@@ -28,6 +28,7 @@
 
 /* Limits */
 #define MAX_ARGLN 512       // Max command line argument length
+#define MAX_COMPONENT_SCAN_HASHES 1000  // Max number of url hashes accepted by -C
 #define MAX_PATH 1024
 #define MAX_HASHES_READ 65535
 #define MAX_FILE_SIZE (1024 * 1024 * 4)

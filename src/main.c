@@ -40,6 +40,7 @@
 #include "parse.h"
 #include "report.h"
 #include "scan.h"
+#include "purl_scan.h"
 #include "scanoss.h"
 #include "util.h"
 #include "component.h"
@@ -278,8 +279,11 @@ static struct option long_options[] = {
 	{"sbom",              required_argument, 0, 's'},
 	{"blacklist",         required_argument, 0, 'b'},
 	{"force-snippet",     required_argument, 0, 256}, /* Long option only, no short form */
+	{"snippet-scan",      required_argument, 0, 'S'},
 	{"component",         required_argument, 0, 'c'},
 	{"key",               required_argument, 0, 'k'},
+	{"purl",              required_argument, 0, 'P'},
+	{"url-hash",          required_argument, 0, 'C'},
 	{"attribution",       required_argument, 0, 'a'},
 	{"flags",             required_argument, 0, 'F'},
 	{"license",           required_argument, 0, 'l'},
@@ -334,18 +338,8 @@ int main(int argc, char **argv)
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
 
-	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:wtLvhdqH", long_options, &option_index)) != -1)
+	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:P:C:S:wtLvhdqH", long_options, &option_index)) != -1)
 	{
-		/* Check valid alpha is entered */
-		if (optarg)
-		{
-			if ((strlen(optarg) > MAX_ARGLN))
-			{
-				invalid_argument = true;
-				break;
-			}
-		}
-
 		switch (option)
 		{
 			case 's':
@@ -369,6 +363,16 @@ int main(int argc, char **argv)
 				initialize_ldb_tables(ldb_db_name);
 				mz_get_key(oss_sources, optarg);
 				exit(EXIT_SUCCESS);
+				break;
+
+			case 'P':
+				initialize_ldb_tables(ldb_db_name);
+				exit(purl_scan(optarg));
+				break;
+
+			case 'C':
+				initialize_ldb_tables(ldb_db_name);
+				exit(component_scan(optarg));
 				break;
 
 			case 'a':
@@ -413,6 +417,12 @@ int main(int argc, char **argv)
 				break;
 			case 256: /* --force-snippet (long option only) */
 				force_snippet_scan = true;
+				break;
+			case 'S':
+				initialize_ldb_tables(ldb_db_name);
+				if (optarg && optarg[0] == '-' && optarg[1] == '\0')
+					exit(snippet_scan_stdin());
+				exit(snippet_scan_string(optarg));
 				break;
 			case 't':
 				initialize_ldb_tables(ldb_db_name);

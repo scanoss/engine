@@ -215,9 +215,14 @@ void match_list_tolerance_set(float in)
 {
     if (in > 99)
         in = 99;
-    
+
     match_list_tolerance = 100.0-in;
     scanlog("setting match list tolerance to %.1f\n", match_list_tolerance);
+}
+
+float match_list_tolerance_get(void)
+{
+    return 100.0 - match_list_tolerance;
 }
 
 bool tolerance_eval(int a, int b)
