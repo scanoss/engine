@@ -147,5 +147,6 @@ void component_list_destroy(component_list_t *list);
 bool component_list_add_binary(component_list_t *list, component_data_t *new_comp, bool (*val)(component_data_t *a, component_data_t *b), bool remove_a);
 bool match_list_eval(match_list_t *list, match_data_t * in,  bool (*eval)(match_data_t *fpa, match_data_t *fpb));
 void match_list_tolerance_set(float in);
+float match_list_tolerance_get(void);
 
 #endif

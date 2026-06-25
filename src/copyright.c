@@ -35,28 +35,27 @@
 #include "util.h"
 #include "decrypt.h"
 #include "debug.h"
-const char *copyright_sources[] = {"component_declared", "file_header", "license_file", "scancode"};
 
-/**
- * @brief get fisrt copyright LDB function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
- * @param key //TODO
- * @param subkey //TODO
- * @param subkey_ln //TODO
- * @param[out] data //TODO
- * @param datalen //TODO
- * @param iteration //TODO
- * @param ptr output pointer, returns the fisrt copyright obtained from the database
- * @return //TODO
- */
-/* static bool get_first_copyright(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+static char * copyright_id_to_source_name(int id)
 {
-	char * result = decrypt_data(data, datalen, oss_copyright, key, subkey);
-	if (result)
-		strncpy(ptr, skip_first_comma((char *) result), MAX_COPYRIGHT);
-	
-	free(result);
-	return true;
-}*/
+	switch (id)
+	{
+		case 1:
+		case 5:
+			return "file_header";
+		case 0:
+		case 2:
+		case 6:
+		case 8:
+			return "license_file";
+		case 3:
+		case 4:
+		case 7:
+			return "scancode";
+		default:
+			return NULL;
+	}
+}
 
 /**
  * @brief //Remove undesired characteres from a copyright
@@ -105,13 +104,13 @@ static bool print_copyrights_item(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 
 	char result[MAX_FIELD_LN] = "\0";
 	int len = 0;
-
-	if (!dup && (*copyright) && (src <= (sizeof(copyright_sources) / sizeof(copyright_sources[0]))))
+	char * source_id = copyright_id_to_source_name(src);
+	if (!dup && (*copyright) && source_id)
 	{
 		if (comp->copyright_text) 
 			len += sprintf(result+len,",");
 		len += sprintf(result+len,"{\"name\": \"%s\",", copyright);
-		len += sprintf(result+len,"\"source\": \"%s\"}", copyright_sources[atoi(source)]);
+		len += sprintf(result+len,"\"source\": \"%s\"}", source_id);
 	}
 	if (*result)
 		str_cat_realloc(&comp->copyright_text, result);

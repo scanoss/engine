@@ -40,6 +40,7 @@
 #include "parse.h"
 #include "report.h"
 #include "scan.h"
+#include "purl_scan.h"
 #include "scanoss.h"
 #include "util.h"
 #include "component.h"
@@ -278,8 +279,11 @@ static struct option long_options[] = {
 	{"sbom",              required_argument, 0, 's'},
 	{"blacklist",         required_argument, 0, 'b'},
 	{"force-snippet",     required_argument, 0, 256}, /* Long option only, no short form */
+	{"snippet-scan",      required_argument, 0, 'S'},
 	{"component",         required_argument, 0, 'c'},
 	{"key",               required_argument, 0, 'k'},
+	{"purl",              required_argument, 0, 'P'},
+	{"url-hash",          required_argument, 0, 'C'},
 	{"attribution",       required_argument, 0, 'a'},
 	{"flags",             required_argument, 0, 'F'},
 	{"license",           required_argument, 0, 'l'},
@@ -292,6 +296,7 @@ static struct option long_options[] = {
 	{"min-snippet-lines",   required_argument, 0, 259}, /* Long option only */
 	{"ignore-file-ext",   no_argument,		 0, 260}, /* Long option only */
 	{"range-tolerance",   required_argument, 0, 261}, /* Long option only */
+	{"max-file-content-size", required_argument, 0, 262}, /* Long option only */
 	{"wfp",               no_argument,       0, 'w'},
 	{"test",              no_argument,       0, 't'},
 	{"version",           no_argument,       0, 'v'},
@@ -334,18 +339,8 @@ int main(int argc, char **argv)
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
 
-	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:wtLvhdqH", long_options, &option_index)) != -1)
+	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:P:C:S:wtLvhdqH", long_options, &option_index)) != -1)
 	{
-		/* Check valid alpha is entered */
-		if (optarg)
-		{
-			if ((strlen(optarg) > MAX_ARGLN))
-			{
-				invalid_argument = true;
-				break;
-			}
-		}
-
 		switch (option)
 		{
 			case 's':
@@ -369,6 +364,16 @@ int main(int argc, char **argv)
 				initialize_ldb_tables(ldb_db_name);
 				mz_get_key(oss_sources, optarg);
 				exit(EXIT_SUCCESS);
+				break;
+
+			case 'P':
+				initialize_ldb_tables(ldb_db_name);
+				exit(purl_scan(optarg));
+				break;
+
+			case 'C':
+				initialize_ldb_tables(ldb_db_name);
+				exit(component_scan(optarg));
 				break;
 
 			case 'a':
@@ -413,6 +418,12 @@ int main(int argc, char **argv)
 				break;
 			case 256: /* --force-snippet (long option only) */
 				force_snippet_scan = true;
+				break;
+			case 'S':
+				initialize_ldb_tables(ldb_db_name);
+				if (optarg && optarg[0] == '-' && optarg[1] == '\0')
+					exit(snippet_scan_stdin());
+				exit(snippet_scan_string(optarg));
 				break;
 			case 't':
 				initialize_ldb_tables(ldb_db_name);
@@ -478,6 +489,11 @@ int main(int argc, char **argv)
 				scan_range_tolerance = atoi(optarg);
 				scan_adjust_tolerance = false;
 				scanlog("Range tolerance set to %d\n", scan_range_tolerance);
+				break;
+
+			case 262: /* --max-file-content-size (value in MB) */
+				max_file_content_size = strtoull(optarg, NULL, 10) * 1024 * 1024;
+				scanlog("Max file content size set to %lu MB\n", (unsigned long) (max_file_content_size / (1024 * 1024)));
 				break;
 
 			case 'H':

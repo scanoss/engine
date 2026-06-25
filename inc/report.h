@@ -16,4 +16,5 @@ void json_open();
 void json_close(void);
 void kb_version_get(void);
 bool print_json_component(component_data_t * component);
+void print_purl_array(component_data_t * component);
 #endif
