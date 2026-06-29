@@ -68,17 +68,17 @@ static bool add_purl_from_urlid(struct ldb_table *table, uint8_t *key, uint8_t *
 	if (iteration > MAX_URLS)
 		return true;
 	/* Ignore path lengths over the limit */
-	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH)) return false;
 
 	/* Decrypt data */
 	char * decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
 	if (!decrypted)
 		return NULL;
-	
+
 	component_list_t * component_list = (component_list_t*) ptr;
 	/* Copy data to memory */
-	uint8_t url_id[MD5_LEN];
-	memcpy(url_id, raw_data, MD5_LEN);
+	uint8_t url_id[table->key_ln];
+	memcpy(url_id, raw_data, table->key_ln);
 	char path[MAX_FILE_PATH+1];
 	strncpy(path, decrypted, MAX_FILE_PATH);
 
@@ -136,9 +136,9 @@ static bool get_all_file_ids(struct ldb_table *table, uint8_t *key, uint8_t *sub
 	{
 		if (iteration < max_files_to_process * 2)
 		{
-			memcpy(files[iteration].url_id, data, MD5_LEN);
+			memcpy(files[iteration].url_id, data, table->key_ln);
 			return false;
-		} 
+		}
 		return true;
 		//uint32_t size = uint32_read(record);
 
@@ -159,12 +159,16 @@ static bool get_all_file_ids(struct ldb_table *table, uint8_t *key, uint8_t *sub
 
 static void fhash_process(char * hash, component_list_t * comp_list)
 {
-	struct ldb_table oss_fhash = {.db = "oss", .table = "fhashes", .key_ln = 16, .rec_ln = 0, .ts_ln = 2, .tmp = false, .keys=2, .definitions = 0};
-	
+	/* Load the fhashes table from the configured db so its key_ln/hash_calc
+	 * match the backend (MD5 or CRC64) instead of being hardcoded. */
+	char dbtable[1024];
+	snprintf(dbtable, sizeof(dbtable), "%s/fhashes", oss_file.db);
+	struct ldb_table oss_fhash = ldb_read_cfg(dbtable);
+
 	if (!ldb_table_exists(oss_fhash.db, oss_fhash.table)) // skip if the table is not present
 		return;
-	
-	uint8_t fhash[16];
+
+	uint8_t fhash[oss_fhash.key_ln];
 	ldb_hex_to_bin(hash, oss_fhash.key_ln*2, fhash);
 	/* Get all file IDs for given wfp */
 	file_recordset *files = calloc(1001, sizeof(file_recordset));;
@@ -259,9 +263,10 @@ int binary_scan(char * input)
 	ldb_hex_to_bin(hexmd5, oss_file.key_ln * 2, bin_md5);
 	free(hexmd5);
 
-	uint8_t zero_md5[MD5_LEN] = {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
-	
-	if (!memcmp(zero_md5,bin_md5, MD5_LEN)) //the md5 key of an empty string must be skipped.
+	/* The key of an empty string (hash of empty input) must be skipped. */
+	uint8_t zero_md5[MD5_LEN];
+	oss_file.hash_calc(NULL, 0, zero_md5);
+	if (!memcmp(zero_md5, bin_md5, oss_file.key_ln))
 		return -1;
 	
 	if (ldb_key_exists(oss_file, bin_md5))
@@ -272,7 +277,7 @@ int binary_scan(char * input)
 		char * target = strndup(file_name, target_len);
 		scan_data_t * scan =  scan_data_init(target, 1, 1, true, 0, 3, 5, SNIPPETS_DEFAULT_RANGE_TOLERANCE, false);
 		free(target);
-		memcpy(scan->md5, bin_md5, MD5_LEN);
+		memcpy(scan->md5, bin_md5, oss_file.key_ln);
 		scan->match_type = MATCH_FILE;
 		compile_matches(scan);
 
