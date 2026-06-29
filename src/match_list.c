@@ -432,6 +432,59 @@ void component_list_print(component_list_t *list, bool (*printer)(component_data
     }
 }
 
+/* Swap the component payloads of two list nodes (keeps node order/bookkeeping intact). */
+static void component_switch(struct comp_entry *na, struct comp_entry *nb)
+{
+    component_data_t *aux = na->component;
+    na->component = nb->component;
+    nb->component = aux;
+}
+
+/**
+ * @brief Reorder the component list in place using the given comparator.
+ * Only the component payloads are swapped, so node pointers held by the list
+ * (last_element/last_element_aux) remain valid. The list is small (max 3),
+ * so a simple recursive bubble pass is sufficient.
+ */
+void component_list_sort(struct comp_entry *np, bool (*val)(component_data_t *a, component_data_t *b))
+{
+    struct comp_entry *next = np->entries.le_next;
+    if (!next)
+        return;
+    if (next->entries.le_next)
+        component_list_sort(next, val);
+    if (val(np->component, next->component))
+        component_switch(np, next);
+}
+
+/**
+ * @brief Try to merge a candidate component into the list instead of adding a duplicate.
+ * For each existing component the eval callback decides whether the candidate is the
+ * same component (by purl) and, if so, which one is preferred:
+ *  - LIST_ITEM_UPDATE: candidate preferred -> replace the existing payload in place.
+ *  - LIST_ITEM_FOUND:  existing preferred  -> candidate already freed by the callback.
+ *  - LIST_ITEM_NOT_FOUND: keep scanning; if none matched the candidate is new.
+ * @return the outcome for the caller to decide whether to add and/or re-sort.
+ */
+list_update_t component_list_update(component_list_t *list, component_data_t *in, list_update_t (*eval)(component_data_t *fpa, component_data_t *fpb))
+{
+    for (struct comp_entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)
+    {
+        list_update_t r = eval(np->component, in);
+        if (r == LIST_ITEM_UPDATE)
+        {
+            scanlog("update component %s (release %s) with release date %s\n", np->component->purls[0], np->component->release_date, in->release_date);
+            component_data_t *aux = np->component;
+            np->component = in;
+            component_data_free(aux);
+            return r;
+        }
+        else if (r == LIST_ITEM_FOUND)
+            return r;
+    }
+    return LIST_ITEM_NOT_FOUND;
+}
+
 void match_list_process(match_list_t *list, bool (*funct_p)(match_data_t *fpa))
 {
     for (struct entry *np = list->headp.lh_first; np != NULL; np = np->entries.le_next)

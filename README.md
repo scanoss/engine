@@ -157,6 +157,10 @@ The scanning client can optionally pass a a component hint (context). The contex
 
 If no hint is provided, the SCANOSS engine will look for the oldest component in the KB which matches the scanned file. In case of a tie between two components with the same release date, other available information will be used to select the best match.
 
+## Distinct component selection
+
+A matched file is frequently present in several components and versions at once. The engine keeps a small, fixed-size list of candidate components (3 by default) for each match, which is the list reported when best-match-only is disabled (`-F 256`). To avoid a single component monopolising that list with multiple versions of itself, candidates are deduplicated by their main purl: when a new candidate shares the purl of one already in the list, only the preferred one is kept (using the same ranking criteria described above, i.e. favouring the oldest release), and the freed slots are made available to genuinely different components. As a result the list reflects distinct components rather than repeated versions of the same one.
+
 ## SBOM Ingestion
 
 The user can use the "-s'' optional argument plus a sbom.json. The engine will prioritize the declared components during the analysis. If a file can not be matched against any declared component, then the logic previously explained will be applied.

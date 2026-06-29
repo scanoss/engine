@@ -82,8 +82,22 @@
 typedef struct match_data_t match_data_t; /* Forward declaration */
 
 /**
+ * @brief Result of evaluating a candidate component against an existing one
+ * while updating a component list.
+ * LIST_ITEM_NOT_FOUND: the candidate is a different component (by purl).
+ * LIST_ITEM_FOUND: the candidate is the same component but not preferred (discarded).
+ * LIST_ITEM_UPDATE: the candidate is the same component and preferred (replaced in place).
+ */
+typedef enum
+{
+	LIST_ITEM_NOT_FOUND = 0,
+	LIST_ITEM_FOUND,
+	LIST_ITEM_UPDATE
+} list_update_t;
+
+/**
  * @brief Define a list of component_data_t
- * 
+ *
  */
 LIST_HEAD(comp_listhead, comp_entry);
 struct comp_entry {
@@ -145,6 +159,8 @@ bool component_list_add(component_list_t * list, component_data_t * new_comp, bo
 void component_list_print(component_list_t * list, bool (*printer) (component_data_t * fpa), char * separator);
 void component_list_destroy(component_list_t *list);
 bool component_list_add_binary(component_list_t *list, component_data_t *new_comp, bool (*val)(component_data_t *a, component_data_t *b), bool remove_a);
+void component_list_sort(struct comp_entry *np, bool (*val)(component_data_t *a, component_data_t *b));
+list_update_t component_list_update(component_list_t *list, component_data_t *in, list_update_t (*eval)(component_data_t *fpa, component_data_t *fpb));
 bool match_list_eval(match_list_t *list, match_data_t * in,  bool (*eval)(match_data_t *fpa, match_data_t *fpb));
 void match_list_tolerance_set(float in);
 float match_list_tolerance_get(void);

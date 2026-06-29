@@ -666,6 +666,35 @@ static bool component_hint_date_comparation(component_data_t *a, component_data_
 	return false;
 }
 
+/**
+ * @brief Decide how a candidate component relates to one already present in the list.
+ * Two components are considered the same when their main purl matches; in that case
+ * we keep only the preferred one according to the current selection policy
+ * (component_hint_date_comparation), so a single component cannot occupy several
+ * slots of the fixed-size list and crowd out genuinely different components.
+ *
+ * @param a Component already present in the list.
+ * @param b Candidate component being added.
+ * @return LIST_ITEM_UPDATE if 'b' (same purl) is preferred and should replace 'a';
+ *         LIST_ITEM_FOUND   if 'a' (same purl) is preferred ('b' is freed here);
+ *         LIST_ITEM_NOT_FOUND if they are different components.
+ */
+static list_update_t component_update(component_data_t *a, component_data_t *b)
+{
+	if (a && b && a->purls[0] && b->purls[0] && !strcmp(a->purls[0], b->purls[0]))
+	{
+		/* Same component: let the current selection policy pick the winner. */
+		if (component_hint_date_comparation(a, b))
+			return LIST_ITEM_UPDATE; /* candidate wins, caller replaces 'a' */
+
+		scanlog("--- Component already exists: %s --- keeping %s over %s\n", b->purls[0], a->release_date, b->release_date);
+		component_data_free(b); /* existing one wins, discard the duplicate candidate */
+		return LIST_ITEM_FOUND;
+	}
+
+	return LIST_ITEM_NOT_FOUND;
+}
+
 bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id, char *path)
 {
 	component_data_t *new_comp = NULL;
@@ -673,7 +702,7 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	ldb_fetch_recordset(NULL, oss_url, url_id, false, get_oldest_url, (void *)&new_comp);
 	if (!new_comp)
 		return false;
-		
+
 	/* Create a new component and fill it from the url record */
 	fill_component_path(new_comp, path);
 
@@ -685,10 +714,26 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
 
 	scanlog("--- new comp: %s@%s %s %d---\n", new_comp->purls[0], new_comp->version, new_comp->release_date, new_comp->identified);
-	if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
+
+	/* First try to merge the candidate with an existing component sharing the same purl.
+	   This forces the list to keep different components instead of several copies of one. */
+	list_update_t r = component_list_update(component_list, new_comp, component_update);
+	if (r == LIST_ITEM_FOUND)
+		return true; /* duplicate purl already present and preferred; candidate already freed */
+
+	if (r == LIST_ITEM_UPDATE)
 	{
-		component_data_free(new_comp); /* Free if the componet was rejected */
-		return false;
+		/* The candidate replaced an existing duplicate in place; reorder the list. */
+		if (component_list->headp.lh_first)
+			component_list_sort(component_list->headp.lh_first, component_hint_date_comparation);
+	}
+	else /* LIST_ITEM_NOT_FOUND: genuinely new component */
+	{
+		if (!component_list_add(component_list, new_comp, component_hint_date_comparation, true))
+		{
+			component_data_free(new_comp); /* Free if the componet was rejected */
+			return false;
+		}
 	}
 
 	char hex_url[MD5_LEN * 2 + 1];
