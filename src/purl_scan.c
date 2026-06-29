@@ -208,9 +208,9 @@ static bool handle_file_for_purls(struct ldb_table *table, uint8_t *key, uint8_t
 
 int purl_scan(char *file_md5_hex)
 {
-	if (!file_md5_hex || !valid_md5(file_md5_hex))
+	if (!file_md5_hex || !valid_hash(file_md5_hex, oss_file.key_ln))
 	{
-		fprintf(stdout, "Invalid file MD5: %s\n", file_md5_hex ? file_md5_hex : "(null)");
+		fprintf(stdout, "Invalid file hash: %s\n", file_md5_hex ? file_md5_hex : "(null)");
 		return EXIT_FAILURE;
 	}
 
@@ -446,9 +446,9 @@ int component_scan(char *url_hash_list)
 		if (!*tok)
 			continue;
 
-		if (!valid_md5(tok))
+		if (!valid_hash(tok, oss_url.key_ln))
 		{
-			fprintf(stderr, "Invalid url hash MD5, skipping: %s\n", tok);
+			fprintf(stderr, "Invalid url hash, skipping: %s\n", tok);
 			continue;
 		}
 
@@ -524,7 +524,7 @@ static int snippet_scan_stream(FILE *in)
 			}
 
 			char *hexmd5 = strndup(line + tagln, oss_file.key_ln * 2);
-			if (!hexmd5 || strlen(hexmd5) < (size_t)(oss_file.key_ln * 2) || !valid_md5(hexmd5))
+			if (!hexmd5 || !valid_hash(hexmd5, oss_file.key_ln))
 			{
 				fprintf(stderr, "snippet-scan: invalid md5 in file= line\n");
 				free(hexmd5);

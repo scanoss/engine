@@ -336,9 +336,9 @@ bool starts_with(char *str, char *start)
 }
 
 /* Returns true if str is a valid MD5 hash */
-bool valid_md5(char *str)
+bool valid_hash(char *str, int hash_ln)
 {
-	if (strlen(str) != 32) return false;
+	if (!str || (int) strlen(str) != hash_ln * 2) return false;
 
 	char *p = str;
 	while (*p)
@@ -348,6 +348,11 @@ bool valid_md5(char *str)
 	}
 
 	return true;
+}
+
+bool valid_md5(char *str)
+{
+	return valid_hash(str, MD5_LEN);
 }
 
 char * str_cat_realloc(char **a, char * b)

@@ -56,7 +56,9 @@ bool starts_with(char *str, char *start);
 /* Returns a pointer to field n in data */
 char *field_n(int n, char *data);
 
-/* Returns true if str is a valid MD5 hash */
+/* Returns true if str is a valid hex hash of hash_ln bytes (2*hash_ln chars) */
+bool valid_hash(char *str, int hash_ln);
+/* Returns true if str is a valid MD5 hash (16 bytes / 32 hex chars) */
 bool valid_md5(char *str);
 
 char * json_remove_invalid_char(char * input);
