@@ -279,6 +279,10 @@ void fetch_related_purls(component_data_t *component)
 		else
 			scanlog("Finding related PURLs for %s returned no matches\n", component->purls[i]);
 	}
+
+	/* crclist points to a local stack array; drop the reference before returning
+	 * so it is not left dangling in the component. */
+	component->crclist = NULL;
 }
 
 /**
