@@ -417,7 +417,7 @@ int path_is_third_party(component_data_t *comp)
         "libresources", "offloading", "compile", "release", "bundle",   
 		"media","lib","documentation", "test", 
 		"service","dist",
-		"driver", "common","files"
+		"driver","util","files","common"
     };
 
     const int numPatterns = sizeof(patterns) / sizeof(patterns[0]);
