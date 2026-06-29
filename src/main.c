@@ -552,7 +552,9 @@ int main(int argc, char **argv)
 		char *arg_target = argv[argc-1];
 		bool isfile = is_file(arg_target);
 		bool isdir = is_dir(arg_target);
-		bool ishash = !isdir && !isfile && valid_md5(arg_target);
+		/* A bare hash target may be MD5 (16 bytes) or CRC64 (8 bytes); accept
+		 * either length here (tables, and thus key_ln, are loaded just below). */
+		bool ishash = !isdir && !isfile && (valid_hash(arg_target, MD5_LEN) || valid_hash(arg_target, 8));
 
 		if (!isfile && !isdir && !ishash)
 		{
