@@ -5,7 +5,7 @@ endif
 LDFLAGS+= -lldb -lm -lpthread -ldl
 
 LDB_CURRENT_VERSION := $(shell ldb -v | sed 's/ldb-//' | head -c 3)
-LDB_TARGET_VERSION := 4.1
+LDB_TARGET_VERSION := 4.2
 
 VERSION_IS_LESS := $(shell echo $(LDB_CURRENT_VERSION) \< $(LDB_TARGET_VERSION) | bc)
 
