@@ -238,10 +238,9 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 		return EXIT_FAILURE;
 	}
 
-	/* Get wfp MD5 hash */
-	uint8_t tmp_md5[16];
+	/* Get wfp file hash */
+	uint8_t tmp_md5[MD5_LEN];
 	get_file_md5(path, tmp_md5);
-	char *tmp_md5_hex = md5_hex(tmp_md5);
 
 	/* Read line by line */
 	while ((lineln = getline(&line, &len, fp)) != -1)
@@ -309,7 +308,7 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 
 			/*Init a new scan object for the next file to be scanned */
 			scan = scan_data_init(target, scan_max_snippets, scan_max_components, adjust_tolerance, component_ranking_threshold, snippet_min_hits, snippet_min_lines, snippet_range_tolerance, snippet_honor_file_extension);
-			strcpy(scan->source_md5, tmp_md5_hex);
+			ldb_bin_to_hex(tmp_md5, oss_file.key_ln, scan->source_md5);
 			extract_csv(scan->file_size, (char *)rec, 1, LDB_MAX_REC_LN);
 			scan->preload = true;
 			free(rec);
@@ -359,8 +358,7 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 
 	fclose(fp);
 	if (line) free(line);
-	
-	free(tmp_md5_hex);
+
 	return EXIT_SUCCESS;
 }
 
@@ -482,9 +480,7 @@ void ldb_scan(scan_data_t *scan)
 		get_file_md5(scan->file_path, scan->md5);
 
 	/* Scan full file */
-	char *tmp_md5_hex = md5_hex(scan->md5);
-	strcpy(scan->source_md5, tmp_md5_hex);
-	free(tmp_md5_hex);
+	ldb_bin_to_hex(scan->md5, oss_file.key_ln, scan->source_md5);
 
 	/* Look for full file match or url match in ldb */
 	scan->match_type = ldb_scan_file(scan);
