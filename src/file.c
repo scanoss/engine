@@ -141,7 +141,7 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 
 	if (!in)
 	{
-		MD5(NULL, 0, md5_result);
+		oss_file.hash_calc(NULL, 0, md5_result);
 		return;
 	}
 
@@ -149,7 +149,7 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 	long filesize = ftell(in);
 	if (!filesize)
 	{
-		MD5(NULL, 0, md5_result);
+		oss_file.hash_calc(NULL, 0, md5_result);
 	}
 	else
 	{
@@ -160,7 +160,7 @@ void get_file_md5(char *filepath, uint8_t *md5_result)
 			fprintf(stderr, "Warning: cannot open file %s\n", filepath);
 
 		/* Calculate MD5sum */
-		MD5(buffer, filesize, md5_result);
+		oss_file.hash_calc(buffer, filesize, md5_result);
 		free(buffer);
 		fclose(in);
 	}
@@ -189,7 +189,7 @@ int dir_count(char *path)
  * @param ptr //TODO
  * @return //TODO
  */
-bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+bool collect_all_files(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 
 	/* Leave if fetch_max_files is reached */
@@ -199,7 +199,7 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
 
 	/* Decrypt data */
-	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
+	char * decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
 	if (!decrypted)
 		return NULL;
 	/* Copy data to memory */
@@ -224,7 +224,7 @@ bool collect_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *ra
  * @param ptr //TODO
  * @return //TODO
  */
-bool count_all_files(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+bool count_all_files(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
@@ -263,11 +263,11 @@ char *file_extension(char *path)
  * @param ptr //TODO
  * @return //TODO
  */
-bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool get_first_file(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen) return false;
 
-	char * file_data = decrypt_data(data, datalen, oss_file, key, subkey);
+	char * file_data = decrypt_data(data, datalen, *table, key, subkey);
 	
 	if (!file_data || !*file_data) 
 		return false;
@@ -279,8 +279,41 @@ bool get_first_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data,
 		strcpy((char *) ptr, ext);
 	
 	free(file_data);
-	
+
 	return true;
+}
+
+/**
+ * @brief ldb record handler that returns the decrypted path stored in the path table.
+ */
+static bool path_query_handler(struct ldb_table * table, uint8_t * key, uint8_t * subkey, uint8_t * data, uint32_t datalen, int record_number, void * ptr)
+{
+	char **path = ptr;
+	/* Decrypt data */
+	char * decrypted = decrypt_data(data, datalen, *table, key, subkey);
+	if (!decrypted || !*decrypted)
+		return false;
+
+	*path = decrypted;
+	return true;
+}
+
+/**
+ * @brief Resolve a path from the path table given its file_id (path hash).
+ * @param file_id input path hash
+ * @return mallocated string with the path, or NULL
+ */
+char * path_query(uint8_t * file_id)
+{
+	char * path = NULL;
+	if (!path_table_present)
+	{
+		scanlog("path_query: path table must be present to use this query\n");
+		return NULL;
+	}
+
+	ldb_fetch_recordset(NULL, oss_path, file_id, false, path_query_handler, (void *) &path);
+	return path;
 }
 /**
  * @brief Get the extension of a given file into a ldb table.

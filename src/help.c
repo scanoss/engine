@@ -68,6 +68,8 @@ Configuration:\n\
     --max-file-content-size MB Set maximum file content size in MB printed by -k (default: 50).\n\
 -P, --purl MD5           Return the purls and versions related to the given file MD5 (JSON).\n\
 -C, --url-hash MD5       Return the details of the component identified by the given url hash (JSON).\n\
+-p, --project URL_HASH   Reconstruct a project's file structure: list the md5 and path of each project file\n\
+                         (requires the pivot table; the url hash may be MD5 or CRC64).\n\
 -S, --snippet-scan WFP   Snippet-only scan: take a single-file WFP block as argument and return JSON with candidate\n\
                          file_md5s and their line ranges, filtered by the tolerance set via -T (precede -S with -T\n\
                          to apply). Use -S - to read the WFP from stdin instead of passing it as argument.\n\

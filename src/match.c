@@ -266,7 +266,7 @@ static inline void initialize_component_age(component_data_t *comp)
 			scanlog("critical: MD5 memory allocation failed");
 			return;
 		}
-		MD5((uint8_t *)comp->purls[0], strlen(comp->purls[0]), comp->purls_md5[0]);
+		oss_purl.hash_calc((uint8_t *)comp->purls[0], strlen(comp->purls[0]), comp->purls_md5[0]);
 		comp->age = get_component_age(comp->purls_md5[0]);
 	}
 }
@@ -692,7 +692,7 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	}
 
 	char hex_url[MD5_LEN * 2 + 1];
-	ldb_bin_to_hex(new_comp->url_md5, MD5_LEN, hex_url);
+	ldb_bin_to_hex(new_comp->url_md5, oss_url.key_ln, hex_url);
 	scanlog("component accepted: %s@%s - pathrank: %d - %s - %s\n", new_comp->purls[0], new_comp->version, new_comp->path_rank, new_comp->file, hex_url);
 
 	return true;
@@ -711,7 +711,7 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
  */
 /*Iterations must be doubled if high accuracy is enabled*/
 int iteration_max = DEFAULT_MATCHMAP_FILES;
-bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+bool component_from_file(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	/*Iterations must be doubled if high accuracy is enabled*/
 	if (iteration == 0)
@@ -725,22 +725,31 @@ bool component_from_file(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *
 	}
 
 	/* Ignore path lengths over the limit */
-	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH)) return false;
 
-	/* Decrypt data */
-	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
+	/* Resolve the path: from the path table if present, otherwise decrypt it inline */
+	char * decrypted = NULL;
+	if (path_table_present)
+		decrypted = path_query(&raw_data[table->key_ln]);
+	else
+		decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
 	if (!decrypted)
 		return false;
-	
+
 	component_list_t * component_list = (component_list_t*) ptr;
 	/* Copy data to memory */
 
-	uint8_t url_id[MD5_LEN] = {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5
-	
-	if (!memcmp(raw_data,url_id, MD5_LEN)) //the md5 key of an empty string must be skipped.
+	/* The key of an empty string (hash of empty input) must be skipped. */
+	uint8_t empty_id[table->key_ln];
+	table->hash_calc(NULL, 0, empty_id);
+	if (!memcmp(raw_data, empty_id, table->key_ln))
+	{
+		free(decrypted);
 		return false;
+	}
 
-	memcpy(url_id, raw_data, MD5_LEN);
+	uint8_t url_id[table->key_ln];
+	memcpy(url_id, raw_data, table->key_ln);
 	char path[MAX_FILE_PATH+1];
 	strncpy(path, decrypted, MAX_FILE_PATH);
 	//check the ignore list only if the match type is MATCH_SNIPPET. TODO: remove this after remine everything.

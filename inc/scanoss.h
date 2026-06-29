@@ -101,6 +101,11 @@ extern struct ldb_table oss_attribution;
 extern struct ldb_table oss_cryptography;
 extern struct ldb_table oss_sources;
 extern struct ldb_table oss_notices;
+extern struct ldb_table oss_pivot;
+extern struct ldb_table oss_path;
+
+/* Reconstruct a project's file structure (md5,path per file) from its url hash. */
+void get_project_files(char * url_key);
 
 
 extern bool first_file;

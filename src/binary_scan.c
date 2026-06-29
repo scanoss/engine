@@ -62,7 +62,7 @@ static bool sort_by_hits(component_data_t *a, component_data_t *b)
 
 #define MAX_URLS 100
 
-static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+static bool add_purl_from_urlid(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 
 	if (iteration > MAX_URLS)
@@ -71,7 +71,7 @@ static bool add_purl_from_urlid(uint8_t *key, uint8_t *subkey, int subkey_ln, ui
 	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
 
 	/* Decrypt data */
-	char * decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
+	char * decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
 	if (!decrypted)
 		return NULL;
 	
@@ -128,7 +128,7 @@ int max_files_to_process = 4;
  * @param ptr //TODO
  * @return //TODO
  */
-static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+static bool get_all_file_ids(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	//component_list_t * comp_list = (component_list_t *) ptr;
 	file_recordset * files = (file_recordset *) ptr;
@@ -164,8 +164,8 @@ static void fhash_process(char * hash, component_list_t * comp_list)
 	if (!ldb_table_exists(oss_fhash.db, oss_fhash.table)) // skip if the table is not present
 		return;
 	
-	uint8_t fhash[16]; 
-	ldb_hex_to_bin(hash, 32, fhash);
+	uint8_t fhash[16];
+	ldb_hex_to_bin(hash, oss_fhash.key_ln*2, fhash);
 	/* Get all file IDs for given wfp */
 	file_recordset *files = calloc(1001, sizeof(file_recordset));;
 	int records = ldb_fetch_recordset(NULL, oss_fhash, fhash, false, get_all_file_ids, (void *) files);
@@ -253,10 +253,10 @@ extern bool first_file;
 int binary_scan(char * input)
 {
 	/* Get file MD5 */
-	char * hexmd5 = strndup(input, MD5_LEN * 2);
+	char * hexmd5 = strndup(input, oss_file.key_ln * 2);
 	scanlog("Bin File md5 to be scanned: %s\n", hexmd5);
 	uint8_t bin_md5[MD5_LEN];
-	ldb_hex_to_bin(hexmd5, MD5_LEN * 2, bin_md5);
+	ldb_hex_to_bin(hexmd5, oss_file.key_ln * 2, bin_md5);
 	free(hexmd5);
 
 	uint8_t zero_md5[MD5_LEN] = {0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e}; //empty string md5

@@ -142,12 +142,12 @@ static int purl_entry_ptr_cmp(const void *a, const void *b)
  * @brief url table recordset handler. Extracts the purl and rank from the url
  * record and stores the url_id (= url_hash) under the matching purl entry.
  */
-static bool handle_url_for_purls(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+static bool handle_url_for_purls(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen)
 		return false;
 
-	char *data = decrypt_data(raw_data, datalen, oss_url, key, subkey);
+	char *data = decrypt_data(raw_data, datalen, *table, key, subkey);
 	if (!data)
 		return false;
 
@@ -164,7 +164,7 @@ static bool handle_url_for_purls(uint8_t *key, uint8_t *subkey, int subkey_ln, u
 	purl_entry_t *e = purl_entry_get(ctx, purl);
 
 	char url_hash_hex[MD5_LEN * 2 + 1];
-	ldb_bin_to_hex(key, MD5_LEN, url_hash_hex);
+	ldb_bin_to_hex(key, oss_url.key_ln, url_hash_hex);
 	purl_entry_add_url_hash(e, url_hash_hex);
 
 	if (*rank)
@@ -181,7 +181,7 @@ static bool handle_url_for_purls(uint8_t *key, uint8_t *subkey, int subkey_ln, u
  * @brief file table recordset handler. Each record holds a 16 byte url id
  * followed by the (encrypted) path; for every url id we query the url table.
  */
-static bool handle_file_for_purls(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+static bool handle_file_for_purls(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	/* Bound the amount of files processed (same limit used during matching) */
 	if (iteration >= fetch_max_files)
@@ -215,7 +215,7 @@ int purl_scan(char *file_md5_hex)
 	}
 
 	uint8_t file_md5[MD5_LEN];
-	ldb_hex_to_bin(file_md5_hex, MD5_LEN * 2, file_md5);
+	ldb_hex_to_bin(file_md5_hex, oss_file.key_ln * 2, file_md5);
 
 	purl_scan_ctx_t ctx;
 	memset(&ctx, 0, sizeof(ctx));
@@ -284,7 +284,7 @@ int purl_scan(char *file_md5_hex)
 static void component_scan_one(const char *url_hash_hex)
 {
 	uint8_t url_hash[MD5_LEN];
-	ldb_hex_to_bin((char *) url_hash_hex, MD5_LEN * 2, url_hash);
+	ldb_hex_to_bin((char *) url_hash_hex, oss_url.key_ln * 2, url_hash);
 
 	scanlog("component_scan_one: looking up url_hash=%s (declared_components=%p)\n",
 		url_hash_hex, (void *) declared_components);
@@ -309,7 +309,7 @@ static void component_scan_one(const char *url_hash_hex)
 			if (component->purls[i] && !component->purls_md5[i])
 			{
 				component->purls_md5[i] = malloc(MD5_LEN);
-				MD5((uint8_t *)component->purls[i], strlen(component->purls[i]), component->purls_md5[i]);
+				oss_purl.hash_calc((uint8_t *)component->purls[i], strlen(component->purls[i]), component->purls_md5[i]);
 			}
 		}
 
@@ -516,15 +516,15 @@ static int snippet_scan_stream(FILE *in)
 			}
 
 			const int tagln = 5;
-			if (strlen(line) < (size_t)(tagln + MD5_LEN * 2 + 1))
+			if (strlen(line) < (size_t)(tagln + oss_file.key_ln * 2 + 1))
 			{
 				fprintf(stderr, "snippet-scan: malformed file= line\n");
 				free(line);
 				return EXIT_FAILURE;
 			}
 
-			char *hexmd5 = strndup(line + tagln, MD5_LEN * 2);
-			if (!hexmd5 || strlen(hexmd5) < MD5_LEN * 2 || !valid_md5(hexmd5))
+			char *hexmd5 = strndup(line + tagln, oss_file.key_ln * 2);
+			if (!hexmd5 || strlen(hexmd5) < (size_t)(oss_file.key_ln * 2) || !valid_md5(hexmd5))
 			{
 				fprintf(stderr, "snippet-scan: invalid md5 in file= line\n");
 				free(hexmd5);
@@ -534,7 +534,7 @@ static int snippet_scan_stream(FILE *in)
 			strcpy(file_md5_hex, hexmd5);
 			free(hexmd5);
 
-			uint8_t *rec = (uint8_t *) strdup(line + tagln + MD5_LEN * 2 + 1);
+			uint8_t *rec = (uint8_t *) strdup(line + tagln + oss_file.key_ln * 2 + 1);
 			char *target_path = field_n(2, (char *) rec);
 			if (!target_path)
 			{
@@ -567,16 +567,16 @@ static int snippet_scan_stream(FILE *in)
 			/* scan->file_size is a fixed 32-byte buffer; write the parsed
 			   numeric value, which always fits, instead of the raw field */
 			snprintf(scan->file_size, 32, "%llu", (unsigned long long) file_size);
-			ldb_hex_to_bin(file_md5_hex, MD5_LEN * 2, scan->md5);
+			ldb_hex_to_bin(file_md5_hex, oss_file.key_ln * 2, scan->md5);
 			strcpy(scan->source_md5, file_md5_hex);
 			free(rec);
 			got_file = true;
 			continue;
 		}
 
-		if (is_fh2 && scan && strlen(line) == MD5_LEN_HEX + 4)
+		if (is_fh2 && scan && strlen(line) == oss_file.key_ln*2 + 4)
 		{
-			ldb_hex_to_bin(&line[4], MD5_LEN_HEX, scan->md5_fh2);
+			ldb_hex_to_bin(&line[4], oss_file.key_ln*2, scan->md5_fh2);
 			scan->windows_line_endings = true;
 			continue;
 		}
@@ -655,7 +655,7 @@ static int snippet_scan_stream(FILE *in)
 					continue;
 
 				char md5_hex[MD5_LEN * 2 + 1];
-				ldb_bin_to_hex(m->file_md5, MD5_LEN, md5_hex);
+				ldb_bin_to_hex(m->file_md5, oss_file.key_ln, md5_hex);
 
 				if (!first_cand)
 					printf(",");

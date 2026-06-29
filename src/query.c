@@ -48,7 +48,7 @@ char *get_filename(char *md5)
 {
 	/* Convert md5 to bin */
 	uint8_t md5bin[MD5_LEN];
-	ldb_hex_to_bin(md5, MD5_LEN * 2, md5bin);
+	ldb_hex_to_bin(md5, oss_file.key_ln * 2, md5bin);
 
 	/* Init record */
 	uint8_t *record = calloc(LDB_MAX_REC_LN + 1, 1);
@@ -80,9 +80,9 @@ char *get_filename(char *md5)
  * @param ptr //TODO
  * @return //TODO
  */
-bool ldb_get_first_url_not_ignored(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool ldb_get_first_url_not_ignored(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char * decrypted = decrypt_data(data, datalen, oss_url, key, subkey);
+	char * decrypted = decrypt_data(data, datalen, *table, key, subkey);
 
 	char *record = (char *) ptr;
 
@@ -123,12 +123,12 @@ void get_url_record(uint8_t *md5, uint8_t *record)
  * @param ptr //TODO
  * @return //TODO
  */
-bool handle_get_component_age(uint8_t *key, uint8_t *subkey, int subkey_ln, \
+bool handle_get_component_age(struct ldb_table *table, uint8_t *key, uint8_t *subkey, \
 uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	long *age = (long *) ptr;
 
-	char * decrypted = decrypt_data(data, datalen, oss_purl, key, subkey);
+	char * decrypted = decrypt_data(data, datalen, *table, key, subkey);
 
 	/* Expect at least a date*/
 	if (strlen(decrypted) < 9) 
@@ -216,6 +216,6 @@ void purl_version_md5(uint8_t *out, char *purl, char *version)
 {
 	char purl_version[MAX_ARGLN] = "\0";
 	sprintf(purl_version, "%s@%s", purl, version);
-	MD5((uint8_t *)purl_version, strlen(purl_version), out);
+	oss_purl.hash_calc((uint8_t *)purl_version, strlen(purl_version), out);
 }
 

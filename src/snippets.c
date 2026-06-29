@@ -49,7 +49,7 @@
 int matchmap_max_files = DEFAULT_MATCHMAP_FILES;
 
 #define MATCHMAP_ITEM_SIZE (matchmap_max_files * 2)
-static bool get_all_file_ids(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+static bool get_all_file_ids(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *)ptr;
 
@@ -211,7 +211,7 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 			return -1;
 		}
 		
-		if (md5cmp(scan->matchmap[t].md5, md5))
+		if (hashcmp(oss_file.key_ln, scan->matchmap[t].md5, md5))
 		{
 			lastwfp = scan->matchmap[t].lastwfp;
 			found = t;
@@ -554,7 +554,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 					else
 						sector_max = scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits;
 
-					if (md5cmp(&md5s[wfp_p], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5))
+					if (hashcmp(oss_file.key_ln, &md5s[wfp_p], scan->matchmap[scan->matchmap_rank_by_sector[sector]].md5))
 					{				 
 						add_file_to_matchmap(scan, &map[i], &md5s[wfp_p], 0, &sector_max, &scan->matchmap_rank_by_sector[sector]);
 						md5_proceced++;

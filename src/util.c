@@ -138,6 +138,21 @@ bool md5cmp(uint8_t *md51, uint8_t *md52)
 }
 
 /**
+ * @brief Compares two hashes of arbitrary (key) length
+ * @param hash_len number of bytes to compare
+ * @param md51 hash 1
+ * @param md52 hash 2
+ * @return true for equal
+ */
+bool hashcmp(int hash_len, uint8_t *md51, uint8_t *md52)
+{
+	for (int i = 0; i < hash_len; i++)
+		if (md51[i] != md52[i])
+			return false;
+	return true;
+}
+
+/**
  * @brief Trim str
  * @param str string to trim
  */

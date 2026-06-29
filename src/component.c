@@ -289,7 +289,7 @@ bool fill_component(component_data_t *component, uint8_t *url_key, char *file_pa
 	{
 		component->purls[0] = strdup(purl);
 		component->purls_md5[0] = malloc(MD5_LEN);
-		MD5((uint8_t *)component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
+		oss_purl.hash_calc((uint8_t *)component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
 	}
 	component->age = -1;
 	if (*rank)
@@ -312,14 +312,14 @@ bool component_date_comparation(component_data_t *a, component_data_t *b)
 	if (!a->purls_md5[0] && a->purls[0])
 	{
 		a->purls_md5[0] = malloc(MD5_LEN);
-		MD5((uint8_t *)a->purls[0], strlen(a->purls[0]), a->purls_md5[0]);
+		oss_purl.hash_calc((uint8_t *)a->purls[0], strlen(a->purls[0]), a->purls_md5[0]);
 		a->age = get_component_age(a->purls_md5[0]);
 	}
 
 	if (!b->purls_md5[0] && b->purls[0])
 	{
 		b->purls_md5[0] = malloc(MD5_LEN);
-		MD5((uint8_t *)b->purls[0], strlen(b->purls[0]), b->purls_md5[0]);
+		oss_purl.hash_calc((uint8_t *)b->purls[0], strlen(b->purls[0]), b->purls_md5[0]);
 		b->age = get_component_age(b->purls_md5[0]);
 	}
 
@@ -358,7 +358,7 @@ void component_purl_md5(component_data_t * component)
 		if (component->purls[i] && !component->purls_md5[i])
 		{
 			component->purls_md5[i] = malloc(oss_purl.key_ln);
-			MD5((uint8_t *)component->purls[i], strlen(component->purls[i]), component->purls_md5[i]);
+			oss_purl.hash_calc((uint8_t *)component->purls[i], strlen(component->purls[i]), component->purls_md5[i]);
 		}
 	}
 }

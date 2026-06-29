@@ -68,7 +68,7 @@ void mz_get_key(struct ldb_table kb, char *key)
 
 	/* Save path and key on job */
 	job.key = calloc(MD5_LEN, 1);
-	ldb_hex_to_bin(key, MD5_LEN * 2, job.key);	
+	ldb_hex_to_bin(key, kb.key_ln * 2, job.key);
 
 	/* Read source mz file into memory */
 	job.mz = file_read(mz_path, &job.mz_ln);

@@ -75,6 +75,7 @@ typedef struct scan_data_t
 } scan_data_t;
 
 extern bool force_snippet_scan;
+extern bool path_table_present;
 
 scan_data_t * scan_data_init(char *target, int max_snippets, int max_components, bool adjust_tolerance, int component_ranking_threshold, int snippet_min_hits, int snippet_min_lines, int snippet_range_tolerance, bool snippet_honor_file_extension);
 void scan_data_free (scan_data_t * scan);

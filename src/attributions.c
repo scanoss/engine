@@ -51,7 +51,7 @@
  * @param ptr //TODO 
  * @return //TODO  
  */
-bool notices_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, \
+bool notices_handler(struct ldb_table *table, uint8_t *key, uint8_t *subkey, \
 uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (datalen != 2 * MD5_LEN) return false;
@@ -81,7 +81,7 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
  * @param ptr //TODO
  * @return return true or false if the atribution exist or not.
  */
-bool attribution_handler(uint8_t *key, uint8_t *subkey, int subkey_ln, \
+bool attribution_handler(struct ldb_table *table, uint8_t *key, uint8_t *subkey, \
 uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	bool *valid = (bool *) ptr;
@@ -222,8 +222,8 @@ bool check_purl_attributions(struct ldb_table oss_attributions, char * licenses_
 		{
 			/* Get purl md5 */
 			uint8_t md5[16];
-			MD5((uint8_t *)purl, strlen(purl), md5);
-			if (declared_components[i].license && licenses_json && 
+			oss_attributions.hash_calc((uint8_t *)purl, strlen(purl), md5);
+			if (declared_components[i].license && licenses_json &&
 				license_search_on_licenses_json(declared_components[i].license, licenses_json))
 			{
 				continue;
@@ -271,7 +271,7 @@ void print_purl_attribution_notices(struct ldb_table oss_attributions, char * li
 		{
 			/* Get purl md5 */
 			uint8_t md5[16];
-			MD5((uint8_t *)purl, strlen(purl), md5);
+			oss_attributions.hash_calc((uint8_t *)purl, strlen(purl), md5);
 			print_notices(oss_attributions, md5, purl);
 		}
   	}

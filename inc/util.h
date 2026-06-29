@@ -15,6 +15,9 @@ void hex_to_bin(char *hex, uint32_t len, uint8_t *out);
 /* Compares two MD5 checksums */
 bool md5cmp(uint8_t *md51, uint8_t *md52);
 
+/* Compares two hashes of arbitrary (key) length */
+bool hashcmp(int hash_len, uint8_t *md51, uint8_t *md52);
+
 /* Trim str */
 void trim(char *str);
 

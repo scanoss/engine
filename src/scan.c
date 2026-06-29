@@ -200,7 +200,7 @@ int hash_scan(char *path, int scan_max_snippets, int scan_max_components, bool a
 	scan->preload = true;
 
 		/* Get file MD5 */
-	ldb_hex_to_bin(scan->file_path, MD5_LEN * 2, scan->md5);
+	ldb_hex_to_bin(scan->file_path, oss_file.key_ln * 2, scan->md5);
 
 	/* Fake file length */
 	strcpy(scan->file_size, "999");
@@ -267,9 +267,9 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 			continue;
 		}
 
-		if (is_fh2 && scan  && strlen(line) == MD5_LEN_HEX + 4) 
+		if (is_fh2 && scan  && strlen(line) == oss_file.key_ln*2 + 4)
 		{
-			ldb_hex_to_bin(&line[4], MD5_LEN_HEX, scan->md5_fh2);
+			ldb_hex_to_bin(&line[4], oss_file.key_ln*2, scan->md5_fh2);
 			scan->windows_line_endings = true;
 			scanlog("Winodws line endings hash detected\n");
 			continue;
@@ -286,15 +286,15 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 			const int tagln = 5; // len of 'file='
 
 			/* Get file MD5 */
-			char * hexmd5 = strndup(line + tagln, MD5_LEN * 2);
-			if (strlen(hexmd5) <  MD5_LEN * 2)
+			char * hexmd5 = strndup(line + tagln, oss_file.key_ln * 2);
+			if (strlen(hexmd5) <  oss_file.key_ln * 2)
 			{
 				scanlog("Incorrect md5 len in line %s. Skipping\n", line);
 				free(hexmd5);
 				continue;
 			}
-			
-			rec = (uint8_t*) strdup(line + tagln + (MD5_LEN * 2) + 1);
+
+			rec = (uint8_t*) strdup(line + tagln + (oss_file.key_ln * 2) + 1);
 			char * target = field_n(2, (char *)rec);
 
 			/* Validate that the WFP file has the correct format */
@@ -314,7 +314,7 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 			scan->preload = true;
 			free(rec);
 			scanlog("File md5 to be scanned: %s\n", hexmd5);
-			ldb_hex_to_bin(hexmd5, MD5_LEN * 2, scan->md5);
+			ldb_hex_to_bin(hexmd5, oss_file.key_ln * 2, scan->md5);
 			free(hexmd5);
 			continue;
 		}

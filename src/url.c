@@ -53,11 +53,12 @@
  */
 int component_rank_max = COMPONENT_DEFAULT_RANK + 1; /*Used defined max component rank accepted*/
 
-bool handle_url_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
+bool handle_url_record(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
+	int subkey_ln = table->key_ln - LDB_KEY_LN;
 	if (!datalen && datalen >= MAX_PATH) return false;
 
-	char * data = decrypt_data(raw_data, datalen, oss_url, key, subkey);
+	char * data = decrypt_data(raw_data, datalen, *table, key, subkey);
 
 	if (!data)
 		return false;
@@ -189,11 +190,11 @@ bool purl_type_matches(char *purl1, char *purl2)
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
 **/
 
-bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool handle_purl_record(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	component_data_t *component = (component_data_t *) ptr;
 
-	char * purl = decrypt_data(data, datalen, oss_purl, key, subkey);
+	char * purl = decrypt_data(data, datalen, *table, key, subkey);
 
 	if (!purl)
 		return false;
@@ -226,7 +227,7 @@ bool handle_purl_record(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *d
 				scanlog("Related PURL: %s\n", purl);
 				component->purls[i] = purl;
 				component->purls_md5[i] = malloc(MD5_LEN);
-				MD5((uint8_t *)purl, strlen(purl), component->purls_md5[i]);
+				oss_purl.hash_calc((uint8_t *)purl, strlen(purl), component->purls_md5[i]);
 				return false;
 			}
 			/* Already exists, exit */
@@ -259,7 +260,7 @@ void fetch_related_purls(component_data_t *component)
 	if (!component->purls_md5[0] && component->purls[0])
 	{
 		component->purls_md5[0] = malloc(MD5_LEN);
-		MD5((uint8_t *)component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
+		oss_purl.hash_calc((uint8_t *)component->purls[0], strlen(component->purls[0]), component->purls_md5[0]);
 	}
 
 	/* Fill purls */
@@ -285,11 +286,11 @@ void fetch_related_purls(component_data_t *component)
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
 **/
 
-bool get_purl_first_release(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool get_purl_first_release(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen) return false;
 
-	char * purl = decrypt_data(data, datalen, oss_purl, key, subkey);
+	char * purl = decrypt_data(data, datalen, *table, key, subkey);
 	uint8_t *oldest = (uint8_t *) ptr;
 
 	if (!purl)
@@ -321,7 +322,7 @@ void purl_release_date(char *purl, char *date)
 		return; 
 
 	uint8_t purl_md5[MD5_LEN];
-	MD5((uint8_t *)purl, strlen(purl), purl_md5);
+	oss_purl.hash_calc((uint8_t *)purl, strlen(purl), purl_md5);
 
 	ldb_fetch_recordset(NULL, oss_purl, purl_md5, false, get_purl_first_release, (void *) date);
 }
@@ -332,9 +333,9 @@ void purl_release_date(char *purl, char *date)
  * @brief Handler function for getting the oldest URL.
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
 **/
-bool get_oldest_url(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
+bool get_oldest_url(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char * url = decrypt_data(data, datalen, oss_url, key, subkey);
+	char * url = decrypt_data(data, datalen, *table, key, subkey);
 	if (!url)
 		return false;
 

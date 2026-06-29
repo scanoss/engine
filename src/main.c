@@ -62,6 +62,9 @@ struct ldb_table oss_attribution;
 struct ldb_table oss_cryptography;
 struct ldb_table oss_sources;
 struct ldb_table oss_notices;
+struct ldb_table oss_pivot;
+struct ldb_table oss_path;
+bool path_table_present = false;
 component_item *ignore_components;
 component_item *declared_components;
 
@@ -177,6 +180,20 @@ void initialize_ldb_tables(char *name)
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "notices");
 	oss_notices = ldb_read_cfg(dbtable);
 
+	/* Optional path table: when present, the file table stores a path hash
+	 * (referencing the path table) instead of the encrypted path itself. */
+	if (ldb_table_exists(oss_db_name, "path"))
+	{
+		path_table_present = true;
+		snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "path");
+		oss_path = ldb_read_cfg(dbtable);
+	}
+
+	/* Optional pivot table: maps a url key to the file keys of that project,
+	 * used by -p to reconstruct the project structure. */
+	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "pivot");
+	oss_pivot = ldb_read_cfg(dbtable);
+
 	kb_version_get();
 	osadl_load_file();
 
@@ -284,6 +301,7 @@ static struct option long_options[] = {
 	{"key",               required_argument, 0, 'k'},
 	{"purl",              required_argument, 0, 'P'},
 	{"url-hash",          required_argument, 0, 'C'},
+	{"project",           required_argument, 0, 'p'},
 	{"attribution",       required_argument, 0, 'a'},
 	{"flags",             required_argument, 0, 'F'},
 	{"license",           required_argument, 0, 'l'},
@@ -339,7 +357,7 @@ int main(int argc, char **argv)
 	bool invalid_argument = false;
 	char * ldb_db_name = NULL;
 
-	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:P:C:S:wtLvhdqH", long_options, &option_index)) != -1)
+	while ((option = getopt_long(argc, argv, ":r:T:s:b:c:k:a:F:l:n:M:N:P:C:S:p:wtLvhdqH", long_options, &option_index)) != -1)
 	{
 		switch (option)
 		{
@@ -374,6 +392,12 @@ int main(int argc, char **argv)
 			case 'C':
 				initialize_ldb_tables(ldb_db_name);
 				exit(component_scan(optarg));
+				break;
+
+			case 'p':
+				initialize_ldb_tables(ldb_db_name);
+				get_project_files(optarg);
+				exit(EXIT_SUCCESS);
 				break;
 
 			case 'a':
