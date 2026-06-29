@@ -36,6 +36,29 @@ struct get_path_s {
 	int paths_index;
 };
 
+/* Growable output buffer for the project listing (avoids a huge fixed
+ * allocation and the O(n^2) cost of repeated strcat). */
+struct out_buffer_s {
+	char * buffer;
+	size_t len;
+	size_t cap;
+};
+
+static void out_append(struct out_buffer_s * o, const char * s)
+{
+	size_t sl = strlen(s);
+	if (o->len + sl + 1 > o->cap)
+	{
+		size_t newcap = o->cap ? o->cap : 65536;
+		while (newcap < o->len + sl + 1)
+			newcap *= 2;
+		o->buffer = realloc(o->buffer, newcap);
+		o->cap = newcap;
+	}
+	memcpy(o->buffer + o->len, s, sl + 1);
+	o->len += sl;
+}
+
 /**
  * @brief ldb record handler for the file table. Collects every path associated
  * with a file key that belongs to the requested url_key.
@@ -74,16 +97,18 @@ bool get_project_hashes(struct ldb_table * table, uint8_t *key, uint8_t *subkey,
 	ldb_bin_to_hex(file_key, table->key_ln, key_hex);
 
 	ldb_fetch_recordset(NULL, oss_file, file_key, false, get_file_path_hash, (void *)&get_path);
-	char * output = ptr;
+	struct out_buffer_s * output = ptr;
 	char * line = NULL;
 	for (int i = 0; i < get_path.paths_index; i++)
 	{
 		if (!get_path.paths[i])
 			continue;
-		asprintf(&line, "%s,%s\n", key_hex, get_path.paths[i]);
+		if (asprintf(&line, "%s,%s\n", key_hex, get_path.paths[i]) >= 0)
+		{
+			out_append(output, line);
+			free(line);
+		}
 		free(get_path.paths[i]);
-		strcat(output, line);
-		free(line);
 	}
 
 	free(get_path.paths);
@@ -105,8 +130,9 @@ void get_project_files(char * url_key_hex)
 		exit(EXIT_FAILURE);
 	}
 	ldb_hex_to_bin(url_key_hex, oss_url.key_ln*2, url_key);
-	char * out = calloc(1, 1024*1024*500);
-	ldb_fetch_recordset(NULL, oss_pivot, url_key, false, get_project_hashes, (void *)out);
-	printf("%s", out);
-	free(out);
+	struct out_buffer_s out = {.buffer = NULL, .len = 0, .cap = 0};
+	ldb_fetch_recordset(NULL, oss_pivot, url_key, false, get_project_hashes, (void *)&out);
+	if (out.buffer)
+		printf("%s", out.buffer);
+	free(out.buffer);
 }
