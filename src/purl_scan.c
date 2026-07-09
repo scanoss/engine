@@ -27,8 +27,8 @@
   * This implements the "-P <file_md5>" command: given a file MD5 it walks the
   * KB (url and file tables) and reports, in JSON, the unique purls associated
   * with that file, the url hashes (url_id) where the file was seen for each
-  * purl and the best (lowest) KB rank found. It does not use the best-match
-  * selection logic.
+  * purl, the source path of each url hash and the best (lowest) KB rank found.
+  * It does not use the best-match selection logic.
   */
 
 #include <libgen.h>
