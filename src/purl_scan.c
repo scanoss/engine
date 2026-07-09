@@ -227,9 +227,12 @@ static bool handle_file_for_purls(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 	}
 
 	purl_scan_ctx_t *ctx = (purl_scan_ctx_t *) ptr;
+	/* Strip the leading version-bearing directory (e.g. "libfoo-1.2.3/src/a.c"
+	   -> "src/a.c"), same rule fill_component_path applies to the match path.
+	   look_for_version returns a pointer into the buffer, so it stays valid. */
 	/* The nested lookup runs synchronously, so the url handler can safely read
 	   the path from the stack buffer via the context. */
-	ctx->current_path = path;
+	ctx->current_path = look_for_version(path);
 	ldb_fetch_recordset(NULL, oss_url, url_id, false, handle_url_for_purls, ptr);
 	ctx->current_path = NULL;
 

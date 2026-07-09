@@ -180,7 +180,7 @@ bool ignored_asset_match(uint8_t *url_record)
 	return found;
 }
 
-static char * look_for_version(char *in)
+char * look_for_version(char *in)
 {
 	if (!in)
 		return NULL;
