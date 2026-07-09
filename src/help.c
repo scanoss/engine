@@ -66,8 +66,8 @@ Configuration:\n\
 -c, --component HINT     Add a component HINT to guide scan results.\n\
 -k, --key KEY            Show contents of the specified KEY file from MZ sources archive.\n\
     --max-file-content-size MB Set maximum file content size in MB printed by -k (default: 50).\n\
--P, --purl MD5           Return the purls and versions related to the given file MD5 (JSON).\n\
--C, --url-hash MD5       Return the details of the component identified by the given url hash (JSON).\n\
+-P, --purl MD5           Return the purls related to the given file MD5, with their url hashes and source paths (JSON).\n\
+-C, --url-hash MD5       Return the details of the component(s) identified by the given url hash or comma-separated list (JSON).\n\
 -p, --project URL_HASH   Reconstruct a project's file structure: list the md5 and path of each project file\n\
                          (requires the pivot table; the url hash may be MD5 or CRC64).\n\
 -S, --snippet-scan WFP   Snippet-only scan: take a single-file WFP block as argument and return JSON with candidate\n\
