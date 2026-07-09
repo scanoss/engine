@@ -244,10 +244,18 @@ int osadl_print_license(char *output, const char *license, bool more_keys_after)
 	if (!content)
 		return 0;
 
-	content = strchr(content, '{') + 1;
-	if (content)
+	char *open = strchr(content, '{');
+	if (!open)
+		return 0;
+	content = open + 1;
 	{
 		char *end = strchr(content, '}');
+		/* Only accept flat license entries: if the object contains a nested
+		   object, this key is a structural one (e.g. the top-level "licenses"
+		   key), not a per-license entry, and copying it would emit unbalanced
+		   braces and break the JSON. */
+		if (end && memchr(content, '{', end - content))
+			return 0;
 		if (end)
 		{
 			int key_len = end - content;

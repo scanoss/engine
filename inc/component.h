@@ -107,4 +107,5 @@ component_data_t * component_data_copy(component_data_t * in);
 int asset_declared(component_data_t * comp);
 void component_item_free(component_item * comp_item);
 void fill_component_path(component_data_t *component, char *file_path);
+char * look_for_version(char *in);
 #endif
