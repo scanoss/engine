@@ -356,13 +356,6 @@ static void component_scan_one(const char *url_hash_hex)
 			}
 		}
 
-		/* print_licenses (and other enrichers) look up comp->file_md5_ref
-		   unconditionally. We don't have a matched file in this mode, so
-		   point it at the url_md5 to avoid a NULL deref; the lookup will
-		   simply return no extra records. */
-		if (!component->file_md5_ref)
-			component->file_md5_ref = component->url_md5;
-
 		fetch_related_purls(component);
 		fill_main_url(component);
 
@@ -374,9 +367,6 @@ static void component_scan_one(const char *url_hash_hex)
 
 		char *version_clean = string_clean(component->version);
 		printf("\"version\": \"%s\",", version_clean ? version_clean : "");
-
-		char *latest_clean = string_clean(component->latest_version);
-		printf("\"latest\": \"%s\",", latest_clean ? latest_clean : "");
 
 		printf("\"url\": \"%s\",", component->main_url ? component->main_url : (component->url ? component->url : ""));
 		printf("\"release_date\": \"%s\",", component->release_date ? component->release_date : "");
@@ -393,56 +383,6 @@ static void component_scan_one(const char *url_hash_hex)
 		free(file_field);
 
 		printf("\"rank\": %d", component->rank);
-
-		if (!(engine_flags & DISABLE_LICENSES))
-		{
-			print_licenses(component);
-			if (component->license_text)
-				printf(",%s", json_remove_invalid_char(component->license_text));
-		}
-
-		if (!(engine_flags & DISABLE_HEALTH))
-		{
-			if (!component->health_text)
-				print_health(component);
-			if (component->health_text)
-				printf(",%s", json_remove_invalid_char(component->health_text));
-
-			printf(",\"url_stats\":{");
-			if (component->url_stats[0] > 0)
-			{
-				printf("\"total_files\":%d,"
-					   "\"indexed_files\":%d,"
-					   "\"source_files\":%d,"
-					   "\"ignored_files\":%d,"
-					   "\"package_size\":%d",
-					   component->url_stats[0], component->url_stats[1], component->url_stats[2],
-					   component->url_stats[3], component->url_stats[4]);
-			}
-			printf("}");
-		}
-
-		if (!(engine_flags & DISABLE_DEPENDENCIES))
-		{
-			if (!component->dependency_text)
-				print_dependencies(component);
-			if (component->dependency_text)
-				printf(",%s", json_remove_invalid_char(component->dependency_text));
-		}
-
-		if (!(engine_flags & DISABLE_COPYRIGHTS))
-		{
-			print_copyrights(component);
-			if (component->copyright_text)
-				printf(",%s", component->copyright_text);
-		}
-
-		if (!(engine_flags & DISABLE_VULNERABILITIES))
-		{
-			print_vulnerabilities(component);
-			if (component->vulnerabilities_text)
-				printf(",%s", json_remove_invalid_char(component->vulnerabilities_text));
-		}
 
 		printf("}");
 	}
