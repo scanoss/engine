@@ -62,11 +62,18 @@ extern int scan_min_match_lines;
 extern int scan_range_tolerance;
 extern bool scan_honor_file_extension;
 
+/* A url hash (url_id in hex) together with the file path it was seen at */
+typedef struct url_hash_t
+{
+	char *hash;
+	char *path;
+} url_hash_t;
+
 /* Single purl entry: the purl, the set of url hashes seen and the best rank */
 typedef struct purl_entry_t
 {
 	char *purl;
-	char **url_hashes;
+	url_hash_t *url_hashes;
 	int n_url_hashes;
 	int url_hashes_cap;
 	int rank;
@@ -79,6 +86,10 @@ typedef struct purl_scan_ctx_t
 	purl_entry_t *head;
 	int count;
 	uint32_t files_processed;
+	/* Path of the file record currently being processed; valid only while the
+	   nested url lookup runs, so the url handler can associate each url hash
+	   with the path it came from. */
+	const char *current_path;
 } purl_scan_ctx_t;
 
 /* MD5 of the empty string, used as a sentinel in the file table */
@@ -104,29 +115,33 @@ static purl_entry_t * purl_entry_get(purl_scan_ctx_t *ctx, const char *purl)
 }
 
 /**
- * @brief Add a url hash to a purl entry, ignoring duplicates and empty values.
+ * @brief Add a url hash (and its associated path) to a purl entry, ignoring
+ * duplicates and empty values. The hash and path are kept together so they
+ * stay aligned when the list is later sorted.
  */
-static void purl_entry_add_url_hash(purl_entry_t *e, const char *url_hash)
+static void purl_entry_add_url_hash(purl_entry_t *e, const char *url_hash, const char *path)
 {
 	if (!url_hash || !*url_hash)
 		return;
 
 	for (int i = 0; i < e->n_url_hashes; i++)
-		if (!strcmp(e->url_hashes[i], url_hash))
+		if (!strcmp(e->url_hashes[i].hash, url_hash))
 			return;
 
 	if (e->n_url_hashes >= e->url_hashes_cap)
 	{
 		e->url_hashes_cap = e->url_hashes_cap ? e->url_hashes_cap * 2 : 8;
-		e->url_hashes = realloc(e->url_hashes, e->url_hashes_cap * sizeof(char *));
+		e->url_hashes = realloc(e->url_hashes, e->url_hashes_cap * sizeof(url_hash_t));
 	}
-	e->url_hashes[e->n_url_hashes++] = strdup(url_hash);
+	e->url_hashes[e->n_url_hashes].hash = strdup(url_hash);
+	e->url_hashes[e->n_url_hashes].path = strdup(path ? path : "");
+	e->n_url_hashes++;
 }
 
 /* qsort comparators for deterministic output */
 static int url_hash_cmp(const void *a, const void *b)
 {
-	return strcmp(*(const char **) a, *(const char **) b);
+	return strcmp(((const url_hash_t *) a)->hash, ((const url_hash_t *) b)->hash);
 }
 
 static int purl_entry_ptr_cmp(const void *a, const void *b)
@@ -165,7 +180,7 @@ static bool handle_url_for_purls(uint8_t *key, uint8_t *subkey, int subkey_ln, u
 
 	char url_hash_hex[MD5_LEN * 2 + 1];
 	ldb_bin_to_hex(key, MD5_LEN, url_hash_hex);
-	purl_entry_add_url_hash(e, url_hash_hex);
+	purl_entry_add_url_hash(e, url_hash_hex, ctx->current_path);
 
 	if (*rank)
 	{
@@ -200,9 +215,25 @@ static bool handle_file_for_purls(uint8_t *key, uint8_t *subkey, int subkey_ln, 
 	uint8_t url_id[MD5_LEN];
 	memcpy(url_id, raw_data, MD5_LEN);
 
-	ldb_fetch_recordset(NULL, oss_url, url_id, false, handle_url_for_purls, ptr);
+	/* Decrypt the file path that follows the url id (see component_from_file
+	   in match.c). For the file table decrypt_data returns just the path. */
+	char path[MAX_FILE_PATH + 1] = "";
+	char *decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
+	if (decrypted)
+	{
+		strncpy(path, decrypted, MAX_FILE_PATH);
+		path[MAX_FILE_PATH] = '\0';
+		free(decrypted);
+	}
 
-	((purl_scan_ctx_t *) ptr)->files_processed++;
+	purl_scan_ctx_t *ctx = (purl_scan_ctx_t *) ptr;
+	/* The nested lookup runs synchronously, so the url handler can safely read
+	   the path from the stack buffer via the context. */
+	ctx->current_path = path;
+	ldb_fetch_recordset(NULL, oss_url, url_id, false, handle_url_for_purls, ptr);
+	ctx->current_path = NULL;
+
+	ctx->files_processed++;
 	return false;
 }
 
@@ -233,7 +264,7 @@ int purl_scan(char *file_md5_hex)
 		for (purl_entry_t *e = ctx.head; e; e = e->next)
 		{
 			if (e->n_url_hashes > 1)
-				qsort(e->url_hashes, e->n_url_hashes, sizeof(char *), url_hash_cmp);
+				qsort(e->url_hashes, e->n_url_hashes, sizeof(url_hash_t), url_hash_cmp);
 			sorted[i++] = e;
 		}
 		qsort(sorted, ctx.count, sizeof(purl_entry_t *), purl_entry_ptr_cmp);
@@ -252,7 +283,16 @@ int purl_scan(char *file_md5_hex)
 			{
 				if (v)
 					printf(", ");
-				printf("\"%s\"", e->url_hashes[v]);
+				printf("\"%s\"", e->url_hashes[v].hash);
+			}
+			printf("], \"oss_path\": [");
+			for (int v = 0; v < e->n_url_hashes; v++)
+			{
+				if (v)
+					printf(", ");
+				char *escaped_path = scape_slashes(e->url_hashes[v].path);
+				printf("\"%s\"", escaped_path ? escaped_path : "");
+				free(escaped_path);
 			}
 			printf("], \"rank\": %d}", e->rank);
 		}
@@ -267,7 +307,10 @@ int purl_scan(char *file_md5_hex)
 	{
 		purl_entry_t *next = e->next;
 		for (int v = 0; v < e->n_url_hashes; v++)
-			free(e->url_hashes[v]);
+		{
+			free(e->url_hashes[v].hash);
+			free(e->url_hashes[v].path);
+		}
 		free(e->url_hashes);
 		free(e->purl);
 		free(e);
