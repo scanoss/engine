@@ -41,6 +41,7 @@
 #include "component.h"
 #include "report.h"
 #include "url.h"
+#include "file.h"
 #include "license.h"
 #include "health.h"
 #include "dependency.h"
@@ -91,10 +92,6 @@ typedef struct purl_scan_ctx_t
 	   with the path it came from. */
 	const char *current_path;
 } purl_scan_ctx_t;
-
-/* MD5 of the empty string, used as a sentinel in the file table */
-static const uint8_t empty_string_md5[MD5_LEN] =
-	{0xd4,0x1d,0x8c,0xd9,0x8f,0x00,0xb2,0x04,0xe9,0x80,0x09,0x98,0xec,0xf8,0x42,0x7e};
 
 /**
  * @brief Find an existing purl entry or create a new one.
@@ -205,26 +202,38 @@ static bool handle_file_for_purls(struct ldb_table *table, uint8_t *key, uint8_t
 		return true;
 	}
 
-	if (datalen < MD5_LEN)
+	/* Ignore empty records and path lengths over the limit */
+	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH))
 		return false;
 
-	/* Skip records pointing to the empty string md5 */
-	if (!memcmp(raw_data, empty_string_md5, MD5_LEN))
+	/* Resolve the path the same way component_from_file does: from the path
+	   table when present, otherwise decrypt it inline. The record is a
+	   key_ln-byte url id followed by either the (encrypted) path or, when the
+	   path table is present, a path id used to look the path up. */
+	char *decrypted = NULL;
+	if (path_table_present)
+		decrypted = path_query(&raw_data[table->key_ln]);
+	else
+		decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
+	if (!decrypted)
 		return false;
 
-	uint8_t url_id[MD5_LEN];
-	memcpy(url_id, raw_data, MD5_LEN);
-
-	/* Decrypt the file path that follows the url id (see component_from_file
-	   in match.c). For the file table decrypt_data returns just the path. */
-	char path[MAX_FILE_PATH + 1] = "";
-	char *decrypted = decrypt_data(raw_data, datalen, oss_file, key, subkey);
-	if (decrypted)
+	/* Skip records pointing to the empty string key */
+	uint8_t empty_id[table->key_ln];
+	table->hash_calc(NULL, 0, empty_id);
+	if (!memcmp(raw_data, empty_id, table->key_ln))
 	{
-		strncpy(path, decrypted, MAX_FILE_PATH);
-		path[MAX_FILE_PATH] = '\0';
 		free(decrypted);
+		return false;
 	}
+
+	uint8_t url_id[table->key_ln];
+	memcpy(url_id, raw_data, table->key_ln);
+
+	char path[MAX_FILE_PATH + 1] = "";
+	strncpy(path, decrypted, MAX_FILE_PATH);
+	path[MAX_FILE_PATH] = '\0';
+	free(decrypted);
 
 	purl_scan_ctx_t *ctx = (purl_scan_ctx_t *) ptr;
 	/* Strip the leading version-bearing directory (e.g. "libfoo-1.2.3/src/a.c"
