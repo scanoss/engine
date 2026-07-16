@@ -206,23 +206,17 @@ static bool handle_file_for_purls(struct ldb_table *table, uint8_t *key, uint8_t
 	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH))
 		return false;
 
-	/* Resolve the path the same way component_from_file does: decrypt the
-	   record (the path/path-id lives after the MD5_LEN url field), and when the
-	   path table is present treat the decrypted value as a path id (hex string)
-	   to look the actual path up. */
-	char *decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
+	/* Resolve the path the same way component_from_file does: from the path
+	   table when present, otherwise decrypt it inline. The record is a
+	   key_ln-byte url id followed by either the (encrypted) path or, when the
+	   path table is present, a path id used to look the path up. */
+	char *decrypted = NULL;
+	if (path_table_present)
+		decrypted = path_query(&raw_data[table->key_ln]);
+	else
+		decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
 	if (!decrypted)
 		return false;
-
-	if (path_table_present)
-	{
-		uint8_t path_id[oss_path.key_ln];
-		ldb_hex_to_bin(decrypted, oss_path.key_ln * 2, path_id);
-		free(decrypted);
-		decrypted = path_query(path_id);
-		if (!decrypted)
-			return false;
-	}
 
 	/* Skip records pointing to the empty string key */
 	uint8_t empty_id[table->key_ln];

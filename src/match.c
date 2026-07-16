@@ -772,23 +772,14 @@ bool component_from_file(struct ldb_table *table, uint8_t *key, uint8_t *subkey,
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH)) return false;
 
-	/* Decrypt the record: the path (or, with a path table, the path id) is
-	   stored right after the MD5_LEN url field, exactly as in collect_all_files. */
-	char * decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
+	/* Resolve the path: from the path table if present, otherwise decrypt it inline */
+	char * decrypted = NULL;
+	if (path_table_present)
+		decrypted = path_query(&raw_data[table->key_ln]);
+	else
+		decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
 	if (!decrypted)
 		return false;
-
-	/* When the path table is present the decrypted value is a path id (hex
-	   string); resolve the actual path through the path table. */
-	if (path_table_present)
-	{
-		uint8_t path_id[oss_path.key_ln];
-		ldb_hex_to_bin(decrypted, oss_path.key_ln * 2, path_id);
-		free(decrypted);
-		decrypted = path_query(path_id);
-		if (!decrypted)
-			return false;
-	}
 
 	component_list_t * component_list = (component_list_t*) ptr;
 	/* Copy data to memory */
