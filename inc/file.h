@@ -16,5 +16,6 @@ bool collect_all_files(struct ldb_table *table, uint8_t *key, uint8_t *subkey, u
 bool count_all_files(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr);
 char *get_file_extension(uint8_t *md5);
 char * path_query(uint8_t * file_id);
+char * file_record_path(struct ldb_table *table, uint8_t *raw_data, uint32_t datalen, uint8_t *key, uint8_t *subkey);
 
 #endif

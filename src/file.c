@@ -198,8 +198,8 @@ bool collect_all_files(struct ldb_table *table, uint8_t *key, uint8_t *subkey, u
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH)) return false;
 
-	/* Decrypt data */
-	char * decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
+	/* Resolve the path (via the path table when present) */
+	char * decrypted = file_record_path(table, raw_data, datalen, key, subkey);
 	if (!decrypted)
 		return NULL;
 	/* Copy data to memory */
@@ -263,13 +263,26 @@ char *file_extension(char *path)
  * @param ptr //TODO
  * @return //TODO
  */
+/* Resolve a file's path from a raw file-table record. The record layout is
+ * [url id (table->key_ln bytes)][path or path id]. When the path table is
+ * present the bytes right after the url id are the binary path-table key used
+ * to look the actual path up; otherwise the path is stored (encrypted) inline
+ * right after the url id. Returns a malloc'd string the caller must free, or
+ * NULL. Every file-table reader that needs the path must go through here. */
+char * file_record_path(struct ldb_table *table, uint8_t *raw_data, uint32_t datalen, uint8_t *key, uint8_t *subkey)
+{
+	if (path_table_present)
+		return path_query(&raw_data[table->key_ln]);
+	return decrypt_data(raw_data, datalen, *table, key, subkey);
+}
+
 bool get_first_file(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	if (!datalen) return false;
 
-	char * file_data = decrypt_data(data, datalen, *table, key, subkey);
-	
-	if (!file_data || !*file_data) 
+	char * file_data = file_record_path(table, data, datalen, key, subkey);
+
+	if (!file_data || !*file_data)
 		return false;
 
 	*(char *)ptr = 0;

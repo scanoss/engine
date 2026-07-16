@@ -38,6 +38,7 @@
 #include "scanoss.h"
 #include "decrypt.h"
 #include "debug.h"
+#include "file.h"
 
 /**
  * @brief Obtain the first file name for the given file MD5 hash
@@ -61,8 +62,8 @@ char *get_filename(char *md5)
 	memmove(record, record + 4, recln);
 	record[recln] = 0;
 
-	/* Decrypt data */
-	char *  decrypted = decrypt_data(record, recln, oss_file, md5bin, md5bin + LDB_KEY_LN);
+	/* Resolve the path/filename (via the path table when present) */
+	char *  decrypted = file_record_path(&oss_file, record, recln, md5bin, md5bin + LDB_KEY_LN);
 	free (record);
 
 

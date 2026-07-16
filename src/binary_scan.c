@@ -70,8 +70,8 @@ static bool add_purl_from_urlid(struct ldb_table *table, uint8_t *key, uint8_t *
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH)) return false;
 
-	/* Decrypt data */
-	char * decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
+	/* Resolve the path (via the path table when present) */
+	char * decrypted = file_record_path(table, raw_data, datalen, key, subkey);
 	if (!decrypted)
 		return NULL;
 

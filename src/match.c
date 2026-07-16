@@ -772,12 +772,8 @@ bool component_from_file(struct ldb_table *table, uint8_t *key, uint8_t *subkey,
 	/* Ignore path lengths over the limit */
 	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH)) return false;
 
-	/* Resolve the path: from the path table if present, otherwise decrypt it inline */
-	char * decrypted = NULL;
-	if (path_table_present)
-		decrypted = path_query(&raw_data[table->key_ln]);
-	else
-		decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
+	/* Resolve the path (via the path table when present, else decrypt inline) */
+	char * decrypted = file_record_path(table, raw_data, datalen, key, subkey);
 	if (!decrypted)
 		return false;
 

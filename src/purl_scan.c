@@ -206,15 +206,9 @@ static bool handle_file_for_purls(struct ldb_table *table, uint8_t *key, uint8_t
 	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH))
 		return false;
 
-	/* Resolve the path the same way component_from_file does: from the path
-	   table when present, otherwise decrypt it inline. The record is a
-	   key_ln-byte url id followed by either the (encrypted) path or, when the
-	   path table is present, a path id used to look the path up. */
-	char *decrypted = NULL;
-	if (path_table_present)
-		decrypted = path_query(&raw_data[table->key_ln]);
-	else
-		decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
+	/* Resolve the path the same way component_from_file does: via the path
+	   table when present, otherwise decrypt it inline. */
+	char *decrypted = file_record_path(table, raw_data, datalen, key, subkey);
 	if (!decrypted)
 		return false;
 
