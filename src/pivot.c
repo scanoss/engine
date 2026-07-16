@@ -72,12 +72,17 @@ bool get_file_path_hash(struct ldb_table * table, uint8_t *key, uint8_t *subkey,
 	if (memcmp(get_path_url->url_key, data, table->key_ln))
 		return false;
 
-	char * decrypted = NULL;
+	char * decrypted = decrypt_data(data, datalen, *table, key, subkey);
 
-	if (path_table_present)
-		decrypted = path_query(&data[table->key_ln]);
-	else
-		decrypted = decrypt_data(data, datalen, *table, key, subkey);
+	/* With a path table the decrypted value is a path id (hex string): resolve
+	   the actual path through the path table. */
+	if (path_table_present && decrypted)
+	{
+		uint8_t path_id[oss_path.key_ln];
+		ldb_hex_to_bin(decrypted, oss_path.key_ln * 2, path_id);
+		free(decrypted);
+		decrypted = path_query(path_id);
+	}
 
 	get_path_url->paths = realloc(get_path_url->paths, (get_path_url->paths_index + 1) * sizeof(char*));
 	get_path_url->paths[get_path_url->paths_index] = decrypted;

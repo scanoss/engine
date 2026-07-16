@@ -75,6 +75,18 @@ static bool add_purl_from_urlid(struct ldb_table *table, uint8_t *key, uint8_t *
 	if (!decrypted)
 		return NULL;
 
+	/* With a path table the decrypted value is a path id (hex string): resolve
+	   the actual path through the path table. */
+	if (path_table_present)
+	{
+		uint8_t path_id[oss_path.key_ln];
+		ldb_hex_to_bin(decrypted, oss_path.key_ln * 2, path_id);
+		free(decrypted);
+		decrypted = path_query(path_id);
+		if (!decrypted)
+			return false;
+	}
+
 	component_list_t * component_list = (component_list_t*) ptr;
 	/* Copy data to memory */
 	uint8_t url_id[table->key_ln];

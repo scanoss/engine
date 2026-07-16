@@ -268,9 +268,24 @@ bool get_first_file(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint
 	if (!datalen) return false;
 
 	char * file_data = decrypt_data(data, datalen, *table, key, subkey);
-	
-	if (!file_data || !*file_data) 
+
+	if (!file_data || !*file_data)
 		return false;
+
+	/* With a path table the decrypted value is a path id (hex string): resolve
+	   the actual path so the file extension can be extracted from it. */
+	if (path_table_present)
+	{
+		uint8_t path_id[oss_path.key_ln];
+		ldb_hex_to_bin(file_data, oss_path.key_ln * 2, path_id);
+		free(file_data);
+		file_data = path_query(path_id);
+		if (!file_data || !*file_data)
+		{
+			free(file_data);
+			return false;
+		}
+	}
 
 	*(char *)ptr = 0;
 	char *ext = file_extension((char *)file_data);
