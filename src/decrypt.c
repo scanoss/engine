@@ -50,8 +50,10 @@ char * standalone_decrypt_data(uint8_t *data, uint32_t size, struct ldb_table ta
 {
 	char * msg = NULL;
   
-  if (!strcmp(table.table, "file"))
-    msg = strndup((char*) data + 16, size - 16);
+  /* The file record is [url_id (key_ln bytes)][path]; skip the url id using the
+     table's key length (8 for CRC64, 16 for MD5) instead of a hardcoded 16. */
+  if (!strcmp(table.table, "file") && size >= table.key_ln)
+    msg = strndup((char*) data + table.key_ln, size - table.key_ln);
   else
     msg = strndup((char*) data, size);
   
