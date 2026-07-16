@@ -196,7 +196,7 @@ bool collect_all_files(struct ldb_table *table, uint8_t *key, uint8_t *subkey, u
 	if (iteration >= fetch_max_files) return true;
 
 	/* Ignore path lengths over the limit */
-	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH)) return false;
 
 	/* Decrypt data */
 	char * decrypted = decrypt_data(raw_data, datalen, *table, key, subkey);
@@ -205,7 +205,7 @@ bool collect_all_files(struct ldb_table *table, uint8_t *key, uint8_t *subkey, u
 	/* Copy data to memory */
 	file_recordset *files = ptr;
 
-	memcpy(files[iteration].url_id, raw_data, MD5_LEN);
+	memcpy(files[iteration].url_id, raw_data, table->key_ln);
 	strncpy(files[iteration].path, decrypted, MAX_FILE_PATH);
 	free(decrypted);
 	
@@ -227,7 +227,7 @@ bool collect_all_files(struct ldb_table *table, uint8_t *key, uint8_t *subkey, u
 bool count_all_files(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *raw_data, uint32_t datalen, int iteration, void *ptr)
 {
 	/* Ignore path lengths over the limit */
-	if (!datalen || datalen >= (MD5_LEN + MAX_FILE_PATH)) return false;
+	if (!datalen || datalen >= (table->key_ln + MAX_FILE_PATH)) return false;
 
 	int * count = ptr;
 	*count = iteration;
