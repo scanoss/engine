@@ -49,6 +49,9 @@
 int matchmap_max_files = DEFAULT_MATCHMAP_FILES;
 
 #define MATCHMAP_ITEM_SIZE (matchmap_max_files * 2)
+/* Length of a WFP table record: file id (oss_file.key_ln) + 2 bytes line number.
+   Taken from the table definition at runtime, since the KB may be MD5 (18) or CRC64 (10) based */
+#define wfp_rec_ln() (oss_wfp.rec_ln > 0 ? oss_wfp.rec_ln : WFP_REC_LN)
 static bool get_all_file_ids(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *)ptr;
@@ -246,14 +249,14 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 
 		found = scan->matchmap_size;
 		/* Write MD5 */
-		memcpy(scan->matchmap[found].md5, md5, MD5_LEN);
+		memcpy(scan->matchmap[found].md5, md5, oss_file.key_ln);
 		scan->matchmap[found].ranges_number = 0;	
 	}
 
 	/* Search for the right range */
 
 	uint32_t from = 0;
-	uint16_t oss_line = uint16_read(md5 + MD5_LEN);
+	uint16_t oss_line = uint16_read(md5 + oss_file.key_ln);
 	bool range_found = false;
 
 	for (uint32_t t = 0; t < scan->matchmap[found].ranges_number; t++)
@@ -344,12 +347,13 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	{
 		/* Get all file IDs for given wfp */
 		map[i].md5_set = malloc(WFP_REC_LN * MATCHMAP_ITEM_SIZE);
+		/* WFP_REC_LN (18) is the largest possible record, so the buffer above always fits */
 		wfp_invert(scan->hashes[i], map[i].wfp);
 		//scanlog(" Add wfp %02x%02x%02x%02x to map\n",map[i].wfp[0], map[i].wfp[1],map[i].wfp[2],map[i].wfp[3]);
 		uint32_write(map[i].md5_set, 0);
 		map[i].line = scan->lines[i];
 		ldb_fetch_recordset(NULL, oss_wfp, map[i].wfp, false, get_all_file_ids, (void *)map[i].md5_set);
-		map[i].size = uint32_read(map[i].md5_set) / WFP_REC_LN;
+		map[i].size = uint32_read(map[i].md5_set) / wfp_rec_ln();
 		//Initializate the lines indirection when a wfp from a line has at least one md5 linked
 		if (map[i].size)
 			map_lines_indirection[scan->lines[i]] = 0;
@@ -487,7 +491,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 				/* Add each item to the matchmap*/
 				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index++)
 				{
-					int wfp_p = wfp_index * WFP_REC_LN;
+					int wfp_p = wfp_index * wfp_rec_ln();
 					/*Stop when a new sector appers*/
 					if (md5s[wfp_p] != sector)
 					{
@@ -545,7 +549,7 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 				/* Add each item to the matchmap*/
 				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index++)
 				{
-					int wfp_p = wfp_index * WFP_REC_LN;
+					int wfp_p = wfp_index * wfp_rec_ln();
 					int sector = md5s[wfp_p];
 					int sector_max = scan->snippet_min_hits;
 
