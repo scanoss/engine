@@ -66,8 +66,13 @@ void mz_get_key(struct ldb_table kb, char *key)
 	}
 	scanlog("MZ path: %s \n", mz_path);
 
+	/* The first two key bytes name the mz file, the remaining ones are the id
+	 * stored in each record (14 for MD5 keys, 6 for CRC64 ones). */
+	job.key_ln = kb.key_ln - 2;
+	int id_ln = MZ_ID_LN(&job);
+
 	/* Save path and key on job */
-	job.key = calloc(MD5_LEN, 1);
+	job.key = calloc(kb.key_ln, 1);
 	ldb_hex_to_bin(key, kb.key_ln * 2, job.key);
 
 	/* Read source mz file into memory */
@@ -80,7 +85,7 @@ void mz_get_key(struct ldb_table kb, char *key)
 	{
 		/* Position pointers */
 		job.id = job.mz + ptr;
-		uint8_t *file_ln = job.id + MZ_MD5;
+		uint8_t *file_ln = job.id + id_ln;
 		job.zdata = file_ln + MZ_SIZE;
 
 		/* Get compressed data size */
@@ -89,10 +94,10 @@ void mz_get_key(struct ldb_table kb, char *key)
 		job.zdata_ln = tmpln;
 
 		/* Get total mz record length */
-		job.ln = MZ_MD5 + MZ_SIZE + job.zdata_ln;
+		job.ln = id_ln + MZ_SIZE + job.zdata_ln;
 
 		/* Pass job to handler */
-		if (!memcmp(job.id, job.key + 2, MZ_MD5))
+		if (!memcmp(job.id, job.key + 2, id_ln))
 		{
 			if (kb.definitions & LDB_TABLE_DEFINITION_ENCRYPTED)
 			{
@@ -113,6 +118,9 @@ void mz_get_key(struct ldb_table kb, char *key)
 
 			job.data[job.data_ln] = 0;
 			printf("%s", job.data);
+			free(job.data);
+			free(job.key);
+			free(job.mz);
 			return;
 		}
 		/* Increment pointer */

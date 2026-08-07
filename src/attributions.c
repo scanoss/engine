@@ -94,7 +94,7 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 
 	/* Define mz_job values */
 	struct mz_job job;
-	sprintf(job.path, "%s/oss/notices", ldb_root);
+	sprintf(job.path, "%s/%s/%s", ldb_root, oss_notices.db, oss_notices.table);
 	memset(job.mz_id, 0, 2);
 	job.mz = NULL;
 	job.mz_ln = 0;
@@ -102,6 +102,9 @@ uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 	job.ln = 0;
 	job.md5[MD5_LEN] = 0;
 	job.key = NULL;
+	/* Record ids hold the key minus the two bytes used as mz file name */
+	job.key_ln = oss_notices.key_ln - 2;
+	job.hash_calc = oss_notices.hash_calc;
 
 	/* If file does not exist, exit with valid = false */
 	if (!mz_key_exists(&job, attr_id))
