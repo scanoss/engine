@@ -70,19 +70,30 @@ bool print_crypto_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *da
 
 	scanlog("Fetched cryptography %s (%s)\n", algorithm, strength);
 	
-	char result[MAX_FIELD_LN] = "\0";
-	int len = 0;
-	
-	if (!dup && *algorithm)
+	/* Skip duplicated/empty records. Nothing must be appended in that case,
+	   otherwise crytography_text becomes a non NULL empty string and the next
+	   valid record would be prefixed with a stray comma: "cryptography": [,{...}] */
+	if (dup || !*algorithm)
 	{
-		if (iteration) len += sprintf(result+len,",");
-		len += sprintf(result+len,"{");
-		len += sprintf(result+len,"\"algorithm\": \"%s\",", algorithm);
-		len += sprintf(result+len,"\"strength\": \"%s\"", strength);
-		len += sprintf(result+len,"}");
+		scanlog("Cryptography record ignored (%s), iteration %d\n", dup ? "duplicated" : "empty algorithm", iteration);
 	}
-	
-	str_cat_realloc(&match->crytography_text, result);
+	else
+	{
+		/* Big enough to hold the two extracted fields plus the json decoration */
+		char result[2 * MAX_JSON_VALUE_LEN + MAX_FIELD_LN];
+		/* A leading comma is only valid once an item has actually been emitted,
+		   the iteration number is not a reliable indicator since records can be skipped */
+		int len = snprintf(result, sizeof(result),
+				"%s{\"algorithm\": \"%s\",\"strength\": \"%s\"}",
+				(match->crytography_text && *match->crytography_text) ? "," : "",
+				algorithm, strength);
+
+		/* A truncated item would break the json, drop the record instead */
+		if (len < 0 || len >= (int) sizeof(result))
+			scanlog("Cryptography record ignored, json item too long (%d bytes)\n", len);
+		else
+			str_cat_realloc(&match->crytography_text, result);
+	}
 
 	free(algorithm);
 	free(strength);

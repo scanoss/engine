@@ -42,6 +42,7 @@
 #include "debug.h"
 
 const char *dependency_sources[] = {"component_declared"};
+#define DEPENDENCY_SOURCES_COUNT (sizeof(dependency_sources) / sizeof(dependency_sources[0]))
 
 /**
  * @brief print dependencies item data function pointer. Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
@@ -56,8 +57,14 @@ const char *dependency_sources[] = {"component_declared"};
  */
 bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
-	char *CSV = decrypt_data(data, datalen, oss_dependency, key, subkey);
 	component_data_t * comp = (component_data_t *) ptr;
+	if (!comp)
+	{
+		scanlog("Dependency record ignored: no component context\n");
+		return false;
+	}
+
+	char *CSV = decrypt_data(data, datalen, oss_dependency, key, subkey);
 	char *source = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *vendor = calloc(MAX_JSON_VALUE_LEN, 1);
 	char *component = calloc(MAX_JSON_VALUE_LEN, 1);
@@ -71,24 +78,42 @@ bool print_dependencies_item(uint8_t *key, uint8_t *subkey, int subkey_ln, uint8
 	free(CSV);
 
 	int src = atoi(source);
+	/* Keep the source index inside the known sources, a corrupted record must not
+	   be able to dereference outside of dependency_sources[] */
+	if (src < 0 || src >= (int) DEPENDENCY_SOURCES_COUNT)
+	{
+		scanlog("Dependency record with unknown source id (%d), defaulting to %s\n", src, dependency_sources[0]);
+		src = 0;
+	}
+
 	string_clean(vendor);
 	string_clean(component);
 	string_clean(version);
 
-	char result[MAX_FIELD_LN] = "\0";
-	int len = 0;
-	if (*vendor && *component)
+	/* Skip incomplete/corrupted records. Nothing must be appended in that case,
+	   otherwise dependency_text becomes a non NULL empty string and the next
+	   valid record would be prefixed with a stray comma: "dependencies": [,{...}] */
+	if (!*vendor || !*component)
 	{
-		if (comp->dependency_text) len += sprintf(result+len,",");
-		len += sprintf(result+len,"{");
-		len += sprintf(result+len,"\"vendor\": \"%s\",", vendor);
-		len += sprintf(result+len,"\"component\": \"%s\",", component);
-		len += sprintf(result+len,"\"version\": \"%s\",", json_remove_invalid_char(version));
-		len += sprintf(result+len,"\"source\": \"%s\"", dependency_sources[src]);
-		len += sprintf(result+len,"}");
+		scanlog("Dependency record ignored (empty vendor or component), iteration %d\n", iteration);
+	}
+	else
+	{
+		/* Big enough to hold the three extracted fields plus the json decoration */
+		char result[3 * MAX_JSON_VALUE_LEN + MAX_FIELD_LN];
+		/* A leading comma is only valid once an item has actually been emitted */
+		int len = snprintf(result, sizeof(result),
+				"%s{\"vendor\": \"%s\",\"component\": \"%s\",\"version\": \"%s\",\"source\": \"%s\"}",
+				(comp->dependency_text && *comp->dependency_text) ? "," : "",
+				vendor, component, json_remove_invalid_char(version), dependency_sources[src]);
+
+		/* A truncated item would break the json, drop the record instead */
+		if (len < 0 || len >= (int) sizeof(result))
+			scanlog("Dependency record ignored, json item too long (%d bytes)\n", len);
+		else
+			str_cat_realloc(&comp->dependency_text, result);
 	}
 
-	str_cat_realloc(&comp->dependency_text, result);
 	free(source);
 	free(vendor);
 	free(component);
@@ -113,7 +138,7 @@ int print_dependencies(component_data_t * comp)
 	uint32_t records = 0;
 
 	/* Pull URL dependencies */
-	records = ldb_fetch_recordset(NULL, oss_dependency, comp->url_md5, false, print_dependencies_item, NULL);
+	records = ldb_fetch_recordset(NULL, oss_dependency, comp->url_md5, false, print_dependencies_item, comp);
 	if (records)
 		scanlog("Dependency matches (%d) reported for url_hash\n", records);
 	else
