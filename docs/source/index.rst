@@ -8,6 +8,37 @@ With its open architecture that is easy to integrate into existing processes and
 
 By freeing developers to focus on writing great, compliant code that they and their team can completely trust, applications are finished earlier, quality is consistently higher, and development costs are dramatically lower.
 
+Release line: CRC64-compatible (6.x)
+------------------------------------
+
+This documentation covers the ``crc64`` release line of the SCANOSS engine, starting at v6.0.0-crc64.
+
+The engine is maintained as two parallel release lines:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Release line
+     - Branch
+     - Engine versions
+     - Tag format
+     - Requires LDB
+   * - Traditional
+     - ``main``
+     - 5.x
+     - ``v5.5.1``
+     - 4.x (``main`` branch of scanoss/ldb)
+   * - CRC64-compatible
+     - ``crc64``
+     - 6.x and later
+     - ``v6.0.0-crc64``
+     - 5.x-crc64 (``crc64`` branch of scanoss/ldb)
+
+Engine 6.x requires LDB 5.0.0-crc64 or later. Engine 5.x and earlier go with the traditional LDB line (4.x). The constraint
+comes from the LDB on-disk table layout and the library API surface, not from the choice of CRC64 vs MD5, so it applies in both
+hash modes. The requirement is enforced at build time (``scripts/check_ldb_version.sh``) and at run time
+(``ldb_compat_check()``), both driven from ``inc/ldb_compat.h``.
+
 Setup
 -----
 
@@ -18,7 +49,7 @@ The knowledge database is incrementally built using the SCANOSS mining tool (min
 Prerequisites
 -------------
 
-* LDB shared library. Installation instructions: `LDB README <https://github.com/scanoss/ldb/blob/master/README.md>`_. Minimum version 4.1.0.
+* LDB shared library, **5.0.0-crc64 or later**, built from the ``crc64`` branch. Installation instructions: `LDB README (crc64 branch) <https://github.com/scanoss/ldb/blob/crc64/README.md>`_.
 * libgcrypt-dev
 
 Installation
@@ -26,9 +57,8 @@ Installation
 
 The SCANOSS Engine is a command-line tool used for comparing a file or directory against the SCANOSS Knowledgebase. The source code can be downloaded and compiled as follows::
 
-    wget -O engine.zip https://github.com/scanoss/engine/archive/master.zip
-    unzip engine.zip
-    cd engine-master
+    git clone -b crc64 https://github.com/scanoss/engine
+    cd engine
     make
     sudo make install
     cd ..

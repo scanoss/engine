@@ -43,6 +43,7 @@
 #include "purl_scan.h"
 #include "scanoss.h"
 #include "util.h"
+#include "ldb_compat.h"
 #include "component.h"
 #include <decrypt.h>
 #include "hpsm.h"
@@ -76,7 +77,6 @@ int scan_ranking_threshold = -1; //disable by defaults
 bool scan_honor_file_extension = SNIPPETS_DEFAULT_HONOR_FILE_EXTENSION;
 
 bool lib_encoder_present = false;
-#define LDB_VER_MIN "4.1.0"
 
 void * lib_encoder_handle = NULL;
 bool lib_encoder_load()
@@ -123,17 +123,11 @@ bool lib_encoder_load()
 void initialize_ldb_tables(char *name)
 {
 	
-	char * ldb_ver = NULL;
-	ldb_version(&ldb_ver);
-	scanlog("ldb version: %s\n", ldb_ver);
-	
-	if (!ldb_ver || strcmp(ldb_ver, LDB_VER_MIN) < 0)
-	{
-		fprintf(stderr, "The current ldb version %s is too old, please upgrade to %s to proceed\n", ldb_ver, LDB_VER_MIN);
-		exit(EXIT_FAILURE);
-	}
-	free(ldb_ver);
-	
+	/* Validate the LDB actually loaded: libldb is linked dynamically, so it is
+	   not necessarily the build the engine was compiled against. The minimum is
+	   declared once, in inc/ldb_compat.h, and shared with the build time check. */
+	ldb_compat_check();
+
 	char oss_db_name[MAX_ARGLN];
 
 	if (name) strcpy(oss_db_name, name);
@@ -295,7 +289,7 @@ static struct option long_options[] = {
 	{"tolerance",         required_argument, 0, 'T'},
 	{"sbom",              required_argument, 0, 's'},
 	{"blacklist",         required_argument, 0, 'b'},
-	{"force-snippet",     required_argument, 0, 256}, /* Long option only, no short form */
+	{"force-snippet",     no_argument,       0, 256}, /* Long option only, no short form */
 	{"snippet-scan",      required_argument, 0, 'S'},
 	{"component",         required_argument, 0, 'c'},
 	{"key",               required_argument, 0, 'k'},
