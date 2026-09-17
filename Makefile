@@ -4,10 +4,11 @@ endif
 
 LDFLAGS+= -lldb -lm -lpthread -ldl
 
-LDB_CURRENT_VERSION := $(shell ldb -v | sed 's/ldb-//' | head -c 3)
-LDB_TARGET_VERSION := 4.2
-
-VERSION_IS_LESS := $(shell echo $(LDB_CURRENT_VERSION) \< $(LDB_TARGET_VERSION) | bc)
+# Minimum LDB requirement. The single source of truth is inc/ldb_compat.h, which
+# is also what the run time check in src/ldb_compat.c compiles against, so the
+# build time and run time checks cannot drift apart.
+LDB_COMPAT_HEADER := inc/ldb_compat.h
+LDB_VERSION_CHECK := scripts/check_ldb_version.sh
 
 CCFLAGS ?= -O -lz -Wall -Wno-unused-result -Wno-deprecated-declarations -g -Iinc -Iexternal/inc -D_LARGEFILE64_SOURCE -D_GNU_SOURCE
 SOURCES=$(wildcard src/*.c) $(wildcard src/**/*.c)  $(wildcard external/*.c) $(wildcard external/**/*.c)
@@ -16,19 +17,21 @@ TARGET=scanoss
 
 
 # Regla de prueba
-$(TARGET): $(OBJECTS)
-ifeq ($(VERSION_IS_LESS),1)
-	@echo "Current LDB version: $(LDB_CURRENT_VERSION) is too old, please update to the lastest version to continue."
-	exit 1
-endif
+$(TARGET): $(OBJECTS) | check_ldb_version
+	$(CC) -g -o $(TARGET) $(OBJECTS) $(LDFLAGS)
 
-	$(CC) -g -o $(TARGET) $^ $(LDFLAGS)
+# Verify the installed LDB before anything is compiled. Declared as an
+# order-only prerequisite of every object so it also runs under `make -j`, and
+# kept out of the plain `make clean` path.
+.PHONY: check_ldb_version
+check_ldb_version: $(LDB_VERSION_CHECK) $(LDB_COMPAT_HEADER)
+	@$(LDB_VERSION_CHECK) $(LDB_COMPAT_HEADER)
 
 VERSION=$(shell ./version.sh)
 
 .PHONY: scanoss
 
-%.o: %.c
+%.o: %.c | check_ldb_version
 	$(CC) $(CCFLAGS) -o $@ -c $<
 
 all: clean scanoss

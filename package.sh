@@ -53,7 +53,10 @@ if [ "$1" = "rpm" ] ; then
   cp scanoss dist/.rpmpkg/scanoss
   chmod +x ./dist/.rpmpkg/scanoss
   cp scripts/rpmpkg/scanoss.spec dist/.rpmpkg/scanoss.spec
-  sed -i 's/\ENGINE_VERSION/'"$2"'/g' dist/.rpmpkg/scanoss.spec
+  # RPM forbids '-' in the Version field, and the crc64 release line tags carry a
+  # "-crc64" suffix (e.g. v6.0.0-crc64). Translate it to '_' for the spec file.
+  rpm_version="${2//-/_}"
+  sed -i 's/\ENGINE_VERSION/'"$rpm_version"'/g' dist/.rpmpkg/scanoss.spec
   rpmbuild -ba --build-in-place --define "_topdir $(pwd)/dist/rpm" dist/.rpmpkg/scanoss.spec
 fi
 

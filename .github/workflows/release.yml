@@ -25,11 +25,22 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: scanoss/ldb
+          # This branch requires the CRC64 release line of LDB (5.x-crc64).
+          ref: crc64
           path: ldb
           fetch-depth: 0
-        
+
       - name: Build & Install ldb
-        run: cd ldb && git checkout $(git describe --tags $(git rev-list --tags --max-count=1)) && make all && sudo make install
+        # Pick the latest tag of the CRC64 line specifically. Both LDB release
+        # lines are tagged in the same repository, so "the newest tag" may well
+        # be a 4.x one from the traditional line.
+        run: |
+          cd ldb
+          ldb_tag=$(git tag --list 'v*-crc64' --sort=-v:refname | head -1)
+          if [ -z "$ldb_tag" ] ; then echo "No -crc64 tag found in scanoss/ldb" >&2 ; exit 1 ; fi
+          echo "Building LDB $ldb_tag"
+          git checkout "$ldb_tag"
+          make all && sudo make install
 
       - name: Build engine
         run: |

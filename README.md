@@ -8,21 +8,60 @@ With its open architecture that is easy to integrate into existing processes and
 
 By freeing developers to focus on writing great, compliant code that they and their team can completely trust, applications are finished earlier, quality is consistently higher, and development costs are dramatically lower.
 
+---
+
+## ⚠️ Release line: CRC64-compatible (6.x)
+
+**This branch (`crc64`) holds the CRC64-compatible release line of the SCANOSS engine, starting at v6.0.0-crc64.**
+
+The engine is maintained as two parallel release lines:
+
+| Release line | Branch | Engine versions | Tag format | Requires LDB |
+|---|---|---|---|---|
+| Traditional | `main` | 5.x | `v5.5.1` | 4.x (`main` branch of scanoss/ldb) |
+| CRC64-compatible | `crc64` | 6.x and later | `v6.0.0-crc64` | 5.x-crc64 (`crc64` branch of scanoss/ldb) |
+
+Releases of this line carry a mandatory `-crc64` suffix, since both lines are tagged in the same repository. `scanoss -v`
+reports it too, so a binary always identifies the line it came from.
+
+### LDB compatibility
+
+> **Engine 6.x requires LDB 5.0.0-crc64 or later, from the [`crc64` branch of scanoss/ldb](https://github.com/scanoss/ldb/tree/crc64).**
+>
+> Engine 5.x and earlier go with the traditional LDB line (4.x, `main` branch). The two combinations are not interchangeable in
+> either direction.
+
+This constraint applies in both hash modes: it comes from the LDB on-disk table layout and the library API surface, not from the
+choice of CRC64 vs MD5. An MD5 knowledge base is still perfectly usable with engine 6.x, as long as it was built with LDB 5.x-crc64.
+
+The requirement is enforced twice, because libldb is linked dynamically and the LDB present at build time is not necessarily the
+one loaded at run time:
+
+* at build time, by `scripts/check_ldb_version.sh`, which validates both the `ldb.h` the compiler resolves and the `libldb.so`
+  the linker resolves, and aborts `make` if either falls short;
+* at run time, by `ldb_compat_check()`, which validates the loaded library before any table is opened.
+
+Both derive the minimum from a single source of truth, [`inc/ldb_compat.h`](inc/ldb_compat.h).
+
+---
+
 # Setup 
 The Scanoss engine requires a Knowledge database installed for retrieving results. Scanoss use the SCANOSS LDB (Linked-list database) as a shared library. LDB Source code and installation guide can be found on https://github.com/scanoss/ldb
 The knowledge database is incrementally built using the SCANOSS mining tool (minr). It source code and installation guide can be found on https://github.com/scanoss/minr
 
 # Prerequisites
-- LDB shared library. Installation instructions: [https://github.com/scanoss/ldb/README.md](https://github.com/scanoss/ldb/blob/master/README.md). Minimum version 4.1.0.
+- LDB shared library, **5.0.0-crc64 or later**, built from the `crc64` branch. Installation instructions: [LDB README (crc64 branch)](https://github.com/scanoss/ldb/blob/crc64/README.md).
 - libgcrypt-dev
 # Installation
 
 The SCANOSS Engine is a command-line tool used for comparing a file or directory against the SCANOSS Knowledgebase. The source code can be downloaded and compiled as follows:
 
 ```
-wget -O engine.zip https://github.com/scanoss/engine/archive/master.zip
-unzip engine.zip
-cd engine-master
+git clone -b crc64 https://github.com/scanoss/ldb
+cd ldb && make all && sudo make install && cd ..
+
+git clone -b crc64 https://github.com/scanoss/engine
+cd engine
 make
 sudo make install
 cd ..
@@ -53,23 +92,30 @@ Syntax: scanoss [parameters] [TARGET]
 * `-T, --tolerance NUM` - Set snippet scanning tolerance percentage (default: 0.1)
 * `-r, --rank NUM` - Set maximum component rank accepted (default: 11)
 * `--max-files NUM` - Set maximum number of files to fetch during matching (default: 12000)
-* `--min-match-hits NUM` - Set minimum snippet ID hits for a match (default: 3, disables auto-adjust)
-* `--min-match-lines NUM` - Set minimum matched lines for a range (default: 10, disables auto-adjust)
+* `--min-snippet-hits NUM` - Set minimum snippet ID hits for a match (default: 3, disables auto-adjust)
+* `--min-snippet-lines NUM` - Set minimum matched lines for a range (default: 10, disables auto-adjust)
 * `--range-tolerance NUM` - Set max non-matched lines tolerated in a range (default: 5)
 * `--ignore-file-ext` - Ignore file extension during snippet matching (default: honor extension)
 
 ### SBOM and Filtering
 * `-s, --sbom FILE` - Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification
 * `-b, --blacklist FILE` - Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format)
-* `--force-snippet` - Same as "-b" but with forced snippet scanning
+* `--force-snippet` - Force snippet scanning (no full file matching). Takes no argument
 * `-c, --component HINT` - Add a component HINT to guide scan results
 
 ### Attribution and Licenses
 * `-a, --attribution FILE` - Show attribution notices for the provided SBOM.json file
 * `-k, --key KEY` - Show contents of the specified KEY file from MZ sources archive
+* `--max-file-content-size MB` - Set maximum file content size in MB printed by `-k` (default: 50)
 * `-l, --license LICENSE` - Display OSADL metadata for the given SPDX license ID
 * `-L, --full-license` - Enable full license report
 * `-F, --flags FLAGS` - Set engine scanning flags (see Engine Flags section below)
+
+### Knowledgebase Queries
+* `-P, --purl MD5` - Return the purls related to the given file MD5, with their url hashes and source paths (JSON)
+* `-C, --url-hash MD5` - Return the details of the component(s) identified by the given url hash, or a comma-separated list (JSON)
+* `-p, --project URL_HASH` - Reconstruct a project's file structure: list the md5 and path of each project file (requires the pivot table; the url hash may be MD5 or CRC64)
+* `-S, --snippet-scan WFP` - Snippet-only scan of a single-file WFP block, returning candidate file_md5s and their line ranges. Use `-S -` to read the WFP from stdin
 
 ### General Options
 * `-t, --test` - Run engine performance tests
@@ -116,7 +162,7 @@ scanoss --flags 12 DIRECTORY
 scanoss --sbom my_sbom.json TARGET
 
 # Scan with custom snippet matching parameters
-scanoss --min-match-hits 5 --min-match-lines 15 TARGET
+scanoss --min-snippet-hits 5 --min-snippet-lines 15 TARGET
 
 # Scan with custom range tolerance
 scanoss --range-tolerance 10 TARGET

@@ -3,7 +3,7 @@ name: build
 on:
   workflow_dispatch:
   pull_request:
-    branches: [ 'main' ]
+    branches: [ 'main', 'crc64' ]
   push:
     branches:        
       - '*' 
@@ -23,7 +23,9 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: scanoss/ldb
-        ref: master
+        # This branch requires the CRC64 release line of LDB (5.x-crc64).
+        # See inc/ldb_compat.h; building against ldb 'main' (4.x) is rejected.
+        ref: crc64
         path: ldb
 
     - name: Build LDB
