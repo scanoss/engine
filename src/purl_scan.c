@@ -402,8 +402,10 @@ static void component_scan_one(const char *url_hash_hex)
  * @brief Resolve and report the details of one or more components identified
  * by url hash (url_id). Accepts a single hash or a comma-separated list.
  *
- * Output is always an array under the "results" key, one entry per input
- * hash: {"results": [{"url_hash": "...", "component": {...}}, ...]}.
+ * Output is an array under the "results" key, one entry per input hash,
+ * followed by a "server" block with the engine and KB versions:
+ * {"results": [{"url_hash": "...", "component": {...}}, ...],
+ *  "server": {"version": "...", "kb_version": ...}}.
  * Invalid hashes are skipped with a stderr warning.
  *
  * @param url_hash_list comma-separated url hashes in hex (32 chars each)
@@ -452,7 +454,7 @@ int component_scan(char *url_hash_list)
 
 	if (!quiet)
 	{
-		printf("]}\n");
+		printf("], \"server\": {\"version\": \"%s\", \"kb_version\": %s}}\n", SCANOSS_VERSION, kb_version);
 		fflush(stdout);
 	}
 
