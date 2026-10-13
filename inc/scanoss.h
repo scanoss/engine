@@ -33,7 +33,7 @@
 #define WFP_LN 4
 #define WFP_REC_LN 18
 
-#define SCANOSS_VERSION "6.0.0-crc64"
+#define SCANOSS_VERSION "6.0.1-crc64"
 
 /* Log files */
 #define SCAN_LOG "/tmp/scanoss_scan.log"
