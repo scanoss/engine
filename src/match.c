@@ -91,7 +91,9 @@ match_data_t * match_data_copy(match_data_t * in)
     out->line_ranges = strdup(in->line_ranges);
     out->oss_ranges = strdup(in->oss_ranges);
     out->matched_percent = in->matched_percent;
+    out->lines_matched = in->lines_matched;
     out->snippet_ids = strdup(in->snippet_ids);
+    out->scan_ower = in->scan_ower; /* keep owning scan so downstream (e.g. print_json_match) can deref it */
     strcpy(out->source_md5, in->source_md5);
     return out;
 }
@@ -1099,6 +1101,18 @@ void match_select_best(scan_data_t *scan)
 	}
 }
 
+/**
+ * @brief Order multi-snippet matches by relevance (matched lines, descending).
+ *        Used to rank the per-region candidates so the most-covered block is the
+ *        principal match (match_index 0) and the rest follow as alternatives.
+ */
+bool more_lines_matched(match_data_t *a, match_data_t *b)
+{
+	if (!a)
+		return true;
+	return (b->lines_matched > a->lines_matched);
+}
+
 match_list_t *match_select_m_component_best(scan_data_t *scan)
 {
 	scanlog("<<<select_best_match_M: %d>>>>\n", scan->max_snippets_to_process);
@@ -1119,7 +1133,7 @@ match_list_t *match_select_m_component_best(scan_data_t *scan)
 		dup_match->component_list.match_ref = dup_match;
 		component_list_add(&dup_match->component_list, dup_comp, NULL, false);
 		dup_match->component_list.max_items = 1; // harcoded to show only fist component in report.
-		if (!match_list_add(final, dup_match, find_oldest_match, true))
+		if (!match_list_add(final, dup_match, more_lines_matched, true))
 			match_data_free(dup_match);
 	}
 
