@@ -542,8 +542,15 @@ static int snippet_scan_stream(FILE *in)
 			extract_csv(size_field, (char *) rec, 1, sizeof(size_field));
 			file_size = strtoull(size_field, NULL, 10);
 
+			/* snippet-scan is a multi-candidate discovery endpoint: it must expose
+			   every non-overlapping snippet region, not just the single best block.
+			   The engine-wide default (SCAN_MAX_SNIPPETS_DEFAULT = 1) would collapse
+			   biggest_snippet() to one group, so unless the caller explicitly raised
+			   -M we open it up to MAX_MULTIPLE_COMPONENTS groups. */
+			int snippet_max = scan_max_snippets > 1 ? scan_max_snippets : MAX_MULTIPLE_COMPONENTS;
+
 			scan = scan_data_init(file_path,
-			                      scan_max_snippets,
+			                      snippet_max,
 			                      scan_max_components,
 			                      scan_adjust_tolerance,
 			                      scan_ranking_threshold,

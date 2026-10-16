@@ -158,28 +158,41 @@ void biggest_snippet(scan_data_t *scan)
 			match_new->lines_matched = matched_lines;
 			//match_new->hits = hits;
 
-			do /*Check if there is already a list for this line ranges */
+			/* Place the match in the list of the snippet region it belongs to.
+			 * First look for an existing list whose ranges intersect this match
+			 * (same region -> alternative candidate). If none intersects, open a
+			 * new list for this region while there is room; otherwise fall back to
+			 * the last list. */
+			bool assigned = false;
+			for (i = 0; i < scan->matches_list_array_index; i++)
 			{
-				if (!scan->matches_list_array[scan->matches_list_array_index] && scan->matches_list_array_index < scan->max_snippets_to_process)
+				if (match_list_eval(scan->matches_list_array[i], match_new, ranges_intersection))
 				{
-					scan->matches_list_array[scan->matches_list_array_index] = match_list_init(true, 1);	/*create the list if it doesnt exist*/
+					if (!match_list_add(scan->matches_list_array[i], match_new, hit_test, true))
+						match_data_free(match_new);
+					assigned = true;
+					break;
+				}
+			}
+
+			if (!assigned)
+			{
+				if (scan->matches_list_array_index < scan->max_snippets_to_process)
+				{
+					/* New non-overlapping region: create its own list and add the match there */
+					int new_index = scan->matches_list_array_index;
+					scan->matches_list_array[new_index] = match_list_init(true, 1);
 					scan->matches_list_array_index++;
-					if(!match_list_add(scan->matches_list_array[i], match_new, hit_test, true))
-					{
-						match_data_free(match_new); 
-					}
-					break;
+					if (!match_list_add(scan->matches_list_array[new_index], match_new, hit_test, true))
+						match_data_free(match_new);
 				}
-				if (match_list_eval(scan->matches_list_array[i], match_new, ranges_intersection) || i == scan->max_snippets_to_process -1)
+				else
 				{
-					if(!match_list_add(scan->matches_list_array[i], match_new, hit_test, true))
-					{
-						match_data_free(match_new); 
-					}
-					break;
+					/* No room left for new regions: force into the last list */
+					if (!match_list_add(scan->matches_list_array[scan->max_snippets_to_process - 1], match_new, hit_test, true))
+						match_data_free(match_new);
 				}
-				i++;
-			} while(i < scan->matches_list_array_index); /*Check if there is already a list for this line ranges */
+			}
 		}
 	}
 	/*just for loging*/
