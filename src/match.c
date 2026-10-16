@@ -85,6 +85,8 @@ void match_data_free(match_data_t *data)
 match_data_t * match_data_copy(match_data_t * in)
 {
     match_data_t * out = calloc(1, sizeof(*out));
+    out->scan_ower = in->scan_ower;
+    out->lines_matched = in->lines_matched;
     memcpy(out->file_md5,in->file_md5,MD5_LEN);
     out->hits = in->hits;
     out->type = in->type;
