@@ -46,6 +46,13 @@
 
 bool full_license_report = false;
 
+/* normalize_license() may replace a license string in place with its canonical
+   SPDX id (e.g. "Apache" -> "Apache-2.0"), which can be LONGER than the original
+   text. License buffers must therefore be sized to hold the longest canonical id
+   in license_normalization[] (currently "LGPL-3.0-or-later", 17 chars) even when
+   the matched text is shorter. 32 leaves headroom for future table entries. */
+#define MAX_NORMALIZED_LICENSE_LN 32
+
 struct license_type
 {
 	char * text;
@@ -108,9 +115,13 @@ bool license_add_to_list(struct license_list * ptr, char * license, int license_
 	ptr->licenses[ptr->count].text = NULL;
 	ptr->licenses[ptr->count].id = 0;
 
-	/* Allocate with extra padding for CRC32C hardware reads (8-byte blocks) */
+	/* Allocate with extra padding for CRC32C hardware reads (8-byte blocks).
+	   Reserve at least MAX_NORMALIZED_LICENSE_LN so normalize_license() can
+	   replace the text in place with a longer canonical SPDX id without
+	   overflowing the buffer. */
 	size_t len = strlen(license);
-	size_t padded_len = ((len + 8) / 8) * 8;  /* Round up to next 8-byte boundary */
+	size_t capacity = len < MAX_NORMALIZED_LICENSE_LN ? MAX_NORMALIZED_LICENSE_LN : len;
+	size_t padded_len = ((capacity + 8) / 8) * 8;  /* Round up to next 8-byte boundary */
 	ptr->licenses[ptr->count].text = calloc(1, padded_len);
 	if (!ptr->licenses[ptr->count].text)
 		return false;
@@ -199,7 +210,10 @@ void normalize_license(char *license)
 		{
 			if (stricmp(license, token))
 			{
-				strcpy(license, spdx);
+				/* Defensive: never write a canonical id that would not fit the
+				   buffers reserved by license_add_to_list(). */
+				if (spdx && strlen(spdx) < MAX_NORMALIZED_LICENSE_LN)
+					strcpy(license, spdx);
 				return;
 			}
 			token = strtok(NULL, ",");
