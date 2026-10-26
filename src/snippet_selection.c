@@ -158,28 +158,20 @@ void biggest_snippet(scan_data_t *scan)
 			match_new->lines_matched = matched_lines;
 			//match_new->hits = hits;
 
-			do /*Check if there is already a list for this line ranges */
+			/* Add the match to the first list whose line ranges intersect it */
+			for (i = 0; i < scan->matches_list_array_index; i++)
+				if (match_list_eval(scan->matches_list_array[i], match_new, ranges_intersection))
+					break;
+			/* No list for these line ranges: open a new one while there is room, else use the last one */
+			if (i == scan->matches_list_array_index)
 			{
-				if (!scan->matches_list_array[scan->matches_list_array_index] && scan->matches_list_array_index < scan->max_snippets_to_process)
-				{
-					scan->matches_list_array[scan->matches_list_array_index] = match_list_init(true, 1);	/*create the list if it doesnt exist*/
-					scan->matches_list_array_index++;
-					if(!match_list_add(scan->matches_list_array[i], match_new, hit_test, true))
-					{
-						match_data_free(match_new); 
-					}
-					break;
-				}
-				if (match_list_eval(scan->matches_list_array[i], match_new, ranges_intersection) || i == scan->max_snippets_to_process -1)
-				{
-					if(!match_list_add(scan->matches_list_array[i], match_new, hit_test, true))
-					{
-						match_data_free(match_new); 
-					}
-					break;
-				}
-				i++;
-			} while(i < scan->matches_list_array_index); /*Check if there is already a list for this line ranges */
+				if (scan->matches_list_array_index < scan->max_snippets_to_process)
+					scan->matches_list_array[scan->matches_list_array_index++] = match_list_init(true, 1);
+				else
+					i = scan->matches_list_array_index - 1;
+			}
+			if (!match_list_add(scan->matches_list_array[i], match_new, hit_test, true))
+				match_data_free(match_new);
 		}
 	}
 	/*just for loging*/
