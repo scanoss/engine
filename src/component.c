@@ -34,6 +34,7 @@
 #include "util.h"
 #include "debug.h"
 #include "query.h"
+#include "url.h"
 
 /**
  * @brief Free component object
@@ -118,6 +119,33 @@ component_data_t *component_data_copy(component_data_t *in)
 }
 
 /**
+ * @brief Return true if the given purl is listed in ignore_components (-b parameter)
+ * @param purl purl string to test
+ */
+bool ignored_purl(const char *purl)
+{
+	if (!ignore_components || !purl)
+		return false;
+
+	/* Travel ignore_components looking for a purl rule matching this purl */
+	for (int i = 0; i < MAX_SBOM_ITEMS; i++)
+	{
+		char *dvendor = ignore_components[i].vendor;
+		char *dcomponent = ignore_components[i].component;
+		char *dpurl = ignore_components[i].purl;
+
+		/* Exit if reached the end */
+		if (!dcomponent && !dvendor && !dpurl)
+			break;
+
+		if (dpurl && !strcmp(purl, dpurl))
+			return true;
+	}
+
+	return false;
+}
+
+/**
  * @brief Return true if asset is found in ignore_components (-b parameter)
  * @param url_record pointer to url record
  */
@@ -178,6 +206,41 @@ bool ignored_asset_match(uint8_t *url_record)
 	if (found)
 		scanlog("Component ignored: %s\n", url_record);
 	return found;
+}
+
+/**
+ * @brief Return true if a component relates to an ignored purl (-b parameter).
+ *
+ * ignored_asset_match() only compares the single primary purl stored in the url
+ * record (field 6). A project may be published under several purls (e.g. a
+ * github repo mirrored as a golang module), and those sibling identities are
+ * only materialised later by fetch_related_purls(). This helper resolves the
+ * related purls and checks every purl of the component against the ignore list,
+ * so ignoring any one of a project's purls suppresses it regardless of which
+ * identity ended up as the primary one.
+ *
+ * @param component component to test
+ */
+bool component_ignored_by_purl(component_data_t *component)
+{
+	if (!ignore_components || !component)
+		return false;
+
+	/* Resolve sibling purls so we match the project under any of its identities */
+	fetch_related_purls(component);
+
+	for (int i = 0; i < MAX_PURLS; i++)
+	{
+		if (!component->purls[i])
+			break;
+		if (ignored_purl(component->purls[i]))
+		{
+			scanlog("Component ignored by purl %s\n", component->purls[i]);
+			return true;
+		}
+	}
+
+	return false;
 }
 
 char * look_for_version(char *in)
