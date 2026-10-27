@@ -836,6 +836,13 @@ bool load_matches(match_data_t *match)
 	records = ldb_fetch_recordset(NULL, oss_file, match->file_md5, false, component_from_file,(void *)&match->component_list);
 	scanlog("Found %d file entries\n", records);
 
+	/* Drop components whose primary OR related purl is in the ignore list (-b).
+	   handle_url_record()/get_oldest_url() only compare the url record's primary
+	   purl, so a project indexed under several purls would otherwise survive under
+	   its other identity and the ignored purl would resurface as a related purl. */
+	if (ignore_components)
+		component_list_remove_ignored(&match->component_list);
+
 	/* Final optimization based on the available information for a component */
 	/* If two components have the date date, select the one with more available information */
 	

@@ -24,6 +24,38 @@ void component_list_destroy(component_list_t *list)
     }
 }
 
+int component_list_remove_ignored(component_list_t *list)
+{
+    if (!list || !ignore_components)
+        return 0;
+
+    int removed = 0;
+    struct comp_entry *item = list->headp.lh_first;
+    while (item != NULL)
+    {
+        struct comp_entry *next = item->entries.le_next;
+
+        if (component_ignored_by_purl(item->component))
+        {
+            component_data_free(item->component);
+            LIST_REMOVE(item, entries);
+            free(item);
+            list->items--;
+            removed++;
+        }
+        item = next;
+    }
+
+    /* Structural changes invalidate the cached tail pointers kept for inserts */
+    list->last_element = NULL;
+    list->last_element_aux = NULL;
+
+    if (removed)
+        scanlog("Removed %d component(s) matching the ignore list\n", removed);
+
+    return removed;
+}
+
 void component_list_init(component_list_t *comp_list, int max_items)
 {
     LIST_INIT(&comp_list->headp); /* Initialize the list. */

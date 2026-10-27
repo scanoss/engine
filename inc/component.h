@@ -108,4 +108,6 @@ int asset_declared(component_data_t * comp);
 void component_item_free(component_item * comp_item);
 void fill_component_path(component_data_t *component, char *file_path);
 char * look_for_version(char *in);
+bool ignored_purl(const char *purl);
+bool component_ignored_by_purl(component_data_t *component);
 #endif
