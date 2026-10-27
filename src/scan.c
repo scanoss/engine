@@ -98,6 +98,49 @@ void scan_data_free(scan_data_t * scan)
 	scan = NULL;
 }
 
+/** @brief Discards the scan RESULTS (matches, matchmap, best match) while
+    keeping the scan identity, configuration and the reusable hash/line buffers,
+    so the same scan can be re-run over the same file (e.g. a snippet second
+    pass). Mirrors the result-freeing half of scan_data_free().
+    @param scan Scan data */
+static void scan_data_reset(scan_data_t *scan)
+{
+	/* Clear the slots too: biggest_snippet() only creates a list when the slot is NULL */
+	for (int i = 0; i < scan->matches_list_array_index; i++)
+	{
+		match_list_destroy(scan->matches_list_array[i]);
+		scan->matches_list_array[i] = NULL;
+	}
+	scan->matches_list_array_index = 0;
+	memset(scan->matches_list_array_indirection, 0, sizeof(scan->matches_list_array_indirection));
+
+	for (int i = 0; i < scan->matchmap_size; i++)
+		free(scan->matchmap[i].range);
+	free(scan->matchmap);
+	scan->matchmap = NULL;
+	scan->matchmap_size = 0;
+	memset(scan->matchmap_rank_by_sector, 0, sizeof(scan->matchmap_rank_by_sector));
+
+	scan->match_ptr = NULL;
+	scan->best_match = NULL;
+	scan->match_type = MATCH_NONE;
+	scan->printed_succed = false;
+}
+
+/** @brief True if the scan produced at least one match that still has
+    components to report (i.e. it would not be rendered as "none").
+    @param scan Scan data */
+static bool scan_has_reportable_match(scan_data_t *scan)
+{
+	for (int i = 0; i < scan->matches_list_array_index; i++)
+	{
+		match_list_t *list = scan->matches_list_array[i];
+		if (list && list->best_match && list->best_match->component_list.items > 0)
+			return true;
+	}
+	return false;
+}
+
 /** @brief Returns true if md5 is the md5sum for NULL
     @param md5 File ID (md5)
     @result Empty file result
@@ -486,53 +529,83 @@ void ldb_scan(scan_data_t *scan)
 	strcpy(scan->source_md5, tmp_md5_hex);
 	free(tmp_md5_hex);
 
-	/* Look for full file match or url match in ldb */
-	scan->match_type = ldb_scan_file(scan);
+	/* A full-file match whose candidates are all removed by the ignore list
+	   collapses to "none". When that happens we discard the result and retry
+	   once as a snippet scan over the same file, honoring the same ignore/
+	   include lists (force_snippets drives that second pass). */
+	bool force_snippets = false;
+	bool retried = false;
 
-	/* If no match, scan snippets */
-	if (scan->match_type == MATCH_NONE || force_snippet_scan)
+	while (true)
 	{
-		/* Load snippets into scan data */
-		if (!scan->preload)
+		/* Look for full file match or url match in ldb (skipped when forcing snippets) */
+		scan->match_type = force_snippets ? MATCH_NONE : ldb_scan_file(scan);
+
+		/* If no match (or snippets are forced), scan snippets */
+		if (scan->match_type == MATCH_NONE || force_snippet_scan || force_snippets)
 		{
-			/* Read file into memory */
-			char *src = calloc(MAX_FILE_SIZE, 1);
-			if (file_size < MAX_FILE_SIZE)
-				read_file(src, scan->file_path, 0);
-
-			/* If HPSM is enable calculate the crc8 line hash calling the shared lib */
-			if (hpsm_enabled)
+			/* Load snippets into scan data */
+			if (!scan->preload)
 			{
-				char *aux = hpsm_hash_file_contents(src);
-				if (aux)
+				/* Read file into memory */
+				char *src = calloc(MAX_FILE_SIZE, 1);
+				if (file_size < MAX_FILE_SIZE)
+					read_file(src, scan->file_path, 0);
+
+				/* If HPSM is enable calculate the crc8 line hash calling the shared lib */
+				if (hpsm_enabled)
 				{
-					hpsm_crc_lines = strdup(&aux[5]);
-					scanlog("HPSM lines CRC: %s\n", hpsm_crc_lines);
-					free(aux);
+					char *aux = hpsm_hash_file_contents(src);
+					if (aux)
+					{
+						hpsm_crc_lines = strdup(&aux[5]);
+						scanlog("HPSM lines CRC: %s\n", hpsm_crc_lines);
+						free(aux);
+					}
 				}
+				/* Determine if file is to skip snippet search */
+				if (!skip_snippets(src, file_size))
+				{ /* Load wfps into scan structure */
+					scan->hash_count = winnowing(src, scan->hashes, scan->lines, MAX_FILE_SIZE);
+					if (scan->hash_count)
+						scan->total_lines = scan->lines[scan->hash_count - 1];
+				}
+				free(src);
 			}
-			/* Determine if file is to skip snippet search */
-			if (!skip_snippets(src, file_size))
-			{ /* Load wfps into scan structure */
-				scan->hash_count = winnowing(src, scan->hashes, scan->lines, MAX_FILE_SIZE);
-				if (scan->hash_count)
-					scan->total_lines = scan->lines[scan->hash_count - 1];
-			}
-			free(src);
+			else if (scan->hash_count)
+				scan->total_lines = scan->lines[scan->hash_count - 1];
+
+			/* Perform snippet scan */
+			if (scan->total_lines)
+				scan->match_type = ldb_scan_snippets(scan);
+
+			else
+				scanlog("File skipped\n");
 		}
-		else if (scan->hash_count)
-			scan->total_lines = scan->lines[scan->hash_count - 1];
 
-		/* Perform snippet scan */
-		if (scan->total_lines)
-			scan->match_type = ldb_scan_snippets(scan);
+		/* Type found by this pass, captured before compile_matches, which resets
+		   match_type to MATCH_NONE when the selected match has no components. */
+		match_t scanned_type = scan->match_type;
 
-		else
-			scanlog("File skipped\n");
+		/* Compile matches */
+		compile_matches(scan);
+
+		/* Retry once as a snippet scan if a full-file match was entirely
+		   filtered out by the ignore list (otherwise it would print "none"). */
+		if (!retried && !force_snippets
+			&& scanned_type == MATCH_FILE
+			&& ignore_components
+			&& !scan_has_reportable_match(scan))
+		{
+			scanlog("Full-file match filtered out by ignore list; retrying as snippet scan\n");
+			scan_data_reset(scan);
+			force_snippets = true;
+			retried = true;
+			continue;
+		}
+
+		break;
 	}
-
-	/* Compile matches */
-	compile_matches(scan);
 
 	if (!scan->best_match)
 		scanlog("No best match\n");
