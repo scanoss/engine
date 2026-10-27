@@ -105,8 +105,12 @@ void scan_data_free(scan_data_t * scan)
     @param scan Scan data */
 static void scan_data_reset(scan_data_t *scan)
 {
+	/* Clear the slots too: biggest_snippet() only creates a list when the slot is NULL */
 	for (int i = 0; i < scan->matches_list_array_index; i++)
+	{
 		match_list_destroy(scan->matches_list_array[i]);
+		scan->matches_list_array[i] = NULL;
+	}
 	scan->matches_list_array_index = 0;
 	memset(scan->matches_list_array_indirection, 0, sizeof(scan->matches_list_array_indirection));
 

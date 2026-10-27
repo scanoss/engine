@@ -55,9 +55,9 @@ scan() {
 		printf ']}'
 	} > "$ign"
 	if [ "$#" -eq 0 ]; then
-		"$BIN" -n "$KB" -M 9 -w "$WFP" 2>/dev/null
+		"$BIN" -n "$KB" -w "$WFP" 2>/dev/null
 	else
-		"$BIN" -n "$KB" -M 9 -b "$ign" -w "$WFP" 2>/dev/null
+		"$BIN" -n "$KB" -b "$ign" -w "$WFP" 2>/dev/null
 	fi
 }
 
