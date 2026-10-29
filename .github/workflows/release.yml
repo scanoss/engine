@@ -56,7 +56,7 @@ jobs:
           echo "Produced artifact at ${PWD}/artifacts/scanoss"
 
       - name: 'Tar files'
-        run: tar czvf scanoss-engine-${{ github.ref_name }}-linux-amd64.tar.gz -C ./artifacts/ .
+        run: tar czvf "scanoss-engine-${GITHUB_REF_NAME//\//-}-linux-amd64.tar.gz" -C ./artifacts/ .
 
       - name: Prepare deb package
         id: build_deb
