@@ -2,6 +2,7 @@
 name: "tagged-release"
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*.*.*"
@@ -28,12 +29,27 @@ jobs:
           path: ldb
           fetch-depth: 0
         
-      - name: Build & Install ldb
-        run: cd ldb && git checkout $(git describe --tags $(git rev-list --tags --max-count=1)) && make all && sudo make install
+      - name: Checkout latest ldb release
+        run: cd ldb && git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
 
-      - name: Build engine
+      # Built on EL8 (glibc 2.28) so the same binary, .deb and .rpm run on
+      # Debian 11+, Ubuntu 22.04+, RHEL/Rocky/Alma 8+ and Fedora. ldb is
+      # installed in the container because the engine links against libldb.
+      - name: Build ldb & engine (EL8, glibc 2.28 baseline)
         run: |
-          make all
+          docker run --rm -v "$PWD:/src" -w /src -e SUDO_USER=root rockylinux:8 bash -c '
+            dnf install -y -q gcc make bc findutils zlib-devel libgcrypt-devel &&
+            (cd ldb && make all && make install) && ldconfig && make all'
+          sudo chown -R "$(id -u):$(id -g)" .
+
+      - name: Check glibc baseline
+        run: |
+          max=$(objdump -T scanoss | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -uV | tail -1)
+          echo "scanoss requires glibc $max"
+          [ "$(printf '%s\n' "$max" 2.28 | sort -V | tail -1)" = "2.28" ] || { echo "scanoss requires glibc > 2.28"; exit 1; }
+
+      - name: Collect artifacts
+        run: |
           mkdir -p ./artifacts
           cp scanoss ./artifacts/scanoss
           cp LICENSES/GPL-2.0-only.txt ./artifacts/LICENSE
@@ -44,13 +60,14 @@ jobs:
 
       - name: Prepare deb package
         id: build_deb
+        # package.sh directly: make prepare_*_package would rebuild on the runner
         run: |
-          make prepare_deb_package
+          ./package.sh deb "$(./version.sh)"
           echo "debpkg_file_name=$(ls *.deb)" >> $GITHUB_OUTPUT
 
       - name: Prepare rpm package
         run: |
-          make prepare_rpm_package
+          ./package.sh rpm "$(./version.sh)"
           echo "rpmpkg_file_name=$(ls dist/rpm/RPMS/x86_64/*.rpm)" >> $GITHUB_OUTPUT
 
       - name: Show the artifacts
@@ -61,6 +78,18 @@ jobs:
           ls -al "${PWD}"
           ls -al "${PWD}/dist/rpm/RPMS/x86_64/"
       
+      # Manual runs (workflow_dispatch) don't create a release: keep the packages
+      # as workflow artifacts so they can be tested
+      - name: Upload packages
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            ./*.tar.gz
+            ./*.deb
+            ./dist/rpm/RPMS/x86_64/*.rpm
+
       - name: Create Draft Release ${{ github.ref_type }} - ${{ github.ref_name }}
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v1
