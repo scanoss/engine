@@ -33,6 +33,7 @@
 #include "util.h"
 #include "versions.h"
 #include "winnowing.h"
+#include "wfp2.h"
 #include "hpsm.h"
 #include "match_list.h"
 #include "report.h"
@@ -61,6 +62,10 @@ scan_data_t * scan_data_init(char *target, int max_snippets, int max_components,
 	scan->file_size = malloc(32);
 	scan->hashes = calloc(MAX_FILE_SIZE,1);
 	scan->lines  = malloc(MAX_FILE_SIZE);
+	/* wfp2 hashes are only allocated lazily when a wfp2= block is parsed */
+	scan->hashes2 = NULL;
+	scan->lines2  = NULL;
+	scan->hash_count2 = 0;
 	scan->match_type = MATCH_NONE;
 	scan->component_ranking_threshold = component_ranking_threshold;
 	scan->snippet_adjust_tolerance = adjust_tolerance;
@@ -88,6 +93,8 @@ void scan_data_free(scan_data_t * scan)
 	free(scan->file_size);
 	free(scan->hashes);
 	free(scan->lines);
+	free(scan->hashes2);
+	free(scan->lines2);
 
 	for (int i = 0; i < scan->matchmap_size; i++)
 	{
@@ -267,7 +274,11 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 	size_t len = 0;
 	ssize_t lineln;
 	uint8_t *rec = NULL;
-	
+	/* When true, the snippet lines being read belong to the wfp2 (token-aware)
+	   block of the current file. Toggled on by a "wfp2=" marker line and reset
+	   on every new "file=" line. */
+	bool in_wfp2 = false;
+
 	scanlog("--- WFP SCAN ---\n");
 	/* Open WFP file */
 	FILE *fp = fopen(path, "r");
@@ -290,7 +301,17 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 		bool is_fh2 = (memcmp(line, "fh2=", 4) == 0);
 		bool is_hpsm = (memcmp(line, "hpsm=", 5) == 0);
 		bool is_bin = (memcmp(line, "bin=", 4) == 0);
-		bool is_wfp = (!is_file && !is_hpsm && !is_bin && !is_fh2);
+		bool is_wfp2_marker = (memcmp(line, "wfp2=", 5) == 0);
+		bool is_wfp = (!is_file && !is_hpsm && !is_bin && !is_fh2 && !is_wfp2_marker);
+
+		/* wfp2 block delimiter: every snippet line after this (until the next
+		   "file=") is a token-aware wfp2 fingerprint and must be matched against
+		   the wfp2 table, not the classic wfp table. */
+		if (is_wfp2_marker)
+		{
+			in_wfp2 = true;
+			continue;
+		}
 
 		if (is_hpsm) 
 		{
@@ -316,6 +337,9 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 		/* Parse file information with format: file=MD5(32),file_size,file_path */
 		if (is_file)
 		{
+			/* Each file starts in classic wfp mode until a wfp2= marker appears */
+			in_wfp2 = false;
+
 			/* A scan data was fullfilled and is ready to be scanned */
 			if (scan)
 				ldb_scan(scan);
@@ -360,35 +384,60 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 		/* Save hash/es to memory. Parse file information with format:
 			 linenr=wfp(6)[,wfp(6)]+ */
 
-		if (is_wfp && scan && (scan->hash_count < MAX_HASHES_READ))
+		if (is_wfp && scan)
 		{
-			/* Split string by the equal and commas */
-			int line_ln = strlen(line);
-			for (int e = 0; e < line_ln; e++) if (line[e]=='=' || line[e]==',') line[e] = 0;
-
-			/* Extract line number */
-			int line_nr = atoi(line);
-
-			/* Move pointer to the first hash */
-			char *hexhash = line + strlen(line) + 1;
-
-			/* Save all hashes in the present line */
-			while (*hexhash) 
+			/* Route the hashes to the classic wfp buffers or, when inside a
+			   wfp2= block, to the wfp2 buffers (allocated lazily). */
+			uint32_t *dst_hashes;
+			uint32_t *dst_lines;
+			uint32_t *dst_count;
+			if (in_wfp2)
 			{
+				if (!scan->hashes2)
+				{
+					scan->hashes2 = calloc(MAX_FILE_SIZE, 1);
+					scan->lines2  = malloc(MAX_FILE_SIZE);
+				}
+				dst_hashes = scan->hashes2;
+				dst_lines  = scan->lines2;
+				dst_count  = &scan->hash_count2;
+			}
+			else
+			{
+				dst_hashes = scan->hashes;
+				dst_lines  = scan->lines;
+				dst_count  = &scan->hash_count;
+			}
 
-				/* Convert hash to binary */
-				ldb_hex_to_bin(hexhash, 8, (uint8_t *)&scan->hashes[scan->hash_count]);
-				uint32_reverse((uint8_t *)&scan->hashes[scan->hash_count]);
+			if (*dst_count < MAX_HASHES_READ)
+			{
+				/* Split string by the equal and commas */
+				int line_ln = strlen(line);
+				for (int e = 0; e < line_ln; e++) if (line[e]=='=' || line[e]==',') line[e] = 0;
 
-				/* Save line number */
-				scan->lines[scan->hash_count] = line_nr;
+				/* Extract line number */
+				int line_nr = atoi(line);
 
-				/* Move pointer to the next hash */
-				hexhash += strlen(hexhash) + 1;
+				/* Move pointer to the first hash */
+				char *hexhash = line + strlen(line) + 1;
 
-				scan->hash_count++;
-				if (scan->hash_count > MAX_HASHES_READ)
-					break;
+				/* Save all hashes in the present line */
+				while (*hexhash)
+				{
+					/* Convert hash to binary */
+					ldb_hex_to_bin(hexhash, 8, (uint8_t *)&dst_hashes[*dst_count]);
+					uint32_reverse((uint8_t *)&dst_hashes[*dst_count]);
+
+					/* Save line number */
+					dst_lines[*dst_count] = line_nr;
+
+					/* Move pointer to the next hash */
+					hexhash += strlen(hexhash) + 1;
+
+					(*dst_count)++;
+					if (*dst_count > MAX_HASHES_READ)
+						break;
+				}
 			}
 		}
 	}
@@ -475,9 +524,9 @@ void output_matches_json(scan_data_t *scan)
 /**
  * @brief Scans a file and returns JSON matches via STDOUT.
  * scan structure can be already preloaded (.wfp scan)
- * otherwise, it will be loaded here (scanning a physical file) 
- * 
- * @param scan 
+ * otherwise, it will be loaded here (scanning a physical file)
+ *
+ * @param scan
  */
 void ldb_scan(scan_data_t *scan)
 {
@@ -561,16 +610,29 @@ void ldb_scan(scan_data_t *scan)
 					scan->hash_count = winnowing(src, scan->hashes, scan->lines, MAX_FILE_SIZE);
 					if (scan->hash_count)
 						scan->total_lines = scan->lines[scan->hash_count - 1];
+
+					/* When the wfp2 table is available, also compute the file's
+					   token-aware wfp2 fingerprints so the wfp2 snippet pass can
+					   run (fallback by default, additive with --force-wfp2). */
+					if (wfp2_present)
+					{
+						if (!scan->hashes2)
+						{
+							scan->hashes2 = calloc(MAX_FILE_SIZE, 1);
+							scan->lines2  = malloc(MAX_FILE_SIZE);
+						}
+						scan->hash_count2 = winnowing_wfp2(src, file_size, scan->hashes2, scan->lines2, MAX_FILE_SIZE / sizeof(uint32_t));
+					}
 				}
 				free(src);
 			}
 			else if (scan->hash_count)
 				scan->total_lines = scan->lines[scan->hash_count - 1];
 
-			/* Perform snippet scan */
-			if (scan->total_lines)
+			/* Perform snippet scan. ldb_scan_snippets accumulates wfp1 and, when
+			   present, wfp2 hashes into a single matchmap. */
+			if (scan->total_lines || (wfp2_present && scan->hash_count2))
 				scan->match_type = ldb_scan_snippets(scan);
-
 			else
 				scanlog("File skipped\n");
 		}

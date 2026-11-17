@@ -91,6 +91,7 @@ extern char * component_hint;
 extern struct ldb_table oss_url;
 extern struct ldb_table oss_file;
 extern struct ldb_table oss_wfp;
+extern struct ldb_table oss_wfp2;
 extern struct ldb_table oss_purl;
 extern struct ldb_table oss_copyright;
 extern struct ldb_table oss_quality;
@@ -103,6 +104,9 @@ extern struct ldb_table oss_sources;
 extern struct ldb_table oss_notices;
 extern struct ldb_table oss_pivot;
 extern struct ldb_table oss_path;
+
+/* True when the optional wfp2 table is present in the loaded KB. */
+extern bool wfp2_present;
 
 /* Reconstruct a project's file structure (md5,path per file) from its url hash. */
 void get_project_files(char * url_key);

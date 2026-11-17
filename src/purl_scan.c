@@ -454,7 +454,7 @@ int component_scan(char *url_hash_list)
 
 	if (!quiet)
 	{
-		printf("], \"server\": {\"version\": \"%s\", \"kb_version\": %s}}\n", SCANOSS_VERSION, kb_version);
+		printf("], \"server\": {\"version\": \"%s\", \"kb_version\": %s, \"wfp2\": %s}}\n", SCANOSS_VERSION, kb_version, wfp2_present ? "true" : "false");
 		fflush(stdout);
 	}
 
