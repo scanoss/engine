@@ -355,6 +355,19 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 			max_line = sources[s].lines[sources[s].count - 1];
 	}
 
+	/* The match threshold (min_match_hits / min_match_lines / range_tolerance)
+	   must follow the ORIGINAL rule: it scales with the file size, proxied by the
+	   classic wfp1 fingerprint count — exactly as before wfp2 existed. sources[0]
+	   is that classic fingerprint (ldb_scan_snippets always adds oss_wfp first).
+	   The wfp2 opt-in must NOT move the threshold; it only ADDS hits into the same
+	   per-file matchmap (hits summed below), and THAT is where combined detection
+	   is gained: a file whose wfp1 hits alone fall short can cross the unchanged
+	   bar once wfp2 hits are added. Passing the summed wfp1+wfp2 count here would
+	   instead inflate the threshold above the original rule and eat that gain (it
+	   could even push the combined result below the classic wfp1 one). With a
+	   single source this is the classic count, so classic scans are unchanged. */
+	uint32_t file_wfpcount = (n_sources > 0) ? sources[0].count : 0;
+
 	scanlog("snippet_scan_pass (%d source(s), %u hashes)\n", n_sources, hash_count);
 	if (!hash_count)
 	{
@@ -370,7 +383,7 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 
 	matchmap_setup(scan);
 	if (scan->snippet_adjust_tolerance)
-		adjust_tolerance(scan, hash_count, max_line);
+		adjust_tolerance(scan, file_wfpcount, max_line);
 
 	/* First build a map with all the MD5s related with each WFP from the source file*/
 	matchmap_entry_t map[hash_count];
