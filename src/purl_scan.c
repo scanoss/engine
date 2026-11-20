@@ -454,7 +454,7 @@ int component_scan(char *url_hash_list)
 
 	if (!quiet)
 	{
-		printf("], \"server\": {\"version\": \"%s\", \"kb_version\": %s}}\n", SCANOSS_VERSION, kb_version);
+		printf("], \"server\": {\"version\": \"%s\", \"kb_version\": %s, \"wfp2\": %s}}\n", SCANOSS_VERSION, kb_version, wfp2_present ? "true" : "false");
 		fflush(stdout);
 	}
 
@@ -478,6 +478,8 @@ static int snippet_scan_stream(FILE *in)
 	char file_path[MAX_FILE_PATH] = "";
 	uint64_t file_size = 0;
 	bool got_file = false;
+	/* Snippet lines after a "wfp2=" marker belong to the token-aware wfp2 set */
+	bool in_wfp2 = false;
 
 	scanlog("--- SNIPPET SCAN ---\n");
 
@@ -492,11 +494,20 @@ static int snippet_scan_stream(FILE *in)
 		bool is_fh2  = (memcmp(line, "fh2=",  4) == 0);
 		bool is_hpsm = (memcmp(line, "hpsm=", 5) == 0);
 		bool is_bin  = (memcmp(line, "bin=",  4) == 0);
-		bool is_wfp  = (!is_file && !is_fh2 && !is_hpsm && !is_bin);
+		bool is_wfp2_marker = (memcmp(line, "wfp2=", 5) == 0);
+		bool is_wfp  = (!is_file && !is_fh2 && !is_hpsm && !is_bin && !is_wfp2_marker);
 
 		/* Snippet-only mode: ignore hpsm/bin payloads */
 		if (is_hpsm || is_bin)
 			continue;
+
+		/* wfp2 block delimiter: subsequent snippet lines are token-aware wfp2
+		   fingerprints, matched against the wfp2 table by ldb_scan_snippets */
+		if (is_wfp2_marker)
+		{
+			in_wfp2 = true;
+			continue;
+		}
 
 		if (is_file)
 		{
@@ -569,6 +580,7 @@ static int snippet_scan_stream(FILE *in)
 			strcpy(scan->source_md5, file_md5_hex);
 			free(rec);
 			got_file = true;
+			in_wfp2 = false;
 			continue;
 		}
 
@@ -579,24 +591,50 @@ static int snippet_scan_stream(FILE *in)
 			continue;
 		}
 
-		if (is_wfp && scan && (scan->hash_count < MAX_HASHES_READ))
+		if (is_wfp && scan)
 		{
-			int line_ln = strlen(line);
-			for (int e = 0; e < line_ln; e++)
-				if (line[e] == '=' || line[e] == ',') line[e] = 0;
-
-			int line_nr = atoi(line);
-			char *hexhash = line + strlen(line) + 1;
-
-			while (*hexhash)
+			/* Route to the classic wfp buffers or, inside a wfp2= block, to the
+			   wfp2 buffers (allocated lazily) — same as the -w (wfp_scan) path. */
+			uint32_t *dst_hashes;
+			uint32_t *dst_lines;
+			uint32_t *dst_count;
+			if (in_wfp2)
 			{
-				ldb_hex_to_bin(hexhash, 8, (uint8_t *) &scan->hashes[scan->hash_count]);
-				uint32_reverse((uint8_t *) &scan->hashes[scan->hash_count]);
-				scan->lines[scan->hash_count] = line_nr;
-				hexhash += strlen(hexhash) + 1;
-				scan->hash_count++;
-				if (scan->hash_count >= MAX_HASHES_READ)
-					break;
+				if (!scan->hashes2)
+				{
+					scan->hashes2 = calloc(MAX_FILE_SIZE, 1);
+					scan->lines2  = malloc(MAX_FILE_SIZE);
+				}
+				dst_hashes = scan->hashes2;
+				dst_lines  = scan->lines2;
+				dst_count  = &scan->hash_count2;
+			}
+			else
+			{
+				dst_hashes = scan->hashes;
+				dst_lines  = scan->lines;
+				dst_count  = &scan->hash_count;
+			}
+
+			if (*dst_count < MAX_HASHES_READ)
+			{
+				int line_ln = strlen(line);
+				for (int e = 0; e < line_ln; e++)
+					if (line[e] == '=' || line[e] == ',') line[e] = 0;
+
+				int line_nr = atoi(line);
+				char *hexhash = line + strlen(line) + 1;
+
+				while (*hexhash)
+				{
+					ldb_hex_to_bin(hexhash, 8, (uint8_t *) &dst_hashes[*dst_count]);
+					uint32_reverse((uint8_t *) &dst_hashes[*dst_count]);
+					dst_lines[*dst_count] = line_nr;
+					hexhash += strlen(hexhash) + 1;
+					(*dst_count)++;
+					if (*dst_count >= MAX_HASHES_READ)
+						break;
+				}
 			}
 		}
 	}
@@ -608,14 +646,17 @@ static int snippet_scan_stream(FILE *in)
 		return EXIT_FAILURE;
 	}
 
-	if (scan->hash_count == 0)
+	if (scan->hash_count == 0 && scan->hash_count2 == 0)
 	{
 		fprintf(stderr, "snippet-scan: no WFP hashes in WFP input\n");
 		scan_data_free(scan);
 		return EXIT_FAILURE;
 	}
 
-	scan->total_lines = scan->lines[scan->hash_count - 1];
+	/* ldb_scan_snippets recomputes total_lines across the combined wfp1+wfp2
+	   sources; this pre-sets it for the classic-only case. */
+	if (scan->hash_count)
+		scan->total_lines = scan->lines[scan->hash_count - 1];
 	scan->timer = microseconds_now();
 	scan->match_type = ldb_scan_snippets(scan);
 

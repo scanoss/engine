@@ -142,8 +142,10 @@ void print_server_stats(scan_data_t *scan)
 	char hostname[MAX_ARGLN + 1];
 	printf(",\"server\": {");
 	printf("\"version\": \"%s\",", SCANOSS_VERSION);
-	printf("\"kb_version\": %s", kb_version);
-	
+	printf("\"kb_version\": %s,", kb_version);
+	/* Advertise wfp2 capability so clients/API can gate the opt-in by capability */
+	printf("\"wfp2\": %s", wfp2_present ? "true" : "false");
+
 	if (!(engine_flags & DISABLE_SERVER_INFO))
 	{
 		gethostname(hostname, MAX_ARGLN + 1);
