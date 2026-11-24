@@ -47,6 +47,9 @@ typedef struct scan_data_t
 	uint32_t *hashes; /* pointer to wfp hashes*/
 	uint32_t *lines; /*pointer to line hashes */
 	uint32_t hash_count; /* count of wfp hashes */
+	uint32_t *hashes2; /* pointer to wfp2 (token-aware) hashes, parsed from the wfp2= block */
+	uint32_t *lines2; /* pointer to wfp2 line numbers */
+	uint32_t hash_count2; /* count of wfp2 hashes */
 	long timer; /*timer for execution profile*/
 	bool preload; /*used in hash scanning */
 	int total_lines; /* total file lines */

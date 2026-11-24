@@ -53,6 +53,7 @@
 struct ldb_table oss_url;
 struct ldb_table oss_file;
 struct ldb_table oss_wfp;
+struct ldb_table oss_wfp2;
 struct ldb_table oss_purl;
 struct ldb_table oss_copyright;
 struct ldb_table oss_quality;
@@ -66,6 +67,7 @@ struct ldb_table oss_notices;
 struct ldb_table oss_pivot;
 struct ldb_table oss_path;
 bool path_table_present = false;
+bool wfp2_present = false;
 component_item *ignore_components;
 component_item *declared_components;
 
@@ -143,6 +145,17 @@ void initialize_ldb_tables(char *name)
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "wfp");
 	oss_wfp = ldb_read_cfg(dbtable);
+
+	/* Optional wfp2 table: token-aware fingerprints mined into a separate table,
+	 * leaving the classic wfp table untouched. When present, the engine can run a
+	 * wfp2 snippet pass (fallback by default, additive when forced). */
+	if (ldb_table_exists(oss_db_name, "wfp2"))
+	{
+		wfp2_present = true;
+		snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "wfp2");
+		oss_wfp2 = ldb_read_cfg(dbtable);
+		scanlog("wfp2 table present: enabling wfp2 snippet matching\n");
+	}
 
 	snprintf(dbtable, MAX_ARGLN * 2, "%s/%s", oss_db_name, "purl");
 	oss_purl = ldb_read_cfg(dbtable);
