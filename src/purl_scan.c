@@ -506,6 +506,7 @@ static int snippet_scan_stream(FILE *in)
 		if (is_wfp2_marker)
 		{
 			in_wfp2 = true;
+			scanlog("wfp2: wfp2= block found in snippet-scan input\n");
 			continue;
 		}
 

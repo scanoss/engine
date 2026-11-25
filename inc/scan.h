@@ -26,6 +26,7 @@ typedef struct matchmap_entry
 {
 	uint8_t md5[MD5_LEN];
 	uint16_t hits;
+	uint16_t hits_wfp2; /* subset of hits contributed by wfp2 fingerprints (hits - hits_wfp2 = wfp1 hits) */
 	matchmap_range * range;
 	int ranges_number;
 	uint8_t lastwfp[WFP_LN];

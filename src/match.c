@@ -1100,6 +1100,9 @@ void match_select_best(scan_data_t *scan)
 	//if we have multiple snippets match, the best of the best is the most hitted.
 	if (index >= 0)
 		scan->best_match = scan->matches_list_array[index]->best_match;
+
+	if (scan->match_type == MATCH_SNIPPET && scan->best_match)
+		scanlog_snippet_origin("Best snippet match", scan->best_match);
 	/*if the component of the best match was identified in the assets list, return none*/
 	if (!scan->best_match || !scan->best_match->component_list.items || ((engine_flags & DISABLE_REPORT_IDENTIFIED) && scan->best_match->component_list.headp.lh_first->component->identified))
 	{

@@ -101,6 +101,7 @@ Syntax: scanoss [parameters] [TARGET]
 * `-s, --sbom FILE` - Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification
 * `-b, --blacklist FILE` - Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format)
 * `--force-snippet` - Force snippet scanning (no full file matching). Takes no argument
+* `--force-wfp2` - Combine wfp1 and wfp2 snippet hits from the start instead of using wfp2 only as a fallback (requires a `wfp2` table; place it before `-S`). Takes no argument
 * `-c, --component HINT` - Add a component HINT to guide scan results
 
 ### Attribution and Licenses
@@ -186,6 +187,34 @@ This produces an identification (id) of type "file"
 ## Otherwise, snippet comparison is executed comparing snippet hashes
 
 This produces an identification (id) of type "snippet"
+
+### WFP2: token-aware snippet matching (optional)
+
+In addition to the classic snippet fingerprints (wfp1), the engine can match token-aware fingerprints (wfp2): language detection, comment removal and normalization where identifiers and types are collapsed, followed by winnowing (GRAM 20, WINDOW 40, CRC32C). This catches snippets that were reformatted or had identifiers renamed.
+
+**Activation.** There is no command line option. wfp2 is enabled automatically when the Knowledgebase contains a `wfp2` table (`<kb>/wfp2`). Without that table the engine behaves exactly as before. The capability is reported in the `server` block of the output as `"wfp2": true` or `"wfp2": false`, so clients can decide whether to send wfp2 fingerprints. With `-d`, the log shows `wfp2 table present: enabling wfp2 snippet matching`.
+
+**When are wfp2 fingerprints computed?**
+
+* Scanning physical files or directories: the engine computes wfp2 itself, only when the `wfp2` table is present and the file reaches snippet scanning (no full-file match, not binary, not over the size limit). The fingerprints are always computed in that case, but only queried when the combined pass runs.
+* Scanning a `.wfp` file (`-w`) or a WFP block (`-S`): the engine never computes wfp2. It uses the fingerprints sent by the client in a `wfp2=` block. If the Knowledgebase has no `wfp2` table, those lines are ignored.
+
+**WFP format.** Inside each `file=` entry, a `wfp2=` marker line starts the wfp2 block. All snippet lines after it, up to the next `file=`, are matched against the `wfp2` table. Lines use the same `line=hash[,hash]*` format as wfp1:
+
+```
+file=<md5>,<size>,<path>
+4=1a2b3c4d,5e6f7a8b
+12=0badf00d
+wfp2=
+3=deadbeef,cafebabe
+10=12345678
+```
+
+**When is wfp2 used?** wfp2 is a fallback. The snippet scan first runs with wfp1 only. If some file reaches the snippet match criteria (min hits, min lines, file extension), that result is used and wfp2 is not queried. Otherwise a second pass runs with wfp1 and wfp2 combined. With `--force-wfp2` the wfp1-only stage is skipped and the combined pass runs directly, whether or not wfp1 alone would match.
+
+**How results are combined.** In the combined pass, wfp1 and wfp2 hits are accumulated into a single match map: hits are added together and line ranges are merged per file. The minimum hits threshold is still computed from the wfp1 fingerprint count only, so wfp2 adds evidence without changing the matching threshold.
+
+**Logs.** With `-d`, the log shows which stage ran (`wfp1: starting snippet pass`, `wfp2: starting fallback snippet pass`, `wfp2: starting forced snippet pass`) and the origin of each candidate and of the selected match, e.g. `Best snippet match <md5>: hits=304 (wfp1=107, wfp2=197), origin=wfp1+wfp2`.
 
 ## If none of the above,
 

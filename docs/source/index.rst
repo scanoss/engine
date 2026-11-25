@@ -114,6 +114,16 @@ Snippet comparison execution
 
 Comparing snippet hashes produces an identification (id) of type "snippet"
 
+WFP2: token-aware snippet matching (optional)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Besides the classic snippet fingerprints (wfp1), the engine can match token-aware fingerprints (wfp2): comments removed and identifiers/types normalized, then winnowed (GRAM 20, WINDOW 40, CRC32C).
+
+* **Activation**: automatic when the Knowledgebase contains a ``wfp2`` table. There is no command line option. The ``server`` block of the output reports ``"wfp2": true`` or ``"wfp2": false``.
+* **Physical files**: the engine computes wfp2 only when the ``wfp2`` table is present.
+* **.wfp input (-w / -S)**: the engine never computes wfp2. It reads the lines that follow a ``wfp2=`` marker inside each ``file=`` entry (same ``line=hash[,hash]*`` format as wfp1). They are ignored if the table is missing.
+* **Fallback**: the snippet scan runs with wfp1 first. Only when no file reaches the snippet match criteria (min hits, min lines, file extension) is a second pass run, adding wfp1 and wfp2 hits into a single match map. The minimum hits threshold is still based on the wfp1 fingerprint count only. With ``--force-wfp2`` the combined pass runs directly, whether or not wfp1 alone would match (place it before ``-S``).
+
 If none of the above
 ~~~~~~~~~~~~~~~~~~~~
 

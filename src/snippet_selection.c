@@ -105,6 +105,87 @@ bool ranges_intersection(match_data_t *a, match_data_t *b)
  *
  * @param scan
  */
+/**
+ * @brief Build a snippet match from one ranked matchmap entry, applying the
+ *        acceptance criteria (min hits, file extension, min matched lines).
+ * @param scan current scan
+ * @param j matchmap index
+ * @return the match, or NULL when the entry does not qualify
+ */
+static match_data_t *snippet_candidate_build(scan_data_t *scan, int j)
+{
+	if (scan->matchmap[j].hits < scan->snippet_min_hits) /* Only consider file with more than min_match_hits */
+		return NULL;
+
+	match_data_t *match_new = calloc(1, sizeof(match_data_t)); /* Create a match object */
+	if (!match_new)
+	{
+		scanlog("Error allocating memory for match data\n");
+		return NULL;
+	}
+	memcpy(match_new->file_md5, scan->matchmap[j].md5, oss_file.key_ln);
+	match_new->hits = scan->matchmap[j].hits;
+	match_new->matchmap_reg = &scan->matchmap[j];
+	match_new->type = scan->match_type;
+	strcpy(match_new->source_md5, scan->source_md5);
+	match_new->scan_ower = scan;
+
+	if (scan->snippet_honor_file_extension && snippet_extension_discard(match_new))
+	{
+		match_data_free(match_new);
+		return NULL;
+	}
+
+	int matched_lines = compile_ranges(match_new);
+	if (matched_lines < scan->snippet_min_lines)
+	{
+		match_data_free(match_new);
+		return NULL;
+	}
+
+	float percent = (matched_lines * 100) / match_new->scan_ower->total_lines;
+	int matched_percent = floor(percent);
+	if (matched_percent > 99)
+		matched_percent = 99;
+	if (matched_percent < 1)
+		matched_percent = 1;
+	match_new->matched_percent = matched_percent;
+	match_new->lines_matched = matched_lines;
+	return match_new;
+}
+
+/**
+ * @brief Tell whether the current matchmap yields at least one snippet match,
+ *        using the same acceptance criteria as biggest_snippet(). Leaves the
+ *        scan state untouched. Must only be called after a snippet pass that
+ *        returned MATCH_SNIPPET (matchmap_rank_by_sector initialized).
+ * @param scan current scan
+ * @return true if some matchmap file qualifies as a snippet match
+ */
+bool snippet_has_candidate(scan_data_t *scan)
+{
+	/* compile_ranges() forces snippet_adjust_tolerance on; restore it so a
+	   following snippet pass keeps the caller's tolerance configuration. */
+	bool adjust_tolerance = scan->snippet_adjust_tolerance;
+	bool found = false;
+
+	for (int sector = 0; sector < 256 && !found; sector++)
+	{
+		int j = scan->matchmap_rank_by_sector[sector];
+		if (j < 0)
+			continue;
+		match_data_t *m = snippet_candidate_build(scan, j);
+		if (m)
+		{
+			found = true;
+			match_data_free(m);
+		}
+	}
+
+	scan->snippet_adjust_tolerance = adjust_tolerance;
+	return found;
+}
+
 void biggest_snippet(scan_data_t *scan)
 {
 	scanlog("biggest_snippet\n");
@@ -120,42 +201,11 @@ void biggest_snippet(scan_data_t *scan)
 		if (j < 0)
 			continue;
 		
-		if (scan->matchmap[j].hits >= scan->snippet_min_hits) /* Only consider file with more than min_match_hits */
+		match_data_t *match_new = snippet_candidate_build(scan, j);
+		if (match_new)
 		{
-			match_data_t *match_new = calloc(1, sizeof(match_data_t)); /* Create a match object */
-			if (!match_new)
-			{
-				scanlog("Error allocating memory for match data\n");
-				return;
-			}
-			memcpy(match_new->file_md5, scan->matchmap[j].md5, oss_file.key_ln);
-			match_new->hits = scan->matchmap[j].hits;
-			match_new->matchmap_reg = &scan->matchmap[j];
-			match_new->type = scan->match_type;
-			strcpy(match_new->source_md5, scan->source_md5);
-			match_new->scan_ower = scan;
 			int i = 0;
-
-			if (scan->snippet_honor_file_extension && snippet_extension_discard(match_new))
-			{
-				match_data_free(match_new); 
-				continue;
-			}
-
-			int matched_lines = compile_ranges(match_new);
-			if (matched_lines < scan->snippet_min_lines) {
-				match_data_free(match_new); 
-				continue;
-			}
-
-			float percent = (matched_lines * 100) / match_new->scan_ower->total_lines;
-			int matched_percent = floor(percent);
-			if (matched_percent > 99)
-				matched_percent = 99;
-			if (matched_percent < 1)
-				matched_percent = 1;
-			match_new->matched_percent = matched_percent;
-			match_new->lines_matched = matched_lines;
+			scanlog_snippet_origin("Snippet candidate", match_new);
 			//match_new->hits = hits;
 
 			/* Place the match in the list of the snippet region it belongs to.
@@ -209,7 +259,7 @@ void biggest_snippet(scan_data_t *scan)
 			{
 				char md5_hex[oss_file.key_ln * 2 + 1];
 				ldb_bin_to_hex(item->match->file_md5, oss_file.key_ln, md5_hex);
-				scanlog("%s - %d\n", md5_hex, item->match->hits);
+				scanlog("%s - %d (origin=%s)\n", md5_hex, item->match->hits, snippet_origin(item->match->matchmap_reg));
 			}
 		}
 	}
@@ -438,3 +488,33 @@ uint32_t compile_ranges(match_data_t *match)
 	return hits;
 }
 
+
+/**
+ * @brief Origin of the snippet hits accumulated for one matchmap file.
+ * @param entry matchmap entry
+ * @return "wfp1", "wfp2" or "wfp1+wfp2"
+ */
+const char *snippet_origin(matchmap_entry *entry)
+{
+	if (!entry || !entry->hits_wfp2)
+		return "wfp1";
+	if (entry->hits_wfp2 >= entry->hits)
+		return "wfp2";
+	return "wfp1+wfp2";
+}
+
+/**
+ * @brief Log the wfp1/wfp2 origin of a snippet match.
+ * @param prefix text that identifies the log context
+ * @param match snippet match
+ */
+void scanlog_snippet_origin(const char *prefix, match_data_t *match)
+{
+	if (!debug_on || !match || !match->matchmap_reg)
+		return;
+	matchmap_entry *e = match->matchmap_reg;
+	char md5_hex[oss_file.key_ln * 2 + 1];
+	ldb_bin_to_hex(match->file_md5, oss_file.key_ln, md5_hex);
+	scanlog("%s %s: hits=%d (wfp1=%d, wfp2=%d), origin=%s\n", prefix, md5_hex,
+			e->hits, e->hits - e->hits_wfp2, e->hits_wfp2, snippet_origin(e));
+}

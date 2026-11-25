@@ -107,6 +107,8 @@ extern struct ldb_table oss_path;
 
 /* True when the optional wfp2 table is present in the loaded KB. */
 extern bool wfp2_present;
+/* --force-wfp2: combine wfp1+wfp2 from the start instead of as a fallback. */
+extern bool force_wfp2;
 
 /* Reconstruct a project's file structure (md5,path per file) from its url hash. */
 void get_project_files(char * url_key);

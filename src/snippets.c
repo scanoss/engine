@@ -189,6 +189,7 @@ typedef struct  matchmap_entry_t
 	uint8_t wfp[WFP_LN];
 	uint32_t size;
 	uint32_t rec_ln; /* record length of the table this hash was fetched from */
+	bool is_wfp2; /* true when this hash comes from the wfp2 (token-aware) table */
 } matchmap_entry_t;
 
 /* One fingerprint source feeding the snippet scan: a WFP table plus the hash/line
@@ -239,6 +240,8 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 			else
 			{
 				scan->matchmap[found].hits++;
+				if (item->is_wfp2)
+					scan->matchmap[found].hits_wfp2++;
 				//scanlog("hit %d at %d\n", scan->matchmap[found].hits, found);
 				if (scan->matchmap[found].hits > *max_hit)
 				{
@@ -358,8 +361,9 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 	/* The match threshold (min_match_hits / min_match_lines / range_tolerance)
 	   must follow the ORIGINAL rule: it scales with the file size, proxied by the
 	   classic wfp1 fingerprint count — exactly as before wfp2 existed. sources[0]
-	   is that classic fingerprint (ldb_scan_snippets always adds oss_wfp first).
-	   The wfp2 opt-in must NOT move the threshold; it only ADDS hits into the same
+	   is that classic fingerprint whenever the file has wfp1 hashes (ldb_scan_snippets
+	   adds oss_wfp first); a wfp2-only input scales the threshold with its wfp2 count.
+	   The wfp2 fallback must NOT move the threshold; it only ADDS hits into the same
 	   per-file matchmap (hits summed below), and THAT is where combined detection
 	   is gained: a file whose wfp1 hits alone fall short can cross the unchanged
 	   bar once wfp2 hits are added. Passing the summed wfp1+wfp2 count here would
@@ -369,6 +373,8 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 	uint32_t file_wfpcount = (n_sources > 0) ? sources[0].count : 0;
 
 	scanlog("snippet_scan_pass (%d source(s), %u hashes)\n", n_sources, hash_count);
+	for (int s = 0; s < n_sources; s++)
+		scanlog("  source %d: %s, %u hashes\n", s, sources[s].table == &oss_wfp2 ? "wfp2" : "wfp1", sources[s].count);
 	if (!hash_count)
 	{
 		scanlog("No hashes return NONE\n");
@@ -407,6 +413,7 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 			uint32_write(map[idx].md5_set, 0);
 			map[idx].line = sources[s].lines[j];
 			map[idx].rec_ln = rec_ln;
+			map[idx].is_wfp2 = (wfp_table == &oss_wfp2);
 			ldb_fetch_recordset(NULL, *wfp_table, map[idx].wfp, false, get_all_file_ids, (void *)map[idx].md5_set);
 			map[idx].size = uint32_read(map[idx].md5_set) / rec_ln;
 			//Initializate the lines indirection when a wfp from a line has at least one md5 linked
@@ -650,7 +657,26 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 	}
 
 	if (scan->matchmap_size)
+	{
+		if (n_sources > 1 || (n_sources == 1 && sources[0].table == &oss_wfp2))
+		{
+			uint32_t only_wfp1 = 0, only_wfp2 = 0, both = 0;
+			for (uint32_t t = 0; t < scan->matchmap_size; t++)
+			{
+				matchmap_entry *e = &scan->matchmap[t];
+				if (!e->hits)
+					continue;
+				if (!e->hits_wfp2)
+					only_wfp1++;
+				else if (e->hits_wfp2 == e->hits)
+					only_wfp2++;
+				else
+					both++;
+			}
+			scanlog("wfp2: matchmap files with hits by origin: wfp1 only=%u, wfp2 only=%u, wfp1+wfp2=%u\n", only_wfp1, only_wfp2, both);
+		}
 	 	return MATCH_SNIPPET;
+	}
 
 	scanlog("Snippet scan has no matches\n");
 	return MATCH_NONE;
@@ -659,11 +685,29 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 }
 
 /**
- * @brief Snippet scan. Always queries the classic wfp table (oss_wfp); when the
- *        wfp2 table is present and the scan carries wfp2 hashes (parsed from a
- *        wfp2= block or computed from the source), oss_wfp2 is added as a second
- *        source and both are accumulated into the same matchmap. Without wfp2
- *        hashes the behaviour is identical to a classic wfp1-only scan.
+ * @brief Discard the matchmap built by a snippet pass so another pass can run.
+ * @param scan current scan structure
+ */
+static void matchmap_reset(scan_data_t *scan)
+{
+	for (uint32_t i = 0; i < scan->matchmap_size; i++)
+		free(scan->matchmap[i].range);
+	free(scan->matchmap);
+	scan->matchmap = NULL;
+	scan->matchmap_size = 0;
+	for (int sector = 0; sector < 256; sector++)
+		scan->matchmap_rank_by_sector[sector] = -1;
+}
+
+/**
+ * @brief Snippet scan. The classic wfp table (oss_wfp) is queried first. wfp2
+ *        is a fallback: only when the wfp1 pass does not produce a snippet match
+ *        (no file reaching the min hits / min lines criteria) and the wfp2 table
+ *        is present with wfp2 hashes for this file (parsed from a wfp2= block or
+ *        computed from the source), a second pass is run with oss_wfp1 and
+ *        oss_wfp2 accumulated into the same matchmap. With --force-wfp2 the
+ *        wfp1-only stage is skipped and the combined pass runs directly. The
+ *        match threshold is still derived from the wfp1 fingerprint count.
  * @param scan current scan structure
  * @return match_t scan result type
  */
@@ -672,17 +716,48 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 	wfp_source_t sources[2];
 	int n = 0;
 
-	if (scan->hash_count > 0)
+	scanlog("Snippet fingerprints for %s: wfp1=%u, wfp2=%u (wfp2 table %s)\n",
+			scan->file_path ? scan->file_path : "", scan->hash_count, scan->hash_count2,
+			wfp2_present ? "present" : "absent");
+	if (!wfp2_present && scan->hash_count2 > 0)
+		scanlog("wfp2: %u fingerprints ignored, KB has no wfp2 table\n", scan->hash_count2);
+
+	bool wfp2_available = wfp2_present && scan->hash_count2 > 0;
+	match_t result = MATCH_NONE;
+
+	if (force_wfp2 && wfp2_available)
+		scanlog("wfp2: --force-wfp2 set, skipping the wfp1-only stage\n");
+
+	/* Stage 1: classic wfp1 (skipped with --force-wfp2 when wfp2 is available) */
+	if (scan->hash_count > 0 && force_wfp2 && wfp2_available)
 		sources[n++] = (wfp_source_t){ &oss_wfp, scan->hashes, scan->lines, scan->hash_count };
+	else if (scan->hash_count > 0)
+	{
+		sources[n++] = (wfp_source_t){ &oss_wfp, scan->hashes, scan->lines, scan->hash_count };
+		scanlog("wfp1: starting snippet pass (%u fingerprints)\n", scan->hash_count);
+		result = snippet_scan_pass(scan, sources, n);
 
-	if (wfp2_present && scan->hash_count2 > 0)
-		sources[n++] = (wfp_source_t){ &oss_wfp2, scan->hashes2, scan->lines2, scan->hash_count2 };
+		if (result == MATCH_SNIPPET && snippet_has_candidate(scan))
+		{
+			scanlog("wfp1: snippet match found, wfp2 not needed\n");
+			return result;
+		}
+		if (!wfp2_available)
+			return result;
+		scanlog("wfp1: no snippet match\n");
+		matchmap_reset(scan);
+	}
 
-	if (!n)
+	if (!wfp2_available)
 	{
 		scanlog("No hashes return NONE\n");
 		return MATCH_NONE;
 	}
 
+	/* Stage 2: wfp1 + wfp2 combined (fallback, or forced by --force-wfp2) */
+	sources[n++] = (wfp_source_t){ &oss_wfp2, scan->hashes2, scan->lines2, scan->hash_count2 };
+	scanlog("wfp2: starting %s snippet pass with wfp2 (%u fingerprints)%s\n",
+			force_wfp2 ? "forced" : "fallback", scan->hash_count2,
+			scan->hash_count ? " combined with wfp1" : ", no wfp1 fingerprints");
 	return snippet_scan_pass(scan, sources, n);
 }
