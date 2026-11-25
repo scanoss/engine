@@ -11,6 +11,7 @@ void fill_main_url(component_data_t *match);
 
 /* Fetch related purls */
 void fetch_related_purls(component_data_t *component);
+void purl_canonical_mirror(component_data_t *component);
 
 /* Handler function for getting the oldest URL */
 bool get_oldest_url(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr);

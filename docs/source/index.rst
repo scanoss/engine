@@ -142,7 +142,12 @@ The scanning client can optionally pass a component hint (context). The context 
 First component released
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-If no hint is provided, the SCANOSS engine will look for the oldest component in the KB which matches the scanned file. In case of a tie between two components with the same release date, other available information will be used to select the best match.
+If no hint is provided, the SCANOSS engine will look for the oldest component in the KB which matches the scanned file. In case of a tie between two components with the same release date, other available information will be used to select the best match. When component ranking is enabled (``-r``), an older candidate does not replace a better ranked one just for its release date if both are the same project under different purls (a fork or a mirror, i.e. the same repository name), or if the older one has a rank of 8 or more while the other is below 8.
+
+Go proxy mirrors of GitHub projects
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A file of a GitHub project that is not Go code can be identified under a Go module proxy purl such as ``pkg:golang/github.com/<owner>/<repo>``. For non-Go files (anything but ``.go``, ``go.mod`` or ``go.sum``), when that mirror is the main purl and the canonical ``pkg:github/<owner>/<repo>`` purl is among its related purls, the canonical purl is reported as the main one. The mirror purl stays in the purl list. Go files keep their Go module purl.
 
 SBOM Ingestion
 ~~~~~~~~~~~~~~

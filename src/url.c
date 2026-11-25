@@ -39,6 +39,7 @@
 #include "decrypt.h"
 #include "ignorelist.h"
 #include "versions.h"
+#include <strings.h>
 /**
  * @brief Handle url query in th KB. 
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
@@ -286,6 +287,76 @@ void fetch_related_purls(component_data_t *component)
 }
 
 /**
+ * @brief Tell whether a path is Go code (a .go file, go.mod or go.sum).
+ * @param path file path
+ * @return true for Go files
+ */
+static bool is_go_file(char *path)
+{
+	char *ext = extension(path);
+	if (ext && !strcasecmp(ext, "go"))
+		return true;
+
+	char *name = strrchr(path, '/');
+	name = name ? name + 1 : path;
+	return !strcmp(name, "go.mod") || !strcmp(name, "go.sum");
+}
+
+/**
+ * @brief Report a Go proxy mirror of a GitHub repository with its canonical purl.
+ *
+ * The KB also indexes non-Go repositories through the Go module proxy, so a file of a
+ * GitHub project (for instance a C++ header) can be identified under
+ * pkg:golang/github.com/<owner>/<repo>. For a file that is not Go code, that purl is a
+ * mirror of the project, whose canonical identity is pkg:github/<owner>/<repo>. When the
+ * main purl is such a mirror, the scanned file is not Go code and the canonical purl is
+ * among the related purls, both are swapped so the canonical purl is reported as the
+ * main one. The mirror purl is kept in the purl list; version and dates are unchanged.
+ * Must be called after fetch_related_purls().
+ *
+ * @param component component to be reported
+ */
+void purl_canonical_mirror(component_data_t *component)
+{
+	static const char mirror_prefix[] = "pkg:golang/github.com/";
+	const size_t prefix_ln = sizeof(mirror_prefix) - 1;
+
+	if (!component->purls[0] || strncmp(component->purls[0], mirror_prefix, prefix_ln))
+		return;
+
+	/* Go code keeps its Go module purl. Unknown scanned path: leave it unchanged */
+	if (!component->file_path_ref || is_go_file(component->file_path_ref))
+		return;
+
+	/* owner/repo: the two path segments after github.com/ (drops Go /vN suffixes) */
+	const char *owner = component->purls[0] + prefix_ln;
+	const char *slash = strchr(owner, '/');
+	if (!slash || slash == owner)
+		return;
+	size_t repo_ln = strcspn(slash + 1, "/@?#");
+	if (!repo_ln)
+		return;
+
+	char canonical[MAX_FIELD_LN];
+	snprintf(canonical, sizeof(canonical), "pkg:github/%.*s", (int)(slash - owner + 1 + repo_ln), owner);
+
+	for (int i = 1; i < MAX_PURLS && component->purls[i]; i++)
+	{
+		if (strcasecmp(component->purls[i], canonical))
+			continue;
+
+		scanlog("Mirror purl %s reported as %s\n", component->purls[0], component->purls[i]);
+		char *purl = component->purls[0];
+		component->purls[0] = component->purls[i];
+		component->purls[i] = purl;
+		uint8_t *md5 = component->purls_md5[0];
+		component->purls_md5[0] = component->purls_md5[i];
+		component->purls_md5[i] = md5;
+		return;
+	}
+}
+
+/**
  * @brief Get the oldest release for a purl handler.
  * Will be executed for the ldb_fetch_recordset function in each iteration. See LDB documentation for more details.
 **/
@@ -454,15 +525,22 @@ bool purl_vendor_component_check(component_data_t * component)
 
 int purl_source_check(component_data_t * component)
 {
-			// check the match source
+	/* Prefer purls of the main source hosting platforms. The purl type is compared
+	   (pkg:github/...), not any substring: otherwise a Go proxy mirror such as
+	   pkg:golang/github.com/owner/repo would count as a github source and tie with
+	   the canonical pkg:github/owner/repo purl. */
 	const char * sources[] = {
-    				"github",
-    				"gitlab",
+					"github",
+					"gitlab",
 					"bitbucket"};
- 	const int sources_number = sizeof(sources) / sizeof(sources[0]);
+	const int sources_number = sizeof(sources) / sizeof(sources[0]);
+	if (!component->purls[0])
+		return 9999;
 	for (int i = 0; i < sources_number; i++)
 	{
-		if (strstr(component->purls[0], sources[i]))
+		char prefix[32];
+		int prefix_ln = snprintf(prefix, sizeof(prefix), "pkg:%s/", sources[i]);
+		if (!strncmp(component->purls[0], prefix, prefix_ln))
 			return i;
 	}
 	return 9999;

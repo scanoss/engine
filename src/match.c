@@ -29,6 +29,7 @@
   * @see https://github.com/scanoss/engine/blob/master/src/match.c
   */
 
+#include <strings.h>
 #include "match.h"
 #include "query.h"
 #include "parse.h"
@@ -105,15 +106,36 @@ match_data_t * match_data_copy(match_data_t * in)
  * @param b New component to be compared
  * @return int -1 to reject, 1 to accept or 0 if not decide
  */
+static bool hint_in_purl(component_data_t *c)
+{
+	return c->purls[0] && strstr(c->purls[0], component_hint);
+}
+
+static bool hint_in_component(component_data_t *c)
+{
+	return c->component && strstr(c->component, component_hint);
+}
+
+/**
+ * @brief Tell whether a component matches the user component hint (-c), either in its
+ *        main purl or in its component name.
+ */
+static bool component_matches_hint(component_data_t *c)
+{
+	return component_hint && (hint_in_purl(c) || hint_in_component(c));
+}
+
 static int hint_eval(component_data_t *a, component_data_t *b)
 {
 		/*Check for component hint in purl, select components matching with the hint */
-		if (a->purls[0] && strstr(a->purls[0], component_hint) && !(b->purls[0] && strstr(b->purls[0], component_hint)))
+		bool purl_a = hint_in_purl(a);
+		bool purl_b = hint_in_purl(b);
+		if (purl_a && !purl_b)
 		{
 			scanlog("Reject component %s by purl hint: %s\n", b->purls[0], component_hint);
 			return -1;
 		}
-		if (b->purls[0] && strstr(b->purls[0], component_hint) && !(a->purls[0] && strstr(a->purls[0], component_hint)))
+		if (purl_b && !purl_a)
 		{
 			scanlog("Accept component %s by purl hint: %s\n", b->purls[0], component_hint);
 			b->identified = 1;
@@ -121,12 +143,14 @@ static int hint_eval(component_data_t *a, component_data_t *b)
 		}
 
 		/*Check for component hint in component, select components matching with the hint */ // tODO: this should be deprecated
-		if (a->component && strstr(a->component, component_hint) && !(b->component && strstr(b->purls[0], component_hint)))
+		bool comp_a = hint_in_component(a);
+		bool comp_b = hint_in_component(b);
+		if (comp_a && !comp_b)
 		{
 			scanlog("Reject component %s by hint: %s\n", b->component, component_hint);
 			return -1;
 		}
-		if (b->component && strstr(b->component, component_hint) && !(a->component && strstr(a->purls[0], component_hint)))
+		if (comp_b && !comp_a)
 		{
 			scanlog("Accept component %s by hint: %s\n",  b->component, component_hint);
 			b->identified = 1;
@@ -715,6 +739,17 @@ bool add_component_from_urlid(component_list_t *component_list, uint8_t *url_id,
 	new_comp->file_path_ref = component_list->match_ref->scan_ower->file_path;
 	new_comp->path_rank = PATH_LEVEL_COMP_INIT_VALUE;
 
+	/* A component matching the user hint (-c) is marked as identified when it is created.
+	   hint_eval() only marks it when it wins a pairwise comparison against a component
+	   that does not match the hint, so a file whose components all match the hint (or a
+	   file with a single component) was never marked, and the hint was then ignored when
+	   selecting the best match among files. */
+	if (!declared_components && new_comp->identified == IDENTIFIED_NONE && component_matches_hint(new_comp))
+	{
+		scanlog("Component %s identified by hint: %s\n", new_comp->purls[0], component_hint);
+		new_comp->identified = IDENTIFIED_PURL;
+	}
+
 	scanlog("--- new comp: %s@%s %s %d---\n", new_comp->purls[0], new_comp->version, new_comp->release_date, new_comp->identified);
 
 	/* First try to merge the candidate with an existing component sharing the same purl.
@@ -843,8 +878,10 @@ bool load_matches(match_data_t *match)
 	if (ignore_components)
 		component_list_remove_ignored(&match->component_list);
 
-	/* Final optimization based on the available information for a component */
-	/* If two components have the date date, select the one with more available information */
+	/* Vulnerability tiebreak: if a component of the list has no vulnerability information
+	   and a later one has, they are swapped, so the reported component carries vulnerability
+	   data. Release dates and ranks are NOT compared: the component moved to the front can be
+	   newer or worse ranked than the one it replaces. */
 	
 	if (match->component_list.items > 1)
 	{
@@ -941,6 +978,58 @@ bool find_oldest(match_data_t *fp1, void *fp2)
  * @return true 
  * @return false 
  */
+
+/**
+ * @brief Name of a project in a purl: the last segment of the purl name
+ *        (pkg:type/namespace/name@version -> name).
+ * @param purl purl
+ * @param len output, name length
+ * @return pointer to the name inside purl, NULL if none
+ */
+static const char *purl_project_name(const char *purl, size_t *len)
+{
+	if (!purl)
+		return NULL;
+	const char *end = purl + strcspn(purl, "@?#");
+	const char *start = end;
+	while (start > purl && start[-1] != '/')
+		start--;
+	*len = end - start;
+	return *len ? start : NULL;
+}
+
+/**
+ * @brief Tell whether two components are the same project under different purls,
+ *        such as a fork (pkg:github/a/repo vs pkg:github/b/repo) or a mirror
+ *        (pkg:golang/github.com/a/repo vs pkg:github/a/repo). Compares the purl names.
+ */
+static bool same_project(component_data_t *a, component_data_t *b)
+{
+	size_t len_a = 0, len_b = 0;
+	const char *name_a = purl_project_name(a->purls[0], &len_a);
+	const char *name_b = purl_project_name(b->purls[0], &len_b);
+	return name_a && name_b && len_a == len_b && !strncasecmp(name_a, name_b, len_a);
+}
+
+/**
+ * @brief With ranking enabled, tell whether a worse ranked candidate must not replace
+ *        the current best match just for being older, when the hits of both are similar:
+ *        - both are the same project (a fork or a mirror with a worse rank), or
+ *        - the candidate rank is at or above COMPONENT_RANK_SELECTION_MAX while the best
+ *          match is below it (the same rule applied inside a file, see 7.3 in
+ *          component_hint_date_comparation).
+ * @param best current best match component
+ * @param candidate candidate component
+ * @return true if the date replacement is blocked
+ */
+static bool rank_blocks_date_replacement(component_data_t *best, component_data_t *candidate)
+{
+	if (component_rank_max < 0 || candidate->rank <= best->rank)
+		return false;
+	if (same_project(best, candidate))
+		return true;
+	return candidate->rank >= COMPONENT_RANK_SELECTION_MAX && best->rank < COMPONENT_RANK_SELECTION_MAX;
+}
 
 bool find_oldest_match(match_data_t *fp1, match_data_t *fp2)
 {
@@ -1043,6 +1132,12 @@ void match_select_best(scan_data_t *scan)
 
 			if (diff <= 10)
 			{
+				if (rank_blocks_date_replacement(best_match_component, match_component))
+				{
+					scanlog("%s (rank %d) cannot replace %s (rank %d) by release date\n", match_component->purls[0],
+							match_component->rank, best_match_component->purls[0], best_match_component->rank);
+					continue;
+				}
 				if (component_date_comparation(best_match_component, match_component))
 				{
 					scanlog("Replacing best match for an older version with similar hits\n");

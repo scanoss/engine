@@ -228,6 +228,9 @@ bool print_json_component(component_data_t * component)
 	/* Fetch related purls */
 	fetch_related_purls(component);
 
+	/* Report a Go proxy mirror of a GitHub project with its canonical purl */
+	purl_canonical_mirror(component);
+
 	/* Calculate main URL */
 	fill_main_url(component);
 

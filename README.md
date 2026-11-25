@@ -230,11 +230,15 @@ The scanning client can optionally pass a a component hint (context). The contex
 
 ## First component released
 
-If no hint is provided, the SCANOSS engine will look for the oldest component in the KB which matches the scanned file. In case of a tie between two components with the same release date, other available information will be used to select the best match.
+If no hint is provided, the SCANOSS engine will look for the oldest component in the KB which matches the scanned file. In case of a tie between two components with the same release date, other available information will be used to select the best match. When component ranking is enabled (`-r`), an older candidate does not replace a better ranked one just for its release date if both are the same project under different purls (a fork or a mirror, i.e. the same repository name), or if the older one has a rank of 8 or more while the other is below 8.
 
 ## Distinct component selection
 
 A matched file is frequently present in several components and versions at once. The engine keeps a small, fixed-size list of candidate components (3 by default) for each match, which is the list reported when best-match-only is disabled (`-F 256`). To avoid a single component monopolising that list with multiple versions of itself, candidates are deduplicated by their main purl: when a new candidate shares the purl of one already in the list, only the preferred one is kept (using the same ranking criteria described above, i.e. favouring the oldest release), and the freed slots are made available to genuinely different components. As a result the list reflects distinct components rather than repeated versions of the same one.
+
+## Go proxy mirrors of GitHub projects
+
+The KB also indexes many repositories that are not Go code through the Go module proxy, so a file of a GitHub project (for example a C++ header) can be identified under a purl such as `pkg:golang/github.com/<owner>/<repo>`. For a scanned file that is not Go code (anything but `.go`, `go.mod` or `go.sum`), that purl is a mirror of the project. When the reported main purl is such a mirror and the canonical `pkg:github/<owner>/<repo>` purl is among its related purls, the engine reports the canonical purl as the main one. The mirror purl stays in the purl list, and the version and dates are the ones of the matched release. Go files keep their Go module purl.
 
 ## SBOM Ingestion
 
