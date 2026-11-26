@@ -114,6 +114,17 @@ Snippet comparison execution
 
 Comparing snippet hashes produces an identification (id) of type "snippet"
 
+WFP2: token-aware snippet matching (optional)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Besides the classic snippet fingerprints (wfp1), the engine can match token-aware fingerprints (wfp2): comments removed and identifiers/types normalized, then winnowed (GRAM 20, WINDOW 40, CRC32C).
+
+* **Activation**: automatic when the Knowledgebase contains a ``wfp2`` table. There is no command line option. The ``server`` block of the output reports ``"wfp2": true`` or ``"wfp2": false``.
+* **Physical files**: the engine computes wfp2 only when the ``wfp2`` table is present.
+* **.wfp input (-w / -S)**: the engine never computes wfp2. It reads the lines that follow a ``wfp2=`` marker inside each ``file=`` entry (same ``line=hash[,hash]*`` format as wfp1). They are ignored if the table is missing.
+* **Fallback**: the snippet scan runs with wfp1 first, as a classic scan. Only when no file reaches the snippet match criteria (min hits, min lines, file extension) does the wfp2 pass run, on top of the match map left by wfp1: files already in the map receive the wfp2 hits and ranges, and files not found by wfp1 are added within a wfp2 budget. The minimum hits threshold is still based on the wfp1 fingerprint count only. With ``--force-wfp2`` the wfp2 pass always runs, whether or not wfp1 alone would match (place it before ``-S``).
+* **Selection**: a candidate that qualifies as a snippet match with its wfp1 hits alone is ranked and compared by its wfp1 evidence (hits, matched lines and percent), since wfp1 tells close copies and versions apart better than wfp2; candidates that need wfp2 to qualify rank below and are compared by their total evidence. The reported hits, line ranges and matched percent include both.
+
 If none of the above
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -132,7 +143,12 @@ The scanning client can optionally pass a component hint (context). The context 
 First component released
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-If no hint is provided, the SCANOSS engine will look for the oldest component in the KB which matches the scanned file. In case of a tie between two components with the same release date, other available information will be used to select the best match.
+If no hint is provided, the SCANOSS engine will look for the oldest component in the KB which matches the scanned file. In case of a tie between two components with the same release date, other available information will be used to select the best match. When component ranking is enabled (``-r``), an older candidate does not replace a better ranked one just for its release date if both are the same project under different purls (a fork or a mirror, i.e. the same repository name), or if the older one has a rank of 8 or more while the other is below 8.
+
+Go proxy mirrors of GitHub projects
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A file of a GitHub project that is not Go code can be identified under a Go module proxy purl such as ``pkg:golang/github.com/<owner>/<repo>``. For non-Go files (anything but ``.go``, ``go.mod`` or ``go.sum``), when that mirror is the main purl and the canonical ``pkg:github/<owner>/<repo>`` purl is among its related purls, the canonical purl is reported as the main one. The mirror purl stays in the purl list. Go files keep their Go module purl.
 
 SBOM Ingestion
 ~~~~~~~~~~~~~~

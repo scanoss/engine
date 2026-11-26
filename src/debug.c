@@ -92,7 +92,7 @@ void map_dump(scan_data_t *scan)
 	FILE *map = fopen(MAP_DUMP, "w");
 
 	/* Output column names */
-	fprintf(map, "[MATCHING MD5                  ] HITS ");
+	fprintf(map, "[MATCHING MD5                  ] HITS W2HITS  ");
 	for (int j = 0; j < MATCHMAP_RANGES; j ++)
 	{
 		fprintf(map, "[   RANGE%02d  ] ", j);
@@ -107,7 +107,7 @@ void map_dump(scan_data_t *scan)
 		for (int j = 0; j < MD5_LEN; j++) fprintf(map, "%02x", md5[j]);
 
 		/* Print hits */
-		fprintf(map, " %04x ", scan->matchmap[i].hits);
+		fprintf(map, " %04x %04x   ", scan->matchmap[i].hits, scan->matchmap[i].hits_wfp2);
 
 		/* Print ranges */
 		for (int j = 0; j < scan->matchmap[i].ranges_number; j ++)

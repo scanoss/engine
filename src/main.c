@@ -68,6 +68,9 @@ struct ldb_table oss_pivot;
 struct ldb_table oss_path;
 bool path_table_present = false;
 bool wfp2_present = false;
+/* When true, the wfp2 pass runs together with wfp1 from the start instead of
+   only as a fallback when wfp1 produces no snippet match. */
+bool force_wfp2 = false;
 component_item *ignore_components;
 component_item *declared_components;
 
@@ -147,8 +150,8 @@ void initialize_ldb_tables(char *name)
 	oss_wfp = ldb_read_cfg(dbtable);
 
 	/* Optional wfp2 table: token-aware fingerprints mined into a separate table,
-	 * leaving the classic wfp table untouched. When present, the engine can run a
-	 * wfp2 snippet pass (fallback by default, additive when forced). */
+	 * leaving the classic wfp table untouched. When present, a wfp1+wfp2 pass runs
+	 * as a fallback when wfp1 alone produces no snippet match (always with --force-wfp2). */
 	if (ldb_table_exists(oss_db_name, "wfp2"))
 	{
 		wfp2_present = true;
@@ -322,6 +325,7 @@ static struct option long_options[] = {
 	{"ignore-file-ext",   no_argument,		 0, 260}, /* Long option only */
 	{"range-tolerance",   required_argument, 0, 261}, /* Long option only */
 	{"max-file-content-size", required_argument, 0, 262}, /* Long option only */
+	{"force-wfp2",        no_argument,       0, 263}, /* Long option only */
 	{"wfp",               no_argument,       0, 'w'},
 	{"test",              no_argument,       0, 't'},
 	{"version",           no_argument,       0, 'v'},
@@ -449,6 +453,9 @@ int main(int argc, char **argv)
 				break;
 			case 256: /* --force-snippet (long option only) */
 				force_snippet_scan = true;
+				break;
+			case 263: /* --force-wfp2 (long option only) */
+				force_wfp2 = true;
 				break;
 			case 'S':
 				initialize_ldb_tables(ldb_db_name);

@@ -62,6 +62,8 @@ Configuration:\n\
 -s, --sbom FILE          Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
 -b, --blacklist FILE     Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\
     --force-snippet      Force snippet scanning (no full file matching).\n\
+    --force-wfp2         Always add the wfp2 evidence on top of the wfp1 snippet scan, instead of only when wfp1\n\
+                         produces no snippet match. Needs a wfp2 table. Precede -S with it.\n\
 -a, --attribution FILE   Show attribution notices for the provided SBOM.json file.\n\
 -c, --component HINT     Add a component HINT to guide scan results.\n\
 -k, --key KEY            Show contents of the specified KEY file from MZ sources archive.\n\
@@ -73,6 +75,8 @@ Configuration:\n\
 -S, --snippet-scan WFP   Snippet-only scan: take a single-file WFP block as argument and return JSON with candidate\n\
                          file_md5s and their line ranges, filtered by the tolerance set via -T (precede -S with -T\n\
                          to apply). Use -S - to read the WFP from stdin instead of passing it as argument.\n\
+                         In -w and -S input, lines after a 'wfp2=' marker inside a file= entry are token-aware\n\
+                         (wfp2) fingerprints, matched only when the KB has a wfp2 table (see WFP2 below).\n\
 -l, --license LICENSE    Display OSADL metadata for the given SPDX license ID.\n\
 -L, --full-license       Enable full license report.\n\
 -F, --flags FLAGS        Set engine scanning flags (see below).\n\
@@ -88,6 +92,13 @@ Options:\n\
 Environment variables:\n\
 SCANOSS_MATCHMAP_MAX: Set the snippet scanning match map size (default: %d).\n\
 SCANOSS_FILE_CONTENTS_URL: Define the API URL endpoint for sources. Source URL won't be reported if not defined.\n\
+\n\
+WFP2 (token-aware snippet matching):\n\
+Enabled automatically when the KB contains a 'wfp2' table (no option needed); reported as \"wfp2\" in the\n\
+server block. For physical files the engine computes wfp2 itself; for -w/-S it uses the client's wfp2= block.\n\
+wfp1 always runs first, as a classic scan. wfp2 is queried only when wfp1 alone produces no snippet match\n\
+(always with --force-wfp2), and works on the wfp1 match map: it adds hits to the files found by wfp1 and\n\
+new candidates within its own budget. The min-hits threshold stays based on the wfp1 count.\n\
 \n\
 Engine scanning flags:\n\
 Configure the scanning engine using flags with the -F/--flags parameter.\n\

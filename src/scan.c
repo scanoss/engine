@@ -99,6 +99,7 @@ void scan_data_free(scan_data_t * scan)
 	for (int i = 0; i < scan->matchmap_size; i++)
 	{
 		free(scan->matchmap[i].range);
+		free(scan->matchmap[i].range_wfp1);
 	}
 	free(scan->matchmap);
 	free(scan);
@@ -118,7 +119,10 @@ static void scan_data_reset(scan_data_t *scan)
 	memset(scan->matches_list_array_indirection, 0, sizeof(scan->matches_list_array_indirection));
 
 	for (int i = 0; i < scan->matchmap_size; i++)
+	{
 		free(scan->matchmap[i].range);
+		free(scan->matchmap[i].range_wfp1);
+	}
 	free(scan->matchmap);
 	scan->matchmap = NULL;
 	scan->matchmap_size = 0;
@@ -310,6 +314,8 @@ int wfp_scan(char * path, int scan_max_snippets, int scan_max_components, bool a
 		if (is_wfp2_marker)
 		{
 			in_wfp2 = true;
+			if (scan)
+				scanlog("wfp2: wfp2= block found for %s\n", scan->file_path);
 			continue;
 		}
 
@@ -612,8 +618,8 @@ void ldb_scan(scan_data_t *scan)
 						scan->total_lines = scan->lines[scan->hash_count - 1];
 
 					/* When the wfp2 table is available, also compute the file's
-					   token-aware wfp2 fingerprints so the wfp2 snippet pass can
-					   run (fallback by default, additive with --force-wfp2). */
+					   token-aware wfp2 fingerprints. They are only queried by the
+					   fallback pass, when wfp1 alone produces no snippet match. */
 					if (wfp2_present)
 					{
 						if (!scan->hashes2)
@@ -622,6 +628,7 @@ void ldb_scan(scan_data_t *scan)
 							scan->lines2  = malloc(MAX_FILE_SIZE);
 						}
 						scan->hash_count2 = winnowing_wfp2(src, file_size, scan->hashes2, scan->lines2, MAX_FILE_SIZE / sizeof(uint32_t));
+						scanlog("wfp2: computed %u fingerprints for %s\n", scan->hash_count2, scan->file_path);
 					}
 				}
 				free(src);
@@ -629,8 +636,8 @@ void ldb_scan(scan_data_t *scan)
 			else if (scan->hash_count)
 				scan->total_lines = scan->lines[scan->hash_count - 1];
 
-			/* Perform snippet scan. ldb_scan_snippets accumulates wfp1 and, when
-			   present, wfp2 hashes into a single matchmap. */
+			/* Perform snippet scan: wfp1 first, wfp1+wfp2 fallback when wfp1
+			   produces no snippet match (see ldb_scan_snippets). */
 			if (scan->total_lines || (wfp2_present && scan->hash_count2))
 				scan->match_type = ldb_scan_snippets(scan);
 			else

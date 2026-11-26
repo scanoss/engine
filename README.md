@@ -101,6 +101,7 @@ Syntax: scanoss [parameters] [TARGET]
 * `-s, --sbom FILE` - Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification
 * `-b, --blacklist FILE` - Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format)
 * `--force-snippet` - Force snippet scanning (no full file matching). Takes no argument
+* `--force-wfp2` - Always add the wfp2 evidence on top of the wfp1 snippet scan, instead of only when wfp1 produces no snippet match (requires a `wfp2` table; place it before `-S`). Takes no argument
 * `-c, --component HINT` - Add a component HINT to guide scan results
 
 ### Attribution and Licenses
@@ -187,6 +188,36 @@ This produces an identification (id) of type "file"
 
 This produces an identification (id) of type "snippet"
 
+### WFP2: token-aware snippet matching (optional)
+
+In addition to the classic snippet fingerprints (wfp1), the engine can match token-aware fingerprints (wfp2): language detection, comment removal and normalization where identifiers and types are collapsed, followed by winnowing (GRAM 20, WINDOW 40, CRC32C). This catches snippets that were reformatted or had identifiers renamed.
+
+**Activation.** There is no command line option. wfp2 is enabled automatically when the Knowledgebase contains a `wfp2` table (`<kb>/wfp2`). Without that table the engine behaves exactly as before. The capability is reported in the `server` block of the output as `"wfp2": true` or `"wfp2": false`, so clients can decide whether to send wfp2 fingerprints. With `-d`, the log shows `wfp2 table present: enabling wfp2 snippet matching`.
+
+**When are wfp2 fingerprints computed?**
+
+* Scanning physical files or directories: the engine computes wfp2 itself, only when the `wfp2` table is present and the file reaches snippet scanning (no full-file match, not binary, not over the size limit). The fingerprints are always computed in that case, but only queried when the wfp2 pass runs.
+* Scanning a `.wfp` file (`-w`) or a WFP block (`-S`): the engine never computes wfp2. It uses the fingerprints sent by the client in a `wfp2=` block. If the Knowledgebase has no `wfp2` table, those lines are ignored.
+
+**WFP format.** Inside each `file=` entry, a `wfp2=` marker line starts the wfp2 block. All snippet lines after it, up to the next `file=`, are matched against the `wfp2` table. Lines use the same `line=hash[,hash]*` format as wfp1:
+
+```
+file=<md5>,<size>,<path>
+4=1a2b3c4d,5e6f7a8b
+12=0badf00d
+wfp2=
+3=deadbeef,cafebabe
+10=12345678
+```
+
+**When is wfp2 used?** The snippet scan always runs with wfp1 first, exactly as a classic scan. If some file reaches the snippet match criteria (min hits, min lines, file extension), that result is used and wfp2 is not queried. Otherwise the wfp2 pass runs on top of the match map left by wfp1. With `--force-wfp2` the wfp2 pass always runs, whether or not wfp1 alone would match.
+
+**How results are combined.** The wfp2 pass works on the match map built by wfp1, so the wfp1 evidence is never displaced: every file already in the map receives the wfp2 hits and line ranges of the fingerprints it appears in, and files not found by wfp1 are added as new candidates, within a wfp2 budget (least popular fingerprints first, as in the wfp1 pass). The minimum hits threshold is still computed from the wfp1 fingerprint count only, so wfp2 adds evidence without changing the matching threshold.
+
+**How the match is selected.** wfp2 adds recall, but it tells close copies and versions of the same file apart worse than wfp1. So a candidate that qualifies as a snippet match with its wfp1 hits alone (min hits, min lines) is ranked and compared with the other candidates by its wfp1 evidence (hits, matched lines and matched percent), and it ranks above the candidates that need wfp2 to qualify, which are compared by their total evidence. The reported hits, line ranges and matched percent always include both.
+
+**Logs.** With `-d`, the log shows which stage ran (`wfp1: starting snippet pass`, `wfp2: fallback pass on the wfp1 matchmap`, `wfp2: forced pass on the wfp1 matchmap`) and the origin of each candidate and of the selected match, e.g. `Best snippet match <md5>: hits=304 (wfp1=107, wfp2=197), origin=wfp1+wfp2`. When the file has wfp2 hits, the line also tells which evidence the selection used, e.g. `selected by wfp1 evidence (hits=107, lines=88)`.
+
 ## If none of the above,
 
 This produces an identification (id) of type "none"
@@ -201,11 +232,15 @@ The scanning client can optionally pass a a component hint (context). The contex
 
 ## First component released
 
-If no hint is provided, the SCANOSS engine will look for the oldest component in the KB which matches the scanned file. In case of a tie between two components with the same release date, other available information will be used to select the best match.
+If no hint is provided, the SCANOSS engine will look for the oldest component in the KB which matches the scanned file. In case of a tie between two components with the same release date, other available information will be used to select the best match. When component ranking is enabled (`-r`), an older candidate does not replace a better ranked one just for its release date if both are the same project under different purls (a fork or a mirror, i.e. the same repository name), or if the older one has a rank of 8 or more while the other is below 8.
 
 ## Distinct component selection
 
 A matched file is frequently present in several components and versions at once. The engine keeps a small, fixed-size list of candidate components (3 by default) for each match, which is the list reported when best-match-only is disabled (`-F 256`). To avoid a single component monopolising that list with multiple versions of itself, candidates are deduplicated by their main purl: when a new candidate shares the purl of one already in the list, only the preferred one is kept (using the same ranking criteria described above, i.e. favouring the oldest release), and the freed slots are made available to genuinely different components. As a result the list reflects distinct components rather than repeated versions of the same one.
+
+## Go proxy mirrors of GitHub projects
+
+The KB also indexes many repositories that are not Go code through the Go module proxy, so a file of a GitHub project (for example a C++ header) can be identified under a purl such as `pkg:golang/github.com/<owner>/<repo>`. For a scanned file that is not Go code (anything but `.go`, `go.mod` or `go.sum`), that purl is a mirror of the project. When the reported main purl is such a mirror and the canonical `pkg:github/<owner>/<repo>` purl is among its related purls, the engine reports the canonical purl as the main one. The mirror purl stays in the purl list, and the version and dates are the ones of the matched release. Go files keep their Go module purl.
 
 ## SBOM Ingestion
 

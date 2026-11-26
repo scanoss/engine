@@ -81,7 +81,10 @@ bool snippet_extension_discard(match_data_t * match)
  */
 static bool hit_test(match_data_t *a, match_data_t *b)
 {
-	if (a->hits <= b->hits)
+	/* candidates selected by their wfp1 evidence rank first */
+	if (a->wfp1_evidence != b->wfp1_evidence)
+		return b->wfp1_evidence;
+	if (match_selection_hits(a) <= match_selection_hits(b))
 		return true;
 	else
 		return false;
@@ -100,11 +103,102 @@ bool ranges_intersection(match_data_t *a, match_data_t *b)
 	}
 	return false;
 }
+
+/* Matched lines as a percent of the scanned file (1 to 99) */
+static int lines_matched_percent(int matched_lines, int total_lines)
+{
+	float percent = (matched_lines * 100) / total_lines;
+	int matched_percent = floor(percent);
+	if (matched_percent > 99)
+		matched_percent = 99;
+	if (matched_percent < 1)
+		matched_percent = 1;
+	return matched_percent;
+}
+
+static void snippet_wfp1_evidence(scan_data_t *scan, match_data_t *match);
+
 /**
  * @brief Fill the matches list array based on the matchmap. The possible matches will be sorted by hits number.
  *
  * @param scan
  */
+/**
+ * @brief Build a snippet match from one ranked matchmap entry, applying the
+ *        acceptance criteria (min hits, file extension, min matched lines).
+ * @param scan current scan
+ * @param j matchmap index
+ * @return the match, or NULL when the entry does not qualify
+ */
+static match_data_t *snippet_candidate_build(scan_data_t *scan, int j)
+{
+	if (scan->matchmap[j].hits < scan->snippet_min_hits) /* Only consider file with more than min_match_hits */
+		return NULL;
+
+	match_data_t *match_new = calloc(1, sizeof(match_data_t)); /* Create a match object */
+	if (!match_new)
+	{
+		scanlog("Error allocating memory for match data\n");
+		return NULL;
+	}
+	memcpy(match_new->file_md5, scan->matchmap[j].md5, oss_file.key_ln);
+	match_new->hits = scan->matchmap[j].hits;
+	match_new->matchmap_reg = &scan->matchmap[j];
+	match_new->type = scan->match_type;
+	strcpy(match_new->source_md5, scan->source_md5);
+	match_new->scan_ower = scan;
+
+	if (scan->snippet_honor_file_extension && snippet_extension_discard(match_new))
+	{
+		match_data_free(match_new);
+		return NULL;
+	}
+
+	int matched_lines = compile_ranges(match_new);
+	if (matched_lines < scan->snippet_min_lines)
+	{
+		match_data_free(match_new);
+		return NULL;
+	}
+
+	match_new->matched_percent = lines_matched_percent(matched_lines, match_new->scan_ower->total_lines);
+	match_new->lines_matched = matched_lines;
+	snippet_wfp1_evidence(scan, match_new);
+	return match_new;
+}
+
+/**
+ * @brief Tell whether the current matchmap yields at least one snippet match,
+ *        using the same acceptance criteria as biggest_snippet(). Leaves the
+ *        scan state untouched. Must only be called after a snippet pass that
+ *        returned MATCH_SNIPPET (matchmap_rank_by_sector initialized).
+ * @param scan current scan
+ * @return true if some matchmap file qualifies as a snippet match
+ */
+bool snippet_has_candidate(scan_data_t *scan)
+{
+	/* compile_ranges() forces snippet_adjust_tolerance on; restore it so a
+	   following snippet pass keeps the caller's tolerance configuration. */
+	bool adjust_tolerance = scan->snippet_adjust_tolerance;
+	bool found = false;
+
+	for (int sector = 0; sector < 256 && !found; sector++)
+	{
+		int j = scan->matchmap_rank_by_sector[sector];
+		if (j < 0)
+			continue;
+		match_data_t *m = snippet_candidate_build(scan, j);
+		if (m)
+		{
+			found = true;
+			match_data_free(m);
+		}
+	}
+
+	scan->snippet_adjust_tolerance = adjust_tolerance;
+	return found;
+}
+
 void biggest_snippet(scan_data_t *scan)
 {
 	scanlog("biggest_snippet\n");
@@ -120,42 +214,11 @@ void biggest_snippet(scan_data_t *scan)
 		if (j < 0)
 			continue;
 		
-		if (scan->matchmap[j].hits >= scan->snippet_min_hits) /* Only consider file with more than min_match_hits */
+		match_data_t *match_new = snippet_candidate_build(scan, j);
+		if (match_new)
 		{
-			match_data_t *match_new = calloc(1, sizeof(match_data_t)); /* Create a match object */
-			if (!match_new)
-			{
-				scanlog("Error allocating memory for match data\n");
-				return;
-			}
-			memcpy(match_new->file_md5, scan->matchmap[j].md5, oss_file.key_ln);
-			match_new->hits = scan->matchmap[j].hits;
-			match_new->matchmap_reg = &scan->matchmap[j];
-			match_new->type = scan->match_type;
-			strcpy(match_new->source_md5, scan->source_md5);
-			match_new->scan_ower = scan;
 			int i = 0;
-
-			if (scan->snippet_honor_file_extension && snippet_extension_discard(match_new))
-			{
-				match_data_free(match_new); 
-				continue;
-			}
-
-			int matched_lines = compile_ranges(match_new);
-			if (matched_lines < scan->snippet_min_lines) {
-				match_data_free(match_new); 
-				continue;
-			}
-
-			float percent = (matched_lines * 100) / match_new->scan_ower->total_lines;
-			int matched_percent = floor(percent);
-			if (matched_percent > 99)
-				matched_percent = 99;
-			if (matched_percent < 1)
-				matched_percent = 1;
-			match_new->matched_percent = matched_percent;
-			match_new->lines_matched = matched_lines;
+			scanlog_snippet_origin("Snippet candidate", match_new);
 			//match_new->hits = hits;
 
 			/* Place the match in the list of the snippet region it belongs to.
@@ -209,7 +272,7 @@ void biggest_snippet(scan_data_t *scan)
 			{
 				char md5_hex[oss_file.key_ln * 2 + 1];
 				ldb_bin_to_hex(item->match->file_md5, oss_file.key_ln, md5_hex);
-				scanlog("%s - %d\n", md5_hex, item->match->hits);
+				scanlog("%s - %d (origin=%s)\n", md5_hex, item->match->hits, snippet_origin(item->match->matchmap_reg));
 			}
 		}
 	}
@@ -438,3 +501,92 @@ uint32_t compile_ranges(match_data_t *match)
 	return hits;
 }
 
+
+/**
+ * @brief Matched lines of a set of ranges, counted as compile_ranges() does
+ *        (sort, join overlapping ranges, discard ranges under the minimum).
+ */
+static int ranges_matched_lines(scan_data_t *scan, matchmap_range *ranges, int ranges_number)
+{
+	if (ranges_number <= 0)
+		return 0;
+	ranges_sort(ranges, ranges_number);
+	matchmap_range *joined = ranges_join_overlapping(ranges, ranges_number, scan->snippet_range_tolerance, false);
+	if (!joined)
+		return 0;
+	char line_ranges[MAX_FIELD_LN * 2] = "\0";
+	char oss_ranges[MAX_FIELD_LN * 2] = "\0";
+	int lines = ranges_assemble(joined, line_ranges, oss_ranges, scan->snippet_min_lines, MATCHMAP_RANGES);
+	free(joined);
+	return lines;
+}
+
+/**
+ * @brief Fill the wfp1 evidence of a snippet candidate, when it qualifies as a match with
+ *        its wfp1 hits alone (min hits, min lines). A file the wfp2 pass did not touch
+ *        has only wfp1 evidence; a file found by wfp2 alone has none.
+ * @param scan current scan
+ * @param match snippet candidate
+ */
+static void snippet_wfp1_evidence(scan_data_t *scan, match_data_t *match)
+{
+	matchmap_entry *entry = match->matchmap_reg;
+	if (!entry->range_wfp1)
+	{
+		if (entry->hits_wfp2)
+			return;
+		match->wfp1_evidence = true;
+		match->hits_wfp1 = match->hits;
+		match->lines_matched_wfp1 = match->lines_matched;
+		match->matched_percent_wfp1 = match->matched_percent;
+		return;
+	}
+
+	int hits = entry->hits - entry->hits_wfp2;
+	if (hits < scan->snippet_min_hits)
+		return;
+	int lines = ranges_matched_lines(scan, entry->range_wfp1, entry->ranges_number_wfp1);
+	if (lines < scan->snippet_min_lines)
+		return;
+	match->wfp1_evidence = true;
+	match->hits_wfp1 = hits;
+	match->lines_matched_wfp1 = lines;
+	match->matched_percent_wfp1 = lines_matched_percent(lines, scan->total_lines);
+}
+
+/**
+ * @brief Origin of the snippet hits accumulated for one matchmap file.
+ * @param entry matchmap entry
+ * @return "wfp1", "wfp2" or "wfp1+wfp2"
+ */
+const char *snippet_origin(matchmap_entry *entry)
+{
+	if (!entry || !entry->hits_wfp2)
+		return "wfp1";
+	if (entry->hits_wfp2 >= entry->hits)
+		return "wfp2";
+	return "wfp1+wfp2";
+}
+
+/**
+ * @brief Log the wfp1/wfp2 origin of a snippet match.
+ * @param prefix text that identifies the log context
+ * @param match snippet match
+ */
+void scanlog_snippet_origin(const char *prefix, match_data_t *match)
+{
+	if (!debug_on || !match || !match->matchmap_reg)
+		return;
+	matchmap_entry *e = match->matchmap_reg;
+	char md5_hex[oss_file.key_ln * 2 + 1];
+	ldb_bin_to_hex(match->file_md5, oss_file.key_ln, md5_hex);
+	if (!e->hits_wfp2)
+	{
+		scanlog("%s %s: hits=%d (wfp1=%d, wfp2=%d), origin=%s\n", prefix, md5_hex,
+				e->hits, e->hits - e->hits_wfp2, e->hits_wfp2, snippet_origin(e));
+		return;
+	}
+	scanlog("%s %s: hits=%d (wfp1=%d, wfp2=%d), origin=%s, selected by %s evidence (hits=%d, lines=%d)\n", prefix, md5_hex,
+			e->hits, e->hits - e->hits_wfp2, e->hits_wfp2, snippet_origin(e),
+			match->wfp1_evidence ? "wfp1" : "total", match_selection_hits(match), match_selection_lines(match));
+}

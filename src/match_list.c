@@ -267,6 +267,15 @@ bool tolerance_eval(int a, int b)
 }
 
 
+/* Candidates in the same list must be selected by the same evidence (wfp1 or total),
+   with matched lines within the tolerance */
+static bool selection_tolerance_eval(match_data_t *a, match_data_t *b)
+{
+    if (a->wfp1_evidence != b->wfp1_evidence)
+        return false;
+    return tolerance_eval(match_selection_lines(a), match_selection_lines(b));
+}
+
 /**
  * @brief Try to add a match in a existing matches list.
  * 
@@ -348,11 +357,11 @@ bool match_list_add(match_list_t *list, match_data_t *new_match, bool (*val)(mat
         }
         /* in autolimit mode the list doesnt have a fix size, it will accept all the matchest until a 75% of the fist element (the biggest) */
         //TODO: this part of the code should be in the function pointer or I need to re-evaluate the archtecture of this function */
-        if (list->autolimit && !tolerance_eval(list->headp.lh_first->match->lines_matched, list->last_element->match->lines_matched))
+        if (list->autolimit && !selection_tolerance_eval(list->headp.lh_first->match, list->last_element->match))
         {    
             np = list->headp.lh_first;
             /*We have to find and remove the unwanted elements */
-            for (; np->entries.le_next != NULL && tolerance_eval(list->headp.lh_first->match->lines_matched, np->entries.le_next->match->lines_matched); np = np->entries.le_next)
+            for (; np->entries.le_next != NULL && selection_tolerance_eval(list->headp.lh_first->match, np->entries.le_next->match); np = np->entries.le_next)
             {
 
             }
