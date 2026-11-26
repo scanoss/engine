@@ -93,6 +93,10 @@ match_data_t * match_data_copy(match_data_t * in)
     out->oss_ranges = strdup(in->oss_ranges);
     out->matched_percent = in->matched_percent;
     out->lines_matched = in->lines_matched;
+    out->wfp1_evidence = in->wfp1_evidence;
+    out->hits_wfp1 = in->hits_wfp1;
+    out->lines_matched_wfp1 = in->lines_matched_wfp1;
+    out->matched_percent_wfp1 = in->matched_percent_wfp1;
     out->snippet_ids = strdup(in->snippet_ids);
     out->scan_ower = in->scan_ower; /* keep owning scan so downstream (e.g. print_json_match) can deref it */
     strcpy(out->source_md5, in->source_md5);
@@ -1095,8 +1099,8 @@ void match_select_best(scan_data_t *scan)
 			scanlog("%s - %s - %d - %d VS %s - %s - %d - %d\n",
 					best_match_component->purls[0],
 					best_match_component->release_date,
-					scan->matches_list_array[i]->best_match->hits,best_match_component->rank,
-					match_component->purls[0], match_component->release_date, item->match->hits, match_component->rank);
+					match_selection_hits(scan->matches_list_array[i]->best_match),best_match_component->rank,
+					match_component->purls[0], match_component->release_date, match_selection_hits(item->match), match_component->rank);
 			
 			if (best_match_component->identified < match_component->identified)
 			{
@@ -1116,19 +1120,23 @@ void match_select_best(scan_data_t *scan)
 				continue;
 			}
 
+			/* Snippet candidates are compared by their wfp1 evidence when they have it */
+			int best_hits = match_selection_hits(best_match);
+			int match_hits = match_selection_hits(match);
+
 			//If best match has 20% more of hits do nothing.
-			if (best_match->hits >= match->hits * 1.2 && best_match_component->path_depth <= match_component->path_depth)
+			if (best_hits >= match_hits * 1.2 && best_match_component->path_depth <= match_component->path_depth)
 				continue;
 
 			//if cantidate has 10% more of hits do not consider dates and switch
-			if (match->hits > best_match->hits * 1.1)
+			if (match_hits > best_hits * 1.1)
 			{
 				scanlog("Replacing best match due to big hits difference\n");
 				scan->matches_list_array[i]->best_match = item->match;
 				continue;
 			} 
 			// if the hit numbers are close, select the oldest.
-			int diff = abs(best_match->matched_percent - match->matched_percent);
+			int diff = abs(match_selection_percent(best_match) - match_selection_percent(match));
 
 			if (diff <= 10)
 			{

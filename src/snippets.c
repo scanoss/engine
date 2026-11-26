@@ -654,6 +654,19 @@ static void matchmap_index_add(matchmap_index_t *ix, const uint8_t *id, int32_t 
 	ix->slots[pos] = entry;
 }
 
+/* Keep the wfp1 line ranges of a file before its first wfp2 hit, so the candidate
+   selection can still use its wfp1 evidence alone */
+static void matchmap_keep_wfp1_ranges(matchmap_entry *entry)
+{
+	if (entry->range_wfp1 || entry->ranges_number <= 0)
+		return;
+	entry->range_wfp1 = malloc(entry->ranges_number * sizeof(matchmap_range));
+	if (!entry->range_wfp1)
+		return;
+	memcpy(entry->range_wfp1, entry->range, entry->ranges_number * sizeof(matchmap_range));
+	entry->ranges_number_wfp1 = entry->ranges_number;
+}
+
 static int wfp2_popularity_cmp(const void *a, const void *b)
 {
 	const matchmap_entry_t *x = *(matchmap_entry_t * const *) a;
@@ -669,7 +682,8 @@ static int wfp2_popularity_cmp(const void *a, const void *b)
  * Every file id already in the matchmap receives the wfp2 hits and line ranges of the
  * fingerprints it appears in. Files not found by wfp1 are added as new candidates, only
  * from the wfp2 fingerprints that fit in the wfp2 budget: least popular first, with the
- * same rule as the first stage of the wfp1 pass. The wfp1 evidence is never displaced.
+ * same rule as the first stage of the wfp1 pass. The wfp1 evidence is never displaced,
+ * and the wfp1 line ranges of each file are kept for the candidate selection.
  * The sector leaders are recomputed at the end. Without wfp1 fingerprints the matchmap
  * is built from wfp2 alone.
  *
@@ -776,7 +790,10 @@ static match_t snippet_scan_add_wfp2(scan_data_t *scan)
 							 scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits : scan->snippet_min_hits;
 			int32_t entry = matchmap_index_find(&ix, scan, md5);
 			if (entry >= 0)
+			{
+				matchmap_keep_wfp1_ranges(&scan->matchmap[entry]);
 				add_file_to_matchmap(scan, order[k], md5, entry, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+			}
 			else if (k < allowed && scan->matchmap_size < (uint32_t) scan->max_matchmap_size)
 			{
 				uint32_t slot = scan->matchmap_size;

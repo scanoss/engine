@@ -81,7 +81,10 @@ bool snippet_extension_discard(match_data_t * match)
  */
 static bool hit_test(match_data_t *a, match_data_t *b)
 {
-	if (a->hits <= b->hits)
+	/* candidates selected by their wfp1 evidence rank first */
+	if (a->wfp1_evidence != b->wfp1_evidence)
+		return b->wfp1_evidence;
+	if (match_selection_hits(a) <= match_selection_hits(b))
 		return true;
 	else
 		return false;
@@ -100,6 +103,21 @@ bool ranges_intersection(match_data_t *a, match_data_t *b)
 	}
 	return false;
 }
+
+/* Matched lines as a percent of the scanned file (1 to 99) */
+static int lines_matched_percent(int matched_lines, int total_lines)
+{
+	float percent = (matched_lines * 100) / total_lines;
+	int matched_percent = floor(percent);
+	if (matched_percent > 99)
+		matched_percent = 99;
+	if (matched_percent < 1)
+		matched_percent = 1;
+	return matched_percent;
+}
+
+static void snippet_wfp1_evidence(scan_data_t *scan, match_data_t *match);
+
 /**
  * @brief Fill the matches list array based on the matchmap. The possible matches will be sorted by hits number.
  *
@@ -143,14 +161,9 @@ static match_data_t *snippet_candidate_build(scan_data_t *scan, int j)
 		return NULL;
 	}
 
-	float percent = (matched_lines * 100) / match_new->scan_ower->total_lines;
-	int matched_percent = floor(percent);
-	if (matched_percent > 99)
-		matched_percent = 99;
-	if (matched_percent < 1)
-		matched_percent = 1;
-	match_new->matched_percent = matched_percent;
+	match_new->matched_percent = lines_matched_percent(matched_lines, match_new->scan_ower->total_lines);
 	match_new->lines_matched = matched_lines;
+	snippet_wfp1_evidence(scan, match_new);
 	return match_new;
 }
 
@@ -490,6 +503,58 @@ uint32_t compile_ranges(match_data_t *match)
 
 
 /**
+ * @brief Matched lines of a set of ranges, counted as compile_ranges() does
+ *        (sort, join overlapping ranges, discard ranges under the minimum).
+ */
+static int ranges_matched_lines(scan_data_t *scan, matchmap_range *ranges, int ranges_number)
+{
+	if (ranges_number <= 0)
+		return 0;
+	ranges_sort(ranges, ranges_number);
+	matchmap_range *joined = ranges_join_overlapping(ranges, ranges_number, scan->snippet_range_tolerance, false);
+	if (!joined)
+		return 0;
+	char line_ranges[MAX_FIELD_LN * 2] = "\0";
+	char oss_ranges[MAX_FIELD_LN * 2] = "\0";
+	int lines = ranges_assemble(joined, line_ranges, oss_ranges, scan->snippet_min_lines, MATCHMAP_RANGES);
+	free(joined);
+	return lines;
+}
+
+/**
+ * @brief Fill the wfp1 evidence of a snippet candidate, when it qualifies as a match with
+ *        its wfp1 hits alone (min hits, min lines). A file the wfp2 pass did not touch
+ *        has only wfp1 evidence; a file found by wfp2 alone has none.
+ * @param scan current scan
+ * @param match snippet candidate
+ */
+static void snippet_wfp1_evidence(scan_data_t *scan, match_data_t *match)
+{
+	matchmap_entry *entry = match->matchmap_reg;
+	if (!entry->range_wfp1)
+	{
+		if (entry->hits_wfp2)
+			return;
+		match->wfp1_evidence = true;
+		match->hits_wfp1 = match->hits;
+		match->lines_matched_wfp1 = match->lines_matched;
+		match->matched_percent_wfp1 = match->matched_percent;
+		return;
+	}
+
+	int hits = entry->hits - entry->hits_wfp2;
+	if (hits < scan->snippet_min_hits)
+		return;
+	int lines = ranges_matched_lines(scan, entry->range_wfp1, entry->ranges_number_wfp1);
+	if (lines < scan->snippet_min_lines)
+		return;
+	match->wfp1_evidence = true;
+	match->hits_wfp1 = hits;
+	match->lines_matched_wfp1 = lines;
+	match->matched_percent_wfp1 = lines_matched_percent(lines, scan->total_lines);
+}
+
+/**
  * @brief Origin of the snippet hits accumulated for one matchmap file.
  * @param entry matchmap entry
  * @return "wfp1", "wfp2" or "wfp1+wfp2"
@@ -515,6 +580,13 @@ void scanlog_snippet_origin(const char *prefix, match_data_t *match)
 	matchmap_entry *e = match->matchmap_reg;
 	char md5_hex[oss_file.key_ln * 2 + 1];
 	ldb_bin_to_hex(match->file_md5, oss_file.key_ln, md5_hex);
-	scanlog("%s %s: hits=%d (wfp1=%d, wfp2=%d), origin=%s\n", prefix, md5_hex,
-			e->hits, e->hits - e->hits_wfp2, e->hits_wfp2, snippet_origin(e));
+	if (!e->hits_wfp2)
+	{
+		scanlog("%s %s: hits=%d (wfp1=%d, wfp2=%d), origin=%s\n", prefix, md5_hex,
+				e->hits, e->hits - e->hits_wfp2, e->hits_wfp2, snippet_origin(e));
+		return;
+	}
+	scanlog("%s %s: hits=%d (wfp1=%d, wfp2=%d), origin=%s, selected by %s evidence (hits=%d, lines=%d)\n", prefix, md5_hex,
+			e->hits, e->hits - e->hits_wfp2, e->hits_wfp2, snippet_origin(e),
+			match->wfp1_evidence ? "wfp1" : "total", match_selection_hits(match), match_selection_lines(match));
 }

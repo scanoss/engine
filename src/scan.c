@@ -99,6 +99,7 @@ void scan_data_free(scan_data_t * scan)
 	for (int i = 0; i < scan->matchmap_size; i++)
 	{
 		free(scan->matchmap[i].range);
+		free(scan->matchmap[i].range_wfp1);
 	}
 	free(scan->matchmap);
 	free(scan);
@@ -118,7 +119,10 @@ static void scan_data_reset(scan_data_t *scan)
 	memset(scan->matches_list_array_indirection, 0, sizeof(scan->matches_list_array_indirection));
 
 	for (int i = 0; i < scan->matchmap_size; i++)
+	{
 		free(scan->matchmap[i].range);
+		free(scan->matchmap[i].range_wfp1);
+	}
 	free(scan->matchmap);
 	scan->matchmap = NULL;
 	scan->matchmap_size = 0;

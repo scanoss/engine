@@ -214,7 +214,9 @@ wfp2=
 
 **How results are combined.** The wfp2 pass works on the match map built by wfp1, so the wfp1 evidence is never displaced: every file already in the map receives the wfp2 hits and line ranges of the fingerprints it appears in, and files not found by wfp1 are added as new candidates, within a wfp2 budget (least popular fingerprints first, as in the wfp1 pass). The minimum hits threshold is still computed from the wfp1 fingerprint count only, so wfp2 adds evidence without changing the matching threshold.
 
-**Logs.** With `-d`, the log shows which stage ran (`wfp1: starting snippet pass`, `wfp2: fallback pass on the wfp1 matchmap`, `wfp2: forced pass on the wfp1 matchmap`) and the origin of each candidate and of the selected match, e.g. `Best snippet match <md5>: hits=304 (wfp1=107, wfp2=197), origin=wfp1+wfp2`.
+**How the match is selected.** wfp2 adds recall, but it tells close copies and versions of the same file apart worse than wfp1. So a candidate that qualifies as a snippet match with its wfp1 hits alone (min hits, min lines) is ranked and compared with the other candidates by its wfp1 evidence (hits, matched lines and matched percent), and it ranks above the candidates that need wfp2 to qualify, which are compared by their total evidence. The reported hits, line ranges and matched percent always include both.
+
+**Logs.** With `-d`, the log shows which stage ran (`wfp1: starting snippet pass`, `wfp2: fallback pass on the wfp1 matchmap`, `wfp2: forced pass on the wfp1 matchmap`) and the origin of each candidate and of the selected match, e.g. `Best snippet match <md5>: hits=304 (wfp1=107, wfp2=197), origin=wfp1+wfp2`. When the file has wfp2 hits, the line also tells which evidence the selection used, e.g. `selected by wfp1 evidence (hits=107, lines=88)`.
 
 ## If none of the above,
 
