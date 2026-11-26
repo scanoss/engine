@@ -122,7 +122,7 @@ Besides the classic snippet fingerprints (wfp1), the engine can match token-awar
 * **Activation**: automatic when the Knowledgebase contains a ``wfp2`` table. There is no command line option. The ``server`` block of the output reports ``"wfp2": true`` or ``"wfp2": false``.
 * **Physical files**: the engine computes wfp2 only when the ``wfp2`` table is present.
 * **.wfp input (-w / -S)**: the engine never computes wfp2. It reads the lines that follow a ``wfp2=`` marker inside each ``file=`` entry (same ``line=hash[,hash]*`` format as wfp1). They are ignored if the table is missing.
-* **Fallback**: the snippet scan runs with wfp1 first. Only when no file reaches the snippet match criteria (min hits, min lines, file extension) is a second pass run, adding wfp1 and wfp2 hits into a single match map. The minimum hits threshold is still based on the wfp1 fingerprint count only. With ``--force-wfp2`` the combined pass runs directly, whether or not wfp1 alone would match (place it before ``-S``).
+* **Fallback**: the snippet scan runs with wfp1 first, as a classic scan. Only when no file reaches the snippet match criteria (min hits, min lines, file extension) does the wfp2 pass run, on top of the match map left by wfp1: files already in the map receive the wfp2 hits and ranges, and files not found by wfp1 are added within a wfp2 budget. The minimum hits threshold is still based on the wfp1 fingerprint count only. With ``--force-wfp2`` the wfp2 pass always runs, whether or not wfp1 alone would match (place it before ``-S``).
 
 If none of the above
 ~~~~~~~~~~~~~~~~~~~~

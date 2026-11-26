@@ -62,8 +62,8 @@ Configuration:\n\
 -s, --sbom FILE          Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification.\n\
 -b, --blacklist FILE     Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format).\n\
     --force-snippet      Force snippet scanning (no full file matching).\n\
-    --force-wfp2         Combine wfp1 and wfp2 snippet hits from the start, instead of using wfp2 only as a\n\
-                         fallback when wfp1 produces no snippet match. Needs a wfp2 table. Precede -S with it.\n\
+    --force-wfp2         Always add the wfp2 evidence on top of the wfp1 snippet scan, instead of only when wfp1\n\
+                         produces no snippet match. Needs a wfp2 table. Precede -S with it.\n\
 -a, --attribution FILE   Show attribution notices for the provided SBOM.json file.\n\
 -c, --component HINT     Add a component HINT to guide scan results.\n\
 -k, --key KEY            Show contents of the specified KEY file from MZ sources archive.\n\
@@ -96,9 +96,9 @@ SCANOSS_FILE_CONTENTS_URL: Define the API URL endpoint for sources. Source URL w
 WFP2 (token-aware snippet matching):\n\
 Enabled automatically when the KB contains a 'wfp2' table (no option needed); reported as \"wfp2\" in the\n\
 server block. For physical files the engine computes wfp2 itself; for -w/-S it uses the client's wfp2= block.\n\
-wfp2 is a fallback: it is queried only when wfp1 alone produces no snippet match; that second pass combines\n\
-wfp1 and wfp2 hits, and the min-hits threshold stays based on the wfp1 count. --force-wfp2 runs the combined\n\
-pass directly, whether or not wfp1 alone would match.\n\
+wfp1 always runs first, as a classic scan. wfp2 is queried only when wfp1 alone produces no snippet match\n\
+(always with --force-wfp2), and works on the wfp1 match map: it adds hits to the files found by wfp1 and\n\
+new candidates within its own budget. The min-hits threshold stays based on the wfp1 count.\n\
 \n\
 Engine scanning flags:\n\
 Configure the scanning engine using flags with the -F/--flags parameter.\n\

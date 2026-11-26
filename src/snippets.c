@@ -50,9 +50,8 @@ int matchmap_max_files = DEFAULT_MATCHMAP_FILES;
 
 #define MATCHMAP_ITEM_SIZE (matchmap_max_files * 2)
 /* Length of a WFP table record: file id (oss_file.key_ln) + 2 bytes line number.
-   Taken from the table definition at runtime, since the KB may be MD5 (18) or CRC64 (10) based.
-   Parameterized by table so the same logic serves the classic wfp and the wfp2 table. */
-#define wfp_rec_ln(t) ((t).rec_ln > 0 ? (t).rec_ln : WFP_REC_LN)
+   Taken from the table definition at runtime, since the KB may be MD5 (18) or CRC64 (10) based */
+#define wfp_rec_ln() (oss_wfp.rec_ln > 0 ? oss_wfp.rec_ln : WFP_REC_LN)
 static bool get_all_file_ids(struct ldb_table *table, uint8_t *key, uint8_t *subkey, uint8_t *data, uint32_t datalen, int iteration, void *ptr)
 {
 	uint8_t *record = (uint8_t *)ptr;
@@ -106,6 +105,8 @@ bool skip_snippets(char *src, uint64_t srcln)
 /**
  * @brief Ajust snippet match tolerance
  * @param scan pointer to scan data struct
+ * @param wfpcount number of fingerprints of the scanned file (file size proxy)
+ * @param last_line last fingerprinted line
  */
 static void adjust_tolerance(scan_data_t *scan, uint32_t wfpcount, uint32_t last_line)
 {
@@ -113,7 +114,7 @@ static void adjust_tolerance(scan_data_t *scan, uint32_t wfpcount, uint32_t last
 	int min_match_lines = SNIPPETS_DEFAULT_MIN_MATCH_LINES; /** Minimum number of lines matched for a match range to be acepted */
 	int min_match_hits  = SNIPPETS_DEFAULT_MIN_MATCH_HITS;  /** Minimum number of snippet ID hits to produce a snippet match*/
 
-
+	
 	if (wfpcount && last_line > SNIPPETS_DEFAULT_MIN_MATCH_LINES * 2)
 	{
 		/* Range tolerance is the maximum amount of non-matched lines accepted
@@ -187,22 +188,9 @@ typedef struct  matchmap_entry_t
 	uint8_t * md5_set;
 	uint32_t line;
 	uint8_t wfp[WFP_LN];
-	uint32_t size;
-	uint32_t rec_ln; /* record length of the table this hash was fetched from */
-	bool is_wfp2; /* true when this hash comes from the wfp2 (token-aware) table */
+	uint32_t size; 
+	bool is_wfp2; /* true when the fingerprint comes from the wfp2 (token-aware) table */
 } matchmap_entry_t;
-
-/* One fingerprint source feeding the snippet scan: a WFP table plus the hash/line
-   arrays to query it with. The classic wfp1 scan uses a single source (oss_wfp);
-   the wfp2 opt-in adds a second one (oss_wfp2) so both are accumulated into the
-   SAME matchmap (hits summed and ranges unified per file by add_file_to_matchmap). */
-typedef struct
-{
-	struct ldb_table *table;
-	uint32_t *hashes;
-	uint32_t *lines;
-	uint32_t count;
-} wfp_source_t;
 /**
  * @brief Add one new md5 to the matchmap
  * @param scan pointer to scan object
@@ -330,52 +318,15 @@ int add_file_to_matchmap(scan_data_t *scan, matchmap_entry_t *item, uint8_t *md5
 }
 
 /**
- * @brief Run the snippet-matching pass over one or more WFP sources.
- *
- * Each source pairs a WFP table with its hash/line arrays. All sources are
- * fetched into a single combined map and accumulated into ONE matchmap: a file
- * matched by several sources (e.g. wfp1 and wfp2) is deduplicated by file id by
- * add_file_to_matchmap, so its hits are summed and its ranges unified. The
- * min-hits threshold is applied later (biggest_snippet) over that combined
- * evidence, so a file that each source only partially supports can still cross
- * the threshold once.
- *
+ * @brief Classic (wfp1) snippet pass. Produce the matchmap processing the incoming wfps
  * @param scan current scan structure
- * @param sources array of WFP sources (table + hashes + lines + count)
- * @param n_sources number of sources
  * @return match_t returns the type of scan result.
  */
-static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n_sources)
+static match_t snippet_scan_wfp1(scan_data_t *scan)
 {
-	/* Total hashes across every source, and the highest line number (used to
-	   size the line indirection table and as the matched-percent denominator). */
-	uint32_t hash_count = 0;
-	uint32_t max_line = 0;
-	for (int s = 0; s < n_sources; s++)
-	{
-		hash_count += sources[s].count;
-		if (sources[s].count && sources[s].lines[sources[s].count - 1] > max_line)
-			max_line = sources[s].lines[sources[s].count - 1];
-	}
 
-	/* The match threshold (min_match_hits / min_match_lines / range_tolerance)
-	   must follow the ORIGINAL rule: it scales with the file size, proxied by the
-	   classic wfp1 fingerprint count — exactly as before wfp2 existed. sources[0]
-	   is that classic fingerprint whenever the file has wfp1 hashes (ldb_scan_snippets
-	   adds oss_wfp first); a wfp2-only input scales the threshold with its wfp2 count.
-	   The wfp2 fallback must NOT move the threshold; it only ADDS hits into the same
-	   per-file matchmap (hits summed below), and THAT is where combined detection
-	   is gained: a file whose wfp1 hits alone fall short can cross the unchanged
-	   bar once wfp2 hits are added. Passing the summed wfp1+wfp2 count here would
-	   instead inflate the threshold above the original rule and eat that gain (it
-	   could even push the combined result below the classic wfp1 one). With a
-	   single source this is the classic count, so classic scans are unchanged. */
-	uint32_t file_wfpcount = (n_sources > 0) ? sources[0].count : 0;
-
-	scanlog("snippet_scan_pass (%d source(s), %u hashes)\n", n_sources, hash_count);
-	for (int s = 0; s < n_sources; s++)
-		scanlog("  source %d: %s, %u hashes\n", s, sources[s].table == &oss_wfp2 ? "wfp2" : "wfp1", sources[s].count);
-	if (!hash_count)
+	scanlog("ldb_scan_snippets\n");
+	if (!scan->hash_count)
 	{
 		scanlog("No hashes return NONE\n");
 		return MATCH_NONE;
@@ -384,53 +335,45 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 	if (engine_flags & DISABLE_SNIPPET_MATCHING)
 		return MATCH_NONE;
 
-	/* The matched percentage is computed later against the combined line span */
-	scan->total_lines = max_line;
-
 	matchmap_setup(scan);
 	if (scan->snippet_adjust_tolerance)
-		adjust_tolerance(scan, file_wfpcount, max_line);
+		adjust_tolerance(scan, scan->hash_count, scan->lines[scan->hash_count - 1]);
 
 	/* First build a map with all the MD5s related with each WFP from the source file*/
-	matchmap_entry_t map[hash_count];
+	matchmap_entry_t map[scan->hash_count];
 	/* map_lines_indirection will be used to keep track of the porcessed lines*/
-	int8_t map_lines_indirection[max_line + 1];
+	int8_t map_lines_indirection[scan->lines[scan->hash_count -1] + 1];
 	memset(map_lines_indirection, -1, sizeof(map_lines_indirection));
 	int lines_coverage = 0;
 	int map_max_size = 0;
-	/*Fill up the map with the md5s related with each wfp, across every source*/
-	long idx = 0;
-	for (int s = 0; s < n_sources; s++)
+	/*Fill up the map with the md5s related with each wfp*/
+	for (long i = 0; i < scan->hash_count; i++)
 	{
-		struct ldb_table *wfp_table = sources[s].table;
-		uint32_t rec_ln = wfp_rec_ln((*wfp_table));
-		for (uint32_t j = 0; j < sources[s].count; j++, idx++)
-		{
-			/* Get all file IDs for given wfp */
-			map[idx].md5_set = malloc(WFP_REC_LN * MATCHMAP_ITEM_SIZE);
-			/* WFP_REC_LN (18) is the largest possible record, so the buffer above always fits */
-			wfp_invert(sources[s].hashes[j], map[idx].wfp);
-			uint32_write(map[idx].md5_set, 0);
-			map[idx].line = sources[s].lines[j];
-			map[idx].rec_ln = rec_ln;
-			map[idx].is_wfp2 = (wfp_table == &oss_wfp2);
-			ldb_fetch_recordset(NULL, *wfp_table, map[idx].wfp, false, get_all_file_ids, (void *)map[idx].md5_set);
-			map[idx].size = uint32_read(map[idx].md5_set) / rec_ln;
-			//Initializate the lines indirection when a wfp from a line has at least one md5 linked
-			if (map[idx].size)
-				map_lines_indirection[map[idx].line] = 0;
+		/* Get all file IDs for given wfp */
+		map[i].md5_set = malloc(WFP_REC_LN * MATCHMAP_ITEM_SIZE);
+		/* WFP_REC_LN (18) is the largest possible record, so the buffer above always fits */
+		wfp_invert(scan->hashes[i], map[i].wfp);
+		//scanlog(" Add wfp %02x%02x%02x%02x to map\n",map[i].wfp[0], map[i].wfp[1],map[i].wfp[2],map[i].wfp[3]);
+		uint32_write(map[i].md5_set, 0);
+		map[i].line = scan->lines[i];
+		map[i].is_wfp2 = false;
+		ldb_fetch_recordset(NULL, oss_wfp, map[i].wfp, false, get_all_file_ids, (void *)map[i].md5_set);
+		map[i].size = uint32_read(map[i].md5_set) / wfp_rec_ln();
+		//Initializate the lines indirection when a wfp from a line has at least one md5 linked
+		if (map[i].size)
+			map_lines_indirection[scan->lines[i]] = 0;
 
-			if (map[idx].size > map_max_size)
-				map_max_size = map[idx].size;
-		}
+		if (map[i].size > map_max_size)
+			map_max_size = map[i].size;
+		
 	}
 	/* Classify the WFPs in cathegories depending on popularity
 	Each cathegoy will contain a sub set of index refered to map rows*/
 	#define MAP_INDIRECTION_CAT_NUMBER 1000
 	#define MAP_INDIRECTION_CAT_SIZE (map_max_size / MAP_INDIRECTION_CAT_NUMBER) == 0 ? 1 : (map_max_size / MAP_INDIRECTION_CAT_NUMBER)
-	int map_indedirection_items_size = (hash_count / (MAP_INDIRECTION_CAT_NUMBER))/ 10 < 10 ?
-													hash_count :
-													(hash_count / (MAP_INDIRECTION_CAT_NUMBER))/ 10;
+	int map_indedirection_items_size = (scan->hash_count / (MAP_INDIRECTION_CAT_NUMBER))/ 10 < 10 ? 
+													scan->hash_count : 
+													(scan->hash_count / (MAP_INDIRECTION_CAT_NUMBER))/ 10;
 
 	int * map_indirection[MAP_INDIRECTION_CAT_NUMBER]; //define the cathegories
 	int map_indirection_index[MAP_INDIRECTION_CAT_NUMBER]; //index for each cathegory
@@ -441,7 +384,7 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 	scanlog ("< Snippet scan setup: Total lines: %d ,Matchmap size: %d, Min hits: %d, Min lines: %d, Map max size = %d, Cat N = %d x %d, Cat size = %d >\n", 
 			scan->total_lines, scan->max_matchmap_size, scan->snippet_min_hits, scan->snippet_min_lines, map_max_size, MAP_INDIRECTION_CAT_NUMBER, map_indedirection_items_size, MAP_INDIRECTION_CAT_SIZE);
 
-	for (int i =0; i < hash_count; i++)
+	for (int i =0; i < scan->hash_count; i++)
 	{
 		if ( map[i].size < 1)
 			continue;
@@ -490,7 +433,7 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 			}
 			if (cat_limit > scan->max_matchmap_size)
 			{
-				if ((hashes_to_process < hash_count / 10 || (float) lines_coverage / hash_count < MIN_LINES_COVERAGE) && cat_limit < MAX_MATCHMAP_FILES)
+				if ((hashes_to_process < scan->hash_count / 10 || (float) lines_coverage / scan->hash_count < MIN_LINES_COVERAGE) && cat_limit < MAX_MATCHMAP_FILES)
 				{
 					scan->max_matchmap_size += map[map_indirection[i][j]].size;
 				}
@@ -521,7 +464,7 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 			}
 		}
 
-		for (uint32_t i = 0; i <= max_line; i++)
+		for (int i = 0; i <= scan->lines[scan->hash_count - 1]; i++)
 		{
 			if (map_lines_indirection[i] > -1 && map_lines_indirection[i] == 0)
 			{
@@ -531,10 +474,10 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 	}
 	scan->max_matchmap_size = cat_limit;
 	scanlog("Map limit on %d MD5s at  %d of %d caths. Selected hashes: %d/%d - lines coverage %d\n",
-			scan->max_matchmap_size, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER, hashes_to_process, hash_count, (lines_coverage * 100) / scan->total_lines);
+			scan->max_matchmap_size, cat_limit_index, MAP_INDIRECTION_CAT_NUMBER, hashes_to_process, scan->hash_count, (lines_coverage * 100) / scan->total_lines);
 	scan->matchmap = calloc(scan->max_matchmap_size, sizeof(matchmap_entry));
 
-	int map_indexes[hash_count];
+	int map_indexes[scan->hash_count];
 	memset(map_indexes, 0, sizeof(map_indexes));
 
 	/*Add MD5s to the matchmap, sorting by sector. First add the MD5s starting with 00, then with 01 and so on*/
@@ -553,7 +496,7 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 				/* Add each item to the matchmap*/
 				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index++)
 				{
-					int wfp_p = wfp_index * map[i].rec_ln;
+					int wfp_p = wfp_index * wfp_rec_ln();
 					/*Stop when a new sector appers*/
 					if (md5s[wfp_p] != sector)
 					{
@@ -611,7 +554,7 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 				/* Add each item to the matchmap*/
 				for (int wfp_index = map_indexes[i]; wfp_index < map[i].size; wfp_index++)
 				{
-					int wfp_p = wfp_index * map[i].rec_ln;
+					int wfp_p = wfp_index * wfp_rec_ln();
 					int sector = md5s[wfp_p];
 					int sector_max = scan->snippet_min_hits;
 
@@ -645,77 +588,250 @@ static match_t snippet_scan_pass(scan_data_t *scan, wfp_source_t *sources, int n
 	}
 
 	//Free memory
-	for (int i = 0; i < hash_count; i++)
+	for (int i = 0; i < scan->hash_count; i++)
 	{
 		free(map[i].md5_set);
 	}
 
-
+	
 	for (int i = 0; i < MAP_INDIRECTION_CAT_NUMBER; i++)
 	{
 		free(map_indirection[i]);
 	}
 
 	if (scan->matchmap_size)
-	{
-		if (n_sources > 1 || (n_sources == 1 && sources[0].table == &oss_wfp2))
-		{
-			uint32_t only_wfp1 = 0, only_wfp2 = 0, both = 0;
-			for (uint32_t t = 0; t < scan->matchmap_size; t++)
-			{
-				matchmap_entry *e = &scan->matchmap[t];
-				if (!e->hits)
-					continue;
-				if (!e->hits_wfp2)
-					only_wfp1++;
-				else if (e->hits_wfp2 == e->hits)
-					only_wfp2++;
-				else
-					both++;
-			}
-			scanlog("wfp2: matchmap files with hits by origin: wfp1 only=%u, wfp2 only=%u, wfp1+wfp2=%u\n", only_wfp1, only_wfp2, both);
-		}
 	 	return MATCH_SNIPPET;
-	}
-
+	
 	scanlog("Snippet scan has no matches\n");
 	return MATCH_NONE;
 
 
 }
 
-/**
- * @brief Discard the matchmap built by a snippet pass so another pass can run.
- * @param scan current scan structure
- */
-static void matchmap_reset(scan_data_t *scan)
+/* Open addressing index of the matchmap entries by file id, used by the wfp2 pass */
+typedef struct
 {
-	for (uint32_t i = 0; i < scan->matchmap_size; i++)
-		free(scan->matchmap[i].range);
-	free(scan->matchmap);
-	scan->matchmap = NULL;
-	scan->matchmap_size = 0;
-	for (int sector = 0; sector < 256; sector++)
-		scan->matchmap_rank_by_sector[sector] = -1;
+	int32_t *slots;
+	uint32_t mask;
+} matchmap_index_t;
+
+static uint32_t matchmap_index_slot(const matchmap_index_t *ix, const uint8_t *id)
+{
+	uint64_t h = 0;
+	memcpy(&h, id, oss_file.key_ln < (int) sizeof(h) ? (size_t) oss_file.key_ln : sizeof(h));
+	h ^= h >> 33;
+	h *= 0xff51afd7ed558ccdULL;
+	h ^= h >> 33;
+	return (uint32_t) h & ix->mask;
+}
+
+static bool matchmap_index_init(matchmap_index_t *ix, uint32_t entries)
+{
+	uint32_t size = 1024;
+	while (size < entries * 2)
+		size <<= 1;
+	ix->slots = malloc(size * sizeof(int32_t));
+	if (!ix->slots)
+		return false;
+	memset(ix->slots, 0xff, size * sizeof(int32_t)); /* -1: empty slot */
+	ix->mask = size - 1;
+	return true;
+}
+
+static int32_t matchmap_index_find(const matchmap_index_t *ix, scan_data_t *scan, const uint8_t *id)
+{
+	for (uint32_t pos = matchmap_index_slot(ix, id); ix->slots[pos] >= 0; pos = (pos + 1) & ix->mask)
+		if (!memcmp(scan->matchmap[ix->slots[pos]].md5, id, oss_file.key_ln))
+			return ix->slots[pos];
+	return -1;
+}
+
+static void matchmap_index_add(matchmap_index_t *ix, const uint8_t *id, int32_t entry)
+{
+	uint32_t pos = matchmap_index_slot(ix, id);
+	while (ix->slots[pos] >= 0)
+		pos = (pos + 1) & ix->mask;
+	ix->slots[pos] = entry;
+}
+
+static int wfp2_popularity_cmp(const void *a, const void *b)
+{
+	const matchmap_entry_t *x = *(matchmap_entry_t * const *) a;
+	const matchmap_entry_t *y = *(matchmap_entry_t * const *) b;
+	if (x->size != y->size)
+		return (x->size > y->size) - (x->size < y->size);
+	return (x > y) - (x < y); /* same popularity: keep the fingerprint order */
 }
 
 /**
- * @brief Snippet scan. The classic wfp table (oss_wfp) is queried first. wfp2
- *        is a fallback: only when the wfp1 pass does not produce a snippet match
- *        (no file reaching the min hits / min lines criteria) and the wfp2 table
- *        is present with wfp2 hashes for this file (parsed from a wfp2= block or
- *        computed from the source), a second pass is run with oss_wfp1 and
- *        oss_wfp2 accumulated into the same matchmap. With --force-wfp2 the
- *        wfp1-only stage is skipped and the combined pass runs directly. The
- *        match threshold is still derived from the wfp1 fingerprint count.
+ * @brief wfp2 (token-aware) pass on top of the matchmap left by the wfp1 pass.
+ *
+ * Every file id already in the matchmap receives the wfp2 hits and line ranges of the
+ * fingerprints it appears in. Files not found by wfp1 are added as new candidates, only
+ * from the wfp2 fingerprints that fit in the wfp2 budget: least popular first, with the
+ * same rule as the first stage of the wfp1 pass. The wfp1 evidence is never displaced.
+ * The sector leaders are recomputed at the end. Without wfp1 fingerprints the matchmap
+ * is built from wfp2 alone.
+ *
  * @param scan current scan structure
- * @return match_t scan result type
+ * @return MATCH_SNIPPET if the matchmap has entries, MATCH_NONE otherwise
+ */
+static match_t snippet_scan_add_wfp2(scan_data_t *scan)
+{
+	uint32_t count = scan->hash_count2;
+	uint32_t rec_ln = oss_wfp2.rec_ln > 0 ? oss_wfp2.rec_ln : WFP_REC_LN;
+	uint32_t last_line = scan->lines2[count - 1];
+
+	/* Budget for new candidates: the base size of the wfp1 pass (matchmap_setup) */
+	int capacity = scan->max_matchmap_size;
+	matchmap_setup(scan);
+	int budget = scan->max_matchmap_size;
+	if (scan->matchmap)
+		scan->max_matchmap_size = capacity;
+	else
+	{
+		/* No wfp1 matchmap: wfp2 alone */
+		if (!scan->hash_count && scan->snippet_adjust_tolerance)
+			adjust_tolerance(scan, count, last_line);
+		scan->matchmap = calloc(scan->max_matchmap_size, sizeof(matchmap_entry));
+		scan->matchmap_size = 0;
+		for (int sector = 0; sector < 256; sector++)
+			scan->matchmap_rank_by_sector[sector] = -1;
+	}
+
+	/* Fetch the file ids of every wfp2 fingerprint */
+	matchmap_entry_t *map = calloc(count, sizeof(matchmap_entry_t));
+	matchmap_entry_t **order = calloc(count, sizeof(matchmap_entry_t *));
+	for (uint32_t i = 0; i < count; i++)
+	{
+		map[i].md5_set = malloc(WFP_REC_LN * MATCHMAP_ITEM_SIZE);
+		wfp_invert(scan->hashes2[i], map[i].wfp);
+		uint32_write(map[i].md5_set, 0);
+		map[i].line = scan->lines2[i];
+		map[i].is_wfp2 = true;
+		ldb_fetch_recordset(NULL, oss_wfp2, map[i].wfp, false, get_all_file_ids, (void *)map[i].md5_set);
+		map[i].size = uint32_read(map[i].md5_set) / rec_ln;
+		order[i] = &map[i];
+	}
+	qsort(order, count, sizeof(matchmap_entry_t *), wfp2_popularity_cmp);
+
+	/* Fingerprints allowed to add new candidates (first stage rule of the wfp1 pass) */
+	int8_t *lines_covered = malloc(last_line + 1);
+	memset(lines_covered, 0, last_line + 1);
+	long new_files_max = 0;
+	uint32_t allowed = count, selected = 0, coverage = 0;
+	for (uint32_t k = 0; k < count; k++)
+	{
+		if (!order[k]->size)
+			continue;
+		selected++;
+		new_files_max += order[k]->size;
+		if (!lines_covered[order[k]->line])
+		{
+			lines_covered[order[k]->line] = 1;
+			coverage++;
+		}
+		if (new_files_max > budget)
+		{
+			if ((selected < count / 10 || (float) coverage / count < MIN_LINES_COVERAGE) && new_files_max < MAX_MATCHMAP_FILES)
+				budget += order[k]->size;
+			else
+			{
+				new_files_max -= order[k]->size;
+				allowed = k;
+				break;
+			}
+		}
+	}
+	free(lines_covered);
+
+	/* Room for the new candidates, and an index of the existing ones */
+	uint32_t existing = scan->matchmap_size;
+	uint32_t room = existing + (uint32_t) new_files_max;
+	if (room > (uint32_t) scan->max_matchmap_size)
+	{
+		matchmap_entry *grown = realloc(scan->matchmap, room * sizeof(matchmap_entry));
+		if (grown)
+		{
+			memset(grown + scan->max_matchmap_size, 0, (room - scan->max_matchmap_size) * sizeof(matchmap_entry));
+			scan->matchmap = grown;
+			scan->max_matchmap_size = room;
+		}
+	}
+	matchmap_index_t ix;
+	bool indexed = matchmap_index_init(&ix, scan->max_matchmap_size);
+	for (uint32_t t = 0; indexed && t < existing; t++)
+		matchmap_index_add(&ix, scan->matchmap[t].md5, t);
+
+	/* Add the wfp2 hits, least popular fingerprints first */
+	uint32_t new_files = 0;
+	for (uint32_t k = 0; indexed && k < count; k++)
+	{
+		uint8_t *md5s = order[k]->md5_set + 4;
+		for (uint32_t w = 0; w < order[k]->size; w++)
+		{
+			uint8_t *md5 = &md5s[w * rec_ln];
+			int sector = md5[0];
+			int sector_max = scan->matchmap_rank_by_sector[sector] >= 0 ?
+							 scan->matchmap[scan->matchmap_rank_by_sector[sector]].hits : scan->snippet_min_hits;
+			int32_t entry = matchmap_index_find(&ix, scan, md5);
+			if (entry >= 0)
+				add_file_to_matchmap(scan, order[k], md5, entry, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+			else if (k < allowed && scan->matchmap_size < (uint32_t) scan->max_matchmap_size)
+			{
+				uint32_t slot = scan->matchmap_size;
+				add_file_to_matchmap(scan, order[k], md5, slot, &sector_max, &scan->matchmap_rank_by_sector[sector]);
+				if (scan->matchmap_size > slot)
+				{
+					matchmap_index_add(&ix, md5, slot);
+					new_files++;
+				}
+			}
+		}
+	}
+	if (indexed)
+		free(ix.slots);
+
+	/* Sector leaders over the whole matchmap */
+	for (int sector = 0; sector < 256; sector++)
+		scan->matchmap_rank_by_sector[sector] = -1;
+	for (uint32_t t = 0; t < scan->matchmap_size; t++)
+	{
+		int sector = scan->matchmap[t].md5[0];
+		int leader = scan->matchmap_rank_by_sector[sector];
+		if (scan->matchmap[t].hits > (leader >= 0 ? scan->matchmap[leader].hits : scan->snippet_min_hits))
+			scan->matchmap_rank_by_sector[sector] = t;
+	}
+
+	if (last_line > (uint32_t) scan->total_lines)
+		scan->total_lines = last_line;
+
+	for (uint32_t i = 0; i < count; i++)
+		free(map[i].md5_set);
+	free(map);
+	free(order);
+
+	uint32_t with_wfp2 = 0;
+	for (uint32_t t = 0; t < existing; t++)
+		if (scan->matchmap[t].hits_wfp2)
+			with_wfp2++;
+	scanlog("wfp2: %u of %u wfp1 files got wfp2 hits, %u new files (%u of %u fingerprints may add files)\n",
+			with_wfp2, existing, new_files, allowed, count);
+
+	return scan->matchmap_size ? MATCH_SNIPPET : MATCH_NONE;
+}
+
+/**
+ * @brief Main function of snippet scanning. The classic wfp1 pass runs first, exactly as
+ *        in a classic scan. When the wfp2 table is present and the scan carries wfp2
+ *        fingerprints (from a wfp2= block or computed from the source), the wfp2 pass then
+ *        works on the matchmap left by wfp1: by default only when the wfp1 pass does not
+ *        produce a snippet match, always with --force-wfp2.
+ * @param scan current scan structure
+ * @return match_t returns the type of scan result.
  */
 match_t ldb_scan_snippets(scan_data_t *scan)
 {
-	wfp_source_t sources[2];
-	int n = 0;
-
 	scanlog("Snippet fingerprints for %s: wfp1=%u, wfp2=%u (wfp2 table %s)\n",
 			scan->file_path ? scan->file_path : "", scan->hash_count, scan->hash_count2,
 			wfp2_present ? "present" : "absent");
@@ -723,41 +839,25 @@ match_t ldb_scan_snippets(scan_data_t *scan)
 		scanlog("wfp2: %u fingerprints ignored, KB has no wfp2 table\n", scan->hash_count2);
 
 	bool wfp2_available = wfp2_present && scan->hash_count2 > 0;
-	match_t result = MATCH_NONE;
+	if (!wfp2_available || (engine_flags & DISABLE_SNIPPET_MATCHING))
+		return snippet_scan_wfp1(scan);
 
-	if (force_wfp2 && wfp2_available)
-		scanlog("wfp2: --force-wfp2 set, skipping the wfp1-only stage\n");
-
-	/* Stage 1: classic wfp1 (skipped with --force-wfp2 when wfp2 is available) */
-	if (scan->hash_count > 0 && force_wfp2 && wfp2_available)
-		sources[n++] = (wfp_source_t){ &oss_wfp, scan->hashes, scan->lines, scan->hash_count };
-	else if (scan->hash_count > 0)
+	if (scan->hash_count)
 	{
-		sources[n++] = (wfp_source_t){ &oss_wfp, scan->hashes, scan->lines, scan->hash_count };
 		scanlog("wfp1: starting snippet pass (%u fingerprints)\n", scan->hash_count);
-		result = snippet_scan_pass(scan, sources, n);
-
-		if (result == MATCH_SNIPPET && snippet_has_candidate(scan))
+		match_t result = snippet_scan_wfp1(scan);
+		if (!force_wfp2)
 		{
-			scanlog("wfp1: snippet match found, wfp2 not needed\n");
-			return result;
+			if (result == MATCH_SNIPPET && snippet_has_candidate(scan))
+			{
+				scanlog("wfp1: snippet match found, wfp2 not needed\n");
+				return result;
+			}
+			scanlog("wfp1: no snippet match\n");
 		}
-		if (!wfp2_available)
-			return result;
-		scanlog("wfp1: no snippet match\n");
-		matchmap_reset(scan);
 	}
 
-	if (!wfp2_available)
-	{
-		scanlog("No hashes return NONE\n");
-		return MATCH_NONE;
-	}
-
-	/* Stage 2: wfp1 + wfp2 combined (fallback, or forced by --force-wfp2) */
-	sources[n++] = (wfp_source_t){ &oss_wfp2, scan->hashes2, scan->lines2, scan->hash_count2 };
-	scanlog("wfp2: starting %s snippet pass with wfp2 (%u fingerprints)%s\n",
-			force_wfp2 ? "forced" : "fallback", scan->hash_count2,
-			scan->hash_count ? " combined with wfp1" : ", no wfp1 fingerprints");
-	return snippet_scan_pass(scan, sources, n);
+	scanlog("wfp2: %s pass on the wfp1 matchmap (%u fingerprints)\n",
+			force_wfp2 ? "forced" : "fallback", scan->hash_count2);
+	return snippet_scan_add_wfp2(scan);
 }

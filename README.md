@@ -101,7 +101,7 @@ Syntax: scanoss [parameters] [TARGET]
 * `-s, --sbom FILE` - Include assets from a JSON SBOM file (CycloneDX/SPDX2.2 format) in identification
 * `-b, --blacklist FILE` - Exclude matches from assets listed in JSON SBOM file (CycloneDX/SPDX2.2 format)
 * `--force-snippet` - Force snippet scanning (no full file matching). Takes no argument
-* `--force-wfp2` - Combine wfp1 and wfp2 snippet hits from the start instead of using wfp2 only as a fallback (requires a `wfp2` table; place it before `-S`). Takes no argument
+* `--force-wfp2` - Always add the wfp2 evidence on top of the wfp1 snippet scan, instead of only when wfp1 produces no snippet match (requires a `wfp2` table; place it before `-S`). Takes no argument
 * `-c, --component HINT` - Add a component HINT to guide scan results
 
 ### Attribution and Licenses
@@ -196,7 +196,7 @@ In addition to the classic snippet fingerprints (wfp1), the engine can match tok
 
 **When are wfp2 fingerprints computed?**
 
-* Scanning physical files or directories: the engine computes wfp2 itself, only when the `wfp2` table is present and the file reaches snippet scanning (no full-file match, not binary, not over the size limit). The fingerprints are always computed in that case, but only queried when the combined pass runs.
+* Scanning physical files or directories: the engine computes wfp2 itself, only when the `wfp2` table is present and the file reaches snippet scanning (no full-file match, not binary, not over the size limit). The fingerprints are always computed in that case, but only queried when the wfp2 pass runs.
 * Scanning a `.wfp` file (`-w`) or a WFP block (`-S`): the engine never computes wfp2. It uses the fingerprints sent by the client in a `wfp2=` block. If the Knowledgebase has no `wfp2` table, those lines are ignored.
 
 **WFP format.** Inside each `file=` entry, a `wfp2=` marker line starts the wfp2 block. All snippet lines after it, up to the next `file=`, are matched against the `wfp2` table. Lines use the same `line=hash[,hash]*` format as wfp1:
@@ -210,11 +210,11 @@ wfp2=
 10=12345678
 ```
 
-**When is wfp2 used?** wfp2 is a fallback. The snippet scan first runs with wfp1 only. If some file reaches the snippet match criteria (min hits, min lines, file extension), that result is used and wfp2 is not queried. Otherwise a second pass runs with wfp1 and wfp2 combined. With `--force-wfp2` the wfp1-only stage is skipped and the combined pass runs directly, whether or not wfp1 alone would match.
+**When is wfp2 used?** The snippet scan always runs with wfp1 first, exactly as a classic scan. If some file reaches the snippet match criteria (min hits, min lines, file extension), that result is used and wfp2 is not queried. Otherwise the wfp2 pass runs on top of the match map left by wfp1. With `--force-wfp2` the wfp2 pass always runs, whether or not wfp1 alone would match.
 
-**How results are combined.** In the combined pass, wfp1 and wfp2 hits are accumulated into a single match map: hits are added together and line ranges are merged per file. The minimum hits threshold is still computed from the wfp1 fingerprint count only, so wfp2 adds evidence without changing the matching threshold.
+**How results are combined.** The wfp2 pass works on the match map built by wfp1, so the wfp1 evidence is never displaced: every file already in the map receives the wfp2 hits and line ranges of the fingerprints it appears in, and files not found by wfp1 are added as new candidates, within a wfp2 budget (least popular fingerprints first, as in the wfp1 pass). The minimum hits threshold is still computed from the wfp1 fingerprint count only, so wfp2 adds evidence without changing the matching threshold.
 
-**Logs.** With `-d`, the log shows which stage ran (`wfp1: starting snippet pass`, `wfp2: starting fallback snippet pass`, `wfp2: starting forced snippet pass`) and the origin of each candidate and of the selected match, e.g. `Best snippet match <md5>: hits=304 (wfp1=107, wfp2=197), origin=wfp1+wfp2`.
+**Logs.** With `-d`, the log shows which stage ran (`wfp1: starting snippet pass`, `wfp2: fallback pass on the wfp1 matchmap`, `wfp2: forced pass on the wfp1 matchmap`) and the origin of each candidate and of the selected match, e.g. `Best snippet match <md5>: hits=304 (wfp1=107, wfp2=197), origin=wfp1+wfp2`.
 
 ## If none of the above,
 
